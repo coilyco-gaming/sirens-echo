@@ -1,29 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="sirens-deep">
-  <title>sirens-deep</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-labelledby="t">
+  <title id="t">sirens-deep</title>
 
-  <!-- Ink field. Ring and S geometry match the coilyco org marks exactly. -->
+  <defs>
+    <!-- The water is inset to r 132, not the ring interior. That gap is load
+         bearing: it keeps the lilac water off the lilac ring band, which would
+         otherwise merge and swallow the lower half of the ring. -->
+    <clipPath id="water"><circle cx="200" cy="200" r="132"/></clipPath>
+  </defs>
+
   <rect width="400" height="400" fill="#14111b"/>
 
   <!-- The coilyco ring: mint outer band, lilac inner band. -->
   <circle cx="200" cy="200" r="165.5" fill="none" stroke="#4bcdd1" stroke-width="12"/>
   <circle cx="200" cy="200" r="153" fill="none" stroke="#baa6d9" stroke-width="13"/>
 
-  <!-- Emblem: whale with a stepped body and a blocked fluke. Every edge is
-       horizontal or vertical except the two that run from the fluke back down
-       to the belly, which are the only diagonals holding the animal. -->
-  <g transform="translate(136,84.73) scale(0.8533)">
+  <!-- Sea. -->
+  <g clip-path="url(#water)">
+    <rect x="0" y="228.16" width="400" height="171.84" fill="#baa6d9"/>
+  </g>
+
+  <!-- Whale. Every edge is horizontal or vertical except the two running from
+       the fluke down to the belly. Only the eye is a circle. -->
+  <g transform="translate(104,161.60) scale(1.28)">
     <path fill="#4bcdd1" d="M0 24 V16 H8 V8 H72 V30 H90
              V-20 H112 V4 H130 V-6 H150 V20
              L104 40 L88 64 H76 V80 H8 V72 H0 Z"/>
-    <!-- Mouth, a horizontal slot off the front face. The bar below it reads
-         as the lower jaw. -->
     <path fill="#14111b" d="M0 54 H50 V68 H0 Z"/>
     <circle cx="26" cy="30" r="8" fill="#14111b"/>
   </g>
-
-  <!-- The coilyco S, with the offset mint bar across its waist. -->
-  <path d="M245 182 H165 V229 H240 V283 H158" fill="none" stroke="#baa6d9"
-        stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M165 229.5 H218" fill="none" stroke="#4bcdd1"
-        stroke-width="20" stroke-linecap="round"/>
 </svg>
