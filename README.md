@@ -67,7 +67,7 @@ evaluation target you actually run against.
 
 ## Deployment
 
-Main pushes publish a private full-source-SHA Echo image.
+Main pushes publish a full-source-SHA Echo image to Forgejo OCI.
 `coilyco-bridge/deploy` owns the k3s Deployment, secrets, rollout, and
 rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
 

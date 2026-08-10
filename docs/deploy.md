@@ -11,7 +11,7 @@ general CoilyCo policy root. It loads no AOS or Agent Compose context and does
 not add lore.
 
 The Forgejo workflow runs repository validation first. A main push then
-publishes the private image
+publishes the image
 `forgejo.coilysiren.me/coilyco-gaming/sirens-echo:<full-source-sha>`.
 The trusted deploy runner supplies `REGISTRY_TOKEN` for package writes. The
 publisher uses an isolated Docker config, pushes one immutable tag, and proves

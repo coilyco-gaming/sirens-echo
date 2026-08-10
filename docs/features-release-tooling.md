@@ -8,7 +8,7 @@ The release and validation surfaces stay separate:
 
 - `.pre-commit-config.yaml` pins the shared agentic-os validation suite.
 - `.forgejo/workflows/ci.yml` runs the repository build, tests, and validation.
-- Main pushes publish the private full-source-SHA Sirens Echo image to Forgejo
+- Main pushes publish the full-source-SHA Sirens Echo image to Forgejo
   OCI only after the test job passes.
 - `coilyco-bridge/deploy` owns the read-only pull credential, k3s rollout, and
   rollback.
