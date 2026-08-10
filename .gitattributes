@@ -1,0 +1,6 @@
+# Force LF on every text file. Linux containers and shell entrypoints do not
+# tolerate CRLF in scripts (`$'\r': command not found`).
+* text=auto eol=lf
+
+# Belt-and-suspenders for the formats that bite hardest if mangled.
+*.sh        text eol=lf

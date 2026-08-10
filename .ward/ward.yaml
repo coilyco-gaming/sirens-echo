@@ -1,0 +1,57 @@
+# Per-repo command allowlist for sirens-echo. Ward is the canonical
+# entry point for dev verbs here. Multi-step commands use one focused helper.
+#
+# Names follow Ward's [a-z0-9-] rule. Argv validation rejects shell
+# metacharacters at invocation time, so flags forward verbatim through
+# Ward's native argv handling.
+#
+# The `catalog:` block is metadata for the cross-repo knowledge graph.
+# Schema: coilysiren/agentic-os-kai#420 (tracker).
+
+commands:
+  build:
+    run: bash scripts/ward-command.sh build
+    description: Compile Sirens Echo and the Echo evaluation gate.
+  policy-check:
+    run: bash scripts/ward-command.sh policy-check
+    description: Load every tracked definition and verify its selected response policy.
+  image:
+    run: docker build -t sirens-echo:dev .
+    description: Build the Sirens Echo production container image locally.
+  image-publish-check:
+    run: bash -n scripts/publish-image.sh
+    description: Parse the trusted Forgejo OCI publisher shell contract.
+  vet:
+    run: go vet ./...
+    description: go vet across the tree.
+  test:
+    run: go test ./...
+    description: Run the unit test suite.
+  tidy:
+    run: go mod tidy
+    description: go mod tidy.
+  format:
+    run: bash scripts/ward-command.sh format
+    description: Format Go source.
+  run-echo:
+    run: bash scripts/ward-command.sh run-echo
+    description: Run Sirens Echo. Requires Discord, channel, model, and MCP env.
+  eval-echo:
+    run: bash scripts/ward-command.sh eval-echo
+    description: Run the non-mutating Sirens Echo cases through Agent Proxy.
+  pre-commit-all:
+    run: pre-commit run --all-files
+    description: Run the complete repository pre-commit suite.
+
+agent:
+  workflow: merge-remote-main
+
+catalog:
+  kind: Component
+  type: tool
+  system: ops
+  owner: kai
+  lifecycle: production
+  description: "Sirens Echo Discord community agent and repo-local skillpack."
+  dependsOn:
+    - forgejo.coilysiren.me/coilysiren/infrastructure

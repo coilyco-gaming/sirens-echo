@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root {
+    --bg: #000;
+    --orange: #ff9c00;
+    --peach: #ffcc99;
+    --lavender: #cc99cc;
+    --plum: #cc6699;
+    --red: #cc6666;
+    --gold: #ffcc66;
+    --blue: #99ccff;
+    --text: #ff9c00;
+    --dim: #cc99cc;
+  }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  body {
+    width: 1280px; height: 640px;
+    font-family: "Antonio", "Helvetica Neue Condensed", "Arial Narrow", sans-serif;
+    font-stretch: condensed;
+    color: var(--text);
+    overflow: hidden;
+    position: relative;
+  }
+  /* left elbow column */
+  .col-left { position: absolute; top: 0; left: 0; width: 220px; height: 640px; }
+  .elbow-tl {
+    width: 220px; height: 140px;
+    background: var(--orange);
+    border-bottom-left-radius: 90px;
+    position: relative;
+  }
+  .elbow-tl::after {
+    content: "";
+    position: absolute;
+    right: 0; bottom: 0;
+    width: 130px; height: 50px;
+    background: var(--bg);
+    border-bottom-left-radius: 50px;
+  }
+  .stub { height: 26px; margin-top: 6px; border-radius: 0 18px 18px 0; padding: 4px 14px 0 0; text-align: right; font-size: 22px; color: #000; letter-spacing: 1px; }
+  .s1 { background: var(--peach); }
+  .s2 { background: var(--lavender); }
+  .s3 { background: var(--gold); }
+  .s4 { background: var(--plum); }
+  .s5 { background: var(--orange); }
+  .elbow-bl {
+    position: absolute; left: 0; bottom: 0;
+    width: 220px; height: 100px;
+    background: var(--lavender);
+    border-top-left-radius: 90px;
+  }
+  .elbow-bl::after {
+    content: "";
+    position: absolute;
+    right: 0; top: 0;
+    width: 130px; height: 40px;
+    background: var(--bg);
+    border-top-left-radius: 50px;
+  }
+  /* top bar */
+  .top-bar {
+    position: absolute;
+    left: 230px; top: 0;
+    width: 580px; height: 60px;
+    display: flex; align-items: stretch; gap: 8px;
+    padding: 16px 20px 0 0;
+    box-sizing: border-box;
+  }
+  .bar-seg { background: var(--orange); height: 36px; }
+  .bar-fill { flex: 1; }
+  .bar-cap-l { width: 60px; border-radius: 18px 0 0 18px; }
+  .bar-cap-r { width: 80px; border-radius: 0 18px 18px 0; }
+  .bar-stub { width: 90px; background: var(--lavender); }
+  .bar-stub2 { width: 50px; background: var(--peach); }
+  .bar-title {
+    position: absolute; right: 28px; top: 6px;
+    color: var(--orange);
+    font-size: 30px; letter-spacing: 2px;
+    font-weight: 700;
+  }
+  .bar-title .dot { color: var(--orange); margin: 0 8px; }
+  .bar-code { color: var(--orange); font-size: 30px; font-weight: 700; }
+  /* second bar (connector) */
+  .mid-bar {
+    position: absolute; left: 230px; top: 70px;
+    width: 580px; height: 18px;
+    display: flex; gap: 8px;
+  }
+  .mid-bar .seg { background: var(--lavender); height: 100%; border-radius: 9px; }
+  .mid-bar .seg.a { width: 40px; }
+  .mid-bar .seg.b { flex: 1; background: var(--peach); }
+  .mid-bar .seg.c { width: 200px; background: var(--lavender); }
+  .mid-bar .seg.d { width: 90px; background: var(--orange); }
+  /* code block */
+  .codes {
+    position: absolute; left: 250px; top: 110px;
+    width: 700px; color: var(--peach);
+    font-size: 16px; line-height: 1.35; letter-spacing: 1px;
+    columns: 5; column-gap: 18px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+  }
+  .codes span { display: block; }
+  /* buttons (right rail) */
+  .btn-rail {
+    position: absolute; right: 28px; top: 110px;
+    width: 280px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .btn {
+    height: 60px; border-radius: 30px;
+    color: #000; font-size: 28px; font-weight: 700;
+    letter-spacing: 2px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+  }
+  .btn .code { font-size: 16px; opacity: 0.6; }
+  .btn-restart { background: var(--red); }
+  .btn-status  { background: var(--gold); }
+  .btn-stop    { background: var(--plum); }
+  .btn-start   { background: var(--orange); }
+  /* main panel */
+  .panel {
+    position: absolute; left: 250px; top: 230px;
+    width: 720px; height: 360px;
+    background:
+      radial-gradient(ellipse at 30% 40%, rgba(204, 102, 153, 0.35), transparent 60%),
+      radial-gradient(ellipse at 70% 70%, rgba(153, 204, 255, 0.30), transparent 60%),
+      #0a0a2a;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .panel-title {
+    position: absolute; left: 250px; top: 200px;
+    font-size: 20px; color: var(--orange); letter-spacing: 3px; font-weight: 700;
+  }
+  /* hero text overlay on panel */
+  .hero {
+    position: absolute; left: 280px; top: 260px;
+    color: var(--orange);
+    font-size: 86px; font-weight: 800;
+    letter-spacing: 4px;
+    line-height: 0.95;
+    text-transform: uppercase;
+  }
+  .hero .sub {
+    display: block;
+    font-size: 28px; color: var(--peach); letter-spacing: 6px; font-weight: 600;
+    margin-top: 12px;
+  }
+  /* games list bottom of panel */
+  .games {
+    position: absolute; left: 280px; bottom: 250px;
+    display: flex; gap: 16px;
+    font-size: 18px; letter-spacing: 2px;
+  }
+  .game-chip {
+    padding: 4px 14px; border-radius: 10px; font-weight: 700;
+  }
+  .g-active { background: var(--orange); color: #000; }
+  .g-future { background: transparent; color: var(--lavender); border: 2px solid var(--lavender); }
+  /* corner identifier on right rail label */
+  .rail-label {
+    position: absolute; right: 28px; top: 80px;
+    color: var(--orange); font-size: 18px; letter-spacing: 3px; font-weight: 700;
+  }
+  /* bottom info strip */
+  .info {
+    position: absolute; left: 250px; bottom: 14px;
+    color: var(--peach); font-size: 16px; letter-spacing: 2px;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+  <div class="col-left">
+    <div class="elbow-tl"></div>
+    <div class="stub s1">LCARS 05644</div>
+    <div class="stub s2">49-858801</div>
+    <div class="stub s3">38-412270</div>
+    <div class="stub s4">21-150243</div>
+    <div class="stub s5">25-986187</div>
+    <div class="stub s2">23-801763</div>
+    <div class="elbow-bl"></div>
+  </div>
+
+  <div class="top-bar">
+    <div class="bar-seg bar-cap-l"></div>
+    <div class="bar-seg bar-stub"></div>
+    <div class="bar-seg bar-fill"></div>
+    <div class="bar-seg bar-stub2"></div>
+    <div class="bar-seg bar-cap-r"></div>
+  </div>
+  <div class="bar-title">LONG RANGE SCAN <span class="dot">&bull;</span> <span class="bar-code">676</span></div>
+
+  <div class="mid-bar">
+    <div class="seg a"></div>
+    <div class="seg b"></div>
+    <div class="seg c"></div>
+    <div class="seg d"></div>
+  </div>
+
+  <div class="codes">
+    <span>875 403 310 88 80948</span>
+    <span>9657 9728 280 87881 42</span>
+    <span>1631 5097 987 878 13</span>
+    <span>4210 36 445 4392 62</span>
+    <span>532 2728 124 9300 45</span>
+    <span>5381 59222 178 443 85</span>
+    <span>9812 5080450 894 5330 88</span>
+    <span>58 8262 5523 593353</span>
+    <span>547 4886 4725 477188</span>
+    <span>91625 827 5109 700</span>
+    <span>62881 885 6903 49195</span>
+    <span>68583 784 5110 376</span>
+    <span>61338 92281 8798 9</span>
+    <span>19372 6873 1004 1830</span>
+    <span>15958 193 47000 5200831</span>
+    <span>783781 288 8184 8347877</span>
+    <span>11456 904802 546 19628</span>
+    <span>165999 347718 622 99</span>
+    <span>695822 784829 875 852</span>
+    <span>308463 698185 725 10755</span>
+  </div>
+
+  <div class="rail-label">SUBSPACE &bull; 047</div>
+  <div class="btn-rail">
+    <div class="btn btn-restart">35097</div>
+    <div class="btn btn-status">76713</div>
+    <div class="btn btn-stop">93814</div>
+    <div class="btn btn-start">63388</div>
+  </div>
+
+  <div class="panel">
+    <svg width="720" height="360" style="position:absolute;top:0;left:0">
+      <defs>
+        <pattern id="grid" width="180" height="120" patternUnits="userSpaceOnUse">
+          <path d="M 180 0 L 0 0 0 120" fill="none" stroke="#445" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="720" height="360" fill="url(#grid)"/>
+      <g fill="#ff9c00" font-family="Helvetica Neue, Arial" font-size="13" font-weight="700" letter-spacing="2">
+        <circle cx="180" cy="90" r="3"/><text x="190" y="94">VANDOR</text>
+        <circle cx="380" cy="170" r="3"/><text x="390" y="174">MS</text>
+        <circle cx="540" cy="160" r="3"/><text x="550" y="164">D'ARSAY</text>
+        <circle cx="650" cy="220" r="3"/><text x="600" y="224" text-anchor="end">MORSKA</text>
+        <circle cx="160" cy="290" r="3"/><text x="170" y="294">PROXIMA CENTAURI</text>
+        <circle cx="380" cy="295" r="3"/><text x="390" y="299">OVION</text>
+        <circle cx="560" cy="285" r="3"/><text x="570" y="289">ALTAMID</text>
+      </g>
+      <g fill="#ffcc66" opacity="0.7">
+        <circle cx="80" cy="50" r="2"/><circle cx="280" cy="40" r="1.5"/>
+        <circle cx="450" cy="60" r="2"/><circle cx="610" cy="80" r="1.5"/>
+        <circle cx="120" cy="180" r="1.5"/><circle cx="300" cy="220" r="2"/>
+        <circle cx="480" cy="240" r="1.5"/><circle cx="660" cy="120" r="2"/>
+        <circle cx="220" cy="330" r="1.5"/><circle cx="500" cy="330" r="2"/>
+        <circle cx="40" cy="240" r="1.5"/><circle cx="700" cy="290" r="1.5"/>
+      </g>
+      <g fill="#99ccff" font-family="Helvetica Neue, Arial" font-size="11" opacity="0.6">
+        <text x="200" y="200">0434</text>
+        <text x="400" y="200">5221</text>
+        <text x="580" y="200">3874</text>
+        <text x="690" y="225" text-anchor="end">5130</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="info">LCARS ACCESS 47-ALPHA &nbsp; AUTHORIZATION SIGMA &nbsp; STARDATE 47634.4</div>
+</body>
+</html>

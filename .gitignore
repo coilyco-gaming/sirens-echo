@@ -1,0 +1,10 @@
+/bin/
+/dist/
+*.test
+*.out
+.envrc
+.env
+.claude/settings.local.json
+.claude/worktrees/
+
+.DS_Store
