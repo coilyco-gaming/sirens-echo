@@ -63,7 +63,7 @@ policy. Each MCP server owns its tools. Deploy owns rollout.
 
 ## Release
 
-Main pushes publish the private Echo image at a full source SHA through the
+Main pushes publish the Echo image at a full source SHA through the
 trusted deploy lane. The workload holds no cluster credential. Deploy owns rollout.
 
 ## Agent rules

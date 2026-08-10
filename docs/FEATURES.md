@@ -53,7 +53,7 @@ See [the service](sirens-echo.md), [profiles](response-profiles.md),
 - ExternalSecret injection with no pod AWS permission
 - Existing SigNoZ collector for OTLP/HTTP traces and metrics
 - Singleton k3s Echo Deployment
-- Private full-source-SHA Echo images published to Forgejo OCI
+- Full-source-SHA Echo images published to Forgejo OCI
 
 See [deploy.md](deploy.md).
 

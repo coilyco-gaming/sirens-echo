@@ -65,9 +65,9 @@ Eco MCP roster without sending Discord messages or creating issues. Set
 
 ## Deployment
 
-Main pushes publish a private full-source-SHA Echo image. `coilyco-bridge/deploy`
-owns the k3s Deployment, secrets, rollout, and rollback. See
-[the rollout checks](docs/sirens-echo-rollout.md).
+Main pushes publish a full-source-SHA Echo image to Forgejo OCI.
+`coilyco-bridge/deploy` owns the k3s Deployment, secrets, rollout, and
+rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
 
 ## See also
 
