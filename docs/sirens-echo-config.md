@@ -31,10 +31,19 @@ The Sirens Echo Forgejo entry uses `SIRENS_ECHO_FORGEJO_MCP_URL`, so the
 source definition selects the server while deploy owns its cluster-local
 endpoint. The CoilyCo definition intentionally has no MCP entries.
 
-An empty channel is valid only for HTTP-only deployment. Discord-enabled
-configuration still requires the tracked `#bots` boundary. An empty MCP
-roster is valid. `issue_tracker` is optional and, when present, must name one
-configured MCP server.
+The definition's `channel` is the prompt's boundary label, not the routing key.
+It must be empty or a `#channel-name` the grounding validator also accepts. An
+empty channel is transport-neutral and valid for Discord and HTTP alike, because
+deployment owns routing. An empty MCP roster is valid, and `issue_tracker` must
+name a configured MCP server when present.
+
+`DISCORD_CHANNEL_ID` takes a comma-separated list, `DISCORD_GUILD_IDS`
+restricts which guilds may summon, and `SIRENS_ECHO_DISCORD_DM_ENABLED` opts
+into direct messages. Every ID is validated as a snowflake at startup. See
+[multiple Discord contexts](sirens-echo-contexts.md).
+
+Admission limits, queue depth, and both turn timeouts are configurable. See
+[admission](sirens-echo-admission.md) and [HTTP](sirens-echo-http.md).
 
 ## Knowledge gaps and corrections
 

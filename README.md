@@ -1,6 +1,6 @@
 # sirens-echo
 
-Agent Proxy-backed runtime for Sirens Echo and the general-purpose CoilyCo HTTP harness.
+Agent Proxy-backed runtime for Sirens Echo and the general-purpose CoilyCo harness.
 
 ## Sirens Echo
 
@@ -8,44 +8,43 @@ Sirens Echo is an automated community response service. Its model context is a
 repository-owned neutral profile plus approved Sirens knowledge. The Discord
 deployment remains Sirens Echo.
 
-- Only a mention or reply in the exact `#bots` channel invokes the service.
-- DMs, other channels, bots, self messages, and duplicates are ignored.
-- Replies disable all mentions, including the replied member.
-- Twelve earlier messages provide continuity across consecutive summons.
-- Responses use direct, factual, impersonal language. A deterministic validator
-  rejects greetings, emojis, first-person voice, banter, sign-offs, and offers.
-- The source-controlled tool roster exposes public Eco MCP and Echo's private,
-  repository-fixed Forgejo MCP.
-- Unanswered questions and corrections become sanitized ordinary Forgejo
-  issues with no labels.
-- Traces and metadata-only logs cover transport, model, and MCP work.
-- The tool and action surface remains repository-scoped and excludes
-  moderation, direct messages, announcements, roles, and account actions.
+- Only a mention or reply in a configured channel, or a thread under one,
+  invokes the service. Everything else is ignored, direct messages included.
+- Per-user, per-guild, and global admission limits bound member spend.
+- Replies disable all mentions. Twelve earlier messages give continuity.
+- A deterministic validator rejects greetings, emojis, banter, and sign-offs.
+- The tool roster exposes public Eco MCP and a private, repository-fixed
+  Forgejo MCP.
+- Unanswered questions and corrections become sanitized Forgejo issues, and
+  metadata-only traces cover transport, model, and MCP work.
+- The action surface stays repository-scoped, with no moderation or roles.
 
-Sirens Echo keeps no automatic memory. Guarded investigations use
-`.agents/skills/ops-social-discord/`. See
-[the service walkthrough](docs/sirens-echo.md).
+No automatic memory. Guarded investigations use
+`.agents/skills/ops-social-discord/`. See [the walkthrough](docs/sirens-echo.md).
 
 ## CoilyCo harness
 
-The `sirens-deep` HTTP deployment selects `agent/sirens-deep.yaml`. Its
-CoilyCo model identity is general-purpose rather than an Eco or Sirens harness.
+The `sirens-deep` deployment selects `agent/sirens-deep.yaml`. Its CoilyCo
+model identity is general-purpose rather than an Eco or Sirens harness.
 
-- It is HTTP-only and loads only the domain-neutral `coilyco-general` policy.
-- It starts with no MCP, repository-specific knowledge, issue tracker, or
-  default write surface while retaining the shared safety and transport bounds.
+- It loads only the domain-neutral `coilyco-general` policy and names no
+  channel, so deployment selects Discord ingress, HTTP ingress, or both.
+- It starts with no MCP, repository knowledge, issue tracker, or write surface
+  while retaining the shared safety and transport bounds.
+- One process serves several channels across several guilds, plus opt-in direct
+  messages. See [multiple Discord contexts](docs/sirens-echo-contexts.md).
 
-This is the initial CoilyCo harness definition. General-purpose means
-topic-neutral and extensible, not universally authorized. Future tools or
-knowledge must be added explicitly to the tracked definition with their own
-permission boundary.
+General-purpose means topic-neutral and extensible, not universally authorized.
+Future tools or knowledge must be added explicitly to the tracked definition
+with their own permission boundary.
 
 ## Configuration
 
 Deploy selects the tracked YAML definition, Agent Proxy route, Discord switch,
-and instance name. Discord secrets are required only when Discord is enabled.
-Sirens Echo also receives the private MCP URL but no Forgejo credential or AWS
-permission. See [response profiles](docs/response-profiles.md) and
+channel and guild scope, admission limits, and instance name. `POST /v1/turn`
+requires a shared secret whenever its listener is not loopback. See
+[response profiles](docs/response-profiles.md),
+[admission control](docs/sirens-echo-admission.md), and
 [deployment](docs/deploy.md).
 
 ## Development
@@ -61,20 +60,21 @@ ward exec pre-commit-all
 ```
 
 `ward exec eval-echo` exercises the production prompt, Agent Proxy, and static
-Eco MCP roster without sending Discord messages or creating issues. It falls
-back to a local OTLP receiver. Set `OTEL_EXPORTER_OTLP_ENDPOINT` to name the
-evaluation target you actually run against.
+Eco MCP roster without sending Discord messages or creating issues. Set
+`OTEL_EXPORTER_OTLP_ENDPOINT` to name the evaluation target you run against.
 
 ## Deployment
 
-Main pushes publish a private full-source-SHA Echo image.
-`coilyco-bridge/deploy` owns the k3s Deployment, secrets, rollout, and
-rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
+Main pushes publish a private full-source-SHA Echo image. `coilyco-bridge/deploy`
+owns the k3s Deployment, secrets, rollout, and rollback. See
+[the rollout checks](docs/sirens-echo-rollout.md).
 
 ## See also
 
 See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md),
+[.ward/ward.yaml](.ward/ward.yaml), [admission](docs/sirens-echo-admission.md),
+[contexts](docs/sirens-echo-contexts.md), [HTTP](docs/sirens-echo-http.md),
 [health](docs/sirens-echo-health.md),
-[harness design fundamentals](docs/harness-design-fundamentals.md),
-[docs/deploy.md](docs/deploy.md), and [.ward/ward.yaml](.ward/ward.yaml).
+[design](docs/harness-design-fundamentals.md), and
+[docs/deploy.md](docs/deploy.md).
 Cross-reference convention from [features-release-tooling.md](docs/features-release-tooling.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

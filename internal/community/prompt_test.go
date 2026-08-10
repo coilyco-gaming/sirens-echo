@@ -80,7 +80,7 @@ func TestBuildSystemPromptSelectsSocialPolicy(t *testing.T) {
 		"light situational humor are allowed",
 		"Personality never overrides truth",
 		"general CoilyCo policy",
-		"tailnet-only HTTP requests",
+		"its configured deployment ingress",
 		"Return an \"issue\" value of null",
 	} {
 		if !strings.Contains(prompt, expected) {

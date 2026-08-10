@@ -36,6 +36,7 @@ type Telemetry struct {
 	turnDuration         metric.Float64Histogram
 	modelCalls           metric.Int64Counter
 	toolCalls            metric.Int64Counter
+	admissions           metric.Int64Counter
 	failures             metric.Int64Counter
 	healthRequests       metric.Int64Counter
 	readinessDuration    metric.Float64Histogram
@@ -160,6 +161,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	admissions, err := meter.Int64Counter("sirens_echo.admissions")
+	if err != nil {
+		return nil, err
+	}
 	failures, err := meter.Int64Counter("sirens_echo.failures")
 	if err != nil {
 		return nil, err
@@ -196,6 +201,7 @@ func newTelemetry(
 		turnDuration:         turnDuration,
 		modelCalls:           modelCalls,
 		toolCalls:            toolCalls,
+		admissions:           admissions,
 		failures:             failures,
 		healthRequests:       healthRequests,
 		readinessDuration:    readinessDuration,
@@ -290,6 +296,19 @@ func (t *Telemetry) RecordToolCall(
 			attribute.String("mcp.server.name", server),
 			attribute.String("mcp.tool.name", tool),
 			attribute.String("outcome", outcome),
+		),
+	)
+}
+
+// RecordAdmission records one admission decision. Both labels are closed sets,
+// so a flood cannot expand metric cardinality through member-supplied values.
+func (t *Telemetry) RecordAdmission(ctx context.Context, outcome, transport string) {
+	t.admissions.Add(
+		ctx,
+		1,
+		metric.WithAttributes(
+			attribute.String("outcome", outcome),
+			attribute.String("transport", transport),
 		),
 	)
 }

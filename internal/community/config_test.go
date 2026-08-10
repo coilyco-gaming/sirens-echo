@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
@@ -66,17 +67,97 @@ func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 	}
 }
 
-func TestLoadConfigRejectsDiscordWithHTTPOnlyDefinition(t *testing.T) {
+// The CoilyCo definition names no channel, yet must still be deployable to
+// Discord, which the previous #bots requirement prevented outright.
+func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
-	t.Setenv("DISCORD_CHANNEL_ID", "bots-channel")
+	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001,1024000000000000002")
+	t.Setenv("DISCORD_GUILD_IDS", "2048000000000000001")
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if len(cfg.DiscordChannelIDs) != 2 {
+		t.Fatalf("DiscordChannelIDs = %#v", cfg.DiscordChannelIDs)
+	}
+	if len(cfg.DiscordGuildIDs) != 1 {
+		t.Fatalf("DiscordGuildIDs = %#v", cfg.DiscordGuildIDs)
+	}
+	if cfg.DiscordDMEnabled {
+		t.Fatal("direct messages must stay opt-in")
+	}
+}
+
+func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
+	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
+	t.Setenv("DISCORD_TOKEN", "discord-token")
+	t.Setenv("DISCORD_CHANNEL_ID", "#bots")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 
 	_, err := LoadConfig()
-	if err == nil || !strings.Contains(err.Error(), "channel must be #bots") {
+	if err == nil || !strings.Contains(err.Error(), "numeric snowflakes") {
 		t.Fatalf("LoadConfig error = %v", err)
+	}
+}
+
+func TestLoadConfigRequiresHTTPTokenOffLoopback(t *testing.T) {
+	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+	t.Setenv("SIRENS_ECHO_HTTP_ADDR", "0.0.0.0:8080")
+	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "")
+
+	if _, err := LoadConfig(); err == nil ||
+		!strings.Contains(err.Error(), "SIRENS_ECHO_HTTP_TOKEN is required") {
+		t.Fatalf("LoadConfig error = %v", err)
+	}
+
+	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "shared-secret")
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("LoadConfig with token: %v", err)
+	}
+
+	// Loopback keeps the token optional, so local development is unchanged.
+	t.Setenv("SIRENS_ECHO_HTTP_ADDR", "127.0.0.1:8080")
+	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "")
+	if _, err := LoadConfig(); err != nil {
+		t.Fatalf("LoadConfig on loopback: %v", err)
+	}
+}
+
+func TestLoadRateLimitPolicyOverridesAndDisables(t *testing.T) {
+	t.Setenv("SIRENS_ECHO_RATE_USER", "7/45s")
+	t.Setenv("SIRENS_ECHO_RATE_CONTEXT", "off")
+	t.Setenv("SIRENS_ECHO_MAX_PENDING", "3")
+
+	policy, err := loadRateLimitPolicy()
+	if err != nil {
+		t.Fatalf("loadRateLimitPolicy: %v", err)
+	}
+	if policy.PerUser.Burst != 7 || policy.PerUser.Every != 45*time.Second {
+		t.Fatalf("PerUser = %#v", policy.PerUser)
+	}
+	if policy.PerContext.enabled() {
+		t.Fatalf("PerContext = %#v, want disabled", policy.PerContext)
+	}
+	if !policy.Global.enabled() {
+		t.Fatal("an unset tier must keep its packaged default")
+	}
+	if policy.MaxPending != 3 {
+		t.Fatalf("MaxPending = %d", policy.MaxPending)
+	}
+
+	t.Setenv("SIRENS_ECHO_RATE_USER", "3 per minute")
+	if _, err := loadRateLimitPolicy(); err == nil {
+		t.Fatal("malformed rate limit was accepted")
 	}
 }
 
@@ -95,7 +176,7 @@ func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("DISCORD_TOKEN", "discord-token")
-	t.Setenv("DISCORD_CHANNEL_ID", "bots-channel")
+	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://forgejo-mcp:8080/mcp")
 	t.Setenv("AGENT_PROXY_MODEL", "")
 
@@ -109,7 +190,7 @@ func TestLoadConfigResolvesMCPURLFromEnvironment(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("DISCORD_TOKEN", "discord-token")
-	t.Setenv("DISCORD_CHANNEL_ID", "bots-channel")
+	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://forgejo-mcp:8080/mcp")
 
@@ -130,7 +211,7 @@ func TestLoadConfigRequiresEnvironmentBackedMCPURL(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("DISCORD_TOKEN", "discord-token")
-	t.Setenv("DISCORD_CHANNEL_ID", "bots-channel")
+	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "")
 
