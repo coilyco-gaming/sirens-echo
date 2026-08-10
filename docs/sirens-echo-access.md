@@ -44,24 +44,24 @@ never matches on it.
 
 Steps one through four decide from the Gateway payload already in memory, so a
 guild, member, or channel outside the policy costs nothing. Only an unseen
-thread reaches a Discord lookup, and those are separately bounded.
+thread reaches a Discord lookup, and those are bounded separately.
 
 ## Roles
 
-`roles` is the part that scales in a guild whose membership the operator does
-not control. Listing users means every new person is a config change plus a
-rollout. A role grant covers members nobody has enumerated, and it is free,
-because `Message.Member.Roles` arrives on the Gateway payload. Users and roles
-are a union, so either alone is a complete grant.
+`roles` scales in a guild whose membership the operator does not control.
+Listing users makes every new person a config change plus a rollout, while a
+role grant covers members nobody enumerated, free, because
+`Message.Member.Roles` arrives on the Gateway payload. Users and roles are a
+union, so either alone is a complete grant.
 
 ## Failing closed
 
 A missing file, an unparseable file, an unknown field, a non-snowflake ID, a
 duplicate guild, a guild that allows no channel, and a guild that allows no
 member are all startup failures. Absent configuration never widens the surface.
-`ward exec policy-check` validates the reference copy in CI and validates
-`SIRENS_ECHO_ACCESS_POLICY` when set, so an operator can check a candidate
-ConfigMap before a rollout that would otherwise fail closed.
+`ward exec test` validates the tracked reference copy and proves policy-check
+runs with only the files the image carries, and `ward exec policy-check`
+validates `SIRENS_ECHO_ACCESS_POLICY` when set.
 
 ## Without the file
 
