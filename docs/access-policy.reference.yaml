@@ -1,0 +1,45 @@
+# REFERENCE COPY ONLY. The runtime never reads this file.
+#
+# The real policy is a ConfigMap in coilyco-bridge/deploy, mounted at the path
+# named by SIRENS_ECHO_ACCESS_POLICY. This repository owns the schema and the
+# parser. Deployment owns the values. Every ID below is a placeholder.
+#
+# The `note` field is the review aid: a diff of 19-digit snowflakes is
+# otherwise unreadable, and the loader never matches on it. This file keeps its
+# commentary here rather than beside each key, because the repository's YAML
+# comment rule keeps comments above the first content line.
+#
+# The first guild is one the operator moderates, so everything is open and the
+# deployment's default admission limits apply. The second is a guild the
+# operator does not moderate, so it names its channel, grants members through a
+# role rather than a list of accounts, and tightens its own budget.
+#
+# See docs/sirens-echo-access.md.
+
+schema: coilyco-harness.access.v1
+
+deny:
+  users:
+    - "9990000000000000001"
+
+direct_messages:
+  allow:
+    - "1024000000000000001"
+
+guilds:
+  - id: "2048000000000000001"
+    note: "Sirens - operator's own guild"
+    channels: all
+    users: all
+
+  - id: "3072000000000000001"
+    note: "Partner guild - bot answers in #ask-coilyco only"
+    channels:
+      - "4096000000000000001"
+    users:
+      - "1024000000000000001"
+    roles:
+      - "5120000000000000001"
+    rate_limit:
+      per_user: "2/60s"
+      per_context: "6/30s"

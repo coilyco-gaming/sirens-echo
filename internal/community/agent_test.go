@@ -127,8 +127,24 @@ func TestInScopeAcceptsThreadsUnderTheConfiguredChannel(t *testing.T) {
 	}
 	session := &discordgo.Session{State: state}
 	agent := &Agent{
-		cfg:   Config{DiscordChannelID: channelID},
+		cfg:   Config{DiscordChannelIDs: []string{channelID}},
 		scope: newChannelScope(16),
+	}
+	agent.ensureRuntimeDefaults()
+	inScope := func(channel string) bool {
+		origin := summonContext{
+			Kind:      contextKindGuild,
+			GuildID:   guildID,
+			ChannelID: channel,
+		}
+		decision := agent.access.Evaluate(origin, "member-1", nil, nil)
+		if decision.Reason != accessNeedsThreadRef {
+			return decision.allowed()
+		}
+		if cached, known := agent.scope.Get(channel); known {
+			return cached
+		}
+		return agent.resolveScope(session, origin, decision.Guild)
 	}
 	for _, testCase := range []struct {
 		name    string
@@ -139,17 +155,36 @@ func TestInScopeAcceptsThreadsUnderTheConfiguredChannel(t *testing.T) {
 		{name: "thread under configured channel", id: threadID, allowed: true},
 		{name: "thread under another channel", id: foreignID, allowed: false},
 		{name: "another channel", id: otherID, allowed: false},
-		{name: "empty channel", id: "", allowed: false},
 	} {
-		if got := agent.inScope(session, testCase.id); got != testCase.allowed {
+		if got := inScope(testCase.id); got != testCase.allowed {
 			t.Fatalf("%s: inScope = %v, want %v", testCase.name, got, testCase.allowed)
 		}
 	}
 	if _, known := agent.scope.Get(threadID); !known {
 		t.Fatal("thread scope decision was not cached")
 	}
+	if _, known := agent.scope.Get(foreignID); !known {
+		t.Fatal("denied thread was not cached, so every message would repeat the lookup")
+	}
 	if _, known := agent.scope.Get(channelID); known {
 		t.Fatal("configured channel took the resolver path")
+	}
+}
+
+func TestSummonContextKeySharesOneBudgetPerGuild(t *testing.T) {
+	t.Parallel()
+	first := summonContext{Kind: contextKindGuild, GuildID: "g1", ChannelID: "c1"}
+	second := summonContext{Kind: contextKindGuild, GuildID: "g1", ChannelID: "c2"}
+	other := summonContext{Kind: contextKindGuild, GuildID: "g2", ChannelID: "c1"}
+	if first.Key() != second.Key() {
+		t.Fatalf("channels in one guild must share a key, got %q and %q", first.Key(), second.Key())
+	}
+	if first.Key() == other.Key() {
+		t.Fatal("separate guilds must not share one budget")
+	}
+	dm := summonContext{Kind: contextKindDM, ChannelID: "c1"}
+	if dm.Key() == other.Key() {
+		t.Fatal("a direct message must not share a guild's budget")
 	}
 }
 
@@ -250,6 +285,117 @@ func TestHTTPHandlerRunsTheSharedTurnPath(t *testing.T) {
 	}
 	if response.Reply != "Echo is ready." {
 		t.Fatalf("reply = %q", response.Reply)
+	}
+}
+
+// turnAgent builds an agent whose model always succeeds, so HTTP edge tests
+// measure the edge rather than the completion path.
+func turnAgent(cfg Config) *Agent {
+	cfg.Definition.MaxContextMessages = 12
+	return &Agent{
+		cfg: cfg,
+		completions: fakeCompletionClient{responses: map[string]CompletionResult{
+			"manual-request": {Content: `{"reply":"Echo is ready.","issue":null}`},
+		}},
+		systemPrompt: "neutral model policy and local knowledge",
+		telemetry:    telemetryOrNoop(nil),
+		slots:        make(chan struct{}, 1),
+	}
+}
+
+func turnRequest(token string) *http.Request {
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/v1/turn",
+		strings.NewReader(`{"request_id":"manual-request","author":"tester","content":"Are you ready?"}`),
+	)
+	request.Header.Set("Content-Type", "application/json")
+	if token != "" {
+		request.Header.Set("Authorization", "Bearer "+token)
+	}
+	return request
+}
+
+func TestHTTPTurnRequiresTheConfiguredToken(t *testing.T) {
+	t.Parallel()
+	agent := turnAgent(Config{HTTPToken: "shared-secret"})
+	handler := agent.HTTPHandler()
+
+	for _, testCase := range []struct {
+		name   string
+		token  string
+		status int
+	}{
+		{name: "no credential", token: "", status: http.StatusUnauthorized},
+		{name: "wrong credential", token: "guessed-secret", status: http.StatusUnauthorized},
+		{name: "correct credential", token: "shared-secret", status: http.StatusOK},
+	} {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, turnRequest(testCase.token))
+		if recorder.Code != testCase.status {
+			t.Fatalf(
+				"%s: status = %d, want %d, body = %s",
+				testCase.name,
+				recorder.Code,
+				testCase.status,
+				recorder.Body.String(),
+			)
+		}
+	}
+
+	// Health routes stay open so a probe needs no credential.
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("healthz status = %d, want %d", recorder.Code, http.StatusOK)
+	}
+}
+
+func TestHTTPTurnAppliesTheAdmissionPolicy(t *testing.T) {
+	t.Parallel()
+	agent := turnAgent(Config{
+		RateLimit: RateLimitPolicy{PerUser: RateLimit{Burst: 1, Every: time.Hour}},
+	})
+	handler := agent.HTTPHandler()
+
+	first := httptest.NewRecorder()
+	handler.ServeHTTP(first, turnRequest(""))
+	if first.Code != http.StatusOK {
+		t.Fatalf("first status = %d, body = %s", first.Code, first.Body.String())
+	}
+
+	second := httptest.NewRecorder()
+	handler.ServeHTTP(second, turnRequest(""))
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("second status = %d, want %d", second.Code, http.StatusTooManyRequests)
+	}
+	if second.Header().Get("Retry-After") == "" {
+		t.Fatal("a rate-limited response must tell the caller when to retry")
+	}
+
+	// A distinct caller has its own budget rather than inheriting the denial.
+	distinct := turnRequest("")
+	distinct.Header.Set("X-Sirens-Caller", "second-client")
+	third := httptest.NewRecorder()
+	handler.ServeHTTP(third, distinct)
+	if third.Code != http.StatusOK {
+		t.Fatalf("distinct caller status = %d, body = %s", third.Code, third.Body.String())
+	}
+}
+
+// An accepted turn must return its queue slot, or the deployment stops
+// answering after MaxPending requests have merely completed.
+func TestHTTPTurnReleasesItsQueueSlot(t *testing.T) {
+	t.Parallel()
+	agent := turnAgent(Config{RateLimit: RateLimitPolicy{MaxPending: 1}})
+	handler := agent.HTTPHandler()
+
+	for attempt := 0; attempt < 4; attempt++ {
+		recorder := httptest.NewRecorder()
+		handler.ServeHTTP(recorder, turnRequest(""))
+		if recorder.Code != http.StatusOK {
+			t.Fatalf("attempt %d: status = %d, body = %s", attempt, recorder.Code, recorder.Body.String())
+		}
 	}
 }
 

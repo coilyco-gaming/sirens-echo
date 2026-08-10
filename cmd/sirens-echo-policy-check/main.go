@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
@@ -14,6 +15,25 @@ func main() {
 	} {
 		verify(path)
 	}
+	verifyAccessPolicy("docs/access-policy.reference.yaml")
+	// A deployment can point the gate at its own file, so an operator can check
+	// a candidate ConfigMap before the rollout that would otherwise fail closed.
+	if path := os.Getenv("SIRENS_ECHO_ACCESS_POLICY"); path != "" {
+		verifyAccessPolicy(path)
+	}
+}
+
+func verifyAccessPolicy(path string) {
+	policy, err := community.LoadAccessPolicy(path)
+	if err != nil {
+		log.Fatalf("access policy %s: %v", path, err)
+	}
+	fmt.Printf(
+		"verified access policy %s with %d guilds and %d direct-message accounts\n",
+		path,
+		len(policy.Guilds),
+		len(policy.DirectMessages.Allow),
+	)
 }
 
 func verify(path string) {

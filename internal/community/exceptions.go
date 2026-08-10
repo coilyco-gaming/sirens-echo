@@ -32,6 +32,8 @@ const (
 	exceptionHTTPTurnContentRequired
 	exceptionHTTPTurnInputTooLong
 	exceptionHTTPTurnHistoryTooLong
+	exceptionHTTPTurnUnauthorized
+	exceptionHTTPTurnRateLimited
 	exceptionCodeCount
 )
 
@@ -180,6 +182,18 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The HTTP turn history exceeded the context limit.",
 		stage:    "http",
 		outcome:  "history_too_long",
+	},
+	exceptionHTTPTurnUnauthorized: {
+		typeName: "sirens_echo.http.turn_unauthorized",
+		message:  "The HTTP turn credential is missing or incorrect.",
+		stage:    "http",
+		outcome:  "unauthorized",
+	},
+	exceptionHTTPTurnRateLimited: {
+		typeName: "sirens_echo.http.turn_rate_limited",
+		message:  "The HTTP turn exceeded the admission policy.",
+		stage:    "http",
+		outcome:  "rate_limited",
 	},
 }
 

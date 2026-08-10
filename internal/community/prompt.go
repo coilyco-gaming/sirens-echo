@@ -14,7 +14,9 @@ type TranscriptEntry struct {
 // BuildSystemPrompt combines the selected response style, local policy,
 // deployment boundary, and response protocol.
 func BuildSystemPrompt(definition Definition, localSkillpack string) string {
-	boundary := "This profile accepts tailnet-only HTTP requests."
+	// A definition naming no channel is transport-neutral, so the prompt must
+	// not assert an ingress the deployment did not select.
+	boundary := "This profile answers only through its configured deployment ingress, and every ingress uses the same response and action policy."
 	if definition.Channel != "" {
 		boundary = fmt.Sprintf(
 			"The deployment's Discord boundary, when Discord ingress is enabled, is %s. Tailnet-only HTTP ingress uses the same response and action policy.",

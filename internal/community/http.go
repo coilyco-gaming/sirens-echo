@@ -2,10 +2,13 @@ package community
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -37,6 +40,7 @@ type httpTurnResponse struct {
 func (a *Agent) HTTPHandler() http.Handler {
 	telemetry := telemetryOrNoop(a.telemetry)
 	a.telemetry = telemetry
+	a.ensureRuntimeDefaults()
 	mux := http.NewServeMux()
 	mux.HandleFunc(healthzPath, a.handleHealthz)
 	mux.HandleFunc(readyzPath, a.handleReadyz)
@@ -105,6 +109,17 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		)
 		return
 	}
+	if !a.authorizedHTTPTurn(request) {
+		writer.Header().Set("WWW-Authenticate", "Bearer")
+		a.writeHTTPError(
+			writer,
+			request,
+			http.StatusUnauthorized,
+			exceptionHTTPTurnUnauthorized,
+			"unauthorized",
+		)
+		return
+	}
 	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
 	var payload httpTurnRequest
 	decoder := json.NewDecoder(request.Body)
@@ -163,9 +178,34 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 			Content: payload.Content,
 		},
 	}
-	ctx, cancel := context.WithTimeout(request.Context(), a.cfg.RequestTimeout)
-	defer cancel()
-	if err := a.runSerialized(ctx, turn); err != nil {
+	// HTTP shares the Discord admission policy, so a scripted client cannot
+	// outspend the guilds it shares a deployment with.
+	decision := a.limiter.Admit(admissionRequest{
+		UserKey:    httpPrincipal(request),
+		ContextKey: transportHTTP,
+		Queued:     true,
+	})
+	if decision.Outcome.denied() {
+		a.telemetry.RecordAdmission(request.Context(), string(decision.Outcome), transportHTTP)
+		if decision.RetryAfter > 0 {
+			writer.Header().Set(
+				"Retry-After",
+				strconv.Itoa(int(math.Ceil(decision.RetryAfter.Seconds()))),
+			)
+		}
+		a.writeHTTPError(
+			writer,
+			request,
+			http.StatusTooManyRequests,
+			exceptionHTTPTurnRateLimited,
+			"rate limit reached",
+		)
+		return
+	}
+	defer a.limiter.Release()
+	a.telemetry.RecordAdmission(request.Context(), string(admissionAccepted), transportHTTP)
+
+	if err := a.runSerialized(request.Context(), turn); err != nil {
 		writeJSON(writer, http.StatusBadGateway, httpTurnResponse{
 			Reply: turn.reply,
 			Error: "turn failed",
@@ -173,6 +213,27 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		return
 	}
 	writeJSON(writer, http.StatusOK, httpTurnResponse{Reply: turn.reply})
+}
+
+// authorizedHTTPTurn checks the deployment's shared secret in constant time.
+// An empty configured token means loopback-only, which LoadConfig enforces.
+func (a *Agent) authorizedHTTPTurn(request *http.Request) bool {
+	if a.cfg.HTTPToken == "" {
+		return true
+	}
+	supplied := strings.TrimSpace(
+		strings.TrimPrefix(request.Header.Get("Authorization"), "Bearer "),
+	)
+	return subtle.ConstantTimeCompare([]byte(supplied), []byte(a.cfg.HTTPToken)) == 1
+}
+
+// httpPrincipal names the per-user limiter key for an HTTP caller. Callers that
+// identify themselves get their own budget; the rest share one.
+func httpPrincipal(request *http.Request) string {
+	if caller := strings.TrimSpace(request.Header.Get("X-Sirens-Caller")); caller != "" {
+		return "http:" + cleanTranscriptText(caller, 64)
+	}
+	return "http:anonymous"
 }
 
 func (a *Agent) writeHTTPError(

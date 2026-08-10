@@ -2,6 +2,7 @@ package community
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -21,6 +22,23 @@ const (
 	ResponseStyleSocial  = "social"
 )
 
+// Admission defaults are sized for a guild the operator does not moderate.
+// See docs/sirens-echo-admission.md.
+const (
+	defaultRequestTimeout = 3 * time.Minute
+	// defaultQueueTimeout bounds the wait for the execution slot. A longer
+	// wait answers a conversation that has already moved on.
+	defaultQueueTimeout = 30 * time.Second
+)
+
+var defaultRateLimitPolicy = RateLimitPolicy{
+	PerUser:     RateLimit{Burst: 3, Every: 30 * time.Second},
+	PerContext:  RateLimit{Burst: 10, Every: 10 * time.Second},
+	Global:      RateLimit{Burst: 20, Every: 5 * time.Second},
+	MaxPending:  8,
+	NotifyEvery: 5 * time.Minute,
+}
+
 // DefaultAgentProxyURL is a neutral fallback. Deployment owns the real
 // endpoint and sets AGENT_PROXY_URL.
 const DefaultAgentProxyURL = "http://agent-proxy:8080"
@@ -31,6 +49,12 @@ const DefaultOTLPEndpoint = "http://signoz-otel-collector.observability.svc.clus
 var (
 	mcpServerNamePattern   = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	environmentNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
+	discordSnowflake       = regexp.MustCompile(`^[0-9]{15,20}$`)
+	// channelLabelPattern matches the grounding validator's channel form, so a
+	// label cannot introduce a reference the model is rejected for repeating.
+	channelLabelPattern = regexp.MustCompile(`^#[A-Za-z_][A-Za-z0-9_-]*$`)
+	// rateLimitPattern is "<burst>/<refill interval for one token>".
+	rateLimitPattern = regexp.MustCompile(`^([0-9]+)/(.+)$`)
 )
 
 // MCPServerDefinition is one model tool surface selected for Sirens Echo.
@@ -55,17 +79,33 @@ type Definition struct {
 
 // Config combines the source-controlled definition with deployment secrets.
 type Config struct {
-	Definition       Definition
-	DefinitionPath   string
-	InstanceName     string
-	DiscordEnabled   bool
-	DiscordToken     string
-	DiscordChannelID string
+	Definition     Definition
+	DefinitionPath string
+	InstanceName   string
+	DiscordEnabled bool
+	DiscordToken   string
+	// DiscordChannelIDs are the channels that may summon this deployment, plus
+	// their threads. Channel IDs are globally unique, so the list spans guilds.
+	DiscordChannelIDs []string
+	// DiscordGuildIDs optionally restricts which guilds may summon at all.
+	// Empty means every guild the bot joined, still bounded by the channels.
+	DiscordGuildIDs []string
+	// DiscordDMEnabled admits direct messages. Off by default, because a
+	// direct message has no guild moderation behind it.
+	DiscordDMEnabled bool
 	AgentProxyURL    string
 	AgentProxyModel  string
 	OTLPEndpoint     string
 	HTTPListenAddr   string
+	// HTTPToken is the shared secret for POST /v1/turn, mandatory whenever the
+	// listener is not loopback.
+	HTTPToken string
+	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
+	// synthesizes the equivalent from the Discord environment variables.
+	AccessPolicyPath string
 	RequestTimeout   time.Duration
+	QueueTimeout     time.Duration
+	RateLimit        RateLimitPolicy
 }
 
 // LoadConfig loads the Sirens Echo deployment from environment and its
@@ -80,31 +120,72 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_ENABLED: %w", err)
 	}
+	dmEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_DM_ENABLED"), false)
+	if err != nil {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_DM_ENABLED: %w", err)
+	}
+	requestTimeout, err := durationOrDefault(
+		os.Getenv("SIRENS_ECHO_REQUEST_TIMEOUT"),
+		defaultRequestTimeout,
+	)
+	if err != nil {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_REQUEST_TIMEOUT: %w", err)
+	}
+	queueTimeout, err := durationOrDefault(
+		os.Getenv("SIRENS_ECHO_QUEUE_TIMEOUT"),
+		defaultQueueTimeout,
+	)
+	if err != nil {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_QUEUE_TIMEOUT: %w", err)
+	}
+	rateLimit, err := loadRateLimitPolicy()
+	if err != nil {
+		return Config{}, err
+	}
 	cfg := Config{
-		Definition:       definition,
-		DefinitionPath:   definitionPath,
-		InstanceName:     valueOrDefault(os.Getenv("SIRENS_ECHO_INSTANCE"), defaultInstanceName),
-		DiscordEnabled:   discordEnabled,
-		DiscordToken:     strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
-		DiscordChannelID: strings.TrimSpace(os.Getenv("DISCORD_CHANNEL_ID")),
-		AgentProxyURL:    valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
-		AgentProxyModel:  strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
-		OTLPEndpoint:     valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
-		HTTPListenAddr:   valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
-		RequestTimeout:   3 * time.Minute,
+		Definition:        definition,
+		DefinitionPath:    definitionPath,
+		InstanceName:      valueOrDefault(os.Getenv("SIRENS_ECHO_INSTANCE"), defaultInstanceName),
+		DiscordEnabled:    discordEnabled,
+		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
+		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
+		DiscordGuildIDs:   splitList(os.Getenv("DISCORD_GUILD_IDS")),
+		DiscordDMEnabled:  dmEnabled,
+		AgentProxyURL:     valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
+		AgentProxyModel:   strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
+		OTLPEndpoint:      valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
+		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
+		HTTPToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
+		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
+		RequestTimeout:    requestTimeout,
+		QueueTimeout:      queueTimeout,
+		RateLimit:         rateLimit,
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_INSTANCE must be a lowercase service name")
 	}
-	if cfg.DiscordEnabled && cfg.Definition.Channel != "#bots" {
-		return Config{}, fmt.Errorf("Discord-enabled definition channel must be #bots")
+	for _, id := range append(append([]string{}, cfg.DiscordChannelIDs...), cfg.DiscordGuildIDs...) {
+		if !discordSnowflake.MatchString(id) {
+			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
+		}
+	}
+	// Derived from the bind address rather than left for the operator to
+	// remember, because the listener is otherwise unauthenticated spend.
+	if !loopbackListener(cfg.HTTPListenAddr) && cfg.HTTPToken == "" {
+		return Config{}, fmt.Errorf(
+			"SIRENS_ECHO_HTTP_TOKEN is required when SIRENS_ECHO_HTTP_ADDR (%s) is not loopback",
+			cfg.HTTPListenAddr,
+		)
 	}
 	missing := make([]string, 0, 5)
 	if cfg.DiscordEnabled {
 		if cfg.DiscordToken == "" {
 			missing = append(missing, "DISCORD_TOKEN")
 		}
-		if cfg.DiscordChannelID == "" {
+		// The access policy file supplies scope on its own. Otherwise a
+		// channel list is required unless direct messages are the only ingress.
+		if cfg.AccessPolicyPath == "" &&
+			len(cfg.DiscordChannelIDs) == 0 && !cfg.DiscordDMEnabled {
 			missing = append(missing, "DISCORD_CHANNEL_ID")
 		}
 	}
@@ -147,8 +228,13 @@ func LoadDefinition(path string) (Definition, error) {
 	if definition.Identity == "" || definition.AuditRole == "" {
 		return Definition{}, fmt.Errorf("agent definition requires identity and audit_role")
 	}
-	if definition.Channel != "" && definition.Channel != "#bots" {
-		return Definition{}, fmt.Errorf("agent definition channel must be empty or #bots")
+	// Channel is the prompt's boundary label, not the routing key. Deployment
+	// owns routing through DISCORD_CHANNEL_ID.
+	if definition.Channel != "" && !channelLabelPattern.MatchString(definition.Channel) {
+		return Definition{}, fmt.Errorf(
+			"agent definition channel must be empty or a #channel-name, got %q",
+			definition.Channel,
+		)
 	}
 	if definition.ResponseStyle != ResponseStyleNeutral &&
 		definition.ResponseStyle != ResponseStyleSocial {
@@ -202,6 +288,119 @@ func valueOrDefault(value, fallback string) string {
 		return trimmed
 	}
 	return fallback
+}
+
+// splitList parses a comma-separated deployment list, dropping empty entries so
+// a trailing comma is not a configuration error.
+func splitList(value string) []string {
+	items := make([]string, 0, 4)
+	for _, part := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			items = append(items, trimmed)
+		}
+	}
+	return items
+}
+
+// loopbackListener reports whether the bind address is reachable only from the
+// process's own host. An unparseable or wildcard host is treated as reachable.
+func loopbackListener(addr string) bool {
+	host, _, err := net.SplitHostPort(strings.TrimSpace(addr))
+	if err != nil {
+		return false
+	}
+	if host == "localhost" {
+		return true
+	}
+	parsed := net.ParseIP(host)
+	return parsed != nil && parsed.IsLoopback()
+}
+
+func durationOrDefault(value string, fallback time.Duration) (time.Duration, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return fallback, nil
+	}
+	parsed, err := time.ParseDuration(trimmed)
+	if err != nil {
+		return 0, fmt.Errorf("must be a Go duration such as 90s")
+	}
+	if parsed <= 0 {
+		return 0, fmt.Errorf("must be greater than zero")
+	}
+	return parsed, nil
+}
+
+// loadRateLimitPolicy overlays deployment overrides onto the packaged
+// defaults. See docs/sirens-echo-admission.md for the format.
+func loadRateLimitPolicy() (RateLimitPolicy, error) {
+	policy := defaultRateLimitPolicy
+	tiers := []struct {
+		name   string
+		target *RateLimit
+	}{
+		{"SIRENS_ECHO_RATE_USER", &policy.PerUser},
+		{"SIRENS_ECHO_RATE_CONTEXT", &policy.PerContext},
+		{"SIRENS_ECHO_RATE_GLOBAL", &policy.Global},
+	}
+	for _, tier := range tiers {
+		limit, ok, err := parseRateLimit(os.Getenv(tier.name))
+		if err != nil {
+			return RateLimitPolicy{}, fmt.Errorf("%s: %w", tier.name, err)
+		}
+		if ok {
+			*tier.target = limit
+		}
+	}
+	pending, err := intOrDefault(os.Getenv("SIRENS_ECHO_MAX_PENDING"), policy.MaxPending)
+	if err != nil {
+		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_MAX_PENDING: %w", err)
+	}
+	policy.MaxPending = pending
+	notify, err := durationOrDefault(
+		os.Getenv("SIRENS_ECHO_RATE_NOTIFY_EVERY"),
+		policy.NotifyEvery,
+	)
+	if err != nil {
+		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_RATE_NOTIFY_EVERY: %w", err)
+	}
+	policy.NotifyEvery = notify
+	return policy, nil
+}
+
+func parseRateLimit(value string) (RateLimit, bool, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return RateLimit{}, false, nil
+	}
+	if trimmed == "off" {
+		return RateLimit{}, true, nil
+	}
+	match := rateLimitPattern.FindStringSubmatch(trimmed)
+	if match == nil {
+		return RateLimit{}, false, fmt.Errorf(`must be "<burst>/<interval>" such as 3/30s, or "off"`)
+	}
+	burst, err := strconv.Atoi(match[1])
+	if err != nil || burst < 1 {
+		return RateLimit{}, false, fmt.Errorf("burst must be a positive integer")
+	}
+	every, err := time.ParseDuration(match[2])
+	if err != nil || every <= 0 {
+		return RateLimit{}, false, fmt.Errorf("interval must be a positive Go duration such as 30s")
+	}
+	return RateLimit{Burst: burst, Every: every}, true, nil
+}
+
+func intOrDefault(value string, fallback int) (int, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return fallback, nil
+	}
+	parsed, err := strconv.Atoi(trimmed)
+	if err != nil || parsed < 0 {
+		return 0, fmt.Errorf("must be a non-negative integer")
+	}
+	return parsed, nil
 }
 
 func boolOrDefault(value string, fallback bool) (bool, error) {

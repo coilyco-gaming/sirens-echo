@@ -38,6 +38,11 @@ type Agent struct {
 	slots             chan struct{}
 	seen              *seenMessages
 	scope             *channelScope
+	access            *AccessPolicy
+	limiter           *rateLimiter
+	// lookups bounds Discord REST calls forced during gate evaluation, so an
+	// unscoped channel cannot make the process call the API per message.
+	lookups *rateLimiter
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -66,6 +71,13 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		session.Identify.Intents = discordgo.IntentsGuilds |
 			discordgo.IntentsGuildMessages |
 			discordgo.IntentsMessageContent
+		if cfg.DiscordDMEnabled {
+			session.Identify.Intents |= discordgo.IntentsDirectMessages
+		}
+	}
+	accessPolicy, err := resolveAccessPolicy(cfg)
+	if err != nil {
+		return nil, err
 	}
 	telemetry = telemetryOrNoop(telemetry)
 	httpClient := &http.Client{
@@ -116,12 +128,56 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		slots:             make(chan struct{}, 1),
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
+		access:            accessPolicy,
 	}
+	agent.ensureRuntimeDefaults()
 	if session != nil {
 		session.AddHandler(agent.onReady)
 		session.AddHandler(agent.onMessage)
 	}
 	return agent, nil
+}
+
+// defaultLookupPolicy bounds Discord REST calls made while evaluating gates.
+// See docs/sirens-echo-admission.md.
+var defaultLookupPolicy = RateLimitPolicy{
+	PerContext: RateLimit{Burst: 30, Every: time.Second},
+	Global:     RateLimit{Burst: 60, Every: 500 * time.Millisecond},
+}
+
+// ensureRuntimeDefaults fills fields a hand-constructed Agent leaves zero. A
+// zero timeout expires on creation and a nil limiter panics.
+func (a *Agent) ensureRuntimeDefaults() {
+	if a.cfg.RequestTimeout <= 0 {
+		a.cfg.RequestTimeout = defaultRequestTimeout
+	}
+	if a.cfg.QueueTimeout <= 0 {
+		a.cfg.QueueTimeout = defaultQueueTimeout
+	}
+	if a.limiter == nil {
+		a.limiter = newRateLimiter(a.cfg.RateLimit, defaultRateLimiterCapacity)
+	}
+	if a.lookups == nil {
+		a.lookups = newRateLimiter(defaultLookupPolicy, 512)
+	}
+	if a.scope == nil {
+		a.scope = newChannelScope(256)
+	}
+	if a.seen == nil {
+		a.seen = newSeenMessages(1024)
+	}
+	if a.access == nil {
+		a.access = synthesizeAccessPolicy(a.cfg)
+	}
+}
+
+// resolveAccessPolicy prefers the deployment's tracked allowlist file and falls
+// back to the equivalent policy built from the legacy environment variables.
+func resolveAccessPolicy(cfg Config) (*AccessPolicy, error) {
+	if cfg.AccessPolicyPath == "" {
+		return synthesizeAccessPolicy(cfg), nil
+	}
+	return LoadAccessPolicy(cfg.AccessPolicyPath)
 }
 
 func mcpServerURL(definition Definition, name string) (string, error) {
@@ -178,41 +234,120 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 	)
 }
 
-func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCreate) {
-	message := event.Message
-	if message == nil ||
-		message.GuildID == "" ||
-		message.Author == nil ||
-		message.Author.Bot ||
-		session.State == nil ||
-		session.State.User == nil ||
-		message.Author.ID == session.State.User.ID {
-		return
-	}
-	if !a.inScope(session, message.ChannelID) {
-		return
-	}
-	if !a.isSummoned(session, message) || !a.seen.Add(message.ID) {
-		return
-	}
-	go a.handleMessage(session, message)
+// summonContext is the origin of one summon, and its key is the admission
+// identity shared by everything from that guild or direct-message channel.
+type summonContext struct {
+	Kind      string
+	GuildID   string
+	ChannelID string
 }
 
-func (a *Agent) inScope(session *discordgo.Session, channelID string) bool {
-	if channelID == "" {
+const (
+	contextKindGuild = "guild"
+	contextKindDM    = "dm"
+)
+
+// Key identifies the context for admission control. One guild shares one key,
+// so it cannot consume every other guild's budget.
+func (c summonContext) Key() string {
+	if c.Kind == contextKindDM {
+		return contextKindDM + ":" + c.ChannelID
+	}
+	return contextKindGuild + ":" + c.GuildID
+}
+
+func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCreate) {
+	message := event.Message
+	if !eligibleMessage(session, message) {
+		return
+	}
+	origin := summonContextFor(message)
+	// The whole allowlist decides from the payload already in memory, so a
+	// guild, member, or channel outside it costs nothing.
+	decision := a.access.Evaluate(origin, message.Author.ID, memberRoles(message), nil)
+	if !decision.allowed() && decision.Reason != accessNeedsThreadRef {
+		a.telemetry.RecordAccess(context.Background(), string(decision.Reason))
+		return
+	}
+	summoned, referenceLookup := summonedLocally(session, message)
+	if !summoned && !referenceLookup {
+		return
+	}
+	threadLookup := false
+	if decision.Reason == accessNeedsThreadRef {
+		cached, known := a.scope.Get(origin.ChannelID)
+		if known && !cached {
+			a.telemetry.RecordAccess(context.Background(), string(accessDeniedChannel))
+			return
+		}
+		threadLookup = !known
+	}
+	if threadLookup || (!summoned && referenceLookup) {
+		if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
+			a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
+			return
+		}
+	}
+	if threadLookup && !a.resolveScope(session, origin, decision.Guild) {
+		a.telemetry.RecordAccess(context.Background(), string(accessDeniedChannel))
+		return
+	}
+	if !summoned && !summonedByReference(session, message) {
+		return
+	}
+	if !a.seen.Add(message.ID) {
+		return
+	}
+	a.telemetry.RecordAccess(context.Background(), string(accessAllowed))
+	go a.handleMessage(session, message, origin, decision.Guild.Overrides())
+}
+
+// eligibleMessage rejects the payloads that can never be a member summon.
+func eligibleMessage(session *discordgo.Session, message *discordgo.Message) bool {
+	return message != nil &&
+		message.Author != nil &&
+		!message.Author.Bot &&
+		session.State != nil &&
+		session.State.User != nil &&
+		message.Author.ID != session.State.User.ID &&
+		message.ChannelID != ""
+}
+
+// memberRoles returns the author's guild roles, which arrive on the Gateway
+// payload. A role grant therefore costs no Discord API call.
+func memberRoles(message *discordgo.Message) []string {
+	if message.Member == nil {
+		return nil
+	}
+	return message.Member.Roles
+}
+
+func summonContextFor(message *discordgo.Message) summonContext {
+	if message.GuildID == "" {
+		return summonContext{Kind: contextKindDM, ChannelID: message.ChannelID}
+	}
+	return summonContext{
+		Kind:      contextKindGuild,
+		GuildID:   message.GuildID,
+		ChannelID: message.ChannelID,
+	}
+}
+
+// resolveScope answers an unknown channel by looking it up and caches both
+// outcomes, so a busy unscoped channel does not repeat the lookup per message.
+func (a *Agent) resolveScope(
+	session *discordgo.Session,
+	origin summonContext,
+	guild *GuildAccess,
+) bool {
+	channel := resolveChannel(session, origin.ChannelID)
+	if channel == nil {
+		// Not cached: the failure may be transient, and caching would deafen a
+		// real channel until restart.
 		return false
 	}
-	if channelID == a.cfg.DiscordChannelID {
-		return true
-	}
-	if cached, known := a.scope.Get(channelID); known {
-		return cached
-	}
-	allowed := false
-	if channel := resolveChannel(session, channelID); channel != nil {
-		allowed = channel.IsThread() && channel.ParentID == a.cfg.DiscordChannelID
-		a.scope.Set(channelID, allowed)
-	}
+	allowed := channel.IsThread() && guild.PermitsChannel(channel.ParentID)
+	a.scope.Set(origin.ChannelID, allowed)
 	return allowed
 }
 
@@ -229,29 +364,72 @@ func resolveChannel(session *discordgo.Session, channelID string) *discordgo.Cha
 	return channel
 }
 
-func (a *Agent) isSummoned(session *discordgo.Session, message *discordgo.Message) bool {
+// summonedLocally decides summoning from the Gateway payload, and reports
+// whether an unresolved reply reference could still make it a summon.
+func summonedLocally(
+	session *discordgo.Session,
+	message *discordgo.Message,
+) (summoned bool, referenceLookup bool) {
 	botID := session.State.User.ID
 	for _, mention := range message.Mentions {
 		if mention.ID == botID {
-			return true
+			return true, false
 		}
 	}
 	if message.ReferencedMessage != nil && message.ReferencedMessage.Author != nil {
-		return message.ReferencedMessage.Author.ID == botID
+		return message.ReferencedMessage.Author.ID == botID, false
 	}
 	if message.MessageReference == nil || message.MessageReference.MessageID == "" {
-		return false
+		return false, false
 	}
-	referenced, err := session.ChannelMessage(message.ChannelID, message.MessageReference.MessageID)
-	return err == nil && referenced.Author != nil && referenced.Author.ID == botID
+	return false, true
 }
 
-func (a *Agent) handleMessage(session *discordgo.Session, message *discordgo.Message) {
-	_ = session.ChannelTyping(message.ChannelID)
-	ctx, cancel := context.WithTimeout(context.Background(), a.cfg.RequestTimeout)
-	defer cancel()
+func summonedByReference(session *discordgo.Session, message *discordgo.Message) bool {
+	referenced, err := session.ChannelMessage(
+		message.ChannelID,
+		message.MessageReference.MessageID,
+	)
+	return err == nil &&
+		referenced != nil &&
+		referenced.Author != nil &&
+		referenced.Author.ID == session.State.User.ID
+}
+
+func (a *Agent) handleMessage(
+	session *discordgo.Session,
+	message *discordgo.Message,
+	origin summonContext,
+	override *RateLimitOverride,
+) {
+	// A panic in one turn must not take down a deployment serving other
+	// guilds, so the handler contains its own failure.
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			a.telemetry.RecordFailure(context.Background(), "panic")
+			a.telemetry.Error(
+				context.Background(),
+				"discord.turn.panicked",
+				slog.String("error_type", "turn_panicked"),
+			)
+		}
+	}()
+
+	decision := a.limiter.Admit(admissionRequest{
+		UserKey:    message.Author.ID,
+		ContextKey: origin.Key(),
+		Queued:     true,
+		Override:   override,
+	})
+	if decision.Outcome.denied() {
+		a.onDenied(session, message, origin, decision)
+		return
+	}
+	defer a.limiter.Release()
+	a.telemetry.RecordAdmission(context.Background(), string(admissionAccepted), transportDiscord)
+
 	receiveCtx, receiveSpan := a.telemetry.StartSpan(
-		ctx,
+		context.Background(),
 		"discord.receive",
 		discordMessageSpanAttributes(
 			"process",
@@ -272,10 +450,92 @@ func (a *Agent) handleMessage(session *discordgo.Session, message *discordgo.Mes
 	}
 }
 
+// onDenied records a refused summon and tells the member at most once per
+// notify window, so a flooder gains no amplifier.
+func (a *Agent) onDenied(
+	session *discordgo.Session,
+	message *discordgo.Message,
+	origin summonContext,
+	decision admissionDecision,
+) {
+	ctx := context.Background()
+	a.telemetry.RecordAdmission(ctx, string(decision.Outcome), transportDiscord)
+	a.telemetry.Info(
+		ctx,
+		"turn.input.denied",
+		slog.String("transport", transportDiscord),
+		slog.String("outcome", string(decision.Outcome)),
+		slog.String("context_kind", origin.Kind),
+		slog.Bool("notified", decision.Notify),
+	)
+	if !decision.Notify {
+		return
+	}
+	turn := &discordMessageTurn{session: session, message: message}
+	if err := turn.Reply(ctx, cooldownNotice(decision.RetryAfter)); err != nil {
+		a.telemetry.RecordFailure(ctx, "reply")
+	}
+}
+
+func cooldownNotice(retryAfter time.Duration) string {
+	if retryAfter < time.Second {
+		return "Rate limit reached. Try again shortly."
+	}
+	return fmt.Sprintf(
+		"Rate limit reached. Try again in about %s.",
+		retryAfter.Round(time.Second),
+	)
+}
+
+// runSerialized waits for the execution slot, then runs the turn. The request
+// budget starts after admission, not on arrival.
 func (a *Agent) runSerialized(ctx context.Context, turn turnIO) error {
-	a.slots <- struct{}{}
+	queueCtx, cancelQueue := context.WithTimeout(ctx, a.cfg.QueueTimeout)
+	defer cancelQueue()
+	select {
+	case a.slots <- struct{}{}:
+	case <-queueCtx.Done():
+		a.telemetry.RecordAdmission(ctx, string(admissionQueue), turn.Transport())
+		return fmt.Errorf("turn waited longer than %s for the execution slot", a.cfg.QueueTimeout)
+	}
 	defer func() { <-a.slots }()
-	return a.runTurn(ctx, turn)
+
+	turnCtx, cancel := context.WithTimeout(ctx, a.cfg.RequestTimeout)
+	defer cancel()
+	// Typing starts when the turn runs. Started at queue time it would expire
+	// before the reply.
+	if notifier, ok := turn.(typingNotifier); ok {
+		stopTyping := startTyping(turnCtx, notifier)
+		defer stopTyping()
+	}
+	return a.runTurn(turnCtx, turn)
+}
+
+// typingNotifier is implemented by transports that can show progress.
+type typingNotifier interface {
+	Typing() error
+}
+
+// startTyping holds the indicator for the turn. Discord expires it after
+// roughly ten seconds, so a long model call needs it refreshed.
+func startTyping(ctx context.Context, notifier typingNotifier) func() {
+	_ = notifier.Typing()
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(8 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				_ = notifier.Typing()
+			}
+		}
+	}()
+	return func() { close(done) }
 }
 
 type turnIO interface {
@@ -486,6 +746,11 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 		})
 	}
 	return history, nil
+}
+
+// Typing shows the Discord indicator for this turn's channel.
+func (t *discordMessageTurn) Typing() error {
+	return t.session.ChannelTyping(t.message.ChannelID)
 }
 
 func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
