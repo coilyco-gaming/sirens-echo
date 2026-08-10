@@ -8,6 +8,8 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
+// This binary runs during the image build. It may only read paths the
+// Dockerfile copies into the build stage.
 func main() {
 	for _, path := range []string{
 		"agent/sirens-echo.yaml",
