@@ -8,8 +8,8 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
-// This binary runs during the image build, where the context excludes docs,
-// assets, and scripts. It may only read paths the Dockerfile copies.
+// This binary runs during the image build. It may only read paths the
+// Dockerfile copies into the build stage.
 func main() {
 	for _, path := range []string{
 		"agent/sirens-echo.yaml",
@@ -17,6 +17,7 @@ func main() {
 	} {
 		verify(path)
 	}
+	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
 	if path := os.Getenv("SIRENS_ECHO_ACCESS_POLICY"); path != "" {

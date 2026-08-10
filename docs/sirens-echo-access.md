@@ -59,9 +59,9 @@ union, so either alone is a complete grant.
 A missing file, an unparseable file, an unknown field, a non-snowflake ID, a
 duplicate guild, a guild that allows no channel, and a guild that allows no
 member are all startup failures. Absent configuration never widens the surface.
-`ward exec test` validates the tracked reference copy and proves policy-check
-runs with only the files the image carries, and `ward exec policy-check`
-validates `SIRENS_ECHO_ACCESS_POLICY` when set.
+`ward exec policy-check` validates the tracked reference copy and validates
+`SIRENS_ECHO_ACCESS_POLICY` when set. The image build runs the same check, and
+`ward exec test` proves it passes with only the files the build context carries.
 
 ## Without the file
 

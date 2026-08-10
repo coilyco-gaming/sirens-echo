@@ -4,8 +4,9 @@
 
 Sirens Echo has no host-local command dependency. The root `Dockerfile` builds
 `cmd/sirens-echo` on the full AOS release image. During the build, the tracked
-definitions and repo-local policy roots are loaded and checked for their
-selected contracts. The final non-root image contains the full AOS runtime
+definitions, repo-local policy roots, and the reference access policy are loaded
+and checked for their selected contracts. A pull request builds the same image
+without publishing, so a build-context change fails before it reaches main. The final non-root image contains the full AOS runtime
 substrate, both source-controlled definitions, the Sirens policy roots, and the
 general CoilyCo policy root. It loads no AOS or Agent Compose context and does
 not add lore.

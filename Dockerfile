@@ -10,6 +10,7 @@ COPY agent ./agent
 COPY .agents/skills/sirens-echo-community ./.agents/skills/sirens-echo-community
 COPY .agents/skills/sirens-echo-knowledge ./.agents/skills/sirens-echo-knowledge
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
+COPY docs ./docs
 RUN CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo ./cmd/sirens-echo \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-policy-check ./cmd/sirens-echo-policy-check \
     && /out/sirens-echo-policy-check

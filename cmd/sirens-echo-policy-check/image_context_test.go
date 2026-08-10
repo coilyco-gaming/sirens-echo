@@ -15,6 +15,7 @@ var imageContextPaths = []string{
 	filepath.Join(".agents", "skills", "sirens-echo-community"),
 	filepath.Join(".agents", "skills", "sirens-echo-knowledge"),
 	filepath.Join(".agents", "skills", "coilyco-general"),
+	"docs",
 }
 
 // The publish job that catches a missing path runs only after a merge to main,
