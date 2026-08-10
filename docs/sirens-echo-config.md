@@ -12,14 +12,13 @@ prompt.
 
 Agent Proxy is the inference transport. Deployment reads the selected
 `<namespace>/<alias>` route from `/sirens-echo/agent-proxy-model` and passes it
-through without a source default. Echo uses the same value for inference and
-non-generating route readiness.
+through without a source default, and Echo uses that value for inference and
+route readiness alike.
 
 Every model round requests OpenAI-compatible JSON object mode at temperature
-zero. The runtime supplies the selected repo-local policy, untrusted bounded
-history, and the current request. Echo attempts one same-conversation,
-style-aware repair with tools disabled, then fails closed before Discord or an
-automatic issue write.
+zero, over the selected repo-local policy, untrusted bounded history, and the
+current request. Echo attempts one same-conversation, style-aware repair with
+tools disabled, then fails closed before Discord or an automatic issue write.
 
 `SIRENS_ECHO_DEFINITION` selects the tracked definition. Discord ingress is on
 by default. `SIRENS_ECHO_DISCORD_ENABLED=false` removes the token and channel
@@ -37,10 +36,12 @@ empty channel is transport-neutral and valid for Discord and HTTP alike, because
 deployment owns routing. An empty MCP roster is valid, and `issue_tracker` must
 name a configured MCP server when present.
 
-`DISCORD_CHANNEL_ID` takes a comma-separated list, `DISCORD_GUILD_IDS`
-restricts which guilds may summon, and `SIRENS_ECHO_DISCORD_DM_ENABLED` opts
-into direct messages. Every ID is validated as a snowflake at startup. See
-[multiple Discord contexts](sirens-echo-contexts.md).
+`SIRENS_ECHO_ACCESS_POLICY` names the deployment's tracked allowlist file,
+which stacks guild, channel, member, and role grants with a deny list. Without
+it, `DISCORD_CHANNEL_ID`, `DISCORD_GUILD_IDS`, and
+`SIRENS_ECHO_DISCORD_DM_ENABLED` synthesize the equivalent. See
+[the access policy](sirens-echo-access.md) and
+[contexts](sirens-echo-contexts.md).
 
 Admission limits, queue depth, and both turn timeouts are configurable. See
 [admission](sirens-echo-admission.md) and [HTTP](sirens-echo-http.md).

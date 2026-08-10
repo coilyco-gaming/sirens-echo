@@ -37,6 +37,7 @@ type Telemetry struct {
 	modelCalls           metric.Int64Counter
 	toolCalls            metric.Int64Counter
 	admissions           metric.Int64Counter
+	accessChecks         metric.Int64Counter
 	failures             metric.Int64Counter
 	healthRequests       metric.Int64Counter
 	readinessDuration    metric.Float64Histogram
@@ -165,6 +166,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	accessChecks, err := meter.Int64Counter("sirens_echo.access.checks")
+	if err != nil {
+		return nil, err
+	}
 	failures, err := meter.Int64Counter("sirens_echo.failures")
 	if err != nil {
 		return nil, err
@@ -202,6 +207,7 @@ func newTelemetry(
 		modelCalls:           modelCalls,
 		toolCalls:            toolCalls,
 		admissions:           admissions,
+		accessChecks:         accessChecks,
 		failures:             failures,
 		healthRequests:       healthRequests,
 		readinessDuration:    readinessDuration,
@@ -311,6 +317,12 @@ func (t *Telemetry) RecordAdmission(ctx context.Context, outcome, transport stri
 			attribute.String("transport", transport),
 		),
 	)
+}
+
+// RecordAccess records one allowlist verdict. The reason is a closed set, so
+// no guild, channel, or member identifier reaches a metric label.
+func (t *Telemetry) RecordAccess(ctx context.Context, reason string) {
+	t.accessChecks.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
 }
 
 // RecordFailure records the stage where an accepted turn failed.

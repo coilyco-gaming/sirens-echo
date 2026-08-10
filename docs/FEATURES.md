@@ -8,8 +8,8 @@
 - Definition-selected history budget, skill roots, MCP roster, issue tracker
 - Mention-or-reply invocation with channel, thread, guild, author, and
   duplicate gates
-- Multi-channel scope, guild allowlist, and opt-in direct messages in one
-  process
+- Git-tracked access policy stacking guild, channel, user, and role grants
+  with a deny list, per-guild rate overrides, and CI validation
 - Per-user, per-context, and global admission control with a bounded queue,
   one cooldown notice per window, and bounded lookups
 - Serialized turns with bounded Discord-history continuity
@@ -40,9 +40,9 @@
 - Offline harness and real MCP fixtures plus a non-mutating live gate
 
 See [the service](sirens-echo.md), [profiles](response-profiles.md),
-[MCP tools](sirens-echo-tools.md), [admission](sirens-echo-admission.md),
-[contexts](sirens-echo-contexts.md), [HTTP](sirens-echo-http.md), and
-[rollout](sirens-echo-rollout.md).
+[MCP tools](sirens-echo-tools.md), [access](sirens-echo-access.md),
+[admission](sirens-echo-admission.md), [contexts](sirens-echo-contexts.md),
+[HTTP](sirens-echo-http.md), and [rollout](sirens-echo-rollout.md).
 
 ## Configuration and deployment
 

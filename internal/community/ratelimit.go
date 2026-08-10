@@ -86,6 +86,13 @@ func newRateLimiter(policy RateLimitPolicy, capacity int) *rateLimiter {
 	}
 }
 
+// RateLimitOverride tightens selected tiers for one context. A nil field keeps
+// the deployment default for that tier.
+type RateLimitOverride struct {
+	PerUser    *RateLimit
+	PerContext *RateLimit
+}
+
 // admissionRequest identifies the principal and context behind one summon.
 type admissionRequest struct {
 	// UserKey identifies the requesting account. Empty disables per-user
@@ -96,6 +103,9 @@ type admissionRequest struct {
 	// Queued marks a request that occupies the execution slot, so it counts
 	// against MaxPending and must be released. Cheap gates leave it false.
 	Queued bool
+	// Override tightens selected tiers for this summon, from the access
+	// policy's per-guild rate_limit.
+	Override *RateLimitOverride
 }
 
 // admissionDecision is the limiter's verdict plus whether this caller should be
@@ -121,12 +131,21 @@ func (l *rateLimiter) Admit(request admissionRequest) admissionDecision {
 		limit   RateLimit
 		outcome admissionOutcome
 	}
+	perUser, perContext := l.policy.PerUser, l.policy.PerContext
+	if request.Override != nil {
+		if request.Override.PerUser != nil {
+			perUser = *request.Override.PerUser
+		}
+		if request.Override.PerContext != nil {
+			perContext = *request.Override.PerContext
+		}
+	}
 	candidates := make([]candidate, 0, 3)
 	if request.UserKey != "" {
-		candidates = append(candidates, candidate{"user:" + request.UserKey, l.policy.PerUser, admissionUser})
+		candidates = append(candidates, candidate{"user:" + request.UserKey, perUser, admissionUser})
 	}
 	if request.ContextKey != "" {
-		candidates = append(candidates, candidate{"context:" + request.ContextKey, l.policy.PerContext, admissionContext})
+		candidates = append(candidates, candidate{"context:" + request.ContextKey, perContext, admissionContext})
 	}
 	candidates = append(candidates, candidate{"global", l.policy.Global, admissionGlobal})
 

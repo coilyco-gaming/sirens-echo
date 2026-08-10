@@ -99,10 +99,13 @@ type Config struct {
 	HTTPListenAddr   string
 	// HTTPToken is the shared secret for POST /v1/turn, mandatory whenever the
 	// listener is not loopback.
-	HTTPToken      string
-	RequestTimeout time.Duration
-	QueueTimeout   time.Duration
-	RateLimit      RateLimitPolicy
+	HTTPToken string
+	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
+	// synthesizes the equivalent from the Discord environment variables.
+	AccessPolicyPath string
+	RequestTimeout   time.Duration
+	QueueTimeout     time.Duration
+	RateLimit        RateLimitPolicy
 }
 
 // LoadConfig loads the Sirens Echo deployment from environment and its
@@ -153,6 +156,7 @@ func LoadConfig() (Config, error) {
 		OTLPEndpoint:      valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
 		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
 		HTTPToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
+		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		RequestTimeout:    requestTimeout,
 		QueueTimeout:      queueTimeout,
 		RateLimit:         rateLimit,
@@ -178,8 +182,10 @@ func LoadConfig() (Config, error) {
 		if cfg.DiscordToken == "" {
 			missing = append(missing, "DISCORD_TOKEN")
 		}
-		// A direct-message-only deployment has no channel to name.
-		if len(cfg.DiscordChannelIDs) == 0 && !cfg.DiscordDMEnabled {
+		// The access policy file supplies scope on its own. Otherwise a
+		// channel list is required unless direct messages are the only ingress.
+		if cfg.AccessPolicyPath == "" &&
+			len(cfg.DiscordChannelIDs) == 0 && !cfg.DiscordDMEnabled {
 			missing = append(missing, "DISCORD_CHANNEL_ID")
 		}
 	}

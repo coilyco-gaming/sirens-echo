@@ -10,13 +10,13 @@ deployment remains Sirens Echo.
 
 - Only a mention or reply in a configured channel, or a thread under one,
   invokes the service. Everything else is ignored, direct messages included.
-- Per-user, per-guild, and global admission limits bound member spend.
+- A git-tracked access policy stacks guild, channel, user, and role grants
+  with a deny list. Per-user, per-guild, and global limits bound spend.
 - Replies disable all mentions. Twelve earlier messages give continuity.
 - A deterministic validator rejects greetings, emojis, banter, and sign-offs.
 - The tool roster exposes public Eco MCP and a private, repository-fixed
   Forgejo MCP.
-- Unanswered questions and corrections become sanitized Forgejo issues, and
-  metadata-only traces cover transport, model, and MCP work.
+- Unanswered questions and corrections become sanitized Forgejo issues.
 - The action surface stays repository-scoped, with no moderation or roles.
 
 No automatic memory. Guarded investigations use
@@ -73,7 +73,7 @@ owns the k3s Deployment, secrets, rollout, and rollback. See
 
 See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md),
 [.ward/ward.yaml](.ward/ward.yaml), [admission](docs/sirens-echo-admission.md),
-[contexts](docs/sirens-echo-contexts.md), [HTTP](docs/sirens-echo-http.md),
+[access](docs/sirens-echo-access.md), [HTTP](docs/sirens-echo-http.md),
 [health](docs/sirens-echo-health.md),
 [design](docs/harness-design-fundamentals.md), and
 [docs/deploy.md](docs/deploy.md).

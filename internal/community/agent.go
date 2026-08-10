@@ -38,8 +38,7 @@ type Agent struct {
 	slots             chan struct{}
 	seen              *seenMessages
 	scope             *channelScope
-	channels          map[string]struct{}
-	guilds            map[string]struct{}
+	access            *AccessPolicy
 	limiter           *rateLimiter
 	// lookups bounds Discord REST calls forced during gate evaluation, so an
 	// unscoped channel cannot make the process call the API per message.
@@ -75,6 +74,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		if cfg.DiscordDMEnabled {
 			session.Identify.Intents |= discordgo.IntentsDirectMessages
 		}
+	}
+	accessPolicy, err := resolveAccessPolicy(cfg)
+	if err != nil {
+		return nil, err
 	}
 	telemetry = telemetryOrNoop(telemetry)
 	httpClient := &http.Client{
@@ -125,8 +128,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		slots:             make(chan struct{}, 1),
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
-		channels:          idSet(cfg.DiscordChannelIDs),
-		guilds:            idSet(cfg.DiscordGuildIDs),
+		access:            accessPolicy,
 	}
 	agent.ensureRuntimeDefaults()
 	if session != nil {
@@ -164,6 +166,18 @@ func (a *Agent) ensureRuntimeDefaults() {
 	if a.seen == nil {
 		a.seen = newSeenMessages(1024)
 	}
+	if a.access == nil {
+		a.access = synthesizeAccessPolicy(a.cfg)
+	}
+}
+
+// resolveAccessPolicy prefers the deployment's tracked allowlist file and falls
+// back to the equivalent policy built from the legacy environment variables.
+func resolveAccessPolicy(cfg Config) (*AccessPolicy, error) {
+	if cfg.AccessPolicyPath == "" {
+		return synthesizeAccessPolicy(cfg), nil
+	}
+	return LoadAccessPolicy(cfg.AccessPolicyPath)
 }
 
 func mcpServerURL(definition Definition, name string) (string, error) {
@@ -242,43 +256,40 @@ func (c summonContext) Key() string {
 	return contextKindGuild + ":" + c.GuildID
 }
 
-// scopeVerdict is the local scope check. Resolving scopeUnknown costs a
-// Discord lookup, so it is gated separately.
-type scopeVerdict int
-
-const (
-	scopeDenied scopeVerdict = iota
-	scopeAllowed
-	scopeUnknown
-)
-
 func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCreate) {
 	message := event.Message
 	if !eligibleMessage(session, message) {
 		return
 	}
 	origin := summonContextFor(message)
-	// Gates run cheapest first, so an unscoped guild costs nothing beyond the
-	// Gateway event the process was going to receive anyway.
-	verdict := a.scopeVerdict(origin)
-	if verdict == scopeDenied {
+	// The whole allowlist decides from the payload already in memory, so a
+	// guild, member, or channel outside it costs nothing.
+	decision := a.access.Evaluate(origin, message.Author.ID, memberRoles(message), nil)
+	if !decision.allowed() && decision.Reason != accessNeedsThreadRef {
+		a.telemetry.RecordAccess(context.Background(), string(decision.Reason))
 		return
 	}
 	summoned, referenceLookup := summonedLocally(session, message)
 	if !summoned && !referenceLookup {
 		return
 	}
-	if verdict == scopeUnknown || (!summoned && referenceLookup) {
+	threadLookup := false
+	if decision.Reason == accessNeedsThreadRef {
+		cached, known := a.scope.Get(origin.ChannelID)
+		if known && !cached {
+			a.telemetry.RecordAccess(context.Background(), string(accessDeniedChannel))
+			return
+		}
+		threadLookup = !known
+	}
+	if threadLookup || (!summoned && referenceLookup) {
 		if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
-			a.telemetry.RecordAdmission(
-				context.Background(),
-				string(admissionContext),
-				"lookup",
-			)
+			a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
 			return
 		}
 	}
-	if verdict == scopeUnknown && !a.resolveScope(session, origin) {
+	if threadLookup && !a.resolveScope(session, origin, decision.Guild) {
+		a.telemetry.RecordAccess(context.Background(), string(accessDeniedChannel))
 		return
 	}
 	if !summoned && !summonedByReference(session, message) {
@@ -287,7 +298,8 @@ func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCr
 	if !a.seen.Add(message.ID) {
 		return
 	}
-	go a.handleMessage(session, message, origin)
+	a.telemetry.RecordAccess(context.Background(), string(accessAllowed))
+	go a.handleMessage(session, message, origin, decision.Guild.Overrides())
 }
 
 // eligibleMessage rejects the payloads that can never be a member summon.
@@ -301,6 +313,15 @@ func eligibleMessage(session *discordgo.Session, message *discordgo.Message) boo
 		message.ChannelID != ""
 }
 
+// memberRoles returns the author's guild roles, which arrive on the Gateway
+// payload. A role grant therefore costs no Discord API call.
+func memberRoles(message *discordgo.Message) []string {
+	if message.Member == nil {
+		return nil
+	}
+	return message.Member.Roles
+}
+
 func summonContextFor(message *discordgo.Message) summonContext {
 	if message.GuildID == "" {
 		return summonContext{Kind: contextKindDM, ChannelID: message.ChannelID}
@@ -312,45 +333,20 @@ func summonContextFor(message *discordgo.Message) summonContext {
 	}
 }
 
-// scopeVerdict decides scope from local state alone. A thread whose parent has
-// not been seen yet is the only case that needs a lookup.
-func (a *Agent) scopeVerdict(origin summonContext) scopeVerdict {
-	if origin.Kind == contextKindDM {
-		if a.cfg.DiscordDMEnabled {
-			return scopeAllowed
-		}
-		return scopeDenied
-	}
-	if len(a.guilds) > 0 {
-		if _, allowed := a.guilds[origin.GuildID]; !allowed {
-			return scopeDenied
-		}
-	}
-	if _, allowed := a.channels[origin.ChannelID]; allowed {
-		return scopeAllowed
-	}
-	if cached, known := a.scope.Get(origin.ChannelID); known {
-		if cached {
-			return scopeAllowed
-		}
-		return scopeDenied
-	}
-	return scopeUnknown
-}
-
-// resolveScope answers scopeUnknown by lookup and caches both outcomes, so a
-// busy unscoped channel does not repeat the lookup per message.
-func (a *Agent) resolveScope(session *discordgo.Session, origin summonContext) bool {
+// resolveScope answers an unknown channel by looking it up and caches both
+// outcomes, so a busy unscoped channel does not repeat the lookup per message.
+func (a *Agent) resolveScope(
+	session *discordgo.Session,
+	origin summonContext,
+	guild *GuildAccess,
+) bool {
 	channel := resolveChannel(session, origin.ChannelID)
 	if channel == nil {
 		// Not cached: the failure may be transient, and caching would deafen a
 		// real channel until restart.
 		return false
 	}
-	allowed := false
-	if channel.IsThread() {
-		_, allowed = a.channels[channel.ParentID]
-	}
+	allowed := channel.IsThread() && guild.PermitsChannel(channel.ParentID)
 	a.scope.Set(origin.ChannelID, allowed)
 	return allowed
 }
@@ -404,6 +400,7 @@ func (a *Agent) handleMessage(
 	session *discordgo.Session,
 	message *discordgo.Message,
 	origin summonContext,
+	override *RateLimitOverride,
 ) {
 	// A panic in one turn must not take down a deployment serving other
 	// guilds, so the handler contains its own failure.
@@ -422,6 +419,7 @@ func (a *Agent) handleMessage(
 		UserKey:    message.Author.ID,
 		ContextKey: origin.Key(),
 		Queued:     true,
+		Override:   override,
 	})
 	if decision.Outcome.denied() {
 		a.onDenied(session, message, origin, decision)
@@ -538,14 +536,6 @@ func startTyping(ctx context.Context, notifier typingNotifier) func() {
 		}
 	}()
 	return func() { close(done) }
-}
-
-func idSet(ids []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(ids))
-	for _, id := range ids {
-		set[id] = struct{}{}
-	}
-	return set
 }
 
 type turnIO interface {

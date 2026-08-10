@@ -7,16 +7,17 @@ tracked agent definition.
 
 ## Scope configuration
 
+The full form is a git-tracked ConfigMap that stacks guild, channel, member,
+and role grants with a deny list. See [the access policy](sirens-echo-access.md).
+
+Without that file, three environment variables give the equivalent:
+
 * `DISCORD_CHANNEL_ID` - comma-separated channel IDs that may summon the
-  service. A thread whose parent is one of them is in scope too. Channel IDs
-  are globally unique, so one list spans guilds without further qualification.
+  service, plus their threads. Channel IDs are globally unique, so one list
+  spans guilds without further qualification.
 * `DISCORD_GUILD_IDS` - optional guild allowlist. Empty means every guild the
-  bot has been added to, still bounded by the channel list. Set it when the bot
-  is installed in a guild whose administrators can create channels the operator
-  has not reviewed.
-* `SIRENS_ECHO_DISCORD_DM_ENABLED` - default `false` - admits direct messages
-  sent to the bot. A direct message has no guild moderation behind it, so it
-  stays opt-in and adds the direct-message intent only when enabled.
+  bot has been added to, still bounded by the channel list.
+* `SIRENS_ECHO_DISCORD_DM_ENABLED` - default `false` - admits direct messages.
 
 Every ID is validated as a numeric snowflake at startup. A channel name in
 place of an ID is a configuration error rather than a service that silently
@@ -44,10 +45,10 @@ the configured deployment ingress without asserting which one was selected.
 
 1. Add the bot with the narrowest permissions that still work: view channel,
    read message history, send messages, and send messages in threads.
-2. Set `DISCORD_CHANNEL_ID` to the exact channels the guild's owner agreed to.
-3. Set `DISCORD_GUILD_IDS` so an unrelated guild cannot summon the same
-   deployment.
-4. Leave `SIRENS_ECHO_DISCORD_DM_ENABLED` unset.
+2. Add a guild entry naming the exact channels the guild's owner agreed to,
+   and grant members by role rather than by listing accounts.
+3. Consider a tighter `rate_limit` for that guild than the deployment default.
+4. Leave direct messages off.
 5. Review the admission defaults in
    [admission control](sirens-echo-admission.md) before the first rollout.
 
@@ -65,6 +66,6 @@ in that install mode.
 
 ## See also
 
-See [admission control](sirens-echo-admission.md),
-[the service walkthrough](sirens-echo.md), and
-[configuration](sirens-echo-config.md).
+See [the access policy](sirens-echo-access.md),
+[admission control](sirens-echo-admission.md),
+[the service](sirens-echo.md), and [configuration](sirens-echo-config.md).

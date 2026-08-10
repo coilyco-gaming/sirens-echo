@@ -127,25 +127,24 @@ func TestInScopeAcceptsThreadsUnderTheConfiguredChannel(t *testing.T) {
 	}
 	session := &discordgo.Session{State: state}
 	agent := &Agent{
-		cfg:      Config{DiscordChannelIDs: []string{channelID}},
-		scope:    newChannelScope(16),
-		channels: idSet([]string{channelID}),
-		guilds:   idSet(nil),
+		cfg:   Config{DiscordChannelIDs: []string{channelID}},
+		scope: newChannelScope(16),
 	}
+	agent.ensureRuntimeDefaults()
 	inScope := func(channel string) bool {
 		origin := summonContext{
 			Kind:      contextKindGuild,
 			GuildID:   guildID,
 			ChannelID: channel,
 		}
-		switch agent.scopeVerdict(origin) {
-		case scopeAllowed:
-			return true
-		case scopeDenied:
-			return false
-		default:
-			return agent.resolveScope(session, origin)
+		decision := agent.access.Evaluate(origin, "member-1", nil, nil)
+		if decision.Reason != accessNeedsThreadRef {
+			return decision.allowed()
 		}
+		if cached, known := agent.scope.Get(channel); known {
+			return cached
+		}
+		return agent.resolveScope(session, origin, decision.Guild)
 	}
 	for _, testCase := range []struct {
 		name    string
@@ -169,52 +168,6 @@ func TestInScopeAcceptsThreadsUnderTheConfiguredChannel(t *testing.T) {
 	}
 	if _, known := agent.scope.Get(channelID); known {
 		t.Fatal("configured channel took the resolver path")
-	}
-}
-
-func TestScopeVerdictSpansGuildsAndDirectMessages(t *testing.T) {
-	t.Parallel()
-	const (
-		homeGuild    = "guild-home"
-		foreignGuild = "guild-foreign"
-		homeChannel  = "channel-home"
-	)
-	guildOrigin := func(guild, channel string) summonContext {
-		return summonContext{Kind: contextKindGuild, GuildID: guild, ChannelID: channel}
-	}
-	dmOrigin := summonContext{Kind: contextKindDM, ChannelID: "dm-1"}
-
-	unrestricted := &Agent{
-		scope:    newChannelScope(16),
-		channels: idSet([]string{homeChannel}),
-		guilds:   idSet(nil),
-	}
-	// A channel ID is globally unique, so one deployment serves the configured
-	// channel in every guild it has been added to.
-	for _, guild := range []string{homeGuild, foreignGuild} {
-		if got := unrestricted.scopeVerdict(guildOrigin(guild, homeChannel)); got != scopeAllowed {
-			t.Fatalf("guild %s: verdict = %v, want scopeAllowed", guild, got)
-		}
-	}
-
-	restricted := &Agent{
-		scope:    newChannelScope(16),
-		channels: idSet([]string{homeChannel}),
-		guilds:   idSet([]string{homeGuild}),
-	}
-	if got := restricted.scopeVerdict(guildOrigin(foreignGuild, homeChannel)); got != scopeDenied {
-		t.Fatalf("guild allowlist: verdict = %v, want scopeDenied", got)
-	}
-	if got := restricted.scopeVerdict(guildOrigin(homeGuild, homeChannel)); got != scopeAllowed {
-		t.Fatalf("allowlisted guild: verdict = %v, want scopeAllowed", got)
-	}
-
-	if got := restricted.scopeVerdict(dmOrigin); got != scopeDenied {
-		t.Fatalf("direct message without opt-in: verdict = %v, want scopeDenied", got)
-	}
-	restricted.cfg.DiscordDMEnabled = true
-	if got := restricted.scopeVerdict(dmOrigin); got != scopeAllowed {
-		t.Fatalf("direct message with opt-in: verdict = %v, want scopeAllowed", got)
 	}
 }
 
