@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -76,13 +78,14 @@ func (p MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		registered: make(map[string]registeredMCPTool),
 	}
 	for _, server := range p.Servers {
+		transport, err := clientTransport(ctx, server, p.HTTPClient)
+		if err != nil {
+			_ = opened.Close()
+			return nil, err
+		}
 		// A server that cannot answer contributes no tools and the turn goes on
 		// with the rest. One transient outage must not cost every turn.
-		session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
-			Endpoint:             server.URL,
-			HTTPClient:           p.HTTPClient,
-			DisableStandaloneSSE: true,
-		}, nil)
+		session, err := client.Connect(ctx, transport, nil)
 		if err != nil {
 			opened.unavailable = append(opened.unavailable, server.Name)
 			continue
@@ -106,6 +109,51 @@ func (p MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		return nil, fmt.Errorf("no configured MCP server is reachable")
 	}
 	return opened, nil
+}
+
+// clientTransport builds the transport one roster entry asks for. Validation
+// has already rejected an entry whose fields do not match its transport.
+func clientTransport(
+	ctx context.Context,
+	server MCPServerDefinition,
+	httpClient *http.Client,
+) (mcp.Transport, error) {
+	switch server.ResolvedTransport() {
+	case MCPTransportStreamable:
+		return &mcp.StreamableClientTransport{
+			Endpoint:             server.URL,
+			HTTPClient:           httpClient,
+			DisableStandaloneSSE: true,
+		}, nil
+	case MCPTransportSSE:
+		return &mcp.SSEClientTransport{
+			Endpoint:   server.URL,
+			HTTPClient: httpClient,
+		}, nil
+	case MCPTransportStdio:
+		// Bound to the caller's context, so the child dies with the session
+		// rather than outliving it.
+		command := exec.CommandContext(ctx, server.Command, server.Args...)
+		command.Env = forwardedEnv(server.Env)
+		return &mcp.CommandTransport{Command: command}, nil
+	}
+	return nil, fmt.Errorf(
+		"MCP server %s has unsupported transport %q",
+		server.Name,
+		server.ResolvedTransport(),
+	)
+}
+
+// forwardedEnv passes only the named variables to a stdio child. Echo holds the
+// Discord token and proxy route, so inheriting wholesale would leak them.
+func forwardedEnv(names []string) []string {
+	forwarded := make([]string, 0, len(names))
+	for _, name := range names {
+		if value, found := os.LookupEnv(name); found {
+			forwarded = append(forwarded, name+"="+value)
+		}
+	}
+	return forwarded
 }
 
 func discoverTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool, error) {

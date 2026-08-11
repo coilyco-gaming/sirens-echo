@@ -268,3 +268,82 @@ func TestLoadConfigRequiresEnvironmentBackedMCPURL(t *testing.T) {
 		t.Fatalf("LoadConfig error = %v", err)
 	}
 }
+
+func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name   string
+		server MCPServerDefinition
+		valid  bool
+	}{
+		{
+			name:   "empty transport defaults to streamable",
+			server: MCPServerDefinition{Name: "eco", URL: "https://eco:9000/mcp"},
+			valid:  true,
+		},
+		{
+			name: "sse takes a url",
+			server: MCPServerDefinition{
+				Name: "eco", Transport: MCPTransportSSE, URL: "https://eco:9000/sse",
+			},
+			valid: true,
+		},
+		{
+			name: "stdio takes a command",
+			server: MCPServerDefinition{
+				Name: "local", Transport: MCPTransportStdio, Command: "/usr/bin/mcp",
+			},
+			valid: true,
+		},
+		{
+			name: "stdio forwards named env",
+			server: MCPServerDefinition{
+				Name: "local", Transport: MCPTransportStdio,
+				Command: "/usr/bin/mcp", Env: []string{"SOME_TOKEN"},
+			},
+			valid: true,
+		},
+		{
+			name: "stdio without a command",
+			server: MCPServerDefinition{Name: "local", Transport: MCPTransportStdio},
+		},
+		{
+			name: "stdio carrying a url",
+			server: MCPServerDefinition{
+				Name: "local", Transport: MCPTransportStdio,
+				Command: "/usr/bin/mcp", URL: "https://eco:9000/mcp",
+			},
+		},
+		{
+			name: "stdio with an invalid env name",
+			server: MCPServerDefinition{
+				Name: "local", Transport: MCPTransportStdio,
+				Command: "/usr/bin/mcp", Env: []string{"not-an-env-name"},
+			},
+		},
+		{
+			name: "url transport carrying a command",
+			server: MCPServerDefinition{
+				Name: "eco", URL: "https://eco:9000/mcp", Command: "/usr/bin/mcp",
+			},
+		},
+		{
+			name:   "url transport with neither url nor url_env",
+			server: MCPServerDefinition{Name: "eco"},
+		},
+		{
+			name: "unsupported transport",
+			server: MCPServerDefinition{
+				Name: "eco", Transport: "carrier-pigeon", URL: "https://eco:9000/mcp",
+			},
+		},
+	} {
+		err := validateMCPServer(testCase.server)
+		if testCase.valid && err != nil {
+			t.Errorf("%s: unexpected error %v", testCase.name, err)
+		}
+		if !testCase.valid && err == nil {
+			t.Errorf("%s: expected an error", testCase.name)
+		}
+	}
+}

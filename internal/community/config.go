@@ -57,11 +57,32 @@ var (
 	rateLimitPattern = regexp.MustCompile(`^([0-9]+)/(.+)$`)
 )
 
+// MCP client transports. Deployment picks the servers and their transports.
+// Echo validates the shape of an entry, never which server is acceptable.
+const (
+	MCPTransportStreamable = "streamable"
+	MCPTransportSSE        = "sse"
+	MCPTransportStdio      = "stdio"
+)
+
 // MCPServerDefinition is one model tool surface selected for Sirens Echo.
 type MCPServerDefinition struct {
-	Name   string `json:"name" yaml:"name"`
-	URL    string `json:"url,omitempty" yaml:"url,omitempty"`
-	URLEnv string `json:"url_env,omitempty" yaml:"url_env,omitempty"`
+	Name      string   `json:"name" yaml:"name"`
+	Transport string   `json:"transport,omitempty" yaml:"transport,omitempty"`
+	URL       string   `json:"url,omitempty" yaml:"url,omitempty"`
+	URLEnv    string   `json:"url_env,omitempty" yaml:"url_env,omitempty"`
+	Command   string   `json:"command,omitempty" yaml:"command,omitempty"`
+	Args      []string `json:"args,omitempty" yaml:"args,omitempty"`
+	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
+}
+
+// ResolvedTransport defaults to streamable, so an entry written before
+// transports were selectable keeps working unchanged.
+func (s MCPServerDefinition) ResolvedTransport() string {
+	if trimmed := strings.TrimSpace(s.Transport); trimmed != "" {
+		return trimmed
+	}
+	return MCPTransportStreamable
 }
 
 // Definition is the source-controlled attribution, route, and policy selection.
@@ -293,16 +314,8 @@ func LoadDefinition(path string) (Definition, error) {
 			return Definition{}, fmt.Errorf("duplicate MCP server %q", server.Name)
 		}
 		seenServers[server.Name] = struct{}{}
-		hasURL := strings.TrimSpace(server.URL) != ""
-		hasURLEnv := strings.TrimSpace(server.URLEnv) != ""
-		if hasURL == hasURLEnv {
-			return Definition{}, fmt.Errorf("MCP server %q requires exactly one of url or url_env", server.Name)
-		}
-		if hasURL && !validHTTPURL(server.URL) {
-			return Definition{}, fmt.Errorf("MCP server %q has invalid URL", server.Name)
-		}
-		if hasURLEnv && !environmentNamePattern.MatchString(server.URLEnv) {
-			return Definition{}, fmt.Errorf("MCP server %q has invalid url_env", server.Name)
+		if err := validateMCPServer(server); err != nil {
+			return Definition{}, err
 		}
 	}
 	if definition.IssueTracker != "" {
@@ -314,6 +327,44 @@ func LoadDefinition(path string) (Definition, error) {
 		}
 	}
 	return definition, nil
+}
+
+// validateMCPServer checks that an entry carries the fields its transport needs
+// and none belonging to another. It makes no judgement about which server runs.
+func validateMCPServer(server MCPServerDefinition) error {
+	hasURL := strings.TrimSpace(server.URL) != ""
+	hasURLEnv := strings.TrimSpace(server.URLEnv) != ""
+	hasCommand := strings.TrimSpace(server.Command) != ""
+	switch server.ResolvedTransport() {
+	case MCPTransportStreamable, MCPTransportSSE:
+		if hasURL == hasURLEnv {
+			return fmt.Errorf("MCP server %q requires exactly one of url or url_env", server.Name)
+		}
+		if hasURL && !validHTTPURL(server.URL) {
+			return fmt.Errorf("MCP server %q has invalid URL", server.Name)
+		}
+		if hasURLEnv && !environmentNamePattern.MatchString(server.URLEnv) {
+			return fmt.Errorf("MCP server %q has invalid url_env", server.Name)
+		}
+		if hasCommand || len(server.Args) > 0 || len(server.Env) > 0 {
+			return fmt.Errorf("MCP server %q takes no command, args, or env", server.Name)
+		}
+	case MCPTransportStdio:
+		if !hasCommand {
+			return fmt.Errorf("MCP server %q requires a command", server.Name)
+		}
+		if hasURL || hasURLEnv {
+			return fmt.Errorf("MCP server %q takes no url or url_env", server.Name)
+		}
+		for _, name := range server.Env {
+			if !environmentNamePattern.MatchString(name) {
+				return fmt.Errorf("MCP server %q has invalid env name %q", server.Name, name)
+			}
+		}
+	default:
+		return fmt.Errorf("MCP server %q has unsupported transport %q", server.Name, server.Transport)
+	}
+	return nil
 }
 
 func validHTTPURL(value string) bool {

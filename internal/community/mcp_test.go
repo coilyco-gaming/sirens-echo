@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -31,6 +32,70 @@ func TestMCPProviderAllowsEmptyRoster(t *testing.T) {
 	}
 	if err := session.Close(); err != nil {
 		t.Fatalf("Close: %v", err)
+	}
+}
+
+// stdioFixtureEnv turns this test binary into an MCP server over stdio, so the
+// stdio transport is exercised against a real child process.
+const stdioFixtureEnv = "SIRENS_ECHO_TEST_STDIO_MCP"
+
+func TestMain(m *testing.M) {
+	if os.Getenv(stdioFixtureEnv) != "1" {
+		os.Exit(m.Run())
+	}
+	server := mcp.NewServer(&mcp.Implementation{Name: "stdio-fixture", Version: "1"}, nil)
+	mcp.AddTool(
+		server,
+		&mcp.Tool{Name: "ping", Description: "fixture tool"},
+		func(context.Context, *mcp.CallToolRequest, struct{}) (
+			*mcp.CallToolResult, any, error,
+		) {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "pong"}},
+			}, nil, nil
+		},
+	)
+	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+		os.Exit(1)
+	}
+}
+
+func TestMCPProviderConnectsOverStdio(t *testing.T) {
+	// Also covers env forwarding: the child only becomes a server because the
+	// roster names this variable, and nothing else from Echo's environment.
+	t.Setenv(stdioFixtureEnv, "1")
+
+	session, err := MCPProvider{Servers: []MCPServerDefinition{{
+		Name:      "local",
+		Transport: MCPTransportStdio,
+		Command:   os.Args[0],
+		Env:       []string{stdioFixtureEnv},
+	}}}.Open(context.Background())
+	if err != nil {
+		t.Fatalf("Open over stdio: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	tools := session.Tools()
+	if len(tools) != 1 || tools[0].Name != "local__ping" {
+		t.Fatalf("tools = %#v, want the stdio server's tool", tools)
+	}
+	result, err := session.Call(context.Background(), "local__ping", nil)
+	if err != nil {
+		t.Fatalf("Call over stdio: %v", err)
+	}
+	if result.Text != "pong" {
+		t.Fatalf("result = %q, want pong", result.Text)
+	}
+}
+
+func TestForwardedEnvPassesOnlyNamedVariables(t *testing.T) {
+	t.Setenv("SIRENS_ECHO_TEST_FORWARDED", "carried")
+	t.Setenv("SIRENS_ECHO_TEST_WITHHELD", "secret")
+
+	forwarded := forwardedEnv([]string{"SIRENS_ECHO_TEST_FORWARDED", "SIRENS_ECHO_TEST_ABSENT"})
+	if len(forwarded) != 1 || forwarded[0] != "SIRENS_ECHO_TEST_FORWARDED=carried" {
+		t.Fatalf("forwarded = %#v", forwarded)
 	}
 }
 
