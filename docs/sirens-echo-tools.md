@@ -22,8 +22,7 @@ When a definition configures MCP servers, the harness:
 3. Exposes each model name as `<server>__<tool>`.
 4. Sends those schemas with the Agent Proxy request.
 5. Executes valid model-requested tools.
-6. Renders each result as text, then appends assistant calls and tool results
-   and continues Agent Proxy.
+6. Renders each result as text, appends the calls and results, then continues.
 
 An empty roster skips discovery and sends no tools. Agent Proxy can return a
 response containing only tool calls when tools exist. Final content can use an
@@ -41,9 +40,10 @@ The harness rejects:
 - A response with neither tool calls nor usable content
 - More than six tool rounds
 
-Connection, discovery, and invocation failures stop the turn and produce the
-neutral retry reply. MCP error results returned as data remain available to
-Agent Proxy for a grounded explanation.
+A server that fails to connect or list contributes no tools and the turn goes on
+with the rest, named to the model so it reports the gap. Only an unreachable
+roster stops the turn, and a name collision stays fatal. Invocation failures give
+the neutral retry reply, and MCP error results stay available as grounded data.
 
 ## Sirens Echo issue ownership
 

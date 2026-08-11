@@ -35,6 +35,7 @@ type ToolResult struct {
 // ToolSession is the per-turn MCP capability available to Agent Proxy.
 type ToolSession interface {
 	Tools() []ToolDefinition
+	Unavailable() []string
 	Call(ctx context.Context, name string, arguments map[string]any) (ToolResult, error)
 	Close() error
 }
@@ -58,9 +59,10 @@ type registeredMCPTool struct {
 }
 
 type mcpToolSession struct {
-	tools      []ToolDefinition
-	registered map[string]registeredMCPTool
-	sessions   []*mcp.ClientSession
+	tools       []ToolDefinition
+	registered  map[string]registeredMCPTool
+	sessions    []*mcp.ClientSession
+	unavailable []string
 }
 
 // Open initializes every configured MCP server and discovers its complete tool
@@ -74,57 +76,90 @@ func (p MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		registered: make(map[string]registeredMCPTool),
 	}
 	for _, server := range p.Servers {
+		// A server that cannot answer contributes no tools and the turn goes on
+		// with the rest. One transient outage must not cost every turn.
 		session, err := client.Connect(ctx, &mcp.StreamableClientTransport{
 			Endpoint:             server.URL,
 			HTTPClient:           p.HTTPClient,
 			DisableStandaloneSSE: true,
 		}, nil)
 		if err != nil {
-			_ = opened.Close()
-			return nil, fmt.Errorf("connect MCP server %s: %w", server.Name, err)
+			opened.unavailable = append(opened.unavailable, server.Name)
+			continue
+		}
+		discovered, err := discoverTools(ctx, session)
+		if err != nil {
+			_ = session.Close()
+			opened.unavailable = append(opened.unavailable, server.Name)
+			continue
 		}
 		opened.sessions = append(opened.sessions, session)
-		cursor := ""
-		for {
-			result, err := session.ListTools(ctx, &mcp.ListToolsParams{Cursor: cursor})
-			if err != nil {
-				_ = opened.Close()
-				return nil, fmt.Errorf("list MCP tools from %s: %w", server.Name, err)
-			}
-			for _, tool := range result.Tools {
-				name, err := proxyToolName(server.Name, tool.Name)
-				if err != nil {
-					_ = opened.Close()
-					return nil, err
-				}
-				if _, exists := opened.registered[name]; exists {
-					_ = opened.Close()
-					return nil, fmt.Errorf("MCP tool name collision %q", name)
-				}
-				opened.registered[name] = registeredMCPTool{
-					serverName: server.Name,
-					toolName:   tool.Name,
-					session:    session,
-				}
-				opened.tools = append(opened.tools, ToolDefinition{
-					Name:        name,
-					Server:      server.Name,
-					Original:    tool.Name,
-					Description: tool.Description,
-					InputSchema: tool.InputSchema,
-				})
-			}
-			if result.NextCursor == "" {
-				break
-			}
-			cursor = result.NextCursor
+		// A collision stays fatal. That is a roster mistake, and degrading past
+		// it would silently drop whichever tool lost the race.
+		if err := opened.register(server.Name, session, discovered); err != nil {
+			_ = opened.Close()
+			return nil, err
 		}
+	}
+	if len(p.Servers) > 0 && len(opened.unavailable) == len(p.Servers) {
+		_ = opened.Close()
+		return nil, fmt.Errorf("no configured MCP server is reachable")
 	}
 	return opened, nil
 }
 
+func discoverTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool, error) {
+	discovered := make([]*mcp.Tool, 0)
+	cursor := ""
+	for {
+		result, err := session.ListTools(ctx, &mcp.ListToolsParams{Cursor: cursor})
+		if err != nil {
+			return nil, err
+		}
+		discovered = append(discovered, result.Tools...)
+		if result.NextCursor == "" {
+			return discovered, nil
+		}
+		cursor = result.NextCursor
+	}
+}
+
+func (s *mcpToolSession) register(
+	serverName string,
+	session *mcp.ClientSession,
+	discovered []*mcp.Tool,
+) error {
+	for _, tool := range discovered {
+		name, err := proxyToolName(serverName, tool.Name)
+		if err != nil {
+			return err
+		}
+		if _, exists := s.registered[name]; exists {
+			return fmt.Errorf("MCP tool name collision %q", name)
+		}
+		s.registered[name] = registeredMCPTool{
+			serverName: serverName,
+			toolName:   tool.Name,
+			session:    session,
+		}
+		s.tools = append(s.tools, ToolDefinition{
+			Name:        name,
+			Server:      serverName,
+			Original:    tool.Name,
+			Description: tool.Description,
+			InputSchema: tool.InputSchema,
+		})
+	}
+	return nil
+}
+
 func (s *mcpToolSession) Tools() []ToolDefinition {
 	return append([]ToolDefinition(nil), s.tools...)
+}
+
+// Unavailable names the configured servers that did not answer this turn.
+func (s *mcpToolSession) Unavailable() []string {
+	return append([]string(nil), s.unavailable...)
 }
 
 func (s *mcpToolSession) Call(

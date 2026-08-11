@@ -34,6 +34,83 @@ func TestMCPProviderAllowsEmptyRoster(t *testing.T) {
 	}
 }
 
+// liveMCPServer starts one streamable MCP server publishing a single tool.
+func liveMCPServer(t *testing.T, name, tool string) string {
+	t.Helper()
+	server := mcp.NewServer(&mcp.Implementation{Name: name, Version: "1"}, nil)
+	mcp.AddTool(
+		server,
+		&mcp.Tool{Name: tool, Description: "fixture tool"},
+		func(context.Context, *mcp.CallToolRequest, struct{}) (
+			*mcp.CallToolResult, any, error,
+		) {
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: "ok"}},
+			}, nil, nil
+		},
+	)
+	handler := mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{JSONResponse: true},
+	)
+	httpServer := httptest.NewServer(handler)
+	t.Cleanup(httpServer.Close)
+	return httpServer.URL
+}
+
+func TestMCPProviderServesReachableServersWhenOneIsDown(t *testing.T) {
+	t.Parallel()
+	reachable := liveMCPServer(t, "eco-test", "get_status")
+	// Closed immediately, so the endpoint refuses connections.
+	dead := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	dead.Close()
+
+	session, err := MCPProvider{Servers: []MCPServerDefinition{
+		{Name: "down", URL: dead.URL},
+		{Name: "eco", URL: reachable},
+	}}.Open(context.Background())
+	if err != nil {
+		t.Fatalf("Open with one server down: %v", err)
+	}
+	defer func() { _ = session.Close() }()
+
+	if got := session.Unavailable(); len(got) != 1 || got[0] != "down" {
+		t.Fatalf("unavailable = %#v, want [down]", got)
+	}
+	tools := session.Tools()
+	if len(tools) != 1 || tools[0].Name != "eco__get_status" {
+		t.Fatalf("tools = %#v, want the reachable server's tool", tools)
+	}
+}
+
+func TestMCPProviderFailsWhenNoServerIsReachable(t *testing.T) {
+	t.Parallel()
+	dead := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	dead.Close()
+
+	// A roster where nothing answered is a capability outage, not a partial one.
+	if _, err := (MCPProvider{Servers: []MCPServerDefinition{
+		{Name: "down", URL: dead.URL},
+	}}).Open(context.Background()); err == nil {
+		t.Fatal("an entirely unreachable roster must fail the turn")
+	}
+}
+
+func TestMCPProviderKeepsToolNameCollisionFatal(t *testing.T) {
+	t.Parallel()
+	first := liveMCPServer(t, "one", "status")
+	second := liveMCPServer(t, "two", "status")
+
+	// Same proxy name from two servers is a roster mistake, so it must not
+	// degrade into silently dropping whichever lost.
+	if _, err := (MCPProvider{Servers: []MCPServerDefinition{
+		{Name: "dup", URL: first},
+		{Name: "dup", URL: second},
+	}}).Open(context.Background()); err == nil {
+		t.Fatal("a tool name collision must stay fatal")
+	}
+}
+
 func TestMCPProviderClosesCleanupResponseSpan(t *testing.T) {
 	mcpServer := mcp.NewServer(
 		&mcp.Implementation{Name: "eco-test", Version: "1"},

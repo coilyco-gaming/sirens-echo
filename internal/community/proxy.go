@@ -214,6 +214,7 @@ func (c ProxyClient) Complete(
 	telemetry := telemetryOrNoop(c.Telemetry)
 	var toolSession ToolSession
 	var tools []chatTool
+	var unavailable []string
 	toolDefinitions := make(map[string]ToolDefinition)
 	if c.Tools != nil {
 		listCtx, listSpan := telemetry.StartSpan(ctx, "mcp.tools.list")
@@ -248,18 +249,39 @@ func (c ProxyClient) Complete(
 			})
 			toolDefinitions[definition.Name] = definition
 		}
-		listSpan.SetAttributes(attribute.Int("mcp.tool.count", len(tools)))
+		unavailable = toolSession.Unavailable()
+		listSpan.SetAttributes(
+			attribute.Int("mcp.tool.count", len(tools)),
+			attribute.Int("mcp.server.unavailable.count", len(unavailable)),
+		)
 		listSpan.End()
 		telemetry.Info(
 			ctx,
 			"mcp.tools.discovered",
 			slog.Int("tool_count", len(tools)),
+			slog.Int("unavailable_servers", len(unavailable)),
 		)
+		for _, name := range unavailable {
+			telemetry.Error(
+				ctx,
+				"mcp.server.unavailable",
+				slog.String("server", name),
+				slog.String("error_type", "mcp_server_unavailable"),
+			)
+		}
 	}
 
 	messages := []chatMessage{
 		{Role: "system", Content: systemPrompt},
 		{Role: "user", Content: userPrompt},
+	}
+	// Named so the model reports the gap rather than answering as though the
+	// surface had been consulted and returned nothing.
+	if len(unavailable) > 0 {
+		messages = append(messages, chatMessage{
+			Role:    "system",
+			Content: unavailableToolNotice(unavailable),
+		})
 	}
 	executed := make([]ExecutedTool, 0)
 	toolRounds := 0
@@ -469,6 +491,12 @@ func boundToolResult(result string) (string, bool) {
 		cut--
 	}
 	return result[:cut] + "\n[truncated by the runtime]", true
+}
+
+func unavailableToolNotice(unavailable []string) string {
+	return "These tool surfaces are unavailable this turn and were not consulted: " +
+		strings.Join(unavailable, ", ") +
+		". Do not claim any result from them. Say the surface was unavailable."
 }
 
 func responseRepairPrompt(style string) string {

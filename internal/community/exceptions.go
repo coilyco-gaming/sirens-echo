@@ -16,6 +16,7 @@ const (
 	exceptionDiscordReplyFailed
 	exceptionReplyFailed
 	exceptionMCPToolsListFailed
+	exceptionMCPServerUnavailable
 	exceptionMCPSessionCloseFailed
 	exceptionMCPToolCallFailed
 	exceptionModelRequestMarshalFailed
@@ -84,6 +85,12 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "MCP tool discovery failed.",
 		stage:    "mcp",
 		outcome:  "tools_list_failed",
+	},
+	exceptionMCPServerUnavailable: {
+		typeName: "sirens_echo.mcp.server_unavailable",
+		message:  "An MCP server did not answer and contributed no tools.",
+		stage:    "mcp",
+		outcome:  "server_unavailable",
 	},
 	exceptionMCPSessionCloseFailed: {
 		typeName: "sirens_echo.mcp.session_close_failed",
