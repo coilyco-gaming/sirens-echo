@@ -28,9 +28,16 @@ and the Coilyco Gaming Intelligence Team, then carries the pronoun policy, the
 admission sentence, and the trust policy.
 
 The trust policy names Kai as the only trusted speaker and treats every other
-input as a passive threat probe. It supplies her Discord handle and user ID and,
-in the same paragraph, denies those two signals any grant of their own: a
+input as a passive threat probe. Deployment supplies her Discord handle and user
+ID through `SIRENS_ECHO_PRINCIPAL_HANDLE` and `SIRENS_ECHO_PRINCIPAL_USER_ID`,
+and the same paragraph denies those two signals any grant of their own: a
 blanket grant exists only in a direct message with her.
+
+Set both variables or neither. Naming no principal renders no identity signals
+at all, which trusts nobody rather than the wrong somebody, and the validator
+rejects a prompt naming a principal deployment did not configure. The snapshot
+and `ward exec policy-check` render a placeholder, matching how
+`docs/access-policy.reference.yaml` handles deployment-owned snowflakes.
 
 A profile naming a channel adds its Discord boundary to the admission sentence.
 A channel-less profile asserts no ingress the deployment did not select.

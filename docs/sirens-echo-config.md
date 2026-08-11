@@ -25,10 +25,15 @@ by default, and `SIRENS_ECHO_DISCORD_ENABLED=false` removes the token and
 channel requirements while retaining the HTTP turn path. `SIRENS_ECHO_INSTANCE`
 sets a distinct lowercase service name for telemetry.
 
+`SIRENS_ECHO_PRINCIPAL_HANDLE` and `SIRENS_ECHO_PRINCIPAL_USER_ID` name the one
+speaker the prompt trusts. Set both or neither: a half-configured principal
+stops the process, and an unset one renders no identity signals at all. See
+[the rendered prompt](sirens-echo-prompt.md).
+
 An MCP entry has either a literal `url` or a deployment-owned `url_env`.
 The Sirens Echo Forgejo entry uses `SIRENS_ECHO_FORGEJO_MCP_URL`, so the
 source definition selects the server while deploy owns its cluster-local
-endpoint. The CoilyCo definition intentionally has no MCP entries.
+endpoint. The CoilyCo definition selects a read-only Steam MCP the same way.
 
 The definition's `channel` is the prompt's boundary label, not the routing key.
 It must be empty or a `#channel-name` the grounding validator also accepts. An

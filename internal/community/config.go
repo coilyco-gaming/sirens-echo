@@ -50,6 +50,7 @@ var (
 	mcpServerNamePattern   = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	environmentNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 	discordSnowflake       = regexp.MustCompile(`^[0-9]{15,20}$`)
+	discordHandlePattern   = regexp.MustCompile(`^[a-z0-9._]{2,32}$`)
 	// channelLabelPattern matches the grounding validator's channel form, so a
 	// label cannot introduce a reference the model is rejected for repeating.
 	channelLabelPattern = regexp.MustCompile(`^#[A-Za-z_][A-Za-z0-9_-]*$`)
@@ -77,11 +78,28 @@ type Definition struct {
 	IssueTracker       string                `json:"issue_tracker,omitempty" yaml:"issue_tracker,omitempty"`
 }
 
+// Principal identifies the one speaker the prompt trusts. The values are
+// deployment-owned. See docs/sirens-echo-prompt.md.
+type Principal struct {
+	Handle string
+	UserID string
+}
+
+// Configured reports whether deployment supplied both signals. One alone
+// identifies nobody, so the prompt renders neither.
+func (p Principal) Configured() bool { return p.Handle != "" && p.UserID != "" }
+
+// PlaceholderPrincipal renders the tracked snapshot and the build-time policy
+// check. It is not a real account, matching docs/access-policy.reference.yaml.
+var PlaceholderPrincipal = Principal{Handle: "example_handle", UserID: "1024000000000000001"}
+
 // Config combines the source-controlled definition with deployment secrets.
 type Config struct {
 	Definition     Definition
 	DefinitionPath string
 	InstanceName   string
+	// Principal is empty until deployment names the trusted account.
+	Principal      Principal
 	DiscordEnabled bool
 	DiscordToken   string
 	// DiscordChannelIDs are the channels that may summon this deployment, plus
@@ -143,9 +161,13 @@ func LoadConfig() (Config, error) {
 		return Config{}, err
 	}
 	cfg := Config{
-		Definition:        definition,
-		DefinitionPath:    definitionPath,
-		InstanceName:      valueOrDefault(os.Getenv("SIRENS_ECHO_INSTANCE"), defaultInstanceName),
+		Definition:     definition,
+		DefinitionPath: definitionPath,
+		InstanceName:   valueOrDefault(os.Getenv("SIRENS_ECHO_INSTANCE"), defaultInstanceName),
+		Principal: Principal{
+			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
+			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
+		},
 		DiscordEnabled:    discordEnabled,
 		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
 		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
@@ -163,6 +185,9 @@ func LoadConfig() (Config, error) {
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_INSTANCE must be a lowercase service name")
+	}
+	if err := validatePrincipal(cfg.Principal); err != nil {
+		return Config{}, err
 	}
 	for _, id := range append(append([]string{}, cfg.DiscordChannelIDs...), cfg.DiscordGuildIDs...) {
 		if !discordSnowflake.MatchString(id) {
@@ -210,6 +235,32 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("missing required env: %v", missing)
 	}
 	return cfg, nil
+}
+
+// validatePrincipal rejects a half-configured principal, which would otherwise
+// render a sentence naming one signal and an empty string for the other.
+func validatePrincipal(principal Principal) error {
+	if principal.Handle == "" && principal.UserID == "" {
+		return nil
+	}
+	if !principal.Configured() {
+		return fmt.Errorf(
+			"SIRENS_ECHO_PRINCIPAL_HANDLE and SIRENS_ECHO_PRINCIPAL_USER_ID must be set together",
+		)
+	}
+	if !discordHandlePattern.MatchString(principal.Handle) {
+		return fmt.Errorf(
+			"SIRENS_ECHO_PRINCIPAL_HANDLE must be a Discord username, got %q",
+			principal.Handle,
+		)
+	}
+	if !discordSnowflake.MatchString(principal.UserID) {
+		return fmt.Errorf(
+			"SIRENS_ECHO_PRINCIPAL_USER_ID must be a numeric snowflake, got %q",
+			principal.UserID,
+		)
+	}
+	return nil
 }
 
 // LoadDefinition reads and validates the repository-owned agent definition.
