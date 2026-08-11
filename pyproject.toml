@@ -7,9 +7,10 @@
 org = "coilyco-gaming"
 
 [tool.agentic-os.code-comments]
-# The agentic-os managed block injects BEGIN/END marker comments below the
-# `repos:` content line; they are machine-managed by apply-agentic-os-hooks.py
-# and cannot move to a top header. Same exclusion deploy carries.
+# Not a grandfathered violation: all three flagged comments are emitted by
+# apply-agentic-os-hooks.py at fixed positions inside its managed block, so no
+# in-repo edit survives the next rollout. agentic-os excludes its own copy for
+# the same reason. Drop this once the hook skips managed marker regions.
 excludes = [
     ".pre-commit-config.yaml",
 ]

@@ -56,7 +56,7 @@ union, so either alone is a complete grant.
 
 ## Failing closed
 
-A missing file, an unparseable file, an unknown field, a non-snowflake ID, a
+A missing file, an unparsable file, an unknown field, a non-snowflake ID, a
 duplicate guild, a guild that allows no channel, and a guild that allows no
 member are all startup failures. Absent configuration never widens the surface.
 `ward exec policy-check` validates the tracked reference copy and validates

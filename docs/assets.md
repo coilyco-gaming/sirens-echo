@@ -28,6 +28,6 @@ Secondary lockup, the same whale over the coilyco S. Matches the org avatars mos
 
 ## Regenerating the mark rasters
 
-The SVGs keep an opaque field so they stand alone, but the PNGs are transparent outside a circle of r 169.9, just inside the ring's outer edge at r 171.5. Each render is therefore a coin rather than a square tile, and drops onto any surface without dark corners. The same convention, at its own radius, governs the copies of these marks in the website repository.
+The SVGs keep an opaque field so they stand alone, but the PNG renders are transparent outside a circle of r 169.9, just inside the ring's outer edge at r 171.5. Each render is therefore a coin rather than a square tile, and drops onto any surface without dark corners. The same convention, at its own radius, governs the copies of these marks in the website repository.
 
 Render at the target size, clip the alpha to that circle, and zero the fully transparent pixels. Do not bake the field into the PNG.

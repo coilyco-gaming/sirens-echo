@@ -303,7 +303,7 @@ func splitList(value string) []string {
 }
 
 // loopbackListener reports whether the bind address is reachable only from the
-// process's own host. An unparseable or wildcard host is treated as reachable.
+// process's own host. An unparsable or wildcard host is treated as reachable.
 func loopbackListener(addr string) bool {
 	host, _, err := net.SplitHostPort(strings.TrimSpace(addr))
 	if err != nil {

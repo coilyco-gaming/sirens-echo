@@ -1,0 +1,5 @@
+# Forgejo runner labels: `docker` runs the CI job, `deploy` the image publish.
+self-hosted-runner:
+  labels:
+    - docker
+    - deploy
