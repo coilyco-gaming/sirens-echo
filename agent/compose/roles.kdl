@@ -1,13 +1,7 @@
-// Allowlist, not a mirror of the host roles: Sirens Deep answers strangers.
-// Rules, enforcement, and reasoning in docs/sirens-echo-compose.md (issue 98).
-
-
-// No repository and no global: knowledge comes from local_skill_roots.
-repositories {
-}
+repositories {}
 
 roles {
-    role "director" {
+    role "creator" {
         composed-skill "personal-preference-*"
         composed-skill "writing-kai-voice"
     }
