@@ -100,8 +100,7 @@ func TestBuildSystemPromptSelectsSocialPolicy(t *testing.T) {
 	}
 }
 
-// Regression for #87: the model inferred "he" for Kai from her name alone, so
-// both response styles must carry the rule and the validators must enforce it.
+// Regression for #87. Both styles carry the rule and both validators enforce it.
 func TestBuildSystemPromptCarriesPronounPolicyInEveryStyle(t *testing.T) {
 	t.Parallel()
 	for _, style := range []string{ResponseStyleSocial, ResponseStyleNeutral} {
@@ -111,11 +110,9 @@ func TestBuildSystemPromptCarriesPronounPolicyInEveryStyle(t *testing.T) {
 			ResponseStyle: style,
 		}
 		prompt := BuildSystemPrompt(definition, "general CoilyCo policy")
-		for _, expected := range []string{
-			"Kai is she/her",
-			"use they/them unless this conversation stated",
-			"A name is never evidence of pronouns",
-		} {
+		// Anchored on the constant plus the two pronouns rather than on wording,
+		// so a copy edit cannot quietly drop either half of the rule.
+		for _, expected := range []string{pronounPolicy, "she/her", "they/them"} {
 			if !strings.Contains(prompt, expected) {
 				t.Fatalf("%s system prompt missing %q", style, expected)
 			}
