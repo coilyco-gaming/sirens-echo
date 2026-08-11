@@ -1,0 +1,19 @@
+repositories {
+    repository acompose path="coilyco-flight-deck/agent-compose"
+    global acompose
+
+    repository echo path="coilyco-gaming/sirens-echo"
+    global echo
+
+    repository profile path="coilysiren/coilysiren"
+    global profile
+}
+
+roles {
+    role "creator" {
+        composed-skill "tooling-discord-community-host"
+        composed-skill "tooling-customer-success-*"
+        composed-skill "personal-preference-*"
+        composed-skill "writing-*"
+    }
+}
