@@ -99,3 +99,30 @@ func TestBuildSystemPromptSelectsSocialPolicy(t *testing.T) {
 		}
 	}
 }
+
+// Regression for #87. Both styles carry the rule and both validators enforce it.
+func TestBuildSystemPromptCarriesPronounPolicyInEveryStyle(t *testing.T) {
+	t.Parallel()
+	for _, style := range []string{ResponseStyleSocial, ResponseStyleNeutral} {
+		definition := Definition{
+			Identity:      "CoilyCo",
+			AuditRole:     "general",
+			ResponseStyle: style,
+		}
+		prompt := BuildSystemPrompt(definition, "general CoilyCo policy")
+		// Anchored on the constant plus the two pronouns rather than on wording,
+		// so a copy edit cannot quietly drop either half of the rule.
+		for _, expected := range []string{pronounPolicy, "she/her", "they/them"} {
+			if !strings.Contains(prompt, expected) {
+				t.Fatalf("%s system prompt missing %q", style, expected)
+			}
+		}
+		if err := ValidateSystemPrompt(definition, prompt); err != nil {
+			t.Fatalf("%s ValidateSystemPrompt: %v", style, err)
+		}
+		stripped := strings.ReplaceAll(prompt, pronounPolicy, "")
+		if err := ValidateSystemPrompt(definition, stripped); err == nil {
+			t.Fatalf("%s validator accepted a prompt with no pronoun policy", style)
+		}
+	}
+}
