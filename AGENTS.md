@@ -27,8 +27,8 @@ their tool behavior.
 
 Each definition explicitly selects its channel, MCP roster, and optional issue
 tracker. Sirens Echo may call its Eco and repository-fixed Forgejo MCPs and
-reply in `#bots`. The CoilyCo profile is HTTP-only and begins with no MCP or
-automatic write surface.
+reply in `#bots`. The CoilyCo profile selects a read-only Steam MCP, names no
+channel, and has no issue tracker or write surface. Deployment owns its ingress.
 
 ## Commands
 
