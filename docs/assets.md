@@ -1,12 +1,16 @@
 # Assets
 
-## banner.png
+## banner.jpg, banner-no-logo.jpg
 
-Repo banner / GitHub social preview.
+Repo banner and GitHub social preview, 1280 x 640. `banner.jpg` carries the mark and is the one embedded in the README. `banner-no-logo.jpg` is the same banner without it, for surfaces that already show the avatar beside the image, Discord among them.
 
-Original SVG/CSS in the LCARS visual idiom. Inspired by [louh/lcars](https://github.com/louh/lcars) (GPL-3.0). No code copied.
+Both name `sirens-echo` and `sirens-deep` together, separated by the house ` // `, over the description this repository already gives itself. Naming both is deliberate: the repository houses two deployments and the banner says so.
 
-LCARS, Star Trek, and the referenced place-names (Vandor, D'Arsay, Morska, Proxima Centauri, Ovion, Altamid) are property of Paramount/CBS. Used here in the fan-creation tradition.
+The field is generated with the self-hosted ComfyUI runtime on the Juggernaut XL checkpoint, at 1536 x 768 and reduced to the banner size. Only the field is generated. The mark and every word are vector, composited afterwards, which is why the prompts exclude marine life and text rather than asking the model to draw either.
+
+Type is Avenir Next, lilac for the names with the separator in mint, and mint for the description. It sits on a centred dark halo rather than an offset drop shadow: an offset implies a light direction the mark does not have and protects only one side of each glyph, while a centred blur darkens the bed under every edge equally.
+
+The previous banner was an original LCARS-idiom composition rendered from a committed HTML file. Both it and that file are retired, and with them the Paramount attribution they required.
 
 ## sirens-deep.svg, sirens-deep.png
 
