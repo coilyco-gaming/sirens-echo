@@ -18,7 +18,25 @@ const (
 	maxAgentProxyResponseBytes = 2 * 1024 * 1024
 	maxToolRounds              = 6
 	maxResponseRepairs         = 1
+
+	// maxToolResultBytes bounds one tool result before it re-enters the
+	// prompt. Four parallel Eco calls inflated a 6k prompt past 47k.
+	maxToolResultBytes = 8 * 1024
+
+	// Completion budget, escalated rather than fixed.
+	// See docs/sirens-echo-budget.md.
+	baseCompletionTokens = 900
+	maxCompletionTokens  = 3600
+	completionBudgetStep = 2
+
+	// budgetRaisesAllowed bounds the escalation so a pathological turn cannot
+	// loop. 900 to 1800 to 3600.
+	budgetRaisesAllowed = 2
 )
+
+// finishReasonLength is the upstream signal that the completion was truncated
+// rather than finished.
+const finishReasonLength = "length"
 
 const neutralResponseRepairPrompt = `The previous assistant response violated the required response contract.
 Return only one valid JSON object with a non-empty "reply" string and an
@@ -122,8 +140,24 @@ type chatMetadata struct {
 
 type chatResponse struct {
 	Choices []struct {
-		Message chatResponseMessage `json:"message"`
+		Message      chatResponseMessage `json:"message"`
+		FinishReason string              `json:"finish_reason"`
 	} `json:"choices"`
+}
+
+// chatChoice carries the finish reason alongside the message, so the caller can
+// tell a finished completion from a truncated one.
+type chatChoice struct {
+	Message      chatResponseMessage
+	FinishReason string
+}
+
+// truncated reports a completion that ran out of budget with nothing to show
+// for it. Content with a length finish is still usable.
+func (c chatChoice) truncated() bool {
+	return c.FinishReason == finishReasonLength &&
+		strings.TrimSpace(c.Message.Content.Text) == "" &&
+		len(c.Message.ToolCalls) == 0
 }
 
 type chatResponseMessage struct {
@@ -231,7 +265,9 @@ func (c ProxyClient) Complete(
 	executed := make([]ExecutedTool, 0)
 	toolRounds := 0
 	repairAttempts := 0
-	maxModelCalls := maxToolRounds + maxResponseRepairs + 1
+	budgetRaises := 0
+	completionTokens := baseCompletionTokens
+	maxModelCalls := maxToolRounds + maxResponseRepairs + budgetRaisesAllowed + 1
 	for round := 0; round < maxModelCalls; round++ {
 		requestTools := tools
 		if repairAttempts > 0 {
@@ -244,17 +280,41 @@ func (c ProxyClient) Complete(
 			ResponseFormat: chatResponseFormat{Type: "json_object"},
 			Stream:         false,
 			Temperature:    0,
-			MaxTokens:      900,
+			MaxTokens:      completionTokens,
 			Metadata: chatMetadata{
 				RequestID: requestID,
 				Role:      c.AuditRole,
 				Seat:      c.Attribution,
 			},
 		}
-		message, err := c.completeOnce(ctx, payload, requestID, round)
+		choice, err := c.completeOnce(ctx, payload, requestID, round)
 		if err != nil {
 			return CompletionResult{}, err
 		}
+		// A reasoning model can spend the whole budget on reasoning_content and
+		// return nothing. Retrying at the same budget just repeats the wall.
+		if choice.truncated() {
+			if budgetRaises >= budgetRaisesAllowed {
+				return CompletionResult{}, fmt.Errorf(
+					"Agent Proxy truncated the completion at %d tokens with empty content after %d raises",
+					completionTokens,
+					budgetRaises,
+				)
+			}
+			budgetRaises++
+			completionTokens *= completionBudgetStep
+			if completionTokens > maxCompletionTokens {
+				completionTokens = maxCompletionTokens
+			}
+			telemetry.Info(
+				ctx,
+				"model.budget.raised",
+				slog.Int("attempt", budgetRaises),
+				slog.Int("max_tokens", completionTokens),
+			)
+			continue
+		}
+		message := choice.Message
 		if repairAttempts > 0 && len(message.ToolCalls) > 0 {
 			return CompletionResult{}, fmt.Errorf(
 				"Agent Proxy returned a tool call during response repair",
@@ -365,20 +425,46 @@ func (c ProxyClient) Complete(
 			)
 			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "ok")
 			toolSpan.End()
+			// The full result is kept for grounding validation. Only the copy
+			// that re-enters the prompt is bounded.
 			executed = append(executed, ExecutedTool{
 				Name:      call.Function.Name,
 				Arguments: call.Function.Arguments,
 				Result:    result,
 			})
+			reinjected, trimmed := boundToolResult(result)
+			if trimmed {
+				telemetry.Info(
+					toolCtx,
+					"mcp.tool.result.bounded",
+					slog.String("server", definition.Server),
+					slog.String("tool", definition.Original),
+					slog.Int("result_bytes", len(result)),
+					slog.Int("reinjected_bytes", len(reinjected)),
+				)
+			}
 			messages = append(messages, chatMessage{
 				Role:       "tool",
-				Content:    result,
+				Content:    reinjected,
 				ToolCallID: call.ID,
 				Name:       call.Function.Name,
 			})
 		}
 	}
 	return CompletionResult{}, fmt.Errorf("Agent Proxy tool loop ended unexpectedly")
+}
+
+// boundToolResult caps one tool result before it re-enters the prompt, so a
+// round of parallel calls cannot inflate the context past the model's budget.
+func boundToolResult(result string) (string, bool) {
+	if len(result) <= maxToolResultBytes {
+		return result, false
+	}
+	runes := []rune(result)
+	if len(runes) > maxToolResultBytes {
+		runes = runes[:maxToolResultBytes]
+	}
+	return string(runes) + "\n[truncated by the runtime]", true
 }
 
 func responseRepairPrompt(style string) string {
@@ -398,7 +484,7 @@ func (c ProxyClient) completeOnce(
 	payload chatRequest,
 	requestID string,
 	round int,
-) (chatResponseMessage, error) {
+) (chatChoice, error) {
 	telemetry := telemetryOrNoop(c.Telemetry)
 	modelCtx, modelSpan := telemetry.StartSpan(
 		ctx,
@@ -409,7 +495,7 @@ func (c ProxyClient) completeOnce(
 	if err != nil {
 		telemetry.MarkSpanError(modelSpan, exceptionModelRequestMarshalFailed)
 		modelSpan.End()
-		return chatResponseMessage{}, fmt.Errorf("marshal Agent Proxy request: %w", err)
+		return chatChoice{}, fmt.Errorf("marshal Agent Proxy request: %w", err)
 	}
 	telemetry.Info(
 		modelCtx,
@@ -424,7 +510,7 @@ func (c ProxyClient) completeOnce(
 	if err != nil {
 		telemetry.MarkSpanError(modelSpan, exceptionModelRequestBuildFailed)
 		modelSpan.End()
-		return chatResponseMessage{}, fmt.Errorf("build Agent Proxy request: %w", err)
+		return chatChoice{}, fmt.Errorf("build Agent Proxy request: %w", err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-Request-ID", requestID)
@@ -437,7 +523,7 @@ func (c ProxyClient) completeOnce(
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelTransportFailed)
 		modelSpan.End()
-		return chatResponseMessage{}, fmt.Errorf("Agent Proxy request: %w", err)
+		return chatChoice{}, fmt.Errorf("Agent Proxy request: %w", err)
 	}
 	defer response.Body.Close()
 	responseRaw, err := io.ReadAll(io.LimitReader(response.Body, maxAgentProxyResponseBytes+1))
@@ -445,7 +531,7 @@ func (c ProxyClient) completeOnce(
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseReadFailed)
 		modelSpan.End()
-		return chatResponseMessage{}, fmt.Errorf("read Agent Proxy response: %w", err)
+		return chatChoice{}, fmt.Errorf("read Agent Proxy response: %w", err)
 	}
 	telemetry.Info(
 		modelCtx,
@@ -459,30 +545,33 @@ func (c ProxyClient) completeOnce(
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseTooLarge)
 		modelSpan.End()
-		return chatResponseMessage{}, err
+		return chatChoice{}, err
 	}
 	if response.StatusCode != http.StatusOK {
 		err := fmt.Errorf("Agent Proxy returned HTTP %d", response.StatusCode)
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseHTTPError)
 		modelSpan.End()
-		return chatResponseMessage{}, err
+		return chatChoice{}, err
 	}
 	var completion chatResponse
 	if err := json.Unmarshal(responseRaw, &completion); err != nil {
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseDecodeFailed)
 		modelSpan.End()
-		return chatResponseMessage{}, fmt.Errorf("decode Agent Proxy response: %w", err)
+		return chatChoice{}, fmt.Errorf("decode Agent Proxy response: %w", err)
 	}
 	if len(completion.Choices) == 0 {
 		err := fmt.Errorf("Agent Proxy response contained no choices")
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseMissingChoice)
 		modelSpan.End()
-		return chatResponseMessage{}, err
+		return chatChoice{}, err
 	}
 	telemetry.RecordModelCall(modelCtx, "ok")
 	modelSpan.End()
-	return completion.Choices[0].Message, nil
+	return chatChoice{
+		Message:      completion.Choices[0].Message,
+		FinishReason: completion.Choices[0].FinishReason,
+	}, nil
 }

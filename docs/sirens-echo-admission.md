@@ -12,8 +12,7 @@ path are governed by one configuration rather than two.
 A deployment can join a guild whose members the operator does not moderate.
 Without admission control any member could summon the service in a loop, and
 every summon would reach the model. The runtime previously queued each summon
-behind one execution slot with no bound, so a flood grew process memory and
-answered a conversation that had already moved on.
+behind one execution slot with no bound.
 
 ## Tiers
 
@@ -51,13 +50,11 @@ so a flood cannot expand metric cardinality.
 
 ## Lookup limiting
 
-Gate evaluation runs cheapest first and decides from the Gateway payload where
-it can. Two gates can still need a Discord API call: an unseen thread whose
-parent is unknown, and a reply whose referenced message was not delivered.
-
-Those lookups are bounded separately, per context, because a member posting in
-an unscoped channel could otherwise make the process issue an API call for every
-message it discards. Scope decisions are cached in both directions.
+Gate evaluation decides from the Gateway payload where it can. Two gates can
+still need a Discord API call: an unseen thread whose parent is unknown, and a
+reply whose referenced message was not delivered. Those are bounded separately
+per context, so an unscoped channel cannot force an API call per message.
+Scope decisions are cached in both directions.
 
 ## Timeouts
 
@@ -70,6 +67,9 @@ its budget on arrival would reach the model with only the remainder.
 
 The typing indicator starts when the turn starts running and refreshes until the
 reply is sent.
+
+Tool results and the completion budget are bounded separately. See
+[the completion budget](sirens-echo-budget.md).
 
 ## Tuning
 

@@ -591,3 +591,116 @@ func Example_proxyToolName() {
 	fmt.Println(name)
 	// Output: eco__get_status
 }
+
+// Reproduces the reported failure: the whole budget goes to reasoning_content
+// and content comes back empty. See docs/sirens-echo-budget.md.
+func TestCompleteRaisesTheBudgetOnTruncatedEmptyContent(t *testing.T) {
+	t.Parallel()
+	var budgets []int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			MaxTokens int `json:"max_tokens"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&payload)
+		budgets = append(budgets, payload.MaxTokens)
+		w.Header().Set("Content-Type", "application/json")
+		if len(budgets) == 1 {
+			// First call burns the budget on reasoning and returns nothing.
+			_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"length",
+				"message":{"content":"","reasoning_content":"thinking"}}]}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"stop",
+			"message":{"content":"{\"reply\":\"Recovered.\",\"issue\":null}"}}]}`))
+	}))
+	defer server.Close()
+
+	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
+	result, err := client.Complete(context.Background(), "system", "user", "req")
+	if err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if !strings.Contains(result.Content, "Recovered.") {
+		t.Fatalf("content = %q", result.Content)
+	}
+	if len(budgets) != 2 {
+		t.Fatalf("model calls = %d, want 2", len(budgets))
+	}
+	if budgets[0] != baseCompletionTokens {
+		t.Fatalf("first budget = %d, want %d", budgets[0], baseCompletionTokens)
+	}
+	if budgets[1] <= budgets[0] {
+		t.Fatalf("budget did not rise: %v", budgets)
+	}
+}
+
+// The escalation is bounded, and the error names the wall rather than
+// surfacing as a generic contract failure.
+func TestCompleteStopsRaisingAfterTheAllowedAttempts(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"length",
+			"message":{"content":"","reasoning_content":"thinking"}}]}`))
+	}))
+	defer server.Close()
+
+	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
+	_, err := client.Complete(context.Background(), "system", "user", "req")
+	if err == nil {
+		t.Fatal("a permanently truncated completion was accepted")
+	}
+	if !strings.Contains(err.Error(), "truncated the completion") {
+		t.Fatalf("error = %v, want it to name the truncation", err)
+	}
+	if calls != budgetRaisesAllowed+1 {
+		t.Fatalf("model calls = %d, want %d", calls, budgetRaisesAllowed+1)
+	}
+}
+
+// Truncated content that is not empty is a usable answer, so it must not
+// trigger a raise.
+func TestCompleteAcceptsTruncatedContentThatIsNotEmpty(t *testing.T) {
+	t.Parallel()
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"length",
+			"message":{"content":"{\"reply\":\"Partial but usable.\",\"issue\":null}"}}]}`))
+	}))
+	defer server.Close()
+
+	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
+	result, err := client.Complete(context.Background(), "system", "user", "req")
+	if err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	if !strings.Contains(result.Content, "Partial but usable.") {
+		t.Fatalf("content = %q", result.Content)
+	}
+	if calls != 1 {
+		t.Fatalf("model calls = %d, want 1", calls)
+	}
+}
+
+func TestBoundToolResultCapsReinjectionButKeepsGrounding(t *testing.T) {
+	t.Parallel()
+	small := strings.Repeat("a", 128)
+	if got, trimmed := boundToolResult(small); got != small || trimmed {
+		t.Fatal("a small result must pass through untouched")
+	}
+	huge := strings.Repeat("b", maxToolResultBytes*4)
+	got, trimmed := boundToolResult(huge)
+	if !trimmed {
+		t.Fatal("an oversized result was not bounded")
+	}
+	if len(got) >= len(huge) {
+		t.Fatalf("bounded length %d is not smaller than %d", len(got), len(huge))
+	}
+	if !strings.Contains(got, "[truncated by the runtime]") {
+		t.Fatal("the bound is not visible to the model")
+	}
+}
