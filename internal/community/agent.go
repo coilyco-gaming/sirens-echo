@@ -28,7 +28,6 @@ type Agent struct {
 	cfg               Config
 	session           *discordgo.Session
 	completions       CompletionClient
-	issues            IssueTracker
 	systemPrompt      string
 	telemetry         *Telemetry
 	readinessClient   *http.Client
@@ -88,20 +87,6 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			otelhttp.WithPropagators(telemetry.propagator),
 		),
 	}
-	var issueTracker IssueTracker
-	if cfg.Definition.IssueTracker != "" {
-		trackerURL, trackerErr := mcpServerURL(
-			cfg.Definition,
-			cfg.Definition.IssueTracker,
-		)
-		if trackerErr != nil {
-			return nil, trackerErr
-		}
-		issueTracker = ForgejoMCPClient{
-			MCPURL:     trackerURL,
-			HTTPClient: httpClient,
-		}
-	}
 	agent := &Agent{
 		cfg:     cfg,
 		session: session,
@@ -119,7 +104,6 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			},
 			Telemetry: telemetry,
 		},
-		issues:            issueTracker,
 		systemPrompt:      systemPrompt,
 		telemetry:         telemetry,
 		readinessClient:   newReadinessHTTPClient(defaultReadinessTimeout),
@@ -633,17 +617,12 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	}
 
 	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
-	decision, err := ParseDecision(result.Content)
+	reply, err := ParseReply(result.Content)
 	if err == nil {
-		err = ValidateGrounding(decision, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
+		err = ValidateGrounding(reply, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
 	}
 	if err == nil {
-		err = ValidateResponseStyle(a.cfg.Definition.ResponseStyle, decision)
-	}
-	if err == nil && decision.Issue != nil && a.issues == nil {
-		err = fmt.Errorf(
-			"model returned an issue draft while automatic issue tracking is disabled",
-		)
+		err = ValidateResponseStyle(a.cfg.Definition.ResponseStyle, reply)
 	}
 	if err != nil {
 		a.telemetry.MarkSpanError(validateSpan, exceptionResponseValidationFailed)
@@ -652,28 +631,6 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	}
 	validateSpan.End()
 
-	reply := decision.Reply
-	if decision.Issue != nil {
-		issueCtx, issueSpan := a.telemetry.StartSpan(turnCtx, "forgejo.issue.ensure")
-		issueURL, issueErr := a.issues.EnsureIssue(issueCtx, *decision.Issue)
-		if issueErr != nil {
-			a.telemetry.RecordFailure(issueCtx, "forgejo")
-			attrs := []slog.Attr{slog.String("error_type", "forgejo_issue_failed")}
-			var callErr ForgejoCallError
-			if errors.As(issueErr, &callErr) {
-				attrs = append(attrs,
-					slog.String("mcp_tool", callErr.Tool),
-					slog.Int("status", callErr.Status),
-					slog.Bool("tool_reported", callErr.ToolReported),
-				)
-			}
-			a.telemetry.Error(issueCtx, "forgejo.issue.failed", attrs...)
-			a.telemetry.MarkSpanError(issueSpan, exceptionForgejoIssueFailed)
-		} else {
-			reply = appendTrackingLink(reply, issueURL)
-		}
-		issueSpan.End()
-	}
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return err
 	}
@@ -825,11 +782,6 @@ func displayName(message *discordgo.Message) string {
 		return message.Author.Username
 	}
 	return "member"
-}
-
-func appendTrackingLink(reply, issueURL string) string {
-	suffix := "\n\nTracked for review: <" + issueURL + ">"
-	return truncateRunes(reply, 1990-len([]rune(suffix))) + suffix
 }
 
 func truncateRunes(value string, limit int) string {

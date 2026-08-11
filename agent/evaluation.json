@@ -17,7 +17,7 @@
         "author": "new member",
         "content": "Sirens Echo, can you confirm the time?"
       },
-      "required_issue_kind": "knowledge-gap",
+      "required_tool": "forgejo__create_issue",
       "forbidden_phrases": [
         "#events",
         "#announcements",
@@ -39,7 +39,7 @@
         "author": "regular member",
         "content": "That answer is wrong. I can provide the source after a steward reviews it."
       },
-      "required_issue_kind": "correction",
+      "required_tool": "forgejo__create_issue",
       "forbidden_phrases": [
         "the correction is verified",
         "staff confirmed",

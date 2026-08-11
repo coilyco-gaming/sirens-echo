@@ -29,20 +29,16 @@ func BuildSystemPrompt(definition Definition, localSkillpack string) string {
 			definition.Channel,
 		)
 	}
-	issuePolicy := `Return an "issue" value of null. State uncertainty plainly when the supplied context and available tools cannot answer the request.`
+	issuePolicy := `State uncertainty plainly when the supplied context and available tools cannot answer the request.`
 	if definition.IssueTracker != "" {
-		issuePolicy = `For an unanswered question or correction, return the issue draft below instead of calling the configured issue tracker. The runtime owns that sanitized, exact-title follow-up.
+		issuePolicy = `When approved knowledge cannot answer a question, or a user explicitly corrects a
+prior answer, call the configured issue-tracker tool to file it. Search for an
+open issue with the same title first and add nothing when one exists.
 
-When approved knowledge cannot answer the question, return:
-{"reply":"user-facing uncertainty","issue":{"kind":"knowledge-gap","title":"short subject","body":"sanitized summary of the missing knowledge and expected behavior"}}
-
-When a user explicitly corrects a prior answer, return:
-{"reply":"correction status","issue":{"kind":"correction","title":"short subject","body":"sanitized summary of the possible correction and expected behavior"}}
-
-Never put labels in the issue draft. Never copy names, handles, raw quotes,
-Discord identifiers, links to Discord messages, secrets, or personal details
-into an issue draft or tool call. The runtime separately reports automatic
-issue-draft follow-up only after it performs the write.`
+Keep the title one short line and never attach labels. Never copy names,
+handles, raw quotes, Discord identifiers, links to Discord messages, secrets,
+or personal details into the issue or any tool call. Say a follow-up was filed
+only when the tool result in this turn confirms it.`
 	}
 	return fmt.Sprintf(`Generate one response for the configured service.
 %s
@@ -64,14 +60,11 @@ the runtime supplied its result in this turn.
 %s
 </local-policy>
 
-Return exactly one JSON object with this shape:
-{"reply":"user-facing reply","issue":null}
-
 %s
 
 Never claim that an issue, message, lookup, escalation, or other action happened
 unless a tool result in this turn confirms it.
-Keep reply under 1800 characters. Do not wrap the JSON in Markdown.
+Reply with plain text and keep it under 1800 characters.
 `,
 		responseInstructions(definition.Identity, definition.ResponseStyle),
 		boundary,

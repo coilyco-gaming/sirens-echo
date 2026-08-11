@@ -3,7 +3,7 @@ Definition: agent/sirens-deep.yaml
 Identity: CoilyCo
 Response style: social
 Local policy roots: .agents/skills/coilyco-general
-System prompt bytes: 3303
+System prompt bytes: 3167
 
 ===== SYSTEM PROMPT =====
 
@@ -69,14 +69,11 @@ permission boundary. General-purpose means topic-neutral and extensible, not
 universally authorized.
 </local-policy>
 
-Return exactly one JSON object with this shape:
-{"reply":"user-facing reply","issue":null}
-
-Return an "issue" value of null. State uncertainty plainly when the supplied context and available tools cannot answer the request.
+State uncertainty plainly when the supplied context and available tools cannot answer the request.
 
 Never claim that an issue, message, lookup, escalation, or other action happened
 unless a tool result in this turn confirms it.
-Keep reply under 1800 characters. Do not wrap the JSON in Markdown.
+Reply with plain text and keep it under 1800 characters.
 
 ===== USER PROMPT (fixed sample) =====
 

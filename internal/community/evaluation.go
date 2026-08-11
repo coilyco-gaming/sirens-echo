@@ -24,7 +24,6 @@ type EvaluationCase struct {
 	ID                string            `json:"id"`
 	History           []TranscriptEntry `json:"history"`
 	Current           TranscriptEntry   `json:"current"`
-	RequiredIssueKind string            `json:"required_issue_kind"`
 	RequiredTool      string            `json:"required_tool"`
 	ForbiddenPhrases  []string          `json:"forbidden_phrases"`
 }
@@ -49,20 +48,10 @@ func LoadEvaluationPack(path string) (EvaluationPack, error) {
 		if evaluationCase.ID == "" || evaluationCase.Current.Content == "" {
 			return EvaluationPack{}, fmt.Errorf("evaluation case requires id and current content")
 		}
-		if evaluationCase.RequiredIssueKind != "" &&
-			evaluationCase.RequiredIssueKind != "knowledge-gap" &&
-			evaluationCase.RequiredIssueKind != "correction" {
-			return EvaluationPack{}, fmt.Errorf(
-				"evaluation case %s has unsupported issue kind %q",
-				evaluationCase.ID,
-				evaluationCase.RequiredIssueKind,
-			)
-		}
-		if evaluationCase.RequiredIssueKind == "" &&
-			evaluationCase.RequiredTool == "" &&
+		if evaluationCase.RequiredTool == "" &&
 			len(evaluationCase.ForbiddenPhrases) == 0 {
 			return EvaluationPack{}, fmt.Errorf(
-				"evaluation case %s requires an issue kind, tool, or forbidden phrase",
+				"evaluation case %s requires a tool or forbidden phrase",
 				evaluationCase.ID,
 			)
 		}
@@ -116,26 +105,19 @@ func runEvaluation(
 			failures = append(failures, fmt.Sprintf("%s: inference: %v", evaluationCase.ID, err))
 			continue
 		}
-		decision, err := ParseDecision(result.Content)
+		reply, err := ParseReply(result.Content)
 		if err == nil {
-			err = ValidateGrounding(decision, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
+			err = ValidateGrounding(reply, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
 		}
 		if err == nil {
-			err = ValidateResponseStyle(definition.ResponseStyle, decision)
-		}
-		if err == nil && evaluationCase.RequiredIssueKind != "" &&
-			(decision.Issue == nil || decision.Issue.Kind != evaluationCase.RequiredIssueKind) {
-			err = fmt.Errorf("expected %s issue draft", evaluationCase.RequiredIssueKind)
+			err = ValidateResponseStyle(definition.ResponseStyle, reply)
 		}
 		if err == nil && evaluationCase.RequiredTool != "" &&
 			!completionUsedTool(result, evaluationCase.RequiredTool) {
 			err = fmt.Errorf("expected tool %s", evaluationCase.RequiredTool)
 		}
 		if err == nil {
-			lowerOutput := strings.ToLower(decision.Reply)
-			if decision.Issue != nil {
-				lowerOutput += strings.ToLower("\n" + decision.Issue.Title + "\n" + decision.Issue.Body)
-			}
+			lowerOutput := strings.ToLower(reply)
 			for _, forbidden := range evaluationCase.ForbiddenPhrases {
 				if strings.Contains(lowerOutput, strings.ToLower(forbidden)) {
 					err = fmt.Errorf("contained forbidden phrase %q", forbidden)
@@ -147,7 +129,7 @@ func runEvaluation(
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
 		}
-		fmt.Fprintf(output, "%s: pass\n%s\n\n", evaluationCase.ID, decision.Reply)
+		fmt.Fprintf(output, "%s: pass\n%s\n\n", evaluationCase.ID, reply)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("evaluation failed:\n%s", strings.Join(failures, "\n"))

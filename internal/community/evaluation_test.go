@@ -19,24 +19,27 @@ func (f fakeCompletionClient) Complete(
 	return f.responses[requestID], nil
 }
 
-func TestRunEvaluationAcceptsGroundedIssueDrafts(t *testing.T) {
+func TestRunEvaluationAcceptsGroundedRepliesAndToolCalls(t *testing.T) {
 	t.Parallel()
 	definition, skillpack, pack := loadEvaluationFixture(t)
 	client := fakeCompletionClient{responses: map[string]CompletionResult{
 		"unknown-event-time": {
-			Content: `{"reply":"The approved information does not confirm the event time. The member-provided guess is unverified.","issue":{"kind":"knowledge-gap","title":"Saturday event time","body":"The skillpack needs a verified event schedule source."}}`,
+			Content: "The approved information does not confirm the event time. " +
+				"The member-provided guess is unverified.",
+			ToolCalls: []ExecutedTool{{Name: "forgejo__create_issue"}},
 		},
 		"explicit-correction": {
-			Content: `{"reply":"The earlier answer is unverified pending review of the source.","issue":{"kind":"correction","title":"Saturday event time answer","body":"A prior Sirens Echo answer may contain an incorrect event time and needs review against an approved source."}}`,
+			Content:   "The earlier answer is unverified pending review of the source.",
+			ToolCalls: []ExecutedTool{{Name: "forgejo__create_issue"}},
 		},
 		"eco-live-status": {
-			Content: `{"reply":"The Eco tool reports that the server is online.","issue":null}`,
+			Content: "The Eco tool reports that the server is online.",
 			ToolCalls: []ExecutedTool{
 				{Name: "eco__get_eco_server_status"},
 			},
 		},
 		"neutral-capability-boundary": {
-			Content: `{"reply":"Available functions cover current Eco information and repository-scoped issue operations.","issue":null}`,
+			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
 		},
 	}}
 	if err := RunEvaluation(
@@ -62,13 +65,13 @@ func TestRunEvaluationRejectsInventedChannel(t *testing.T) {
 			Content: `{"reply":"The earlier answer is unverified.","issue":{"kind":"correction","title":"Event time","body":"The answer may be wrong."}}`,
 		},
 		"eco-live-status": {
-			Content: `{"reply":"The Eco tool reports that the server is online.","issue":null}`,
+			Content: "The Eco tool reports that the server is online.",
 			ToolCalls: []ExecutedTool{
 				{Name: "eco__get_eco_server_status"},
 			},
 		},
 		"neutral-capability-boundary": {
-			Content: `{"reply":"Available functions cover current Eco information and repository-scoped issue operations.","issue":null}`,
+			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
 		},
 	}}
 	if err := RunEvaluation(
@@ -137,19 +140,21 @@ func (c *deadlineRecordingCompletionClient) Complete(
 func validEvaluationResponses() map[string]CompletionResult {
 	return map[string]CompletionResult{
 		"unknown-event-time": {
-			Content: `{"reply":"The approved information does not confirm the event time.","issue":{"kind":"knowledge-gap","title":"Saturday event time","body":"The skillpack needs a verified event schedule source."}}`,
+			Content:   "The approved information does not confirm the event time.",
+			ToolCalls: []ExecutedTool{{Name: "forgejo__create_issue"}},
 		},
 		"explicit-correction": {
-			Content: `{"reply":"The earlier answer is unverified pending review.","issue":{"kind":"correction","title":"Saturday event time answer","body":"A prior answer may contain an incorrect event time and needs review."}}`,
+			Content:   "The earlier answer is unverified pending review.",
+			ToolCalls: []ExecutedTool{{Name: "forgejo__create_issue"}},
 		},
 		"eco-live-status": {
-			Content: `{"reply":"The Eco tool reports that the server is online.","issue":null}`,
+			Content: "The Eco tool reports that the server is online.",
 			ToolCalls: []ExecutedTool{
 				{Name: "eco__get_eco_server_status"},
 			},
 		},
 		"neutral-capability-boundary": {
-			Content: `{"reply":"Available functions cover current Eco information and repository-scoped issue operations.","issue":null}`,
+			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
 		},
 	}
 }
