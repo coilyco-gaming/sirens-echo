@@ -6,4 +6,6 @@ channel: ""
 max_context_messages: 12
 local_skill_roots:
   - .agents/skills/coilyco-general
-mcp_servers: []
+mcp_servers:
+  - name: steam
+    url_env: SIRENS_ECHO_STEAM_MCP_URL
