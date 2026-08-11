@@ -3,11 +3,7 @@ repositories {}
 roles {
     role "creator" {
         composed-skill "personal-preference-*"
-        composed-skill "writing-kai-voice"
-
-        // Mirrors the aos creator role, which is composed-skill "writing-*".
-        composed-skill "writing-social-*"
-        composed-skill "writing-voice-adaptation"
+        composed-skill "writing-*"
 
         // aos creator does not reach this: it is tooling-*, not writing-*.
         composed-skill "tooling-discord-community-host"
