@@ -188,6 +188,40 @@ func TestSummonContextKeySharesOneBudgetPerGuild(t *testing.T) {
 	}
 }
 
+func TestDirectMessagesSummonWithoutAMention(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	state := discordgo.NewState()
+	state.User = &discordgo.User{ID: botID}
+	session := &discordgo.Session{State: state}
+	author := &discordgo.User{ID: "member-1"}
+
+	summoned, lookup := summonedLocally(session, &discordgo.Message{
+		ChannelID: "dm-1",
+		Author:    author,
+	})
+	if !summoned || lookup {
+		t.Fatalf(
+			"a direct message must summon without a mention, got summoned=%v lookup=%v",
+			summoned, lookup,
+		)
+	}
+
+	// The guild path keeps its mention gate, which is what keeps a busy
+	// channel quiet.
+	summoned, lookup = summonedLocally(session, &discordgo.Message{
+		GuildID:   "guild-1",
+		ChannelID: "channel-1",
+		Author:    author,
+	})
+	if summoned || lookup {
+		t.Fatalf(
+			"an unmentioned guild message must not summon, got summoned=%v lookup=%v",
+			summoned, lookup,
+		)
+	}
+}
+
 func TestDiscordMessageSpanAttributesUseStringIdentifiers(t *testing.T) {
 	t.Parallel()
 	got := make(map[string]string)

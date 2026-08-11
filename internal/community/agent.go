@@ -380,6 +380,11 @@ func summonedLocally(
 	session *discordgo.Session,
 	message *discordgo.Message,
 ) (summoned bool, referenceLookup bool) {
+	// A direct message is addressed to this service by definition. See
+	// docs/sirens-echo-contexts.md for what that costs.
+	if message.GuildID == "" {
+		return true, false
+	}
 	botID := session.State.User.ID
 	for _, mention := range message.Mentions {
 		if mention.ID == botID {

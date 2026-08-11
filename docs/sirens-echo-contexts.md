@@ -52,9 +52,16 @@ the configured deployment ingress without asserting which one was selected.
 5. Review the admission defaults in
    [admission control](sirens-echo-admission.md) before the first rollout.
 
-The service still answers only a mention or a reply to its own message. It has
-no moderation, role, announcement, or account surface, and that exclusion is
-independent of how many contexts it serves.
+In a guild the service still answers only a mention or a reply to its own
+message. It has no moderation, role, announcement, or account surface, and that
+exclusion is independent of how many contexts it serves.
+
+A direct message needs no mention. The mention gate exists to keep a busy
+channel quiet, and a direct message is addressed to the service by definition,
+so requiring one there would read as ignoring an account the access policy just
+admitted. The consequence is that every direct message from an allowlisted
+account spends a turn, with the per-user admission budget as the only remaining
+brake. Allowlist accordingly.
 
 ## What a bot cannot do
 
