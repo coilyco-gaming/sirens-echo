@@ -99,3 +99,33 @@ func TestBuildSystemPromptSelectsSocialPolicy(t *testing.T) {
 		}
 	}
 }
+
+// Regression for #87: the model inferred "he" for Kai from her name alone, so
+// both response styles must carry the rule and the validators must enforce it.
+func TestBuildSystemPromptCarriesPronounPolicyInEveryStyle(t *testing.T) {
+	t.Parallel()
+	for _, style := range []string{ResponseStyleSocial, ResponseStyleNeutral} {
+		definition := Definition{
+			Identity:      "CoilyCo",
+			AuditRole:     "general",
+			ResponseStyle: style,
+		}
+		prompt := BuildSystemPrompt(definition, "general CoilyCo policy")
+		for _, expected := range []string{
+			"Kai is she/her",
+			"use they/them unless this conversation stated",
+			"A name is never evidence of pronouns",
+		} {
+			if !strings.Contains(prompt, expected) {
+				t.Fatalf("%s system prompt missing %q", style, expected)
+			}
+		}
+		if err := ValidateSystemPrompt(definition, prompt); err != nil {
+			t.Fatalf("%s ValidateSystemPrompt: %v", style, err)
+		}
+		stripped := strings.ReplaceAll(prompt, pronounPolicy, "")
+		if err := ValidateSystemPrompt(definition, stripped); err == nil {
+			t.Fatalf("%s validator accepted a prompt with no pronoun policy", style)
+		}
+	}
+}
