@@ -43,8 +43,8 @@ with their own permission boundary.
 ## Configuration
 
 Deploy selects the tracked YAML definition, Agent Proxy route, Discord switch,
-channel and guild scope, admission limits, and instance name. `POST /v1/turn`
-requires a shared secret whenever its listener is not loopback. See
+channel and guild scope, admission limits, and instance name. Reachability of
+`POST /v1/turn` is decided at the network layer by the deployment. See
 [response profiles](docs/response-profiles.md),
 [admission control](docs/sirens-echo-admission.md), and
 [deployment](docs/deploy.md).

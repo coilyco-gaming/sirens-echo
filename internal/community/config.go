@@ -2,7 +2,6 @@ package community
 
 import (
 	"fmt"
-	"net"
 	"net/url"
 	"os"
 	"regexp"
@@ -115,9 +114,6 @@ type Config struct {
 	AgentProxyModel  string
 	OTLPEndpoint     string
 	HTTPListenAddr   string
-	// HTTPToken is the shared secret for POST /v1/turn, mandatory whenever the
-	// listener is not loopback.
-	HTTPToken string
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -177,7 +173,6 @@ func LoadConfig() (Config, error) {
 		AgentProxyModel:   strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
 		OTLPEndpoint:      valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
 		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
-		HTTPToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		RequestTimeout:    requestTimeout,
 		QueueTimeout:      queueTimeout,
@@ -193,14 +188,6 @@ func LoadConfig() (Config, error) {
 		if !discordSnowflake.MatchString(id) {
 			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
 		}
-	}
-	// Derived from the bind address rather than left for the operator to
-	// remember, because the listener is otherwise unauthenticated spend.
-	if !loopbackListener(cfg.HTTPListenAddr) && cfg.HTTPToken == "" {
-		return Config{}, fmt.Errorf(
-			"SIRENS_ECHO_HTTP_TOKEN is required when SIRENS_ECHO_HTTP_ADDR (%s) is not loopback",
-			cfg.HTTPListenAddr,
-		)
 	}
 	missing := make([]string, 0, 5)
 	if cfg.DiscordEnabled {
@@ -351,20 +338,6 @@ func splitList(value string) []string {
 		}
 	}
 	return items
-}
-
-// loopbackListener reports whether the bind address is reachable only from the
-// process's own host. An unparsable or wildcard host is treated as reachable.
-func loopbackListener(addr string) bool {
-	host, _, err := net.SplitHostPort(strings.TrimSpace(addr))
-	if err != nil {
-		return false
-	}
-	if host == "localhost" {
-		return true
-	}
-	parsed := net.ParseIP(host)
-	return parsed != nil && parsed.IsLoopback()
 }
 
 func durationOrDefault(value string, fallback time.Duration) (time.Duration, error) {

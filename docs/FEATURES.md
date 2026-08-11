@@ -30,11 +30,11 @@
   exact-title reuse and no labels
 - Transport-aware OpenTelemetry ingress and joined turn traces end to end
 - Trace-correlated metadata logs with byte counts and no member or model text
-- Turn, latency, model-call, tool-call, admission, and failure metrics, plus 24
+- Turn, latency, model-call, tool-call, admission, and failure metrics, plus 23
   bounded SigNoZ exception groups with stage and outcome tags
 - Metrics-only liveness and non-generating route readiness, bounded
-- Private HTTP entrypoint over the same turn path, with W3C tracing, shared
-  secret auth off loopback, and Discord's admission policy
+- Private HTTP entrypoint over the same turn path, with W3C tracing and
+  Discord's admission policy
 - Transport-neutral CoilyCo profile with no assumed domain, MCP, automatic
   issue tracking, or default write surface
 - Offline harness and real MCP fixtures plus a non-mutating live gate

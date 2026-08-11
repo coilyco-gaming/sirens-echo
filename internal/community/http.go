@@ -2,7 +2,6 @@ package community
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -109,17 +108,6 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		)
 		return
 	}
-	if !a.authorizedHTTPTurn(request) {
-		writer.Header().Set("WWW-Authenticate", "Bearer")
-		a.writeHTTPError(
-			writer,
-			request,
-			http.StatusUnauthorized,
-			exceptionHTTPTurnUnauthorized,
-			"unauthorized",
-		)
-		return
-	}
 	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
 	var payload httpTurnRequest
 	decoder := json.NewDecoder(request.Body)
@@ -213,18 +201,6 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		return
 	}
 	writeJSON(writer, http.StatusOK, httpTurnResponse{Reply: turn.reply})
-}
-
-// authorizedHTTPTurn checks the deployment's shared secret in constant time.
-// An empty configured token means loopback-only, which LoadConfig enforces.
-func (a *Agent) authorizedHTTPTurn(request *http.Request) bool {
-	if a.cfg.HTTPToken == "" {
-		return true
-	}
-	supplied := strings.TrimSpace(
-		strings.TrimPrefix(request.Header.Get("Authorization"), "Bearer "),
-	)
-	return subtle.ConstantTimeCompare([]byte(supplied), []byte(a.cfg.HTTPToken)) == 1
 }
 
 // httpPrincipal names the per-user limiter key for an HTTP caller. Callers that

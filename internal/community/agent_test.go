@@ -342,52 +342,14 @@ func turnAgent(cfg Config) *Agent {
 	}
 }
 
-func turnRequest(token string) *http.Request {
+func turnRequest() *http.Request {
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/v1/turn",
 		strings.NewReader(`{"request_id":"manual-request","author":"tester","content":"Are you ready?"}`),
 	)
 	request.Header.Set("Content-Type", "application/json")
-	if token != "" {
-		request.Header.Set("Authorization", "Bearer "+token)
-	}
 	return request
-}
-
-func TestHTTPTurnRequiresTheConfiguredToken(t *testing.T) {
-	t.Parallel()
-	agent := turnAgent(Config{HTTPToken: "shared-secret"})
-	handler := agent.HTTPHandler()
-
-	for _, testCase := range []struct {
-		name   string
-		token  string
-		status int
-	}{
-		{name: "no credential", token: "", status: http.StatusUnauthorized},
-		{name: "wrong credential", token: "guessed-secret", status: http.StatusUnauthorized},
-		{name: "correct credential", token: "shared-secret", status: http.StatusOK},
-	} {
-		recorder := httptest.NewRecorder()
-		handler.ServeHTTP(recorder, turnRequest(testCase.token))
-		if recorder.Code != testCase.status {
-			t.Fatalf(
-				"%s: status = %d, want %d, body = %s",
-				testCase.name,
-				recorder.Code,
-				testCase.status,
-				recorder.Body.String(),
-			)
-		}
-	}
-
-	// Health routes stay open so a probe needs no credential.
-	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/healthz", nil))
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("healthz status = %d, want %d", recorder.Code, http.StatusOK)
-	}
 }
 
 func TestHTTPTurnAppliesTheAdmissionPolicy(t *testing.T) {
@@ -398,13 +360,13 @@ func TestHTTPTurnAppliesTheAdmissionPolicy(t *testing.T) {
 	handler := agent.HTTPHandler()
 
 	first := httptest.NewRecorder()
-	handler.ServeHTTP(first, turnRequest(""))
+	handler.ServeHTTP(first, turnRequest())
 	if first.Code != http.StatusOK {
 		t.Fatalf("first status = %d, body = %s", first.Code, first.Body.String())
 	}
 
 	second := httptest.NewRecorder()
-	handler.ServeHTTP(second, turnRequest(""))
+	handler.ServeHTTP(second, turnRequest())
 	if second.Code != http.StatusTooManyRequests {
 		t.Fatalf("second status = %d, want %d", second.Code, http.StatusTooManyRequests)
 	}
@@ -413,7 +375,7 @@ func TestHTTPTurnAppliesTheAdmissionPolicy(t *testing.T) {
 	}
 
 	// A distinct caller has its own budget rather than inheriting the denial.
-	distinct := turnRequest("")
+	distinct := turnRequest()
 	distinct.Header.Set("X-Sirens-Caller", "second-client")
 	third := httptest.NewRecorder()
 	handler.ServeHTTP(third, distinct)
@@ -431,7 +393,7 @@ func TestHTTPTurnReleasesItsQueueSlot(t *testing.T) {
 
 	for attempt := 0; attempt < 4; attempt++ {
 		recorder := httptest.NewRecorder()
-		handler.ServeHTTP(recorder, turnRequest(""))
+		handler.ServeHTTP(recorder, turnRequest())
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("attempt %d: status = %d, body = %s", attempt, recorder.Code, recorder.Body.String())
 		}

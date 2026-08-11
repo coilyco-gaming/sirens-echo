@@ -14,12 +14,14 @@ It bypasses only Discord's channel, mention, and duplicate gates. Admission,
 Agent Proxy, MCP tool calls, response validation, grounding, and guarded Forgejo
 issue handling are unchanged.
 
-## Authentication and limits
+## Access and limits
 
-`SIRENS_ECHO_HTTP_TOKEN` is required whenever the listener is not bound to
-loopback, which the k3s deployment's `0.0.0.0` bind always is. Startup fails
-rather than serving an unauthenticated completion endpoint. The token is
-compared in constant time, and neither health route requires it.
+Reachability is decided at the network layer rather than by the process. The k3s
+deployment binds `0.0.0.0:8080`, publishes only a private ClusterIP Service with
+no Ingress, certificate, DNS record, or NodePort, and routes callers through
+Echo's Tailscale sidecar, so reaching `/v1/turn` requires being an authorized
+node on the tailnet. The process carries no credential of its own. A deployment
+that exposes the listener any other way owns that boundary itself.
 
 `X-Sirens-Caller` selects the per-caller admission budget. Anonymous clients
 share one budget. A limited caller receives `429` with `Retry-After`. See
@@ -34,7 +36,6 @@ Tailscale sidecar. From an authorized tailnet client:
 ```sh
 curl -sS http://sirens-echo:8080/v1/turn \
   -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer ${SIRENS_ECHO_HTTP_TOKEN}" \
   -H 'X-Sirens-Caller: manual-test' \
   -d '{"author":"manual test","content":"What is the current Eco server status?"}'
 ```

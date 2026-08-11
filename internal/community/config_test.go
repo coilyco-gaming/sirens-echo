@@ -156,30 +156,18 @@ func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 	}
 }
 
-func TestLoadConfigRequiresHTTPTokenOffLoopback(t *testing.T) {
+func TestLoadConfigAcceptsANonLoopbackListener(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
+	// The bind address no longer gates startup. Reachability is decided at the
+	// network layer, so the process does not reason about it.
 	t.Setenv("SIRENS_ECHO_HTTP_ADDR", "0.0.0.0:8080")
-	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "")
 
-	if _, err := LoadConfig(); err == nil ||
-		!strings.Contains(err.Error(), "SIRENS_ECHO_HTTP_TOKEN is required") {
-		t.Fatalf("LoadConfig error = %v", err)
-	}
-
-	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "shared-secret")
 	if _, err := LoadConfig(); err != nil {
-		t.Fatalf("LoadConfig with token: %v", err)
-	}
-
-	// Loopback keeps the token optional, so local development is unchanged.
-	t.Setenv("SIRENS_ECHO_HTTP_ADDR", "127.0.0.1:8080")
-	t.Setenv("SIRENS_ECHO_HTTP_TOKEN", "")
-	if _, err := LoadConfig(); err != nil {
-		t.Fatalf("LoadConfig on loopback: %v", err)
+		t.Fatalf("LoadConfig on a non-loopback listener: %v", err)
 	}
 }
 
