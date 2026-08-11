@@ -52,7 +52,7 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		}
 		writer.Header().Set("Content-Type", "application/json")
 		_, _ = writer.Write([]byte(
-			`{"choices":[{"message":{"content":"{\"reply\":\"Request received.\",\"issue\":null}"}}]}`,
+			`{"choices":[{"message":{"content":"Request received."}}]}`,
 		))
 	}))
 	defer server.Close()
@@ -69,7 +69,7 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"Request received.","issue":null}` {
+	if got.Content != `Request received.` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if len(got.ToolCalls) != 0 {
@@ -141,7 +141,7 @@ func TestProxyClientDiscoversCallsAndContinuesWithEcoMCP(t *testing.T) {
 				t.Errorf("continuation messages = %s", raw)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":[{"type":"output_text","text":"{\"reply\":\"Eco is online now.\",\"issue\":null}"}]}}]}`,
+				`{"choices":[{"message":{"content":[{"type":"output_text","text":"Eco is online now."}]}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -166,7 +166,7 @@ func TestProxyClientDiscoversCallsAndContinuesWithEcoMCP(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"Eco is online now.","issue":null}` {
+	if got.Content != `Eco is online now.` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if len(got.ToolCalls) != 1 {
@@ -206,7 +206,7 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 				t.Errorf("reasoning content = %q, want %q", got, reasoning)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"Eco is online now.\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"Eco is online now."}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -226,7 +226,7 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"Eco is online now.","issue":null}` {
+	if got.Content != `Eco is online now.` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if calls := round.Load(); calls != 2 {
@@ -264,7 +264,7 @@ func TestChatContentAcceptsCompatibleShapes(t *testing.T) {
 	}
 }
 
-func TestProxyClientRepairsInvalidStructuredOutputOnce(t *testing.T) {
+func TestProxyClientRepairsStyleViolationOnce(t *testing.T) {
 	t.Parallel()
 	var round atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(
@@ -279,7 +279,7 @@ func TestProxyClientRepairsInvalidStructuredOutputOnce(t *testing.T) {
 		switch round.Add(1) {
 		case 1:
 			_, _ = writer.Write([]byte(
-				"{\"choices\":[{\"message\":{\"content\":\"```json\\n{\\\"reply\\\":\\\"broken\\\" local,\\\"issue\\\":null}\\n```\"}}]}",
+				`{"choices":[{"message":{"content":"Hey there! Happy to help."}}]}`,
 			))
 		case 2:
 			repairPrompt := ""
@@ -289,11 +289,11 @@ func TestProxyClientRepairsInvalidStructuredOutputOnce(t *testing.T) {
 			if len(body.Messages) != 4 ||
 				body.Messages[2].Role != "assistant" ||
 				body.Messages[3].Role != "user" ||
-				!strings.Contains(repairPrompt, "valid JSON object") {
+				!strings.Contains(repairPrompt, "violated the required response contract") {
 				t.Errorf("repair messages = %#v", body.Messages)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"repaired\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"repaired"}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -312,7 +312,7 @@ func TestProxyClientRepairsInvalidStructuredOutputOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"repaired","issue":null}` {
+	if got.Content != `repaired` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if calls := round.Load(); calls != 2 {
@@ -320,7 +320,7 @@ func TestProxyClientRepairsInvalidStructuredOutputOnce(t *testing.T) {
 	}
 }
 
-func TestProxyClientRepairsEmptyStructuredOutputOnce(t *testing.T) {
+func TestProxyClientRepairsEmptyReplyOnce(t *testing.T) {
 	t.Parallel()
 	var round atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(
@@ -344,14 +344,14 @@ func TestProxyClientRepairsEmptyStructuredOutputOnce(t *testing.T) {
 			}
 			if len(body.Messages) != 3 ||
 				body.Messages[2].Role != "user" ||
-				!strings.Contains(repairPrompt, "valid JSON object") {
+				!strings.Contains(repairPrompt, "violated the required response contract") {
 				t.Errorf("repair messages = %#v", body.Messages)
 			}
 			if len(body.Tools) != 0 {
 				t.Errorf("repair tools = %#v", body.Tools)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"repaired\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"repaired"}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -370,7 +370,7 @@ func TestProxyClientRepairsEmptyStructuredOutputOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"repaired","issue":null}` {
+	if got.Content != `repaired` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if calls := round.Load(); calls != 2 {
@@ -393,7 +393,7 @@ func TestProxyClientRepairsPersonalityOnce(t *testing.T) {
 		switch round.Add(1) {
 		case 1:
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"Hey there! 🫡\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"Hey there! 🫡"}}]}`,
 			))
 		case 2:
 			repairPrompt := ""
@@ -406,7 +406,7 @@ func TestProxyClientRepairsPersonalityOnce(t *testing.T) {
 				t.Errorf("repair request = %#v", body)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"Request received.\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"Request received."}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -425,7 +425,7 @@ func TestProxyClientRepairsPersonalityOnce(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"Request received.","issue":null}` {
+	if got.Content != `Request received.` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	if calls := round.Load(); calls != 2 {
@@ -448,7 +448,7 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 		switch round.Add(1) {
 		case 1:
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"Hey there!"}}]}`,
+				`{"choices":[{"message":{"content":"` + strings.Repeat("a", 1801) + `"}}]}`,
 			))
 		case 2:
 			repairPrompt := ""
@@ -460,7 +460,7 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 				t.Errorf("repair prompt = %q", repairPrompt)
 			}
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"Hey! I found it for you.\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"Hey! I found it for you."}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)
@@ -480,12 +480,12 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
-	if got.Content != `{"reply":"Hey! I found it for you.","issue":null}` {
+	if got.Content != `Hey! I found it for you.` {
 		t.Fatalf("completion = %q", got.Content)
 	}
 }
 
-func TestProxyClientRejectsInvalidStructuredOutputAfterRepair(t *testing.T) {
+func TestProxyClientRejectsPersistentStyleViolation(t *testing.T) {
 	t.Parallel()
 	var round atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(
@@ -495,7 +495,7 @@ func TestProxyClientRejectsInvalidStructuredOutputAfterRepair(t *testing.T) {
 		round.Add(1)
 		writer.Header().Set("Content-Type", "application/json")
 		_, _ = writer.Write([]byte(
-			`{"choices":[{"message":{"content":"not JSON"}}]}`,
+			`{"choices":[{"message":{"content":"Hey there! Happy to help."}}]}`,
 		))
 	}))
 	defer server.Close()
@@ -527,7 +527,7 @@ func TestProxyClientRejectsToolCallDuringResponseRepair(t *testing.T) {
 		switch round.Add(1) {
 		case 1:
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"not JSON"}}]}`,
+				`{"choices":[{"message":{"content":"Hey there! Happy to help."}}]}`,
 			))
 		case 2:
 			_, _ = writer.Write([]byte(
@@ -612,7 +612,7 @@ func TestCompleteRaisesTheBudgetOnTruncatedEmptyContent(t *testing.T) {
 			return
 		}
 		_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"stop",
-			"message":{"content":"{\"reply\":\"Recovered.\",\"issue\":null}"}}]}`))
+			"message":{"content":"Recovered."}}]}`))
 	}))
 	defer server.Close()
 
@@ -670,7 +670,7 @@ func TestCompleteAcceptsTruncatedContentThatIsNotEmpty(t *testing.T) {
 		calls++
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"choices":[{"finish_reason":"length",
-			"message":{"content":"{\"reply\":\"Partial but usable.\",\"issue\":null}"}}]}`))
+			"message":{"content":"Partial but usable."}}]}`))
 	}))
 	defer server.Close()
 

@@ -45,7 +45,7 @@ with a `POST /v1/turn` server span that extracts an incoming W3C
 - `context.assemble`
 - `mcp.tools.list` and one `mcp.tool.call` per tool call
 - One `model.chat` per Agent Proxy round
-- `response.validate` and optional `forgejo.issue.ensure`
+- `response.validate`
 - `community.reply` plus `discord.reply` for Discord delivery
 
 The Agent Proxy and MCP HTTP transports inherit the active trace context.

@@ -8,9 +8,11 @@ environment-backed private Forgejo MCP URL. Eco needs no client credential or
 tailnet identity. Echo sends no credential to the private MCP. The separate
 MCP workload holds its Forgejo token.
 
-The CoilyCo general-purpose definition begins with an empty MCP roster and no
-automatic issue tracker. This is deliberate. General-purpose describes topic
-scope, not universal tool or mutation authority.
+The CoilyCo general-purpose definition selects read-only surfaces one at a time
+and carries no automatic issue tracker. It holds a Steam reader today. The
+restraint is deliberate and it is about mutation, not breadth. General-purpose
+describes topic scope, not universal tool or mutation authority, so a new
+surface is an explicit edit to the definition rather than an inherited default.
 
 ## Tool loop
 
@@ -38,7 +40,6 @@ The harness rejects:
 - Tool arguments that are not JSON objects
 - A response with neither tool calls nor usable content
 - More than six tool rounds
-- An issue draft when the selected definition has no automatic issue tracker
 
 Connection, discovery, and invocation failures stop the turn and produce the
 neutral retry reply. MCP error results returned as data remain available to
@@ -67,8 +68,9 @@ are explicitly reviewed.
 The official in-process MCP fixture proves schema discovery, a tool-call-only
 first model response, complete tool result continuation, a grounded
 user-facing reply, and alternate compatible content forms. Separate profile
-tests prove the CoilyCo definition loads without MCP or issue-tracker
-dependencies.
+tests prove the CoilyCo definition selects exactly its read-only Steam surface,
+resolves that address from deployment rather than a literal URL, and names no
+issue tracker.
 
 The live Echo evaluation selects only static MCP URLs, then requires an
 `eco__get_eco_server_status` call without sending Discord or Forgejo writes.

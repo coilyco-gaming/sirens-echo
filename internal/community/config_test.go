@@ -17,7 +17,9 @@ func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
 	}
 }
 
-func TestCoilyCoDefinitionHasNoDomainSpecificSurface(t *testing.T) {
+// The CoilyCo profile no longer asserts an empty roster. It selects read-only
+// surfaces deliberately, one at a time, and still carries no write surface.
+func TestCoilyCoDefinitionSelectsOnlyReadOnlySurfaces(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	definition, err := LoadDefinition(path)
@@ -34,9 +36,15 @@ func TestCoilyCoDefinitionHasNoDomainSpecificSurface(t *testing.T) {
 	if definition.Channel != "" {
 		t.Fatalf("channel = %q", definition.Channel)
 	}
-	if len(definition.MCPServers) != 0 {
+	if len(definition.MCPServers) != 1 {
 		t.Fatalf("MCP servers = %#v", definition.MCPServers)
 	}
+	steam := definition.MCPServers[0]
+	// Deployment owns the address, so a literal URL here would pin one cluster.
+	if steam.Name != "steam" || steam.URLEnv != "SIRENS_ECHO_STEAM_MCP_URL" || steam.URL != "" {
+		t.Fatalf("steam server = %#v", steam)
+	}
+	// An issue tracker is the profile's write surface, and it stays absent.
 	if definition.IssueTracker != "" {
 		t.Fatalf("issue tracker = %q", definition.IssueTracker)
 	}
@@ -49,6 +57,7 @@ func TestCoilyCoDefinitionHasNoDomainSpecificSurface(t *testing.T) {
 func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
 	t.Setenv("DISCORD_TOKEN", "")
@@ -72,6 +81,7 @@ func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001,1024000000000000002")
@@ -110,6 +120,7 @@ func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 func TestLoadConfigRequiresHTTPTokenOffLoopback(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	t.Setenv("SIRENS_ECHO_HTTP_ADDR", "0.0.0.0:8080")

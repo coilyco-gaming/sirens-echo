@@ -15,10 +15,10 @@ Agent Proxy is the inference transport. Deployment reads the selected
 through without a source default, and Echo uses that value for inference and
 route readiness alike.
 
-Every model round requests OpenAI-compatible JSON object mode at temperature
-zero, over the selected policy, bounded history, and the current request. Echo
-attempts one same-conversation, style-aware repair with tools disabled, then
-fails closed before Discord or an automatic issue write.
+Every model round runs at temperature zero over the selected policy, bounded
+history, and the current request, and the reply is plain text. Echo attempts
+one same-conversation, style-aware repair with tools disabled, then fails
+closed before Discord delivery.
 
 `SIRENS_ECHO_DEFINITION` selects the tracked definition. Discord ingress is on
 by default, and `SIRENS_ECHO_DISCORD_ENABLED=false` removes the token and

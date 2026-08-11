@@ -39,18 +39,13 @@ const (
 const finishReasonLength = "length"
 
 const neutralResponseRepairPrompt = `The previous assistant response violated the required response contract.
-Return only one valid JSON object with a non-empty "reply" string and an
-"issue" value that is either null or an object. Do not use Markdown fences or
-add commentary outside the JSON object. Rewrite the reply in neutral, concise,
-impersonal language. Remove greetings, emojis, exclamation marks, first-person
-or collective pronouns, banter, apologies, thanks, sign-offs, personality, and
-offers of more help.`
+Rewrite the reply in neutral, concise, impersonal language. Remove greetings,
+emojis, exclamation marks, first-person or collective pronouns, banter,
+apologies, thanks, sign-offs, personality, and offers of more help.`
 
 const socialResponseRepairPrompt = `The previous assistant response violated the required response contract.
-Return only one valid JSON object with a non-empty "reply" string and an
-"issue" value that is either null or an object. Do not use Markdown fences or
-add commentary outside the JSON object. Preserve the useful answer and the
-selected social tone while fixing the JSON structure.`
+Preserve the useful answer and the selected social tone while fixing the
+reported problem.`
 
 // ExecutedTool records one model-requested tool that the runtime completed.
 type ExecutedTool struct {
@@ -325,13 +320,9 @@ func (c ProxyClient) Complete(
 		}
 		if len(message.ToolCalls) == 0 {
 			content := strings.TrimSpace(message.Content.Text)
-			contractErr := fmt.Errorf("Agent Proxy returned invalid structured output")
-			if validJSONObject(content) {
-				decision, err := ParseDecision(content)
-				if err == nil {
-					err = ValidateResponseStyle(c.ResponseStyle, decision)
-				}
-				contractErr = err
+			reply, contractErr := ParseReply(content)
+			if contractErr == nil {
+				contractErr = ValidateResponseStyle(c.ResponseStyle, reply)
 			}
 			if contractErr != nil {
 				if repairAttempts >= maxResponseRepairs {

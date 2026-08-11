@@ -5,77 +5,45 @@ import (
 	"testing"
 )
 
-func TestParseDecisionAcceptsOrdinaryReply(t *testing.T) {
+func TestParseReplyAcceptsPlainProse(t *testing.T) {
 	t.Parallel()
-	decision, err := ParseDecision(`{"reply":"Welcome to #bots!","issue":null}`)
+	reply, err := ParseReply("  Welcome to the community.  ")
 	if err != nil {
-		t.Fatalf("ParseDecision: %v", err)
+		t.Fatalf("ParseReply: %v", err)
 	}
-	if decision.Reply != "Welcome to #bots!" || decision.Issue != nil {
-		t.Fatalf("decision = %#v", decision)
+	if reply != "Welcome to the community." {
+		t.Fatalf("reply = %q", reply)
 	}
 }
 
-func TestParseDecisionAcceptsPlainTextReply(t *testing.T) {
+// A fenced block is legitimate reply content now that the envelope is gone.
+// The old parser unwrapped fences and JSON, which would corrupt this answer.
+func TestParseReplyPreservesFencedAndBracedContent(t *testing.T) {
 	t.Parallel()
-	decision, err := ParseDecision("Welcome to the community.")
+	raw := "Run this:\n```sh\necho {\"reply\":\"x\"}\n```"
+	reply, err := ParseReply(raw)
 	if err != nil {
-		t.Fatalf("ParseDecision: %v", err)
+		t.Fatalf("ParseReply: %v", err)
 	}
-	if decision.Reply != "Welcome to the community." || decision.Issue != nil {
-		t.Fatalf("decision = %#v", decision)
-	}
-}
-
-func TestParseDecisionAcceptsEmbeddedJSON(t *testing.T) {
-	t.Parallel()
-	decision, err := ParseDecision(
-		`Here is the result: {"reply":"Use {curly braces} safely.","issue":null}`,
-	)
-	if err != nil {
-		t.Fatalf("ParseDecision: %v", err)
-	}
-	if decision.Reply != "Use {curly braces} safely." || decision.Issue != nil {
-		t.Fatalf("decision = %#v", decision)
+	if reply != raw {
+		t.Fatalf("reply = %q, want the input verbatim", reply)
 	}
 }
 
-func TestParseDecisionRejectsMalformedProtocol(t *testing.T) {
+func TestParseReplyRejectsEmptyAndOverlongReplies(t *testing.T) {
 	t.Parallel()
-	if _, err := ParseDecision(`Result: {"reply":"broken","issue":`); err == nil {
-		t.Fatal("expected malformed protocol error")
+	if _, err := ParseReply("   "); err == nil {
+		t.Fatal("expected empty reply error")
 	}
-}
-
-func TestParseDecisionSanitizesIssueContext(t *testing.T) {
-	t.Parallel()
-	raw := `{"reply":"I do not know yet.","issue":{"kind":"knowledge-gap","title":"Event time","body":"Member <@123456789012345678> cited https://discord.com/channels/123456789012345678/223456789012345678/323456789012345678."}}`
-	decision, err := ParseDecision(raw)
-	if err != nil {
-		t.Fatalf("ParseDecision: %v", err)
-	}
-	if decision.Issue == nil {
-		t.Fatal("expected issue draft")
-	}
-	for _, forbidden := range []string{"123456789012345678", "discord.com/channels"} {
-		if strings.Contains(decision.Issue.Body, forbidden) {
-			t.Fatalf("issue body retained %q: %s", forbidden, decision.Issue.Body)
-		}
-	}
-}
-
-func TestParseDecisionRejectsUnsupportedIssueKind(t *testing.T) {
-	t.Parallel()
-	_, err := ParseDecision(`{"reply":"No.","issue":{"kind":"moderation","title":"Ban","body":"Ban a member."}}`)
-	if err == nil {
-		t.Fatal("expected unsupported issue kind error")
+	if _, err := ParseReply(strings.Repeat("a", 1801)); err == nil {
+		t.Fatal("expected overlong reply error")
 	}
 }
 
 func TestValidateGroundingRejectsInventedChannel(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "Please check #events."}
-	err := ValidateGrounding(decision, "The current channel is #bots.")
+	reply := "Please check #events."
+	err := ValidateGrounding(reply, "The current channel is #bots.")
 	if err == nil || !strings.Contains(err.Error(), "invented channel") {
 		t.Fatalf("error = %v", err)
 	}
@@ -83,8 +51,8 @@ func TestValidateGroundingRejectsInventedChannel(t *testing.T) {
 
 func TestValidateGroundingRejectsClaimedAction(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "I opened an issue for this."}
-	err := ValidateGrounding(decision, "The current channel is #bots.")
+	reply := "I opened an issue for this."
+	err := ValidateGrounding(reply, "The current channel is #bots.")
 	if err == nil || !strings.Contains(err.Error(), "claimed an action") {
 		t.Fatalf("error = %v", err)
 	}
@@ -92,9 +60,9 @@ func TestValidateGroundingRejectsClaimedAction(t *testing.T) {
 
 func TestValidateGroundingAllowsClaimConfirmedByTool(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "I closed issue 42."}
+	reply := "I closed issue 42."
 	err := ValidateGrounding(
-		decision,
+		reply,
 		"The current channel is #bots.",
 		ExecutedTool{Name: "forgejo__close_issue"},
 	)
@@ -105,9 +73,9 @@ func TestValidateGroundingAllowsClaimConfirmedByTool(t *testing.T) {
 
 func TestValidateGroundingRejectsUnsupportedClaimAfterConfirmedTool(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "I closed issue 42, then I deleted its comments."}
+	reply := "I closed issue 42, then I deleted its comments."
 	err := ValidateGrounding(
-		decision,
+		reply,
 		"The current channel is #bots.",
 		ExecutedTool{Name: "forgejo__close_issue"},
 	)
@@ -118,16 +86,16 @@ func TestValidateGroundingRejectsUnsupportedClaimAfterConfirmedTool(t *testing.T
 
 func TestValidateGroundingAllowsSuppliedChannel(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "This is the #bots sandbox."}
-	if err := ValidateGrounding(decision, "The current channel is #bots."); err != nil {
+	reply := "This is the #bots sandbox."
+	if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
 		t.Fatalf("ValidateGrounding: %v", err)
 	}
 }
 
 func TestValidateGroundingAllowsForgejoIssueReference(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "The latest open Forgejo issue is #57."}
-	if err := ValidateGrounding(decision, "The current channel is #bots."); err != nil {
+	reply := "The latest open Forgejo issue is #57."
+	if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
 		t.Fatalf("ValidateGrounding: %v", err)
 	}
 }
@@ -146,7 +114,7 @@ func TestValidateNeutralStyleRejectsPersonalityTraits(t *testing.T) {
 		reply := reply
 		t.Run(reply, func(t *testing.T) {
 			t.Parallel()
-			if err := ValidateNeutralStyle(Decision{Reply: reply}); err == nil {
+			if err := ValidateNeutralStyle(reply); err == nil {
 				t.Fatal("expected personality trait rejection")
 			}
 		})
@@ -160,7 +128,7 @@ func TestValidateNeutralStyleAcceptsDirectResults(t *testing.T) {
 		"The earlier answer is unverified pending source review.",
 		"No approved event time is available.",
 	} {
-		if err := ValidateNeutralStyle(Decision{Reply: reply}); err != nil {
+		if err := ValidateNeutralStyle(reply); err != nil {
 			t.Errorf("ValidateNeutralStyle(%q): %v", reply, err)
 		}
 	}
@@ -168,11 +136,11 @@ func TestValidateNeutralStyleAcceptsDirectResults(t *testing.T) {
 
 func TestValidateResponseStyleAllowsSocialVoice(t *testing.T) {
 	t.Parallel()
-	decision := Decision{Reply: "Hey! I found the Eco server status for you."}
-	if err := ValidateResponseStyle(ResponseStyleSocial, decision); err != nil {
+	reply := "Hey! I found the Eco server status for you."
+	if err := ValidateResponseStyle(ResponseStyleSocial, reply); err != nil {
 		t.Fatalf("ValidateResponseStyle: %v", err)
 	}
-	if err := ValidateResponseStyle(ResponseStyleNeutral, decision); err == nil {
+	if err := ValidateResponseStyle(ResponseStyleNeutral, reply); err == nil {
 		t.Fatal("neutral response style accepted social voice")
 	}
 }
