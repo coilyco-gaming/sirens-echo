@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -138,6 +139,59 @@ func TestMCPProviderClosesCleanupResponseSpan(t *testing.T) {
 				t.Errorf("%s traceparent = %q", method, traceParent)
 			}
 		}
+	}
+}
+
+func TestToolResultTextRendersContentTheModelCanRead(t *testing.T) {
+	t.Parallel()
+	text, err := toolResultText(&mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: "first"},
+			&mcp.TextContent{Text: "second"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("toolResultText: %v", err)
+	}
+	if text != "first\nsecond" {
+		t.Fatalf("text = %q, want the joined text parts", text)
+	}
+}
+
+func TestToolResultTextFallsBackToStructuredContent(t *testing.T) {
+	t.Parallel()
+	text, err := toolResultText(&mcp.CallToolResult{
+		StructuredContent: map[string]any{"status": "online"},
+	})
+	if err != nil {
+		t.Fatalf("toolResultText: %v", err)
+	}
+	if !strings.Contains(text, "online") {
+		t.Fatalf("text = %q, want the structured payload", text)
+	}
+}
+
+func TestToolResultTextSurvivesBoundingAsPlainText(t *testing.T) {
+	t.Parallel()
+	// The regression: bounding cut a marshalled envelope, so an oversized
+	// result reached the model as invalid JSON. Text has no structure to break.
+	text, err := toolResultText(&mcp.CallToolResult{
+		Content: []mcp.Content{
+			&mcp.TextContent{Text: strings.Repeat("a", maxToolResultBytes*2)},
+		},
+	})
+	if err != nil {
+		t.Fatalf("toolResultText: %v", err)
+	}
+	if strings.HasPrefix(strings.TrimSpace(text), "{") {
+		t.Fatal("a text result was rendered as a JSON envelope")
+	}
+	bounded, trimmed := boundToolResult(text)
+	if !trimmed {
+		t.Fatal("an oversized result was not bounded")
+	}
+	if !utf8.ValidString(bounded) {
+		t.Fatal("bounding produced invalid UTF-8")
 	}
 }
 

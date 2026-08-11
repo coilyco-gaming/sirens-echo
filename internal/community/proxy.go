@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -410,30 +411,37 @@ func (c ProxyClient) Complete(
 				toolSpan.End()
 				return CompletionResult{}, err
 			}
+			// A tool that reports its own failure is a result the model must see
+			// and self-correct from, not a transport error that ends the turn.
+			outcome := "ok"
+			if result.IsError {
+				outcome = "tool_error"
+			}
 			telemetry.Info(
 				toolCtx,
 				"mcp.tool.result",
 				slog.String("server", definition.Server),
 				slog.String("tool", definition.Original),
-				slog.Int("result_bytes", len(result)),
+				slog.Int("result_bytes", len(result.Text)),
+				slog.Bool("tool_error", result.IsError),
 			)
-			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "ok")
+			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, outcome)
 			toolSpan.End()
-			// The full result is kept for grounding validation. Only the copy
-			// that re-enters the prompt is bounded.
+			// The full result is retained. Only the copy re-entering the prompt
+			// is bounded.
 			executed = append(executed, ExecutedTool{
 				Name:      call.Function.Name,
 				Arguments: call.Function.Arguments,
-				Result:    result,
+				Result:    result.Text,
 			})
-			reinjected, trimmed := boundToolResult(result)
+			reinjected, trimmed := boundToolResult(result.Text)
 			if trimmed {
 				telemetry.Info(
 					toolCtx,
 					"mcp.tool.result.bounded",
 					slog.String("server", definition.Server),
 					slog.String("tool", definition.Original),
-					slog.Int("result_bytes", len(result)),
+					slog.Int("result_bytes", len(result.Text)),
 					slog.Int("reinjected_bytes", len(reinjected)),
 				)
 			}
@@ -454,11 +462,13 @@ func boundToolResult(result string) (string, bool) {
 	if len(result) <= maxToolResultBytes {
 		return result, false
 	}
-	runes := []rune(result)
-	if len(runes) > maxToolResultBytes {
-		runes = runes[:maxToolResultBytes]
+	// Walk back to a rune boundary at or below the byte budget. Slicing runes
+	// against a byte cap let a multibyte result land several times over it.
+	cut := maxToolResultBytes
+	for cut > 0 && !utf8.RuneStart(result[cut]) {
+		cut--
 	}
-	return string(runes) + "\n[truncated by the runtime]", true
+	return result[:cut] + "\n[truncated by the runtime]", true
 }
 
 func responseRepairPrompt(style string) string {

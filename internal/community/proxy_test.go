@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -703,5 +704,23 @@ func TestBoundToolResultCapsReinjectionButKeepsGrounding(t *testing.T) {
 	}
 	if !strings.Contains(got, "[truncated by the runtime]") {
 		t.Fatal("the bound is not visible to the model")
+	}
+}
+
+func TestBoundToolResultHonoursTheByteBudgetOnMultibyteText(t *testing.T) {
+	t.Parallel()
+	// Three bytes per rune. Slicing runes against a byte cap returned roughly
+	// three times the budget.
+	huge := strings.Repeat("世", maxToolResultBytes)
+	got, trimmed := boundToolResult(huge)
+	if !trimmed {
+		t.Fatal("an oversized multibyte result was not bounded")
+	}
+	body := strings.TrimSuffix(got, "\n[truncated by the runtime]")
+	if len(body) > maxToolResultBytes {
+		t.Fatalf("bounded body is %d bytes, want at most %d", len(body), maxToolResultBytes)
+	}
+	if !utf8.ValidString(body) {
+		t.Fatal("the bound cut a rune in half")
 	}
 }

@@ -22,7 +22,8 @@ When a definition configures MCP servers, the harness:
 3. Exposes each model name as `<server>__<tool>`.
 4. Sends those schemas with the Agent Proxy request.
 5. Executes valid model-requested tools.
-6. Appends assistant calls and tool results, then continues Agent Proxy.
+6. Renders each result as text, then appends assistant calls and tool results
+   and continues Agent Proxy.
 
 An empty roster skips discovery and sends no tools. Agent Proxy can return a
 response containing only tool calls when tools exist. Final content can use an

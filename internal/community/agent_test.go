@@ -522,14 +522,14 @@ func (fixtureToolSession) Call(
 	_ context.Context,
 	name string,
 	arguments map[string]any,
-) (string, error) {
+) (ToolResult, error) {
 	if name != "eco__get_eco_server_status" {
-		return "", fmt.Errorf("unexpected tool %q", name)
+		return ToolResult{}, fmt.Errorf("unexpected tool %q", name)
 	}
 	if len(arguments) != 0 {
-		return "", fmt.Errorf("unexpected arguments %#v", arguments)
+		return ToolResult{}, fmt.Errorf("unexpected arguments %#v", arguments)
 	}
-	return `{"content":[{"type":"text","text":"online"}]}`, nil
+	return ToolResult{Text: "online"}, nil
 }
 
 func (fixtureToolSession) Close() error {

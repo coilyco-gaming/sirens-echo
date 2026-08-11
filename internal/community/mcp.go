@@ -25,10 +25,17 @@ type ToolDefinition struct {
 	InputSchema any
 }
 
+// ToolResult is one completed MCP tool call rendered for the model. Bounding
+// text cannot corrupt a structure the way cutting a marshalled envelope did.
+type ToolResult struct {
+	Text    string
+	IsError bool
+}
+
 // ToolSession is the per-turn MCP capability available to Agent Proxy.
 type ToolSession interface {
 	Tools() []ToolDefinition
-	Call(ctx context.Context, name string, arguments map[string]any) (string, error)
+	Call(ctx context.Context, name string, arguments map[string]any) (ToolResult, error)
 	Close() error
 }
 
@@ -124,23 +131,52 @@ func (s *mcpToolSession) Call(
 	ctx context.Context,
 	name string,
 	arguments map[string]any,
-) (string, error) {
+) (ToolResult, error) {
 	tool, exists := s.registered[name]
 	if !exists {
-		return "", fmt.Errorf("model requested unavailable MCP tool %q", name)
+		return ToolResult{}, fmt.Errorf("model requested unavailable MCP tool %q", name)
 	}
 	result, err := tool.session.CallTool(ctx, &mcp.CallToolParams{
 		Name:      tool.toolName,
 		Arguments: arguments,
 	})
 	if err != nil {
-		return "", fmt.Errorf("call MCP tool %s/%s: %w", tool.serverName, tool.toolName, err)
+		return ToolResult{}, fmt.Errorf(
+			"call MCP tool %s/%s: %w", tool.serverName, tool.toolName, err,
+		)
 	}
-	raw, err := json.Marshal(result)
+	text, err := toolResultText(result)
 	if err != nil {
-		return "", fmt.Errorf("marshal MCP tool result %s/%s: %w", tool.serverName, tool.toolName, err)
+		return ToolResult{}, fmt.Errorf(
+			"render MCP tool result %s/%s: %w", tool.serverName, tool.toolName, err,
+		)
 	}
-	return string(raw), nil
+	return ToolResult{Text: text, IsError: result.IsError}, nil
+}
+
+// toolResultText renders a result as text. A non-text part keeps its JSON form
+// rather than being dropped, which would read to the model as an empty answer.
+func toolResultText(result *mcp.CallToolResult) (string, error) {
+	parts := make([]string, 0, len(result.Content))
+	for _, content := range result.Content {
+		if text, ok := content.(*mcp.TextContent); ok {
+			parts = append(parts, text.Text)
+			continue
+		}
+		raw, err := content.MarshalJSON()
+		if err != nil {
+			return "", err
+		}
+		parts = append(parts, string(raw))
+	}
+	if len(parts) == 0 && result.StructuredContent != nil {
+		raw, err := json.Marshal(result.StructuredContent)
+		if err != nil {
+			return "", err
+		}
+		parts = append(parts, string(raw))
+	}
+	return strings.Join(parts, "\n"), nil
 }
 
 func (s *mcpToolSession) Close() error {
