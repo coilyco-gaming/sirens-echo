@@ -3,7 +3,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: '^agent/rendered/'
       - id: end-of-file-fixer
+        exclude: '^agent/rendered/'
       - id: check-yaml
       - id: check-added-large-files
       - id: check-merge-conflict
@@ -17,6 +19,14 @@ repos:
         language: system
         files: '(go\.mod|go\.sum)$'
         pass_filenames: false
+
+      - id: prompt-snapshot
+        name: rendered prompt snapshots
+        description: Keep agent/rendered in step with the definitions, policy roots, and prompt builder.
+        entry: go run ./cmd/sirens-echo-prompt --check
+        language: system
+        pass_filenames: false
+        files: '^(agent/|\.agents/skills/|internal/community/prompt\.go|internal/community/skillpack\.go|cmd/sirens-echo-prompt/)'
 
       - id: go-vet
         name: go vet

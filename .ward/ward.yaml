@@ -21,6 +21,12 @@ commands:
   image-publish-check:
     run: bash -n scripts/publish-image.sh
     description: Parse the trusted Forgejo OCI publisher shell contract.
+  prompt-dump:
+    run: go run ./cmd/sirens-echo-prompt
+    description: Rewrite the tracked rendered-prompt snapshots for every definition.
+  prompt-check:
+    run: go run ./cmd/sirens-echo-prompt --check
+    description: Fail when a rendered-prompt snapshot no longer matches its sources.
   vet:
     run: go vet ./...
     description: go vet across the tree.

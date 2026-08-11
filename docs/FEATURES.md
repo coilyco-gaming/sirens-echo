@@ -8,13 +8,12 @@
 - Definition-selected history budget, skill roots, MCP roster, issue tracker
 - Mention-or-reply invocation with channel, thread, guild, author, and
   duplicate gates
-- Git-tracked access policy stacking guild, channel, user, and role grants
-  with a deny list, per-guild rate overrides, and CI validation
+- Git-tracked access policy stacking guild, channel, user, and role grants with
+  a deny list, per-guild rate overrides, and CI validation
 - Per-user, per-context, and global admission control with a bounded queue,
   one cooldown notice per window, and bounded lookups
 - Serialized turns with bounded Discord-history continuity
-- Agent Proxy loop for MCP schemas, tool calls, results, continuation, and
-  compatible content shapes
+- Agent Proxy loop for MCP schemas, tool calls, results, and continuation
 - Impersonal response contract rejecting greetings, emojis, banter, sign-offs,
   and open-ended offers
 - Public Eco MCP for current game information
@@ -59,10 +58,10 @@ See [deploy.md](deploy.md).
 
 ## Development gates
 
-- Ward verbs for build, policy verification, format, vet, test, tidy, run,
-  evaluation, and full pre-commit
+- Ward verbs for build, policy verification, prompt snapshots, format, vet,
+  test, tidy, run, evaluation, and full pre-commit
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit
-- Structure, skills, links, Go modules, comments, and secrets validated
+- Structure, skills, links, modules, comments, secrets, and prompt validated
 
 ## Deliberate exclusions
 
