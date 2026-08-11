@@ -1,16 +1,16 @@
 # Assets
 
-## banner.jpg, banner-no-logo.jpg
+## banner.jpg, banner-no-logo.jpg, and their 2x variants
 
-Repo banner and GitHub social preview, 1280 x 640. `banner.jpg` carries the mark and is the one embedded in the README. `banner-no-logo.jpg` is the same banner without it, for surfaces that already show the avatar beside the image, Discord among them.
+Repo banner and GitHub social preview, 1280 x 640, with 2560 x 1280 variants beside them. `banner.jpg` carries the mark and is the one embedded in the README. `banner-no-logo.jpg` drops it, for surfaces that already show the avatar alongside, Discord among them.
+
+The mark and the type are vector, so the 2x pair is redrawn rather than enlarged and only the generated field scales. All four are JPEG: the banner is continuous-tone gradient, the content PNG handles worst, and a lossless 1280 PNG came to 558 KB against this repository's 500 KB cap.
 
 Both name `sirens-echo` and `sirens-deep` together, separated by the house ` // `, over the description this repository already gives itself. Naming both is deliberate: the repository houses two deployments and the banner says so.
 
-The field is generated with the self-hosted ComfyUI runtime on the Juggernaut XL checkpoint, at 1536 x 768 and reduced to the banner size. Only the field is generated. The mark and every word are vector, composited afterwards, which is why the prompts exclude marine life and text rather than asking the model to draw either.
-
-Type is Avenir Next, lilac for the names with the separator in mint, and mint for the description. It sits on a centred dark halo rather than an offset drop shadow: an offset implies a light direction the mark does not have and protects only one side of each glyph, while a centred blur darkens the bed under every edge equally.
-
 The previous banner was an original LCARS-idiom composition rendered from a committed HTML file. Both it and that file are retired, and with them the Paramount attribution they required.
+
+See [banner-generation.md](banner-generation.md) for the checkpoint, seed, prompts, type treatment, and the failures the negative prompt encodes.
 
 ## sirens-deep.svg, sirens-deep.png
 
