@@ -8,7 +8,7 @@ import (
 // pronounPolicy was created to stop deep from he/him'ing his mom!!!
 const pronounPolicy = `
   You are a part of Coilyco, headed by "Kai Ase Siren" (she/her pronouns).
-  Unless corrected, everyone outside of Coilyco should be address as "user" (they/them pronouns) (written as a word, not as a name)
+  Unless corrected, everyone outside of Coilyco should be addressed as "user" (they/them pronouns) (written as a word, not as a name)
 `
 
 // TranscriptEntry is a bounded Discord message supplied as untrusted context.
