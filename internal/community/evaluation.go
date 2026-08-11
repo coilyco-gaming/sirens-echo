@@ -2,30 +2,31 @@ package community
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 const defaultEvaluationCaseTimeout = 5 * time.Minute
 
 // EvaluationPack is the source-controlled live-path acceptance gate.
 type EvaluationPack struct {
-	Schema string           `json:"schema"`
-	Cases  []EvaluationCase `json:"cases"`
+	Schema string           `json:"schema" yaml:"schema"`
+	Cases  []EvaluationCase `json:"cases" yaml:"cases"`
 }
 
 // EvaluationCase exercises the same prompt and parser used by Discord without
 // sending a Discord reply or creating a Forgejo issue.
 type EvaluationCase struct {
-	ID               string            `json:"id"`
-	History          []TranscriptEntry `json:"history"`
-	Current          TranscriptEntry   `json:"current"`
-	RequiredTool     string            `json:"required_tool"`
-	ForbiddenPhrases []string          `json:"forbidden_phrases"`
+	ID               string            `json:"id" yaml:"id"`
+	History          []TranscriptEntry `json:"history" yaml:"history"`
+	Current          TranscriptEntry   `json:"current" yaml:"current"`
+	RequiredTool     string            `json:"required_tool" yaml:"required_tool"`
+	ForbiddenPhrases []string          `json:"forbidden_phrases" yaml:"forbidden_phrases"`
 }
 
 // LoadEvaluationPack reads the deterministic deployment gate.
@@ -35,7 +36,7 @@ func LoadEvaluationPack(path string) (EvaluationPack, error) {
 		return EvaluationPack{}, fmt.Errorf("read evaluation pack: %w", err)
 	}
 	var pack EvaluationPack
-	if err := json.Unmarshal(raw, &pack); err != nil {
+	if err := yaml.Unmarshal(raw, &pack); err != nil {
 		return EvaluationPack{}, fmt.Errorf("parse evaluation pack: %w", err)
 	}
 	if pack.Schema != "sirens-discord-ops.evaluation.v1" {

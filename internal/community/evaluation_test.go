@@ -173,7 +173,7 @@ func loadEvaluationFixture(t *testing.T) (Definition, string, EvaluationPack) {
 	if err != nil {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.json"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}
