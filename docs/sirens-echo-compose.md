@@ -8,9 +8,10 @@ Sirens Echo composes nothing and stays void of personality. Tracked at issue 98.
 `agent/compose/roles.kdl` names every composed source Sirens Deep may load.
 Two rules govern it.
 
-**No global repositories.** The host profile declares `global profile` and
-`global lore`. Either would put private operating context into an agent that
-answers strangers in a guild the operator does not moderate.
+**No private global repositories.** A public repository is fine to globalize.
+`coilysiren/lore` and the private overlays are not, and a global naming one of
+them fails the suite. Banning globals outright was a proxy that rejected
+agent-compose, sirens-echo, and the public profile, all of which are public.
 
 **Tastes and style only.** An organization can own a favorite colour. It cannot
 own a person's social accounts, career, or job search. Every entry is
@@ -36,22 +37,16 @@ surface changes a test rather than only a config file.
 Each guard is negative-tested. `kai-*`, `kai-career`, `writing-kai-*`,
 `global lore`, and an unapproved name each fail the suite.
 
-## What the creator role does and does not reach
+## Why the writing glob is safe
 
-The aos `creator` role is `composed-skill "writing-*"`. That reaches the three
-`writing-social-*` sources, which are the right ones: adapting to an active
-community, running an editorial loop, and handling corrections and
-moderation-adjacent moments.
+`writing-*` now means house writing craft in both catalogs. Getting there took
+renaming the personal sources to the `kai-` prefix rather than moving them
+between repositories, because Sirens Deep composes both catalogs and a move
+only changes which one a glob finds a skill in.
 
-It does not reach `tooling-discord-community-host`, which is `tooling-*`. That
-skill is the closest match in the whole catalog to what this agent does, so it
-is listed explicitly rather than left to the role glob.
-
-Three `writing-*` sources are deliberately not composed here.
-`writing-content-linkedin-video` and `writing-public-repos` are production
-formats rather than conversation. `writing-voice-observer-narrator` constrains
-its subject to a passive observer that is "not an active agent", which
-contradicts an agent that answers and acts.
+`tooling-discord-community-host` is listed separately because the aos creator
+role is `writing-*` and cannot reach a `tooling-*` source. It is the closest
+match in the catalog to what this agent does.
 
 ## Identity, not impersonation
 

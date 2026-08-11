@@ -12,10 +12,9 @@ import (
 // changes a test rather than only a config file. See docs/sirens-echo-compose.md.
 var approvedComposedPatterns = map[string]struct{}{
 	"personal-preference-*":          {},
-	"writing-kai-voice":              {},
-	"writing-social-*":               {},
-	"writing-voice-adaptation":       {},
+	"writing-*":                      {},
 	"tooling-discord-community-host": {},
+	"tooling-customer-success-*":     {},
 }
 
 // deniedComposedSkills must never compose into an agent that answers
@@ -26,7 +25,10 @@ var deniedComposedSkills = map[string]string{
 	"kai-grill-me":             "private operating context",
 	"kai-collaboration":        "private collaboration context",
 	"kai-kapwing-pr-review":    "employer team and domain context",
-	"writing-kai-linkedin":     "a member's personal channel voice",
+	"kai-linkedin-voice":       "a member's personal channel voice",
+	"kai-linkedin-video":       "a member's personal channel format",
+	"kai-bio-surface":          "resume and identity surface, points at private lore",
+	"kai-public-repos":         "names private sibling repositories",
 	"tooling-cross-repo-infra": "fleet mutation surface",
 }
 
@@ -83,18 +85,40 @@ func TestComposePatternsNeverReachDeniedSources(t *testing.T) {
 	}
 }
 
-// The host profile declares `global profile` and `global lore`. Either one here
-// would put private operating context into an agent that answers strangers.
-func TestComposeDeclaresNoGlobalRepositories(t *testing.T) {
+// privateRepositories must never be declared here. A public repository is fine
+// to globalize; lore and the private overlays are not.
+var privateRepositories = map[string]string{
+	"coilysiren/lore":                    "private durable context",
+	"coilysiren/inbox":                   "private work intake",
+	"coilysiren/voice-corpus":            "private dataset",
+	"coilyco-bridge/agentic-os-xxx":      "private harness",
+	"coilyco-flight-deck/infrastructure": "host and cluster operations",
+	"coilyco-bridge/deploy":              "cluster deployment surface",
+}
+
+// Globals are allowed for public repositories. Banning them outright was a
+// proxy that rejected agent-compose, sirens-echo, and the public profile.
+func TestComposeGlobalsAreNeverPrivate(t *testing.T) {
 	t.Parallel()
 	body, _ := composedSkillsIn(t)
+	declared := map[string]string{}
 	for _, line := range strings.Split(body, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "//") {
 			continue
 		}
-		if regexp.MustCompile(`^global\s`).MatchString(trimmed) {
-			t.Errorf("global repository declared: %q", trimmed)
+		if m := regexp.MustCompile(`^repository\s+(\S+)\s+path="([^"]+)"`).FindStringSubmatch(trimmed); m != nil {
+			declared[m[1]] = m[2]
+		}
+		if m := regexp.MustCompile(`^global\s+(\S+)`).FindStringSubmatch(trimmed); m != nil {
+			path, known := declared[m[1]]
+			if !known {
+				t.Errorf("global %q names no declared repository", m[1])
+				continue
+			}
+			if reason, private := privateRepositories[path]; private {
+				t.Errorf("global %q resolves to private %s: %s", m[1], path, reason)
+			}
 		}
 	}
 }
