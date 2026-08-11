@@ -768,3 +768,15 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 		}
 	}
 }
+
+// Issue 88: the harness header asserted discord for every deployment, so an
+// HTTP-only profile reported a Discord surface it does not have.
+func TestDeploymentHarnessFollowsTheConfiguredIngress(t *testing.T) {
+	t.Parallel()
+	if got := deploymentHarness(Config{DiscordEnabled: true}); got != transportDiscord {
+		t.Errorf("Discord deployment harness = %q, want %q", got, transportDiscord)
+	}
+	if got := deploymentHarness(Config{DiscordEnabled: false}); got != transportHTTP {
+		t.Errorf("HTTP-only deployment harness = %q, want %q", got, transportHTTP)
+	}
+}

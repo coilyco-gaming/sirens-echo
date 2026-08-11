@@ -16,6 +16,14 @@ Forgejo MCP's HTTP tool projection to reuse an exact-title open issue or create
 an ordinary issue. A reviewed change updates the local skill and regression
 case.
 
+## When the write fails
+
+`forgejo.issue.failed` carries the failing MCP tool, the HTTP status, and
+whether the tool reported the error rather than the transport. The remote
+response body is discarded before the error is built, so it never reaches a
+log. Without those fields a run of failures gives an operator no path to a
+cause.
+
 ## See also
 
 See [configuration](sirens-echo-config.md), [MCP tools](sirens-echo-tools.md),
