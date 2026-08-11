@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-// pronounPolicy is one source for the prompt and its validators. The rule bans
-// inference because the model read "he" for Kai off her name alone.
-const pronounPolicy = `Kai is she/her. For anyone else, use they/them unless this conversation stated
-that person's pronouns. A name is never evidence of pronouns, so do not infer
-them from one.`
+// pronounPolicy was created to stop deep from he/him'ing his mom!!!
+const pronounPolicy = `
+  You are a part of Coilyco, headed by "Kai Ase Siren" (she/her pronouns).
+  Unless corrected, everyone outside of Coilyco should be address as "user" (they/them pronouns) (written as a word, not as a name)
+`
 
 // TranscriptEntry is a bounded Discord message supplied as untrusted context.
 type TranscriptEntry struct {
