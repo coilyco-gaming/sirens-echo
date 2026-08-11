@@ -19,17 +19,18 @@
 - Public Eco MCP for current game information
 - Private Forgejo MCP fixed to this repository with issue create, close,
   comment, label changes, and bounded reads
-- No Forgejo token in the Echo pod, one guarded handler serving model tools and
-  automatic issue follow-up
-- Decoder-enforced JSON responses with one style-aware repair, normalization,
-  grounding checks, and neutral-style validation where selected
+- No Forgejo token in the Echo pod, one guarded handler serving the model's
+  issue tools
+- Plain-text replies with one style-aware repair, bounds, grounding checks, and
+  neutral-style validation where selected
 - Soft-reference replies with every Discord mention disabled
 - Repo-local Sirens knowledge with no automatic memory or autonomous edits
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
-- Sanitized ordinary Forgejo issues with exact-title reuse and no labels
+- Model-filed ordinary Forgejo issues through the guarded tool, with
+  exact-title reuse and no labels
 - Transport-aware OpenTelemetry ingress and joined turn traces end to end
 - Trace-correlated metadata logs with byte counts and no member or model text
-- Turn, latency, model-call, tool-call, admission, and failure metrics, plus 25
+- Turn, latency, model-call, tool-call, admission, and failure metrics, plus 24
   bounded SigNoZ exception groups with stage and outcome tags
 - Metrics-only liveness and non-generating route readiness, bounded
 - Private HTTP entrypoint over the same turn path, with W3C tracing, shared

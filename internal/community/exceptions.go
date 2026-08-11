@@ -13,7 +13,6 @@ const (
 	exceptionTurnFailed
 	exceptionHistoryFailed
 	exceptionResponseValidationFailed
-	exceptionForgejoIssueFailed
 	exceptionDiscordReplyFailed
 	exceptionReplyFailed
 	exceptionMCPToolsListFailed
@@ -68,12 +67,6 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "Response validation failed.",
 		stage:    "validation",
 		outcome:  "failed",
-	},
-	exceptionForgejoIssueFailed: {
-		typeName: "sirens_echo.forgejo.issue_failed",
-		message:  "Forgejo issue follow-up failed.",
-		stage:    "forgejo",
-		outcome:  "issue_failed",
 	},
 	exceptionDiscordReplyFailed: {
 		typeName: "sirens_echo.discord.reply_failed",

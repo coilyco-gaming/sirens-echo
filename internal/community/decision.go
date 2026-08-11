@@ -1,7 +1,6 @@
 package community
 
 import (
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strings"
@@ -9,138 +8,39 @@ import (
 )
 
 var (
-	channelPattern      = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
-	discordMention      = regexp.MustCompile(`<[@#][!&]?[0-9]+>`)
-	longNumericID       = regexp.MustCompile(`\b[0-9]{16,20}\b`)
-	discordMessageLink  = regexp.MustCompile(`https?://(?:www\.)?discord(?:app)?\.com/channels/\S+`)
-	claimedAction       = regexp.MustCompile(`(?i)\bI (?:have )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
-	markdownFencePrefix = regexp.MustCompile(`(?s)^\s*` + "```(?:json)?\\s*(.*?)\\s*```" + `\s*$`)
-	firstPersonVoice    = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:i|i['’](?:m|ve|d|ll)|me|my|mine|myself|we|we['’](?:re|ve|d|ll)|us|our|ours|ourselves)(?:$|[^A-Za-z0-9_])`)
-	socialOpening       = regexp.MustCompile(`(?i)^\s*(?:hi|hello|hey|greetings|thanks|thank you|sorry|sure|absolutely|of course)\b`)
-	personalityPhrase   = regexp.MustCompile(`(?i)\b(?:happy to help|glad to help|let me know|what can I help|how can I help|would you like|hope that helps|here['’]s the thing|no worries|community host|my toolset|my tools)\b`)
+	channelPattern    = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
+	claimedAction     = regexp.MustCompile(`(?i)\bI (?:have )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
+	firstPersonVoice  = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:i|i['’](?:m|ve|d|ll)|me|my|mine|myself|we|we['’](?:re|ve|d|ll)|us|our|ours|ourselves)(?:$|[^A-Za-z0-9_])`)
+	socialOpening     = regexp.MustCompile(`(?i)^\s*(?:hi|hello|hey|greetings|thanks|thank you|sorry|sure|absolutely|of course)\b`)
+	personalityPhrase = regexp.MustCompile(`(?i)\b(?:happy to help|glad to help|let me know|what can I help|how can I help|would you like|hope that helps|here['’]s the thing|no worries|community host|my toolset|my tools)\b`)
 )
 
-// Decision is the model's constrained response. The runtime performs any issue
-// write and reports it only after Forgejo confirms success.
-type Decision struct {
-	Reply string      `json:"reply"`
-	Issue *IssueDraft `json:"issue"`
-}
-
-// IssueDraft is a sanitized request for an ordinary Forgejo issue.
-type IssueDraft struct {
-	Kind  string `json:"kind"`
-	Title string `json:"title"`
-	Body  string `json:"body"`
-}
-
-// ParseDecision parses the strict model response and applies local bounds.
-func ParseDecision(raw string) (Decision, error) {
-	candidate := strings.TrimSpace(raw)
-	if match := markdownFencePrefix.FindStringSubmatch(candidate); len(match) == 2 {
-		candidate = strings.TrimSpace(match[1])
+// ParseReply bounds the model's plain-text reply. Nothing unwraps a fence or
+// JSON: a fence is reply content now, and stripping it would corrupt an answer.
+func ParseReply(raw string) (string, error) {
+	reply := strings.TrimSpace(raw)
+	if reply == "" {
+		return "", fmt.Errorf("model reply is empty")
 	}
-	var decision Decision
-	parseErr := json.Unmarshal([]byte(candidate), &decision)
-	if parseErr != nil {
-		for _, embedded := range embeddedJSONObjects(candidate) {
-			var decoded Decision
-			if err := json.Unmarshal([]byte(embedded), &decoded); err == nil &&
-				strings.TrimSpace(decoded.Reply) != "" {
-				decision = decoded
-				parseErr = nil
-				break
-			}
-		}
+	if len([]rune(reply)) > 1800 {
+		return "", fmt.Errorf("model reply exceeds 1800 characters")
 	}
-	if parseErr != nil {
-		if strings.HasPrefix(candidate, "{") ||
-			strings.HasPrefix(candidate, "[") ||
-			strings.Contains(candidate, `"reply"`) ||
-			strings.Contains(candidate, `"issue"`) {
-			return Decision{}, fmt.Errorf("parse model decision: %w", parseErr)
-		}
-		decision = Decision{Reply: candidate}
-	}
-	decision.Reply = strings.TrimSpace(decision.Reply)
-	if decision.Reply == "" {
-		return Decision{}, fmt.Errorf("model decision has empty reply")
-	}
-	if len([]rune(decision.Reply)) > 1800 {
-		return Decision{}, fmt.Errorf("model reply exceeds 1800 characters")
-	}
-	if decision.Issue != nil {
-		draft, err := normalizeIssueDraft(*decision.Issue)
-		if err != nil {
-			return Decision{}, err
-		}
-		decision.Issue = &draft
-	}
-	return decision, nil
-}
-
-func embeddedJSONObjects(raw string) []string {
-	var objects []string
-	start := -1
-	depth := 0
-	inString := false
-	escaped := false
-	for index := 0; index < len(raw); index++ {
-		current := raw[index]
-		if start < 0 {
-			if current == '{' {
-				start = index
-				depth = 1
-			}
-			continue
-		}
-		if inString {
-			if escaped {
-				escaped = false
-				continue
-			}
-			if current == '\\' {
-				escaped = true
-				continue
-			}
-			if current == '"' {
-				inString = false
-			}
-			continue
-		}
-		switch current {
-		case '"':
-			inString = true
-		case '{':
-			depth++
-		case '}':
-			depth--
-			if depth == 0 {
-				objects = append(objects, raw[start:index+1])
-				start = -1
-			}
-		}
-	}
-	return objects
+	return reply, nil
 }
 
 // ValidateGrounding rejects invented channel references and first-person
 // action claims that are not supported by a completed tool call.
-func ValidateGrounding(decision Decision, suppliedContext string, executed ...ExecutedTool) error {
+func ValidateGrounding(reply string, suppliedContext string, executed ...ExecutedTool) error {
 	allowedChannels := make(map[string]struct{})
 	for _, channel := range channelPattern.FindAllString(suppliedContext, -1) {
 		allowedChannels[strings.ToLower(channel)] = struct{}{}
 	}
-	check := decision.Reply
-	if decision.Issue != nil {
-		check += "\n" + decision.Issue.Title + "\n" + decision.Issue.Body
-	}
-	for _, channel := range channelPattern.FindAllString(check, -1) {
+	for _, channel := range channelPattern.FindAllString(reply, -1) {
 		if _, ok := allowedChannels[strings.ToLower(channel)]; !ok {
 			return fmt.Errorf("model invented channel %s", channel)
 		}
 	}
-	for _, match := range claimedAction.FindAllStringSubmatch(decision.Reply, -1) {
+	for _, match := range claimedAction.FindAllStringSubmatch(reply, -1) {
 		if len(match) == 2 && !actionClaimSupported(match[1], executed) {
 			return fmt.Errorf("model claimed an action the runtime has not performed")
 		}
@@ -150,8 +50,8 @@ func ValidateGrounding(decision Decision, suppliedContext string, executed ...Ex
 
 // ValidateNeutralStyle rejects the model-facing traits that make a service
 // reply read as a person or character instead of a direct result.
-func ValidateNeutralStyle(decision Decision) error {
-	reply := strings.TrimSpace(decision.Reply)
+func ValidateNeutralStyle(reply string) error {
+	reply = strings.TrimSpace(reply)
 	if socialOpening.MatchString(reply) {
 		return fmt.Errorf("model reply used a social opening")
 	}
@@ -175,9 +75,9 @@ func ValidateNeutralStyle(decision Decision) error {
 
 // ValidateResponseStyle applies the deterministic restrictions promised by the
 // selected profile. Structural and grounding checks run separately for all styles.
-func ValidateResponseStyle(style string, decision Decision) error {
+func ValidateResponseStyle(style string, reply string) error {
 	if style == "" || style == ResponseStyleNeutral {
-		return ValidateNeutralStyle(decision)
+		return ValidateNeutralStyle(reply)
 	}
 	if style == ResponseStyleSocial {
 		return nil
@@ -205,33 +105,4 @@ func actionClaimSupported(verb string, executed []ExecutedTool) bool {
 		}
 	}
 	return false
-}
-
-func normalizeIssueDraft(draft IssueDraft) (IssueDraft, error) {
-	draft.Kind = strings.TrimSpace(draft.Kind)
-	if draft.Kind != "knowledge-gap" && draft.Kind != "correction" {
-		return IssueDraft{}, fmt.Errorf("unsupported issue kind %q", draft.Kind)
-	}
-	draft.Title = sanitizeIssueText(draft.Title)
-	draft.Body = sanitizeIssueText(draft.Body)
-	if draft.Title == "" || draft.Body == "" {
-		return IssueDraft{}, fmt.Errorf("issue draft requires title and body")
-	}
-	if strings.ContainsAny(draft.Title, "\r\n") {
-		return IssueDraft{}, fmt.Errorf("issue title must be one line")
-	}
-	if len([]rune(draft.Title)) > 100 {
-		return IssueDraft{}, fmt.Errorf("issue title exceeds 100 characters")
-	}
-	if len([]rune(draft.Body)) > 1200 {
-		return IssueDraft{}, fmt.Errorf("issue body exceeds 1200 characters")
-	}
-	return draft, nil
-}
-
-func sanitizeIssueText(value string) string {
-	clean := discordMessageLink.ReplaceAllString(value, "[redacted Discord link]")
-	clean = discordMention.ReplaceAllString(clean, "[redacted mention]")
-	clean = longNumericID.ReplaceAllString(clean, "[redacted identifier]")
-	return strings.TrimSpace(clean)
 }

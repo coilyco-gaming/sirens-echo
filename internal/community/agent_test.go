@@ -294,7 +294,7 @@ func TestHTTPHandlerRunsTheSharedTurnPath(t *testing.T) {
 	agent := &Agent{
 		cfg: Config{Definition: Definition{MaxContextMessages: 12}},
 		completions: fakeCompletionClient{responses: map[string]CompletionResult{
-			"manual-request": {Content: `{"reply":"Echo is ready.","issue":null}`},
+			"manual-request": {Content: `Echo is ready.`},
 		}},
 		systemPrompt: "neutral model policy and local knowledge",
 		telemetry:    telemetryOrNoop(nil),
@@ -329,7 +329,7 @@ func turnAgent(cfg Config) *Agent {
 	return &Agent{
 		cfg: cfg,
 		completions: fakeCompletionClient{responses: map[string]CompletionResult{
-			"manual-request": {Content: `{"reply":"Echo is ready.","issue":null}`},
+			"manual-request": {Content: `Echo is ready.`},
 		}},
 		systemPrompt: "neutral model policy and local knowledge",
 		telemetry:    telemetryOrNoop(nil),
@@ -454,7 +454,7 @@ func TestHTTPHandlerContinuesRemoteTraceContext(t *testing.T) {
 			MaxContextMessages: 12,
 		}},
 		completions: fakeCompletionClient{responses: map[string]CompletionResult{
-			"remote-request": {Content: `{"reply":"Echo is ready.","issue":null}`},
+			"remote-request": {Content: `Echo is ready.`},
 		}},
 		systemPrompt: "neutral model policy and local knowledge",
 		telemetry:    telemetry,
@@ -499,45 +499,6 @@ func TestHTTPHandlerContinuesRemoteTraceContext(t *testing.T) {
 	if turnSpan.SpanContext().TraceID() != serverSpan.SpanContext().TraceID() ||
 		turnSpan.Parent().SpanID() != serverSpan.SpanContext().SpanID() {
 		t.Fatalf("community turn is not a child of the HTTP server span")
-	}
-}
-
-func TestAppendTrackingLinkKeepsDiscordLimit(t *testing.T) {
-	t.Parallel()
-	reply := make([]rune, 2100)
-	for index := range reply {
-		reply[index] = 'a'
-	}
-	got := appendTrackingLink(string(reply), "https://forgejo.example/issues/1")
-	if len([]rune(got)) > 1990 {
-		t.Fatalf("reply length = %d", len([]rune(got)))
-	}
-}
-
-func TestRunTurnRejectsIssueWhenAutomaticTrackingIsDisabled(t *testing.T) {
-	t.Parallel()
-	agent := &Agent{
-		cfg: Config{Definition: Definition{ResponseStyle: ResponseStyleSocial}},
-		completions: fakeCompletionClient{responses: map[string]CompletionResult{
-			"request": {
-				Content: `{"reply":"The answer is unknown.","issue":{"kind":"knowledge-gap","title":"Unknown answer","body":"The available context does not contain the answer."}}`,
-			},
-		}},
-		systemPrompt: "general model policy",
-		telemetry:    telemetryOrNoop(nil),
-		slots:        make(chan struct{}, 1),
-	}
-	turn := &fixtureTurn{
-		requestID: "request",
-		current:   TranscriptEntry{Author: "user", Content: "What is the answer?"},
-	}
-
-	err := agent.runTurn(context.Background(), turn)
-	if err == nil || !strings.Contains(err.Error(), "automatic issue tracking is disabled") {
-		t.Fatalf("runTurn error = %v", err)
-	}
-	if turn.reply != genericFailureReply {
-		t.Fatalf("reply = %q", turn.reply)
 	}
 }
 
@@ -668,7 +629,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 			}
 			writer.Header().Set("Content-Type", "application/json")
 			_, _ = writer.Write([]byte(
-				`{"choices":[{"message":{"content":"{\"reply\":\"Eco is online now.\",\"issue\":null}"}}]}`,
+				`{"choices":[{"message":{"content":"Eco is online now."}}]}`,
 			))
 		default:
 			http.Error(writer, "unexpected model round", http.StatusInternalServerError)

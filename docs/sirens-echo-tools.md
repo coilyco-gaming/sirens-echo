@@ -38,7 +38,6 @@ The harness rejects:
 - Tool arguments that are not JSON objects
 - A response with neither tool calls nor usable content
 - More than six tool rounds
-- An issue draft when the selected definition has no automatic issue tracker
 
 Connection, discovery, and invocation failures stop the turn and produce the
 neutral retry reply. MCP error results returned as data remain available to
