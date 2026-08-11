@@ -11,8 +11,12 @@ import (
 
 const maxSkillpackBytes = 256 * 1024
 
-// LoadSkillpack loads SKILL.md and one-level reference Markdown from each
-// configured repo-local skill root in deterministic order.
+// skillEntrypoints are the body filenames a policy root may use. Ordinary
+// skills ship SKILL.md and agent-compose composed sources ship COMPOSED.md.
+var skillEntrypoints = []string{"SKILL.md", "COMPOSED.md"}
+
+// LoadSkillpack loads each root's entrypoint and one-level reference Markdown
+// in deterministic order. See docs/sirens-echo-prompt.md.
 func LoadSkillpack(roots []string) (string, error) {
 	files := make([]string, 0)
 	for _, root := range roots {
@@ -28,7 +32,7 @@ func LoadSkillpack(roots []string) (string, error) {
 				return err
 			}
 			slashed := filepath.ToSlash(relative)
-			if slashed == "SKILL.md" ||
+			if isSkillEntrypoint(slashed) ||
 				(strings.HasPrefix(slashed, "references/") && strings.HasSuffix(slashed, ".md")) {
 				files = append(files, path)
 			}
@@ -58,6 +62,15 @@ func LoadSkillpack(roots []string) (string, error) {
 		}
 	}
 	return strings.TrimSpace(output.String()), nil
+}
+
+func isSkillEntrypoint(slashed string) bool {
+	for _, name := range skillEntrypoints {
+		if slashed == name {
+			return true
+		}
+	}
+	return false
 }
 
 func stripFrontmatter(raw string) string {
