@@ -1,3 +1,5 @@
+![sirens-echo and sirens-deep, a discord community agent harness](assets/banner.jpg)
+
 # sirens-echo
 
 Agent Proxy-backed runtime for Sirens Echo and the general-purpose CoilyCo harness.
@@ -71,10 +73,8 @@ rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
 
 ## See also
 
-See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md),
-[.ward/ward.yaml](.ward/ward.yaml), [admission](docs/sirens-echo-admission.md),
-[access](docs/sirens-echo-access.md), [HTTP](docs/sirens-echo-http.md),
-[health](docs/sirens-echo-health.md),
-[design](docs/harness-design-fundamentals.md), and
-[docs/deploy.md](docs/deploy.md).
+See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [.ward/ward.yaml](.ward/ward.yaml),
+[admission](docs/sirens-echo-admission.md), [access](docs/sirens-echo-access.md),
+[HTTP](docs/sirens-echo-http.md), [health](docs/sirens-echo-health.md),
+[design](docs/harness-design-fundamentals.md), and [docs/deploy.md](docs/deploy.md).
 Cross-reference convention from [features-release-tooling.md](docs/features-release-tooling.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).
