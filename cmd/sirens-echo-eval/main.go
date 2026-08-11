@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("skillpack: %v", err)
 	}
-	pack, err := community.LoadEvaluationPack("agent/evaluation.json")
+	pack, err := community.LoadEvaluationPack("agent/evaluation.yaml")
 	if err != nil {
 		log.Fatalf("evaluation pack: %v", err)
 	}
