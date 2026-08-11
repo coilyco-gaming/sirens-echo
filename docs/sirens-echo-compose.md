@@ -16,11 +16,15 @@ answers strangers in a guild the operator does not moderate.
 own a person's social accounts, career, or job search. Every entry is
 public-safe and mirrored on the public Coilyco website.
 
-## Exact names, never globs
+## Globs are allowed, denied reach is not
 
-`personal-preference-*` would silently include `personal-preference-social`,
-which is the one preference source that must not compose here. Listing sources
-by exact name makes every addition a reviewed line in a diff.
+An earlier revision banned globs outright. That was a proxy for the real rule
+and it blocked legitimate widening once `personal-preference-social` was
+reframed onto the organization and became safe to pull.
+
+The invariant is now direct: no pattern may match a denied source. `kai-*`,
+`writing-kai-*`, and a bare denied name all fail, while
+`personal-preference-*` passes.
 
 ## Enforcement
 
@@ -29,8 +33,25 @@ outside the reviewed set, when an entry is a glob, or when a global repository
 appears. The approved set is duplicated in the test on purpose, so widening the
 surface changes a test rather than only a config file.
 
-Each guard is negative-tested: adding `personal-preference-social`, a
-`personal-preference-*` glob, or `global lore` each fails the suite.
+Each guard is negative-tested. `kai-*`, `kai-career`, `writing-kai-*`,
+`global lore`, and an unapproved name each fail the suite.
+
+## What the creator role does and does not reach
+
+The aos `creator` role is `composed-skill "writing-*"`. That reaches the three
+`writing-social-*` sources, which are the right ones: adapting to an active
+community, running an editorial loop, and handling corrections and
+moderation-adjacent moments.
+
+It does not reach `tooling-discord-community-host`, which is `tooling-*`. That
+skill is the closest match in the whole catalog to what this agent does, so it
+is listed explicitly rather than left to the role glob.
+
+Three `writing-*` sources are deliberately not composed here.
+`writing-content-linkedin-video` and `writing-public-repos` are production
+formats rather than conversation. `writing-voice-observer-narrator` constrains
+its subject to a passive observer that is "not an active agent", which
+contradicts an agent that answers and acts.
 
 ## Identity, not impersonation
 

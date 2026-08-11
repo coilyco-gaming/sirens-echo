@@ -8,28 +8,26 @@ import (
 	"testing"
 )
 
-// approvedComposedSkills is duplicated on purpose, so widening the allowlist
+// approvedComposedPatterns is duplicated on purpose, so widening the allowlist
 // changes a test rather than only a config file. See docs/sirens-echo-compose.md.
-var approvedComposedSkills = map[string]struct{}{
-	"personal-preference-colors":      {},
-	"personal-preference-animals":     {},
-	"personal-preference-games":       {},
-	"personal-preference-shows":       {},
-	"personal-preference-anime":       {},
-	"personal-preference-books":       {},
-	"personal-preference-movies":      {},
-	"personal-preference-fabrication": {},
-	"writing-kai-voice":               {},
+var approvedComposedPatterns = map[string]struct{}{
+	"personal-preference-*":          {},
+	"writing-kai-voice":              {},
+	"writing-social-*":               {},
+	"writing-voice-adaptation":       {},
+	"tooling-discord-community-host": {},
 }
 
-// deniedComposedSkills are sources that must never compose into an agent that
-// answers strangers, each for a stated reason.
+// deniedComposedSkills must never compose into an agent that answers
+// strangers. A pattern that would match one of these fails the suite.
 var deniedComposedSkills = map[string]string{
-	"personal-preference-social": "a person's social accounts are not an organization's taste",
-	"kai-career":                 "private career context",
-	"kai-job-search":             "private job search",
-	"kai-grill-me":               "private operating context",
-	"kai-collaboration":          "private collaboration context",
+	"kai-career":               "private career context",
+	"kai-job-search":           "private job search",
+	"kai-grill-me":             "private operating context",
+	"kai-collaboration":        "private collaboration context",
+	"kai-kapwing-pr-review":    "employer team and domain context",
+	"writing-kai-linkedin":     "a member's personal channel voice",
+	"tooling-cross-repo-infra": "fleet mutation surface",
 }
 
 func composedSkillsIn(t *testing.T) (string, []string) {
@@ -60,23 +58,27 @@ func TestComposeAllowlistHoldsOnlyApprovedSources(t *testing.T) {
 		t.Fatal("no composed-skill entries parsed, so the allowlist proves nothing")
 	}
 	for _, name := range found {
-		if _, ok := approvedComposedSkills[name]; !ok {
+		if _, ok := approvedComposedPatterns[name]; !ok {
 			t.Errorf("composed-skill %q is not on the reviewed allowlist", name)
-		}
-		if reason, denied := deniedComposedSkills[name]; denied {
-			t.Errorf("composed-skill %q must never compose here: %s", name, reason)
 		}
 	}
 }
 
-// A glob is the failure mode this allowlist exists to prevent:
-// personal-preference-* silently includes personal-preference-social.
-func TestComposeAllowlistUsesExactNames(t *testing.T) {
+// Globs are allowed, so the invariant is that no pattern reaches a denied
+// source. See docs/sirens-echo-compose.md.
+func TestComposePatternsNeverReachDeniedSources(t *testing.T) {
 	t.Parallel()
 	_, found := composedSkillsIn(t)
-	for _, name := range found {
-		if strings.ContainsAny(name, "*?[") {
-			t.Errorf("composed-skill %q is a glob; list sources by exact name", name)
+	for _, pattern := range found {
+		for denied, reason := range deniedComposedSkills {
+			matched, err := filepath.Match(pattern, denied)
+			if err != nil {
+				t.Fatalf("composed-skill %q is not a valid pattern: %v", pattern, err)
+			}
+			if matched {
+				t.Errorf("composed-skill %q reaches %q, which must never compose here: %s",
+					pattern, denied, reason)
+			}
 		}
 	}
 }
