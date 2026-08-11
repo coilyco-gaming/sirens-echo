@@ -78,8 +78,8 @@ func render(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	systemPrompt := community.BuildSystemPrompt(definition, localPolicy)
-	if err := community.ValidateSystemPrompt(definition, systemPrompt); err != nil {
+	systemPrompt := community.BuildSystemPrompt(definition, community.PlaceholderPrincipal, localPolicy)
+	if err := community.ValidateSystemPrompt(definition, community.PlaceholderPrincipal, systemPrompt); err != nil {
 		return "", err
 	}
 	userPrompt := community.BuildUserPrompt(sampleHistory, sampleRequest)
@@ -90,6 +90,7 @@ func render(path string) (string, error) {
 	fmt.Fprintf(&output, "Identity: %s\n", definition.Identity)
 	fmt.Fprintf(&output, "Response style: %s\n", definition.ResponseStyle)
 	fmt.Fprintf(&output, "Local policy roots: %s\n", strings.Join(definition.LocalSkillRoots, ", "))
+	fmt.Fprintf(&output, "Principal: placeholder, deployment owns the real values\n")
 	fmt.Fprintf(&output, "System prompt bytes: %d\n", len(systemPrompt))
 	fmt.Fprintf(&output, "\n===== SYSTEM PROMPT =====\n\n%s", systemPrompt)
 	fmt.Fprintf(&output, "\n===== USER PROMPT (fixed sample) =====\n\n%s\n", userPrompt)

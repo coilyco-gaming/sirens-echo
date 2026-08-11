@@ -3,8 +3,8 @@
 ## Discord response service
 
 - AOS release substrate with no composed role, identity card, or lore source
-- Neutral Sirens Echo and social CoilyCo profiles with independent policy roots
-  and build-time verification
+- Neutral Sirens Echo and social CoilyCo profiles with independent policy roots,
+  a Kai-only trust boundary, and build-time checks
 - Definition-selected history budget, skill roots, MCP roster, issue tracker
 - Mention-or-reply invocation with channel, thread, guild, author, and
   duplicate gates

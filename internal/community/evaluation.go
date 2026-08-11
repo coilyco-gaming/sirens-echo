@@ -21,11 +21,11 @@ type EvaluationPack struct {
 // EvaluationCase exercises the same prompt and parser used by Discord without
 // sending a Discord reply or creating a Forgejo issue.
 type EvaluationCase struct {
-	ID                string            `json:"id"`
-	History           []TranscriptEntry `json:"history"`
-	Current           TranscriptEntry   `json:"current"`
-	RequiredTool      string            `json:"required_tool"`
-	ForbiddenPhrases  []string          `json:"forbidden_phrases"`
+	ID               string            `json:"id"`
+	History          []TranscriptEntry `json:"history"`
+	Current          TranscriptEntry   `json:"current"`
+	RequiredTool     string            `json:"required_tool"`
+	ForbiddenPhrases []string          `json:"forbidden_phrases"`
 }
 
 // LoadEvaluationPack reads the deterministic deployment gate.
@@ -64,6 +64,7 @@ func LoadEvaluationPack(path string) (EvaluationPack, error) {
 func RunEvaluation(
 	ctx context.Context,
 	definition Definition,
+	principal Principal,
 	localSkillpack string,
 	pack EvaluationPack,
 	completions CompletionClient,
@@ -72,6 +73,7 @@ func RunEvaluation(
 	return runEvaluation(
 		ctx,
 		definition,
+		principal,
 		localSkillpack,
 		pack,
 		completions,
@@ -83,13 +85,14 @@ func RunEvaluation(
 func runEvaluation(
 	ctx context.Context,
 	definition Definition,
+	principal Principal,
 	localSkillpack string,
 	pack EvaluationPack,
 	completions CompletionClient,
 	output io.Writer,
 	caseTimeout time.Duration,
 ) error {
-	systemPrompt := BuildSystemPrompt(definition, localSkillpack)
+	systemPrompt := BuildSystemPrompt(definition, principal, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {
 		userPrompt := BuildUserPrompt(evaluationCase.History, evaluationCase.Current)

@@ -45,6 +45,7 @@ func TestRunEvaluationAcceptsGroundedRepliesAndToolCalls(t *testing.T) {
 	if err := RunEvaluation(
 		context.Background(),
 		definition,
+		PlaceholderPrincipal,
 		skillpack,
 		pack,
 		client,
@@ -77,6 +78,7 @@ func TestRunEvaluationRejectsInventedChannel(t *testing.T) {
 	if err := RunEvaluation(
 		context.Background(),
 		definition,
+		PlaceholderPrincipal,
 		skillpack,
 		pack,
 		client,
@@ -95,6 +97,7 @@ func TestRunEvaluationGivesEachCaseAFreshDeadline(t *testing.T) {
 	if err := runEvaluation(
 		context.Background(),
 		definition,
+		PlaceholderPrincipal,
 		skillpack,
 		pack,
 		client,

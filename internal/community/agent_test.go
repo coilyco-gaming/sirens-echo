@@ -27,7 +27,7 @@ func TestNewAgentSupportsHTTPOnlySocialDeployment(t *testing.T) {
 	repoRoot := filepath.Join("..", "..")
 	agent, err := NewAgent(Config{
 		Definition: Definition{
-			Identity:      "CoilyCo",
+			Identity:      "Sirens Deep of Coilyco",
 			AuditRole:     "general",
 			ResponseStyle: ResponseStyleSocial,
 			LocalSkillRoots: []string{
@@ -47,10 +47,15 @@ func TestNewAgentSupportsHTTPOnlySocialDeployment(t *testing.T) {
 	if agent.session != nil {
 		t.Fatal("HTTP-only agent created a Discord session")
 	}
-	if !strings.Contains(agent.systemPrompt, "warm and lively general-purpose assistant") {
+	if strings.Contains(agent.systemPrompt, "Do not adopt or express a personality") {
 		t.Fatal("HTTP-only agent did not load the social profile")
 	}
-	for _, forbidden := range []string{"Eco", "Sirens", "#bots", "Forgejo"} {
+	if !strings.Contains(agent.systemPrompt, "CoilyCo general-purpose response policy") {
+		t.Fatal("HTTP-only agent did not load its local voice policy")
+	}
+	// "Sirens" is no longer a leak signal: it is in this profile's own identity
+	// and in the harness name. The community profile's surface still is.
+	for _, forbidden := range []string{"Eco", "Sirens Echo", "#bots", "Forgejo"} {
 		if strings.Contains(agent.systemPrompt, forbidden) {
 			t.Fatalf("HTTP-only agent retained %q", forbidden)
 		}

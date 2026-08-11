@@ -69,6 +69,7 @@ func main() {
 	if err := community.RunEvaluation(
 		context.Background(),
 		definition,
+		community.PlaceholderPrincipal,
 		localSkillpack,
 		pack,
 		client,

@@ -1,5 +1,5 @@
 schema: coilyco-harness.agent.v1
-identity: CoilyCo
+identity: Sirens Deep of Coilyco
 audit_role: general
 response_style: social
 channel: ""

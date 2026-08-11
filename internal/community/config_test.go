@@ -17,16 +17,16 @@ func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
 	}
 }
 
-// The CoilyCo profile no longer asserts an empty roster. It selects read-only
-// surfaces deliberately, one at a time, and still carries no write surface.
-func TestCoilyCoDefinitionSelectsOnlyReadOnlySurfaces(t *testing.T) {
+// The Sirens Deep profile no longer asserts an empty roster. It selects
+// read-only surfaces one at a time and still carries no write surface.
+func TestSirensDeepDefinitionSelectsOnlyReadOnlySurfaces(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	definition, err := LoadDefinition(path)
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}
-	if definition.Identity != "CoilyCo" || definition.AuditRole != "general" {
+	if definition.Identity != "Sirens Deep of Coilyco" || definition.AuditRole != "general" {
 		t.Fatalf(
 			"identity = %q, audit role = %q",
 			definition.Identity,
@@ -100,6 +100,45 @@ func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	}
 	if cfg.DiscordDMEnabled {
 		t.Fatal("direct messages must stay opt-in")
+	}
+}
+
+// One signal identifies nobody, so a half-configured principal must stop the
+// process rather than render a sentence with an empty half.
+func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
+	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_HANDLE", "example_handle")
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_USER_ID", "")
+
+	if _, err := LoadConfig(); err == nil ||
+		!strings.Contains(err.Error(), "must be set together") {
+		t.Fatalf("LoadConfig error = %v", err)
+	}
+
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_USER_ID", "not-a-snowflake")
+	if _, err := LoadConfig(); err == nil ||
+		!strings.Contains(err.Error(), "numeric snowflake") {
+		t.Fatalf("LoadConfig error = %v", err)
+	}
+
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_USER_ID", PlaceholderPrincipal.UserID)
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig: %v", err)
+	}
+	if !cfg.Principal.Configured() {
+		t.Fatalf("Principal = %#v", cfg.Principal)
+	}
+
+	// Neither set is the supported state for a deployment that names nobody.
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_HANDLE", "")
+	t.Setenv("SIRENS_ECHO_PRINCIPAL_USER_ID", "")
+	if cfg, err = LoadConfig(); err != nil || cfg.Principal.Configured() {
+		t.Fatalf("LoadConfig = %#v, %v", cfg.Principal, err)
 	}
 }
 

@@ -38,8 +38,9 @@ It must be empty or a `#channel-name` that the grounding validator will also
 accept, so a configured label can never introduce a reference the model is then
 rejected for repeating.
 
-A definition that names no channel is transport-neutral. Its prompt describes
-the configured deployment ingress without asserting which one was selected.
+A definition that names no channel is transport-neutral. Its admission sentence
+stops at the harness configuration controls without asserting which ingress was
+selected.
 
 ## Deploying to a guild the operator does not moderate
 

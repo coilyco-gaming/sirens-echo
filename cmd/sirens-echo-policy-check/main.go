@@ -47,8 +47,9 @@ func verify(path string) {
 	if err != nil {
 		log.Fatalf("local policy %s: %v", path, err)
 	}
-	prompt := community.BuildSystemPrompt(definition, localPolicy)
-	if err := community.ValidateSystemPrompt(definition, prompt); err != nil {
+	principal := community.PlaceholderPrincipal
+	prompt := community.BuildSystemPrompt(definition, principal, localPolicy)
+	if err := community.ValidateSystemPrompt(definition, principal, prompt); err != nil {
 		log.Fatalf("response policy %s: %v", path, err)
 	}
 	fmt.Printf(
