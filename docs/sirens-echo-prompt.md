@@ -12,10 +12,10 @@ by hand.
   style blocks in `responseInstructions`.
 * `agent/*.yaml` - selects identity, response style, channel label, issue
   tracker, and which policy roots load.
-* `.agents/skills/<root>/SKILL.md` plus one level of `references/*.md` - the
-  domain prose. `LoadSkillpack` collects across every configured root, sorts by
-  full path, strips frontmatter, and joins with `## Source: <path>` headers
-  under a 256 KB cap.
+* `.agents/skills/<root>/SKILL.md`, or `COMPOSED.md` for an agent-compose
+  composed source, plus one level of `references/*.md`. `LoadSkillpack` collects
+  across every configured root, sorts by full path, strips frontmatter, and
+  joins with `## Source: <path>` headers under a 256 KB cap.
 
 Deployment selects which definition loads and contributes no prose.
 
