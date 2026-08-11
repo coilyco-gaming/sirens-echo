@@ -36,6 +36,21 @@ type mcpToolResult struct {
 	} `json:"structuredContent"`
 }
 
+// ForgejoCallError names the tool and status of a refused MCP call. Both are
+// bounded metadata: the body is discarded and never enters this value.
+type ForgejoCallError struct {
+	Tool         string
+	Status       int
+	ToolReported bool
+}
+
+func (e ForgejoCallError) Error() string {
+	if e.ToolReported {
+		return fmt.Sprintf("Forgejo MCP %s reported a tool error", e.Tool)
+	}
+	return fmt.Sprintf("Forgejo MCP %s returned HTTP %d", e.Tool, e.Status)
+}
+
 // EnsureIssue returns an existing exact-title issue or creates one without
 // labels, assignees, milestones, or any other tracker mutation.
 func (c ForgejoMCPClient) EnsureIssue(ctx context.Context, draft IssueDraft) (string, error) {
@@ -111,14 +126,14 @@ func (c ForgejoMCPClient) callTool(ctx context.Context, tool string, arguments a
 	defer response.Body.Close()
 	if response.StatusCode != http.StatusOK {
 		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, 4096))
-		return fmt.Errorf("Forgejo MCP %s returned HTTP %d", tool, response.StatusCode)
+		return ForgejoCallError{Tool: tool, Status: response.StatusCode}
 	}
 	var toolResult mcpToolResult
 	if err := json.NewDecoder(io.LimitReader(response.Body, 2*1024*1024)).Decode(&toolResult); err != nil {
 		return fmt.Errorf("decode Forgejo MCP %s result: %w", tool, err)
 	}
 	if toolResult.IsError {
-		return fmt.Errorf("Forgejo MCP %s failed", tool)
+		return ForgejoCallError{Tool: tool, Status: response.StatusCode, ToolReported: true}
 	}
 	if len(toolResult.StructuredContent.Result) == 0 {
 		return fmt.Errorf("Forgejo MCP %s returned no structured result", tool)

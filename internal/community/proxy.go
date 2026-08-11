@@ -81,9 +81,12 @@ type ProxyClient struct {
 	AuditRole     string
 	Attribution   string
 	ResponseStyle string
-	HTTPClient    *http.Client
-	Tools         ToolProvider
-	Telemetry     *Telemetry
+	// Harness attributes the call to the deployment's ingress. The per-turn
+	// transport is on the turn span; this is deployment-level audit context.
+	Harness    string
+	HTTPClient *http.Client
+	Tools      ToolProvider
+	Telemetry  *Telemetry
 }
 
 type chatRequest struct {
@@ -515,7 +518,7 @@ func (c ProxyClient) completeOnce(
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("X-Request-ID", requestID)
 	request.Header.Set("X-Ward-Role", c.AuditRole)
-	request.Header.Set("X-Ward-Harness", "discord")
+	request.Header.Set("X-Ward-Harness", valueOrDefault(c.Harness, transportHTTP))
 	request.Header.Set("X-Ward-Target-Repo", "coilyco-gaming/sirens-echo")
 
 	response, err := c.HTTPClient.Do(request)

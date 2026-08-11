@@ -3,8 +3,10 @@ package community
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -94,5 +96,37 @@ func testForgejoClient(baseURL string) ForgejoMCPClient {
 	return ForgejoMCPClient{
 		MCPURL:     baseURL + "/mcp",
 		HTTPClient: &http.Client{Timeout: time.Second},
+	}
+}
+
+// Issue 89: the failure carried no status, tool, or cause, so 14 consecutive
+// failures gave an operator no path to a diagnosis.
+func TestForgejoCallErrorCarriesToolAndStatus(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "denied by guardfile", http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	client := ForgejoMCPClient{MCPURL: server.URL + "/mcp", HTTPClient: server.Client()}
+	_, err := client.EnsureIssue(context.Background(), IssueDraft{
+		Kind: "knowledge-gap", Title: "t", Body: "b",
+	})
+	if err == nil {
+		t.Fatal("a refused call was reported as success")
+	}
+	var callErr ForgejoCallError
+	if !errors.As(err, &callErr) {
+		t.Fatalf("error %v does not carry the typed detail", err)
+	}
+	if callErr.Status != http.StatusForbidden {
+		t.Errorf("status = %d, want %d", callErr.Status, http.StatusForbidden)
+	}
+	if callErr.Tool == "" {
+		t.Error("the failing tool is not named")
+	}
+	// The remote body is discarded, so it must never reach the error.
+	if strings.Contains(err.Error(), "denied by guardfile") {
+		t.Errorf("remote body leaked into the error: %v", err)
 	}
 }

@@ -62,6 +62,7 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		Model:       "selected-model",
 		AuditRole:   "community",
 		Attribution: "Sirens Echo",
+		Harness:     transportDiscord,
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
 	got, err := client.Complete(context.Background(), "system", "user", "request")

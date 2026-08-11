@@ -111,6 +111,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			AuditRole:     cfg.Definition.AuditRole,
 			Attribution:   cfg.Definition.Identity,
 			ResponseStyle: cfg.Definition.ResponseStyle,
+			Harness:       deploymentHarness(cfg),
 			HTTPClient:    httpClient,
 			Tools: MCPProvider{
 				Servers:    cfg.Definition.MCPServers,
@@ -178,6 +179,15 @@ func resolveAccessPolicy(cfg Config) (*AccessPolicy, error) {
 		return synthesizeAccessPolicy(cfg), nil
 	}
 	return LoadAccessPolicy(cfg.AccessPolicyPath)
+}
+
+// deploymentHarness attributes model calls to the ingress this deployment
+// actually has, rather than asserting Discord for every profile.
+func deploymentHarness(cfg Config) string {
+	if cfg.DiscordEnabled {
+		return transportDiscord
+	}
+	return transportHTTP
 }
 
 func mcpServerURL(definition Definition, name string) (string, error) {
@@ -643,11 +653,16 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 		issueURL, issueErr := a.issues.EnsureIssue(issueCtx, *decision.Issue)
 		if issueErr != nil {
 			a.telemetry.RecordFailure(issueCtx, "forgejo")
-			a.telemetry.Error(
-				issueCtx,
-				"forgejo.issue.failed",
-				slog.String("error_type", "forgejo_issue_failed"),
-			)
+			attrs := []slog.Attr{slog.String("error_type", "forgejo_issue_failed")}
+			var callErr ForgejoCallError
+			if errors.As(issueErr, &callErr) {
+				attrs = append(attrs,
+					slog.String("mcp_tool", callErr.Tool),
+					slog.Int("status", callErr.Status),
+					slog.Bool("tool_reported", callErr.ToolReported),
+				)
+			}
+			a.telemetry.Error(issueCtx, "forgejo.issue.failed", attrs...)
 			a.telemetry.MarkSpanError(issueSpan, exceptionForgejoIssueFailed)
 		} else {
 			reply = appendTrackingLink(reply, issueURL)
