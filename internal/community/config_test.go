@@ -17,16 +17,16 @@ func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
 	}
 }
 
-// The CoilyCo profile no longer asserts an empty roster. It selects read-only
-// surfaces deliberately, one at a time, and still carries no write surface.
-func TestCoilyCoDefinitionSelectsOnlyReadOnlySurfaces(t *testing.T) {
+// The Sirens Deep profile no longer asserts an empty roster. It selects
+// read-only surfaces one at a time and still carries no write surface.
+func TestSirensDeepDefinitionSelectsOnlyReadOnlySurfaces(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	definition, err := LoadDefinition(path)
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}
-	if definition.Identity != "CoilyCo" || definition.AuditRole != "general" {
+	if definition.Identity != "Sirens Deep of Coilyco" || definition.AuditRole != "general" {
 		t.Fatalf(
 			"identity = %q, audit role = %q",
 			definition.Identity,

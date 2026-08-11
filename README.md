@@ -26,8 +26,8 @@ No automatic memory. Guarded investigations use
 
 ## CoilyCo harness
 
-The `sirens-deep` deployment selects `agent/sirens-deep.yaml`. Its CoilyCo
-model identity is general-purpose rather than an Eco or Sirens harness.
+The `sirens-deep` deployment selects `agent/sirens-deep.yaml`. Its model
+identity is Sirens Deep of Coilyco and its scope is general-purpose.
 
 - It loads only the domain-neutral `coilyco-general` policy and names no
   channel, so deployment selects Discord ingress, HTTP ingress, or both.

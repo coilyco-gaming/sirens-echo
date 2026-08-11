@@ -13,16 +13,17 @@ server as its automatic issue tracker.
 
 `agent/sirens-deep.yaml` is the social CoilyCo general-purpose profile. The
 filename remains the stable deployment selection used by the existing
-`sirens-deep` workload. Its model identity is CoilyCo, its audit role is
-`general`, and its channel is empty because deployment owns routing rather than
-the profile. It loads only `.agents/skills/coilyco-general/`, selects a
+`sirens-deep` workload. Its identity is Sirens Deep of Coilyco, its audit role
+is `general`, and its channel is empty because deployment owns routing rather
+than the profile. It loads only `.agents/skills/coilyco-general/`, selects a
 read-only Steam MCP whose address comes from deployment, and has no automatic
 issue tracker.
 
 The CoilyCo profile starts from the user's request without assuming a project,
-community, product, or technical discipline. It retains a warm,
-proportionate voice while keeping truth, uncertainty, privacy, action
-grounding, and the deployment boundary above personality.
+community, product, or technical discipline. Its voice comes from that policy
+root rather than a scaffolded paragraph, so a copy edit to voice is a skill
+diff. Both profiles share the framing in [the rendered
+prompt](sirens-echo-prompt.md).
 
 Neither profile loads an Agent Compose role, seat, personality meld, shared
 behavioral context, or lore source.

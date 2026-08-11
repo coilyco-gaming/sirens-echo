@@ -21,11 +21,11 @@ type EvaluationPack struct {
 // EvaluationCase exercises the same prompt and parser used by Discord without
 // sending a Discord reply or creating a Forgejo issue.
 type EvaluationCase struct {
-	ID                string            `json:"id"`
-	History           []TranscriptEntry `json:"history"`
-	Current           TranscriptEntry   `json:"current"`
-	RequiredTool      string            `json:"required_tool"`
-	ForbiddenPhrases  []string          `json:"forbidden_phrases"`
+	ID               string            `json:"id"`
+	History          []TranscriptEntry `json:"history"`
+	Current          TranscriptEntry   `json:"current"`
+	RequiredTool     string            `json:"required_tool"`
+	ForbiddenPhrases []string          `json:"forbidden_phrases"`
 }
 
 // LoadEvaluationPack reads the deterministic deployment gate.
