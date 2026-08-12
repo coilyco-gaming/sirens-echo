@@ -53,6 +53,8 @@ func (a *Agent) HTTPHandler() http.Handler {
 	mux.HandleFunc(healthzPath, a.handleHealthz)
 	mux.HandleFunc(readyzPath, a.handleReadyz)
 	mux.Handle(httpTurnPath, instrumentHTTPRoute(telemetry, httpTurnPath, a.handleHTTPTurn))
+	// Same listener and therefore the same network boundary as the turn path.
+	mux.Handle(mcpServerPath, a.mcpHandler())
 	return mux
 }
 
@@ -260,8 +262,11 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(writer).Encode(value)
 }
 
+// httpTurn also serves the MCP tool, which is the same direct turn reached
+// through a different ingress. Only the transport label differs.
 type httpTurn struct {
 	requestID string
+	transport string
 	history   []TranscriptEntry
 	current   TranscriptEntry
 	reply     string
@@ -269,7 +274,12 @@ type httpTurn struct {
 
 func (t *httpTurn) RequestID() string { return t.requestID }
 
-func (t *httpTurn) Transport() string { return transportHTTP }
+func (t *httpTurn) Transport() string {
+	if t.transport == "" {
+		return transportHTTP
+	}
+	return t.transport
+}
 
 func (t *httpTurn) Current() TranscriptEntry { return t.current }
 

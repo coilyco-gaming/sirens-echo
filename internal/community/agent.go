@@ -21,6 +21,7 @@ const genericFailureReply = "there was an error generating your reply"
 const (
 	transportDiscord = "discord"
 	transportHTTP    = "http"
+	transportMCP     = "mcp"
 )
 
 // Agent owns the Sirens Echo Discord session and its outbound boundaries.

@@ -33,8 +33,8 @@
 - Turn, latency, model-call, tool-call, admission, and failure metrics, plus 23
   bounded SigNoZ exception groups with stage and outcome tags
 - Metrics-only liveness and non-generating route readiness, bounded
-- Private HTTP entrypoint over the same turn path, with W3C tracing and
-  Discord's admission policy
+- Private HTTP entrypoint over the same turn path, served as JSON and as an MCP
+  tool, with W3C tracing and Discord's admission policy
 - Transport-neutral CoilyCo profile with no assumed domain, MCP, automatic
   issue tracking, or default write surface
 - Offline harness and real MCP fixtures plus a non-mutating live gate

@@ -14,6 +14,24 @@ It bypasses only Discord's channel, mention, and duplicate gates. Admission,
 Agent Proxy, MCP tool calls, response validation, grounding, and guarded Forgejo
 issue handling are unchanged.
 
+## Echo as an MCP server
+
+The same turn is served over MCP at `/mcp` on the same listener, as a single
+`turn` tool taking `author`, `content`, and optional `history`. A fleet client
+reaches Echo natively instead of learning this JSON contract, and `/v1/turn` is
+unchanged for existing callers.
+
+Nothing is bypassed. The tool runs the same admission, serialization, response
+validation, and grounding as every other ingress, and its turns are labelled
+`mcp` in telemetry. Admission keys off `X-Sirens-Caller` when a client sends one
+and the declared MCP client name otherwise, so a client can still separate its
+own callers. A caller-fixable problem comes back as an error result rather than
+a protocol error, so the calling model can see it and correct itself.
+
+Rostering Echo into its own roster is not guarded against. Turns are serialized,
+so a self-call waits on the slot its caller already holds and fails on the queue
+timeout rather than recursing.
+
 ## Access and limits
 
 Reachability is decided at the network layer rather than by the process. The k3s
