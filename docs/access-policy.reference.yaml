@@ -9,10 +9,12 @@
 # commentary here rather than beside each key, because the repository's YAML
 # comment rule keeps comments above the first content line.
 #
-# The first guild is one the operator moderates, so everything is open and the
-# deployment's default admission limits apply. The second is a guild the
-# operator does not moderate, so it names its channel, grants members through a
-# role rather than a list of accounts, and tightens its own budget.
+# The first guild is one the operator moderates, so its channels and members
+# are open. `users: all` still has to state rate_limit.per_user, because an open
+# guild has no membership bound and the deployment tier it would otherwise
+# inherit is process-wide. A moderated guild sets a generous one. The second is
+# a guild the operator does not moderate, so it names its channel, grants
+# members through a role rather than a list of accounts, and tightens further.
 #
 # See docs/sirens-echo-access.md.
 
@@ -37,6 +39,8 @@ guilds:
     note: "Sirens - operator's own guild"
     channels: all
     users: all
+    rate_limit:
+      per_user: "30/60s"
 
   - id: "3072000000000000001"
     note: "Partner guild - bot answers in #ask-coilyco only"

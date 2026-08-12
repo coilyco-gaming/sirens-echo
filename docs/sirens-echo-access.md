@@ -16,9 +16,9 @@ direct_messages:
   allow: ["<user-id>"]        # absent or empty answers no direct message
 guilds:
   - id: "<guild-id>"
-    note: "operator's own guild"
     channels: all
     users: all
+    rate_limit: {per_user: "30/60s"}   # required whenever users is all
   - id: "<guild-id>"
     note: "partner guild"
     channels: ["<channel-id>"]
@@ -56,12 +56,12 @@ union, so either alone is a complete grant.
 
 ## Failing closed
 
-A missing file, an unparsable file, an unknown field, a non-snowflake ID, a
-duplicate guild, a guild that allows no channel, and a guild that allows no
-member are all startup failures. Absent configuration never widens the surface.
-`ward exec policy-check` validates the tracked reference copy and validates
-`SIRENS_ECHO_ACCESS_POLICY` when set. The image build runs the same check, and
-`ward exec test` proves it passes with only the files the build context carries.
+A missing or unparsable file, an unknown field, a non-snowflake ID, a duplicate
+guild, a guild allowing no channel or no member, and a `users: all` guild whose
+`rate_limit.per_user` is absent or `off` are all startup failures. Absent
+configuration never widens the surface. `ward exec policy-check` validates the
+reference copy and `SIRENS_ECHO_ACCESS_POLICY` when set, the image build runs
+the same check, and `ward exec test` proves it passes on the build context.
 
 ## Without the file
 

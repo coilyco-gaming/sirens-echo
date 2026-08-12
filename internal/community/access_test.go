@@ -60,6 +60,8 @@ guilds:
     note: "open"
     channels: all
     users: all
+    rate_limit:
+      per_user: "30/60s"
   - id: "`+testForeignGuild+`"
     note: "restricted"
     channels: ["`+testNamedChannel+`"]
@@ -176,7 +178,7 @@ schema: coilyco-harness.access.v1
 guilds:
   - id: "`+testHomeGuild+`"
     channels: all
-    users: all
+    users: ["`+testMember+`"]
   - id: "`+testForeignGuild+`"
     channels: all
     users: all
@@ -187,6 +189,8 @@ guilds:
 	if err != nil {
 		t.Fatalf("LoadAccessPolicy: %v", err)
 	}
+	// Only a guild that names its members may omit rate_limit, so this is the
+	// shape that still inherits the deployment tier.
 	home := policy.Evaluate(guildOrigin(testHomeGuild, testOpenChannel), testMember, nil, nil)
 	if home.Guild.Overrides() != nil {
 		t.Fatal("a guild without rate_limit must keep the deployment default")
@@ -240,8 +244,23 @@ func TestAccessPolicyFailsClosed(t *testing.T) {
 		},
 		{
 			name: "duplicate guild",
-			body: "schema: coilyco-harness.access.v1\nguilds:\n  - {id: \"" + testHomeGuild + "\", channels: all, users: all}\n  - {id: \"" + testHomeGuild + "\", channels: all, users: all}",
+			body: "schema: coilyco-harness.access.v1\nguilds:\n  - {id: \"" + testHomeGuild + "\", channels: all, users: [\"" + testMember + "\"]}\n  - {id: \"" + testHomeGuild + "\", channels: all, users: [\"" + testMember + "\"]}",
 			want: "twice",
+		},
+		{
+			name: "open guild without a per-user bound",
+			body: "schema: coilyco-harness.access.v1\nguilds: [{id: \"" + testHomeGuild + "\", channels: all, users: all}]",
+			want: "opens to every member",
+		},
+		{
+			name: "open guild disabling its per-user bound",
+			body: "schema: coilyco-harness.access.v1\nguilds: [{id: \"" + testHomeGuild + "\", channels: all, users: all, rate_limit: {per_user: off}}]",
+			want: "opens to every member",
+		},
+		{
+			name: "open guild bounding only its context tier",
+			body: "schema: coilyco-harness.access.v1\nguilds: [{id: \"" + testHomeGuild + "\", channels: all, users: all, rate_limit: {per_context: \"4/30s\"}}]",
+			want: "opens to every member",
 		},
 		{
 			name: "misspelled widening token",
