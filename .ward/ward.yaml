@@ -51,6 +51,9 @@ commands:
   eval-deep:
     run: bash scripts/ward-command.sh eval-deep
     description: Run the non-mutating Sirens Deep cases through Agent Proxy.
+  board-deep:
+    run: bash scripts/ward-command.sh board-deep
+    description: Emit the Sirens Deep human-graded board dataset. Gates nothing.
   pre-commit-all:
     run: pre-commit run --all-files
     description: Run the complete repository pre-commit suite.

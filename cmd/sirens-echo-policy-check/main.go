@@ -23,6 +23,11 @@ func main() {
 	} {
 		verifyEvaluationPack(path)
 	}
+	for _, path := range []string{
+		"agent/board-deep.yaml",
+	} {
+		verifyBoardPack(path)
+	}
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
@@ -37,6 +42,21 @@ func verifyEvaluationPack(path string) {
 		log.Fatalf("evaluation pack %s: %v", path, err)
 	}
 	fmt.Printf("verified evaluation pack %s with %d cases\n", path, len(pack.Cases))
+}
+
+// The board never gates a deployment, but a pack that does not load is a pack
+// nobody can grade, so the build still refuses to ship a broken one.
+func verifyBoardPack(path string) {
+	pack, err := community.LoadBoardPack(path)
+	if err != nil {
+		log.Fatalf("board pack %s: %v", path, err)
+	}
+	fmt.Printf(
+		"verified board pack %s with %d cases across %d pairs\n",
+		path,
+		len(pack.Cases),
+		len(pack.Cases)/2,
+	)
 }
 
 func verifyAccessPolicy(path string) {

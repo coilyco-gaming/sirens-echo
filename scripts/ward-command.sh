@@ -31,6 +31,13 @@ case "${1:-}" in
       SIRENS_ECHO_EVALUATION_PACK=agent/evaluation-deep.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  board-deep)
+    # Emits an annotation dataset on stdout and reports no verdict. Redirect it
+    # to evaluations/ before grading, because the dataset is the evidence.
+    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agent/board-deep.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   format)
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;

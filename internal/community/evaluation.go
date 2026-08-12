@@ -29,6 +29,22 @@ type EvaluationCase struct {
 	ForbiddenPhrases []string          `json:"forbidden_phrases" yaml:"forbidden_phrases"`
 }
 
+// PackSchema reads only the schema field so a caller can select the right
+// loader. Loading the gate as the board silently is worse than a parse error.
+func PackSchema(path string) (string, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return "", fmt.Errorf("read pack: %w", err)
+	}
+	var header struct {
+		Schema string `yaml:"schema"`
+	}
+	if err := yaml.Unmarshal(raw, &header); err != nil {
+		return "", fmt.Errorf("parse pack schema: %w", err)
+	}
+	return header.Schema, nil
+}
+
 // LoadEvaluationPack reads the deterministic deployment gate.
 func LoadEvaluationPack(path string) (EvaluationPack, error) {
 	raw, err := os.ReadFile(path)

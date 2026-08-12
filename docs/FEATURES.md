@@ -37,7 +37,7 @@
   tool, with W3C tracing and Discord's admission policy
 - Transport-neutral CoilyCo profile with no assumed domain, MCP, automatic
   issue tracking, or default write surface
-- Offline harness and real MCP fixtures plus a non-mutating live gate
+- Offline harness, MCP fixtures, a non-mutating gate, and a graded board
 
 See [the service](sirens-echo.md), [profiles](response-profiles.md),
 [MCP tools](sirens-echo-tools.md), [access](sirens-echo-access.md),

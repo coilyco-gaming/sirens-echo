@@ -44,6 +44,11 @@ pre-commit gate must pass. Never use `--no-verify`.
 
 `ward exec eval-deep` runs 5 times. `ward exec eval-echo` runs once.
 
+`ward exec board-deep` is the human-graded board and gates nothing. It repeats
+each case 5 times inside one run, so it is invoked once and its stdout is the
+evidence. Never wire it into CI and never derive a pass or fail from its
+`structural` field. See [the Deep board](docs/sirens-echo-board.md).
+
 The split is load on `kai-tower-3026`, not confidence. Echo's route
 `sirens-echo/default` resolves to `ornith:35b` on ollama and the AOSH router
 puts `default_server` on that tower, so every Echo case pins a 35B model on the

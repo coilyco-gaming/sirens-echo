@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,9 +31,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("skillpack: %v", err)
 	}
-	pack, err := community.LoadEvaluationPack(evaluationPackPath())
+	packPath := evaluationPackPath()
+	packSchema, err := community.PackSchema(packPath)
 	if err != nil {
-		log.Fatalf("evaluation pack: %v", err)
+		log.Fatalf("pack schema: %v", err)
 	}
 	proxyURL := valueOrDefault(os.Getenv("AGENT_PROXY_URL"), community.DefaultAgentProxyURL)
 	proxyModel := strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL"))
@@ -58,6 +60,7 @@ func main() {
 		Timeout:   timeout,
 		Transport: otelhttp.NewTransport(http.DefaultTransport),
 	}
+	rosterPath := strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER"))
 	client := community.ProxyClient{
 		BaseURL:       proxyURL,
 		Model:         proxyModel,
@@ -66,10 +69,18 @@ func main() {
 		ResponseStyle: definition.ResponseStyle,
 		HTTPClient:    httpClient,
 		Tools: &community.MCPProvider{
-			Servers:    evaluationMCPServers(),
+			Servers:    evaluationMCPServers(rosterPath),
 			HTTPClient: httpClient,
 		},
 		Telemetry: telemetry,
+	}
+	if packSchema == community.BoardSchema {
+		runBoardPack(definition, localSkillpack, packPath, proxyURL, proxyModel, rosterPath, client)
+		return
+	}
+	pack, err := community.LoadEvaluationPack(packPath)
+	if err != nil {
+		log.Fatalf("evaluation pack: %v", err)
 	}
 	if err := community.RunEvaluation(
 		context.Background(),
@@ -84,10 +95,61 @@ func main() {
 	}
 }
 
+// runBoardPack emits the annotation dataset. It reports no verdict, so a
+// non-zero exit here means the run did not happen rather than that Deep failed.
+func runBoardPack(
+	definition community.Definition,
+	localSkillpack string,
+	packPath string,
+	proxyURL string,
+	proxyModel string,
+	rosterPath string,
+	client community.CompletionClient,
+) {
+	pack, err := community.LoadBoardPack(packPath)
+	if err != nil {
+		log.Fatalf("board pack: %v", err)
+	}
+	provenance := community.BoardProvenance{
+		Definition:  evaluationDefinitionPath(),
+		Pack:        packPath,
+		Model:       proxyModel,
+		Transport:   proxyURL,
+		Roster:      valueOrDefault(rosterPath, "empty"),
+		Epochs:      boardEpochs(),
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	if err := community.RunBoard(
+		context.Background(),
+		definition,
+		community.PlaceholderPrincipal,
+		localSkillpack,
+		pack,
+		provenance,
+		client,
+		os.Stdout,
+	); err != nil {
+		log.Fatalf("board: %v", err)
+	}
+}
+
+// boardEpochs repeats each case so the grader reads epoch 1 and the rest stay
+// in the dataset as a failure-spread estimate.
+func boardEpochs() int {
+	raw := strings.TrimSpace(os.Getenv("SIRENS_ECHO_BOARD_EPOCHS"))
+	if raw == "" {
+		return community.DefaultBoardEpochs
+	}
+	epochs, err := strconv.Atoi(raw)
+	if err != nil || epochs < 1 {
+		log.Fatalf("SIRENS_ECHO_BOARD_EPOCHS must be a positive integer, got %q", raw)
+	}
+	return epochs
+}
+
 // evaluationMCPServers uses the deployment roster when one is named, and no
 // tools otherwise, so an offline run needs no MCP endpoint or secret.
-func evaluationMCPServers() []community.MCPServerDefinition {
-	path := strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER"))
+func evaluationMCPServers(path string) []community.MCPServerDefinition {
 	if path == "" {
 		return nil
 	}
