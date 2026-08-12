@@ -32,9 +32,24 @@ var sampleRequest = community.TranscriptEntry{
 	Content: "What changed in the last update?",
 }
 
+// roleSnapshotDir holds one record per baked role. Written only where bundles
+// exist, which is the image build. See docs/sirens-echo-compose.md.
+const roleSnapshotDir = "agent/rendered/roles"
+
+// composedDefinition is the profile the baked bundles belong to.
+const composedDefinition = "agent/sirens-deep.yaml"
+
 func main() {
 	check := flag.Bool("check", false, "fail on a stale snapshot instead of rewriting it")
+	bundles := flag.String("bundles", "", "baked bundle directory, one subdirectory per role")
 	flag.Parse()
+
+	if *bundles != "" {
+		if err := roleSnapshots(*bundles, *check); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	stale := make([]string, 0, len(trackedDefinitions))
 	for _, path := range trackedDefinitions {
@@ -67,6 +82,59 @@ func main() {
 			strings.Join(stale, ", "),
 		)
 	}
+}
+
+// roleSnapshots records what each baked role selected. Loading validates every
+// role's prompt on the way, so a bundle that failed to compose stops the build.
+func roleSnapshots(bundleDir string, check bool) error {
+	definition, err := community.LoadDefinition(composedDefinition)
+	if err != nil {
+		return err
+	}
+	localPolicy, err := community.LoadSkillpack(definition.LocalSkillRoots)
+	if err != nil {
+		return err
+	}
+	loaded, err := community.LoadRoleBundles(
+		bundleDir,
+		definition,
+		community.PlaceholderPrincipal,
+		localPolicy,
+	)
+	if err != nil {
+		return err
+	}
+	stale := make([]string, 0, len(loaded))
+	for _, bundle := range loaded {
+		target := filepath.Join(roleSnapshotDir, bundle.Role+".bundle.txt")
+		rendered := community.RenderRoleSnapshot(bundle)
+		// The prompt size is the early warning issue 98 asked for. It moves with
+		// upstream wording, so it is reported and never gated.
+		fmt.Printf("role %s: %d skills, prompt %d bytes\n",
+			bundle.Role, len(bundle.Skills), len(bundle.SystemPrompt))
+		existing, readErr := os.ReadFile(target)
+		if readErr == nil && string(existing) == rendered {
+			continue
+		}
+		if check {
+			stale = append(stale, target)
+			continue
+		}
+		if err := os.MkdirAll(roleSnapshotDir, 0o755); err != nil {
+			return fmt.Errorf("create %s: %w", roleSnapshotDir, err)
+		}
+		if err := os.WriteFile(target, []byte(rendered), 0o644); err != nil {
+			return fmt.Errorf("write %s: %w", target, err)
+		}
+		fmt.Printf("wrote %s\n", target)
+	}
+	if len(stale) > 0 {
+		return fmt.Errorf(
+			"a role's selection changed: %s\nrun `ward exec role-snapshot` against baked bundles and commit the result",
+			strings.Join(stale, ", "),
+		)
+	}
+	return nil
 }
 
 func render(path string) (string, error) {

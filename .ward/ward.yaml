@@ -30,6 +30,12 @@ commands:
   prompt-check:
     run: go run ./cmd/sirens-echo-prompt --check
     description: Fail when a rendered-prompt snapshot no longer matches its sources.
+  role-snapshot:
+    run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles
+    description: Rewrite the tracked per-role selection record from baked bundles.
+  role-snapshot-check:
+    run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles --check
+    description: Fail when a baked role selects something its tracked record does not.
   vet:
     run: go vet ./...
     description: go vet across the tree.

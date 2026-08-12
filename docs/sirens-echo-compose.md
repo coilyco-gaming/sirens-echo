@@ -40,15 +40,15 @@ exactly this reason; the placement rule is that repository's
 `scripts/stage-compose-sources.sh` reads the roster for the role list, then runs
 the generator per role, staging each admitted `COMPOSED.md` as `SKILL.md` and
 writing the declaration, because a declaration's paths resolve beneath its own
-directory. It then composes and verifies one bundle per role. The staged tree, the declaration, and
-the per-role requests are build output: removed on exit, and a test fails if any
-is committed.
+directory. It composes and verifies one bundle per role. The staged tree, the
+declaration, and the per-role requests are build output, removed on exit.
 
 The image clones the catalogue at `AOS_CATALOG_REF`, which floats on `main` by
 design, so a rebuild takes the catalogue as it stands. Override the build arg to
-reproduce an older bundle. Locally, `ward exec compose-bundles` uses an
-`AOS_CATALOG` checkout, which fails closed when it is too old to satisfy a
-pattern.
+reproduce an older bundle. Locally `ward exec compose-bundles` uses an
+`AOS_CATALOG` checkout and fails closed when it is too old.
+
+Each baked role gets a tracked selection record. See [the role record](sirens-echo-role-record.md).
 
 ## Runtime
 
