@@ -164,3 +164,14 @@ func checkPrincipalEcho(reply string, principal Principal) error {
 	}
 	return nil
 }
+
+// checkRequiredPatterns asserts a positive end state. Recognition is something
+// the reply must do, so a prohibition cannot express it.
+func checkRequiredPatterns(reply string, patterns []*regexp.Regexp) error {
+	for _, pattern := range patterns {
+		if !pattern.MatchString(reply) {
+			return fmt.Errorf("reply does not satisfy %s", pattern.String())
+		}
+	}
+	return nil
+}

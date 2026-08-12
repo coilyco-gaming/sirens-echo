@@ -37,12 +37,16 @@ type EvaluationCase struct {
 	ForbiddenPhrases []string          `json:"forbidden_phrases" yaml:"forbidden_phrases"`
 	// Scoped and anchored checks. A whole-reply substring match cannot tell a
 	// fabrication from a correct refusal quoting it, and these can.
-	ForbiddenPatterns   []string      `json:"forbidden_patterns" yaml:"forbidden_patterns"`
+	ForbiddenPatterns []string `json:"forbidden_patterns" yaml:"forbidden_patterns"`
+	// RequiredPatterns assert a positive end state. Recognition is something
+	// the reply must do, which a prohibition cannot express.
+	RequiredPatterns    []string      `json:"required_patterns" yaml:"required_patterns"`
 	PronounPolicy       PronounPolicy `json:"pronoun_policy" yaml:"pronoun_policy"`
 	MaxVerbatimWords    int           `json:"max_verbatim_words" yaml:"max_verbatim_words"`
 	ForbidPrincipalEcho bool          `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
 
 	compiledPatterns []*regexp.Regexp
+	compiledRequired []*regexp.Regexp
 }
 
 // checked reports whether the case scores anything at all. A case with no check
@@ -51,6 +55,7 @@ func (c EvaluationCase) checked() bool {
 	return c.RequiredTool != "" ||
 		len(c.ForbiddenPhrases) > 0 ||
 		len(c.ForbiddenPatterns) > 0 ||
+		len(c.RequiredPatterns) > 0 ||
 		c.PronounPolicy.configured() ||
 		c.MaxVerbatimWords > 0 ||
 		c.ForbidPrincipalEcho
@@ -121,6 +126,15 @@ func prepareEvaluationCase(evaluationCase *EvaluationCase) error {
 		compiled = append(compiled, expression)
 	}
 	evaluationCase.compiledPatterns = compiled
+	required := make([]*regexp.Regexp, 0, len(evaluationCase.RequiredPatterns))
+	for _, pattern := range evaluationCase.RequiredPatterns {
+		expression, err := regexp.Compile(pattern)
+		if err != nil {
+			return fmt.Errorf("case %s required pattern %q: %w", evaluationCase.ID, pattern, err)
+		}
+		required = append(required, expression)
+	}
+	evaluationCase.compiledRequired = required
 	return nil
 }
 
@@ -219,6 +233,9 @@ func runScopedChecks(
 	principal Principal,
 ) error {
 	if err := checkForbiddenPatterns(reply, evaluationCase.compiledPatterns); err != nil {
+		return err
+	}
+	if err := checkRequiredPatterns(reply, evaluationCase.compiledRequired); err != nil {
 		return err
 	}
 	if evaluationCase.PronounPolicy.configured() {
