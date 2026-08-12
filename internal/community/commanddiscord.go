@@ -1,0 +1,234 @@
+package community
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+
+	"github.com/bwmarrin/discordgo"
+)
+
+// A slash command is a summon path, so it passes the same gates a mention
+// does. See docs/sirens-echo-commands.md.
+
+// discordCommands renders the declared set for registration. Registration
+// itself is a write to Discord and is deployment-gated.
+func discordCommands() ([]*discordgo.ApplicationCommand, error) {
+	declared := JobCommands()
+	rendered := make([]*discordgo.ApplicationCommand, 0, len(declared))
+	for _, command := range declared {
+		if err := command.Validate(); err != nil {
+			return nil, err
+		}
+		options := make([]*discordgo.ApplicationCommandOption, 0, len(command.Parameters))
+		for _, parameter := range command.Parameters {
+			options = append(options, renderParameter(parameter))
+		}
+		rendered = append(rendered, &discordgo.ApplicationCommand{
+			Name:        command.Name,
+			Description: command.Description,
+			Options:     options,
+		})
+	}
+	return rendered, nil
+}
+
+// renderParameter maps the declaration onto Discord's option shape. The schema
+// here is the same one the handler binds against, so the two cannot drift.
+func renderParameter(parameter CommandParameter) *discordgo.ApplicationCommandOption {
+	option := &discordgo.ApplicationCommandOption{
+		Name:        parameter.Name,
+		Description: parameter.Description,
+		Required:    parameter.Required,
+		Type:        discordgo.ApplicationCommandOptionString,
+	}
+	switch parameter.Type {
+	case ParameterInteger:
+		option.Type = discordgo.ApplicationCommandOptionInteger
+	case ParameterBoolean:
+		option.Type = discordgo.ApplicationCommandOptionBoolean
+	case ParameterString:
+		if parameter.MaxLength > 0 {
+			option.MaxLength = parameter.MaxLength
+		}
+		for _, choice := range parameter.Choices {
+			option.Choices = append(option.Choices, &discordgo.ApplicationCommandOptionChoice{
+				Name:  choice,
+				Value: choice,
+			})
+		}
+	}
+	return option
+}
+
+// onInteraction handles one application command. It gates before it acts, so a
+// command reaches no work the same caller's message could not.
+func (a *Agent) onInteraction(
+	session *discordgo.Session,
+	event *discordgo.InteractionCreate,
+) {
+	if event.Type != discordgo.InteractionApplicationCommand {
+		return
+	}
+	ctx := context.Background()
+	data := event.ApplicationCommandData()
+	command, declared := LookupCommand(data.Name)
+	if !declared {
+		a.respondToCommand(session, event, harnessNotice("unknown command"))
+		return
+	}
+	user := interactionUser(event)
+	if user == nil {
+		return
+	}
+	origin := interactionContext(event)
+	// The same allowlist a mention passes. A command routed by Discord's own
+	// picker still has to be admitted by this deployment.
+	decision := a.access.Evaluate(origin, user.ID, interactionRoles(event), nil)
+	if !decision.allowed() {
+		a.telemetry.RecordAccess(ctx, string(decision.Reason))
+		a.respondToCommand(session, event, harnessNotice("not permitted here"))
+		return
+	}
+	admission := a.limiter.Admit(admissionRequest{
+		UserKey:    user.ID,
+		ContextKey: origin.Key(),
+		Override:   decision.Guild.Overrides(),
+	})
+	if admission.Outcome.denied() {
+		a.telemetry.RecordAdmission(ctx, string(admission.Outcome), transportDiscord)
+		a.respondToCommand(session, event, cooldownNotice(admission.RetryAfter))
+		return
+	}
+	defer a.limiter.Release()
+
+	arguments, err := command.BindArguments(interactionArguments(data))
+	if err != nil {
+		a.telemetry.Info(ctx, "command.arguments.refused",
+			slog.String("command", command.Name))
+		a.respondToCommand(session, event, harnessNotice("invalid command arguments"))
+		return
+	}
+	notice := a.runCommand(ctx, commandRequest{
+		Command:       command,
+		Arguments:     arguments,
+		Principal:     user.ID,
+		Origin:        origin,
+		InteractionID: event.ID,
+	})
+	a.respondToCommand(session, event, notice)
+}
+
+// commandRequest is one gated, bound invocation ready to act on.
+type commandRequest struct {
+	Command       CommandDefinition
+	Arguments     map[string]string
+	Principal     string
+	Origin        summonContext
+	InteractionID string
+}
+
+// runCommand performs the declared action and returns the notice to answer
+// with. Every path returns a notice, so a command never ends in silence.
+func (a *Agent) runCommand(ctx context.Context, request commandRequest) string {
+	command := request.Command
+	if a.jobs == nil {
+		return harnessNotice("jobs are not enabled")
+	}
+	switch command.Name {
+	case "job-status", "job-cancel":
+		id, err := ResolveJobReference(a.jobs.Store, request.Arguments["job"], request.Origin.ChannelID)
+		if err != nil {
+			return harnessNotice("no job named and no job bound to this thread")
+		}
+		if command.Name == "job-status" {
+			job, err := a.jobs.Get(id, request.Principal)
+			if err != nil {
+				return harnessNotice("job not found")
+			}
+			return harnessNotice(fmt.Sprintf("job %s is %s", job.ID, job.State))
+		}
+		job, err := a.jobs.Cancel(ctx, id, request.Principal)
+		if err != nil {
+			return harnessNotice("job not found")
+		}
+		return harnessNotice(fmt.Sprintf("job %s is %s", job.ID, job.State))
+	}
+	job, err := a.jobs.Submit(ctx, Submission{
+		Kind:      command.Kind,
+		Principal: request.Principal,
+		Origin: JobOrigin{
+			Transport: transportDiscord,
+			ChannelID: request.Origin.ChannelID,
+			// An interaction carries no message, so its own id is the unit of
+			// "the same request" that a message id would have been.
+			MessageID: request.InteractionID,
+		},
+	})
+	if err != nil {
+		return harnessNotice("job could not be accepted")
+	}
+	return harnessNotice(fmt.Sprintf("job %s submitted", job.ID))
+}
+
+func (a *Agent) respondToCommand(
+	session *discordgo.Session,
+	event *discordgo.InteractionCreate,
+	notice string,
+) {
+	if session == nil {
+		return
+	}
+	err := session.InteractionRespond(event.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionResponseChannelMessageWithSource,
+		Data: &discordgo.InteractionResponseData{
+			Content:         truncateRunes(notice, 1990),
+			AllowedMentions: &discordgo.MessageAllowedMentions{},
+		},
+	})
+	if err != nil {
+		a.telemetry.RecordFailure(context.Background(), "command_reply")
+	}
+}
+
+// interactionArguments flattens Discord's options into the declared shape. The
+// schema decides what survives, not this function.
+func interactionArguments(
+	data discordgo.ApplicationCommandInteractionData,
+) map[string]string {
+	arguments := make(map[string]string, len(data.Options))
+	for _, option := range data.Options {
+		if option == nil {
+			continue
+		}
+		arguments[option.Name] = fmt.Sprintf("%v", option.Value)
+	}
+	return arguments
+}
+
+// interactionRoles reads the roles Discord already sent, so a role grant costs
+// no extra API call here either.
+func interactionRoles(event *discordgo.InteractionCreate) []string {
+	if event.Member == nil {
+		return nil
+	}
+	return event.Member.Roles
+}
+
+func interactionUser(event *discordgo.InteractionCreate) *discordgo.User {
+	if event.Member != nil && event.Member.User != nil {
+		return event.Member.User
+	}
+	return event.User
+}
+
+func interactionContext(event *discordgo.InteractionCreate) summonContext {
+	if event.GuildID == "" {
+		return summonContext{Kind: contextKindDM, ChannelID: event.ChannelID}
+	}
+	return summonContext{
+		Kind:      contextKindGuild,
+		GuildID:   event.GuildID,
+		ChannelID: event.ChannelID,
+	}
+}

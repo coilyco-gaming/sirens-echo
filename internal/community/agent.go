@@ -137,6 +137,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if session != nil {
 		session.AddHandler(agent.onReady)
 		session.AddHandler(agent.onMessage)
+		if cfg.DiscordCommandsEnabled {
+			session.AddHandler(agent.onInteraction)
+		}
 	}
 	return agent, nil
 }

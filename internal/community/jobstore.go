@@ -28,6 +28,9 @@ type JobStore interface {
 	Get(id string) (Job, error)
 	// ListByPrincipal returns a principal's jobs, newest first.
 	ListByPrincipal(principal string) ([]Job, error)
+	// ListByThread returns the jobs bound to a thread, newest first. The
+	// binding lives on the record, so this is a query and not a second index.
+	ListByThread(threadID string) ([]Job, error)
 	// Transition moves a job under the state machine, applying mutate before
 	// the write. A refused move leaves the stored record untouched.
 	Transition(id string, next JobState, mutate func(*Job)) (Job, error)
@@ -106,6 +109,22 @@ func (s *MemoryJobStore) ListByPrincipal(principal string) ([]Job, error) {
 	jobs := make([]Job, 0, len(s.byID))
 	for _, job := range s.byID {
 		if job.Principal == principal {
+			jobs = append(jobs, job)
+		}
+	}
+	sortJobsNewestFirst(jobs)
+	return jobs, nil
+}
+
+func (s *MemoryJobStore) ListByThread(threadID string) ([]Job, error) {
+	if threadID == "" {
+		return nil, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	jobs := make([]Job, 0, 1)
+	for _, job := range s.byID {
+		if job.Origin.ThreadID == threadID {
 			jobs = append(jobs, job)
 		}
 	}

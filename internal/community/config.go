@@ -150,6 +150,9 @@ type Config struct {
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
+	// DiscordCommandsEnabled registers and serves application commands. Off by
+	// default because registering is a write to Discord's API.
+	DiscordCommandsEnabled bool
 	// JobStoreDir is the durable job store's directory. Empty keeps jobs in
 	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
 	JobStoreDir    string
@@ -173,6 +176,10 @@ func LoadConfig() (Config, error) {
 	dmEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_DM_ENABLED"), false)
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_DM_ENABLED: %w", err)
+	}
+	commandsEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_COMMANDS"), false)
+	if err != nil {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_COMMANDS: %w", err)
 	}
 	requestTimeout, err := durationOrDefault(
 		os.Getenv("SIRENS_ECHO_REQUEST_TIMEOUT"),
@@ -200,21 +207,22 @@ func LoadConfig() (Config, error) {
 			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
 			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
 		},
-		DiscordEnabled:    discordEnabled,
-		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
-		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
-		DiscordGuildIDs:   splitList(os.Getenv("DISCORD_GUILD_IDS")),
-		DiscordDMEnabled:  dmEnabled,
-		AgentProxyURL:     valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
-		AgentProxyModel:   strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
-		OTLPEndpoint:      valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
-		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
-		MCPRosterPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
-		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
-		JobStoreDir:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
-		RequestTimeout:    requestTimeout,
-		QueueTimeout:      queueTimeout,
-		RateLimit:         rateLimit,
+		DiscordEnabled:         discordEnabled,
+		DiscordToken:           strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
+		DiscordChannelIDs:      splitList(os.Getenv("DISCORD_CHANNEL_ID")),
+		DiscordGuildIDs:        splitList(os.Getenv("DISCORD_GUILD_IDS")),
+		DiscordDMEnabled:       dmEnabled,
+		DiscordCommandsEnabled: commandsEnabled,
+		AgentProxyURL:          valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
+		AgentProxyModel:        strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
+		OTLPEndpoint:           valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
+		HTTPListenAddr:         valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
+		MCPRosterPath:          strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
+		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
+		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
+		RequestTimeout:         requestTimeout,
+		QueueTimeout:           queueTimeout,
+		RateLimit:              rateLimit,
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_INSTANCE must be a lowercase service name")
