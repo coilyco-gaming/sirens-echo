@@ -12,9 +12,8 @@ import (
 // The role graph is agent-compose's own format, so the allowlist stays terse
 // and globbed. See docs/sirens-echo-compose.md.
 
-// DeniedComposedSkills must never reach an agent that answers strangers. This
-// is the invariant a glob is checked against, so it lives beside the expander
-// rather than only in a test.
+// DeniedComposedSkills must never reach an agent that answers strangers. It is
+// the invariant a glob is checked against, so it sits beside the expander.
 var DeniedComposedSkills = map[string]string{
 	"kai-career":                 "private career context",
 	"kai-job-search":             "private job search",
@@ -57,8 +56,8 @@ var (
 	graphGlobal     = regexp.MustCompile(`^\s*global\s+(\S+)\s*$`)
 )
 
-// ParseRoleGraph reads the tracked allowlist. It is line-oriented on purpose:
-// the file is small, and a KDL dependency would buy nothing here.
+// ParseRoleGraph reads the tracked allowlist. Line-oriented on purpose: the
+// file is small and a KDL dependency would buy nothing.
 func ParseRoleGraph(body string) RoleGraph {
 	graph := RoleGraph{Patterns: map[string][]string{}, Repositories: map[string]string{}}
 	role := ""
@@ -88,8 +87,7 @@ func ParseRoleGraph(body string) RoleGraph {
 }
 
 // ExpandRole resolves one role's patterns against a catalogue. A pattern that
-// matches nothing is an error: a silently empty selector is how an allowlist
-// rots into permitting whatever the upstream rename produced.
+// matches nothing is an error, since an empty selector hides a rename.
 func ExpandRole(catalog, role string, graph RoleGraph) ([]string, error) {
 	entries, err := os.ReadDir(filepath.Join(catalog, ".agents", "composed"))
 	if err != nil {

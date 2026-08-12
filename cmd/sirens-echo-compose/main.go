@@ -10,9 +10,8 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
-// Expands the tracked role graph against a pinned catalogue, stages the
-// admitted bodies, and writes the declaration agent-compose consumes.
-// See docs/sirens-echo-compose.md.
+// Expands the tracked role graph, stages the admitted bodies, and writes the
+// declaration agent-compose consumes. See docs/sirens-echo-compose.md.
 const sourceID = "aos-public"
 
 func main() {
