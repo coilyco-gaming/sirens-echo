@@ -35,9 +35,9 @@ explicit:
 
 - `channel` may be empty for HTTP-only profiles. Discord-enabled deployments
   still require the exact `#bots` value.
-- `mcp_servers` may be empty. A profile gains tool access only through a
-  reviewed tracked entry.
-- `issue_tracker` is optional and must name one configured MCP server. A
+- A profile selects no MCP server. Deployment owns the roster, so tool access
+  is a deploy edit rather than a profile change.
+- `issue_tracker` is optional and must name one server in the roster. A
   profile without it must return `issue: null` and cannot trigger automatic
   issue follow-up.
 

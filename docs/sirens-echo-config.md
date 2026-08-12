@@ -33,11 +33,10 @@ speaker the prompt trusts. Set both or neither: a half-configured principal
 stops the process, and an unset one renders no identity signals at all. See
 [the rendered prompt](sirens-echo-prompt.md).
 
-An MCP entry names its `transport` and the fields that transport needs. The
-Sirens Echo Forgejo entry uses `SIRENS_ECHO_FORGEJO_MCP_URL`, so the definition
-selects the server while deploy owns its cluster-local endpoint. The CoilyCo
-definition selects a read-only Steam MCP the same way. Schema and ownership are
-in [the MCP roster](sirens-echo-mcp-roster.md).
+A definition selects no MCP server. Deployment names the roster file through
+`SIRENS_ECHO_MCP_ROSTER`, so which surfaces exist and where they live is a
+deploy edit rather than a change here. Schema and ownership are in
+[the MCP roster](sirens-echo-mcp-roster.md).
 
 The definition's `channel` is the prompt's boundary label, not the routing key.
 It must be empty or a `#channel-name` the grounding validator also accepts. An

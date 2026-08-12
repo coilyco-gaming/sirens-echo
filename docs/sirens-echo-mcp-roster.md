@@ -3,64 +3,78 @@
 The roster names the MCP servers a deployment gives Echo, and how to reach each
 one. Deployment chooses which servers run, the way an operator chooses their own
 MCP servers. Echo validates that an entry carries the fields its transport needs
-and none belonging to another, and makes no judgement about which server is
-acceptable.
+and none belonging to another, never which server is acceptable. No server name,
+endpoint, or command appears anywhere in this repository.
+
+The file uses the `mcpServers` shape shared with mcporter, Claude Code, and
+Codex rather than a format of Echo's own, so a server registered for a harness
+is expressible here unchanged.
 
 ## Transports
 
-`transport` selects one of three, defaulting to `streamable` when omitted so an
-entry written before transports were selectable keeps working.
+The shared shape carries no transport discriminator, so a `command` means stdio
+and an endpoint means HTTP. `transport` is the one key Echo adds, needed only to
+choose between the two HTTP transports.
 
-- `streamable` - the current HTTP transport. Takes a URL.
+- `streamable` - the current HTTP transport, and the default. Takes a URL.
 - `sse` - the 2024-11-05 HTTP and SSE transport. Takes a URL.
 - `stdio` - a child process speaking newline-delimited JSON over its pipes.
 
-A URL transport takes exactly one of a literal `url` or a deployment-owned
-`url_env` naming the variable to read, and carries no `command`, `args`, or
-`env`. A `stdio` entry takes a `command`, optional `args`, and an optional `env`
-list, and carries no `url` or `url_env`.
+A URL transport takes a `baseUrl`, or `url` as its alias, and no `command`,
+`args`, or `env`. A `stdio` entry takes a `command`, optional `args`, an
+optional `env` map, and no endpoint.
 
-```yaml
-mcp_servers:
-  - name: eco
-    url: https://eco-mcp:9000/mcp
-  - name: forgejo
-    url_env: SIRENS_ECHO_FORGEJO_MCP_URL
-  - name: local
-    transport: stdio
-    command: /usr/bin/some-mcp
-    args: ["--read-only"]
-    env: ["SOME_TOKEN"]
+`SIRENS_ECHO_MCP_ROSTER` names the file, and an unset variable is a valid
+no-tool boundary. Any string field resolves `${VAR}` from Echo's environment, so
+a secret reaches an entry without being written into it. An unset variable
+expands to empty, which fails validation against the named server.
+
+```json
+{
+  "mcpServers": {
+    "eco": {"baseUrl": "https://eco-mcp:9000/mcp"},
+    "forgejo": {"baseUrl": "${SIRENS_ECHO_FORGEJO_MCP_URL}"},
+    "local": {
+      "command": "/usr/bin/some-mcp",
+      "args": ["--read-only"],
+      "env": {"SOME_TOKEN": "${SOME_TOKEN}"}
+    }
+  }
+}
 ```
 
-## What a stdio child inherits
+Keys Echo does not read, such as `description`, `imports`, or an `x-` extension,
+belong to another tool and are ignored rather than rejected.
 
-Nothing except the variables its `env` list names. Echo's own environment
-carries the Discord token, the Agent Proxy route, and the readiness endpoint,
-so handing all of it to every child would leak credentials the server never
-needed. Naming a variable forwards it. Naming one that is unset forwards
-nothing rather than an empty value.
+## Trust and stdio
 
-The child is bound to the session's context, so it exits when the session does
-rather than outliving it.
+A `stdio` entry names a command Echo executes, so whoever can write the roster
+can run a process inside Echo's pod. That is the intended model, matching the
+layer that already chooses Echo's image, arguments, and mounts, and it means the
+roster source deserves the write protection the pod spec gets. A child receives
+exactly the `env` map, never Echo's own environment, and exits when Echo does.
 
-## Trust
+## Connection lifetime
 
-A `stdio` entry names a command Echo executes. Whoever can write the roster can
-therefore run a process inside Echo's pod. That is the intended model, matching
-the fact that the same layer already chooses Echo's image, arguments, and
-mounts. It does mean the roster source deserves the write protection the pod
-spec gets, and that sourcing it from a channel with weaker controls grants more
-than it appears to.
+Connections are held across turns, so a turn pays no handshake and no
+rediscovery. A turn borrows a supervised session and returns it, and only
+shutdown closes one.
+
+A tool listing is cached until something invalidates it. A transport carrying
+server-initiated messages invalidates on `tools/list_changed`. Streamable cannot
+while its standalone SSE stream stays disabled, so those listings expire on an
+interval, bounding staleness rather than removing it. A failed connection
+retries with backoff between five seconds and two minutes. Connection and
+discovery traffic carries the calling turn's trace context even though the
+connection outlives that turn.
 
 ## Failure
 
 Connection is per server. One that cannot connect or list contributes no tools
 and the turn continues on the rest, named to the model so it reports the gap.
-Only an entirely unreachable roster stops the turn. See
-[runtime MCP tools](sirens-echo-tools.md).
+Only an entirely unreachable roster stops the turn.
 
 ## See also
 
-See [configuration](sirens-echo-config.md) and
-[runtime MCP tools](sirens-echo-tools.md).
+See [configuration](sirens-echo-config.md), [runtime MCP tools](sirens-echo-tools.md),
+and [MCP resources](sirens-echo-mcp-resources.md).

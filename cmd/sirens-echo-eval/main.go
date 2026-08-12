@@ -60,8 +60,8 @@ func main() {
 		Attribution:   definition.Identity,
 		ResponseStyle: definition.ResponseStyle,
 		HTTPClient:    httpClient,
-		Tools: community.MCPProvider{
-			Servers:    staticMCPServers(definition.MCPServers),
+		Tools: &community.MCPProvider{
+			Servers:    evaluationMCPServers(),
 			HTTPClient: httpClient,
 		},
 		Telemetry: telemetry,
@@ -79,14 +79,18 @@ func main() {
 	}
 }
 
-func staticMCPServers(servers []community.MCPServerDefinition) []community.MCPServerDefinition {
-	static := make([]community.MCPServerDefinition, 0, len(servers))
-	for _, server := range servers {
-		if server.URL != "" {
-			static = append(static, server)
-		}
+// evaluationMCPServers uses the deployment roster when one is named, and no
+// tools otherwise, so an offline run needs no MCP endpoint or secret.
+func evaluationMCPServers() []community.MCPServerDefinition {
+	path := strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER"))
+	if path == "" {
+		return nil
 	}
-	return static
+	servers, err := community.LoadMCPRoster(path)
+	if err != nil {
+		log.Fatalf("evaluation roster: %v", err)
+	}
+	return servers
 }
 
 func evaluationOTLPEndpoint() string {

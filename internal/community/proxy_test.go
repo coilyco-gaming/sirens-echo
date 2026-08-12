@@ -156,7 +156,7 @@ func TestProxyClientDiscoversCallsAndContinuesWithEcoMCP(t *testing.T) {
 		AuditRole:   "community",
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
-		Tools: MCPProvider{
+		Tools: &MCPProvider{
 			Servers: []MCPServerDefinition{
 				{Name: "eco", URL: mcpHTTP.URL},
 			},

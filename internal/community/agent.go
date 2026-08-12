@@ -27,6 +27,7 @@ const (
 type Agent struct {
 	cfg               Config
 	session           *discordgo.Session
+	tools             *MCPProvider
 	completions       CompletionClient
 	systemPrompt      string
 	telemetry         *Telemetry
@@ -94,9 +95,18 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			otelhttp.WithPropagators(telemetry.propagator),
 		),
 	}
+	roster, err := loadRoster(cfg)
+	if err != nil {
+		return nil, err
+	}
+	tools := &MCPProvider{
+		Servers:    roster,
+		HTTPClient: httpClient,
+	}
 	agent := &Agent{
 		cfg:     cfg,
 		session: session,
+		tools:   tools,
 		completions: ProxyClient{
 			BaseURL:       cfg.AgentProxyURL,
 			Model:         cfg.AgentProxyModel,
@@ -105,11 +115,8 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			ResponseStyle: cfg.Definition.ResponseStyle,
 			Harness:       deploymentHarness(cfg),
 			HTTPClient:    httpClient,
-			Tools: MCPProvider{
-				Servers:    cfg.Definition.MCPServers,
-				HTTPClient: httpClient,
-			},
-			Telemetry: telemetry,
+			Tools:         tools,
+			Telemetry:     telemetry,
 		},
 		systemPrompt:      systemPrompt,
 		telemetry:         telemetry,
@@ -181,13 +188,27 @@ func deploymentHarness(cfg Config) string {
 	return transportHTTP
 }
 
-func mcpServerURL(definition Definition, name string) (string, error) {
-	for _, server := range definition.MCPServers {
-		if server.Name == name && server.URL != "" {
-			return server.URL, nil
+// loadRoster reads the deployment-owned roster and checks the definition's
+// issue tracker against it, the one place both are known.
+func loadRoster(cfg Config) ([]MCPServerDefinition, error) {
+	var roster []MCPServerDefinition
+	if cfg.MCPRosterPath != "" {
+		loaded, err := LoadMCPRoster(cfg.MCPRosterPath)
+		if err != nil {
+			return nil, err
+		}
+		roster = loaded
+	}
+	tracker := cfg.Definition.IssueTracker
+	if tracker == "" {
+		return roster, nil
+	}
+	for _, server := range roster {
+		if server.Name == tracker {
+			return roster, nil
 		}
 	}
-	return "", fmt.Errorf("agent definition requires resolved MCP server %q", name)
+	return nil, fmt.Errorf("issue_tracker %q names no server in the MCP roster", tracker)
 }
 
 // Run opens the Gateway session and blocks until shutdown.
@@ -197,6 +218,11 @@ func (a *Agent) Run(ctx context.Context) error {
 			return fmt.Errorf("Discord open: %w", err)
 		}
 		defer a.session.Close()
+	}
+	if a.tools != nil {
+		// Supervised MCP connections outlive every turn, so shutdown is the only
+		// thing that closes them and stops any stdio child.
+		defer func() { _ = a.tools.Close() }()
 	}
 	httpServer := &http.Server{
 		Addr:              a.cfg.HTTPListenAddr,

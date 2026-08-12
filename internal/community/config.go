@@ -69,15 +69,15 @@ const (
 	MCPTransportStdio      = "stdio"
 )
 
-// MCPServerDefinition is one model tool surface selected for Sirens Echo.
+// MCPServerDefinition is one resolved roster entry. Deployment owns the roster,
+// so this is built by the loader rather than written in a source definition.
 type MCPServerDefinition struct {
-	Name      string   `json:"name" yaml:"name"`
-	Transport string   `json:"transport,omitempty" yaml:"transport,omitempty"`
-	URL       string   `json:"url,omitempty" yaml:"url,omitempty"`
-	URLEnv    string   `json:"url_env,omitempty" yaml:"url_env,omitempty"`
-	Command   string   `json:"command,omitempty" yaml:"command,omitempty"`
-	Args      []string `json:"args,omitempty" yaml:"args,omitempty"`
-	Env       []string `json:"env,omitempty" yaml:"env,omitempty"`
+	Name      string
+	Transport string
+	URL       string
+	Command   string
+	Args      []string
+	Env       map[string]string
 }
 
 // ResolvedTransport defaults to streamable, so an entry written before
@@ -98,7 +98,6 @@ type Definition struct {
 	Channel            string                `json:"channel" yaml:"channel"`
 	MaxContextMessages int                   `json:"max_context_messages" yaml:"max_context_messages"`
 	LocalSkillRoots    []string              `json:"local_skill_roots" yaml:"local_skill_roots"`
-	MCPServers         []MCPServerDefinition `json:"mcp_servers" yaml:"mcp_servers"`
 	IssueTracker       string                `json:"issue_tracker,omitempty" yaml:"issue_tracker,omitempty"`
 	// Composed requires a materialized agent-compose bundle, so a profile that
 	// asks for an identity fails startup rather than answering without one.
@@ -145,6 +144,9 @@ type Config struct {
 	AgentProxyModel  string
 	OTLPEndpoint     string
 	HTTPListenAddr   string
+	// MCPRosterPath names the deployment-owned mcpServers file. Empty is a
+	// valid no-tool boundary.
+	MCPRosterPath string
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -204,6 +206,7 @@ func LoadConfig() (Config, error) {
 		AgentProxyModel:   strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
 		OTLPEndpoint:      valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
 		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
+		MCPRosterPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		RequestTimeout:    requestTimeout,
 		QueueTimeout:      queueTimeout,
@@ -241,20 +244,6 @@ func LoadConfig() (Config, error) {
 	}
 	if cfg.AgentProxyModel == "" {
 		missing = append(missing, "AGENT_PROXY_MODEL")
-	}
-	for index := range cfg.Definition.MCPServers {
-		server := &cfg.Definition.MCPServers[index]
-		if server.URLEnv == "" {
-			continue
-		}
-		server.URL = strings.TrimSpace(os.Getenv(server.URLEnv))
-		if server.URL == "" {
-			missing = append(missing, server.URLEnv)
-			continue
-		}
-		if !validHTTPURL(server.URL) {
-			return Config{}, fmt.Errorf("MCP server %q has invalid URL from %s", server.Name, server.URLEnv)
-		}
 	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing required env: %v", missing)
@@ -337,26 +326,11 @@ func LoadDefinition(path string) (Definition, error) {
 	if len(definition.LocalSkillRoots) == 0 {
 		return Definition{}, fmt.Errorf("agent definition requires at least one local skill root")
 	}
-	seenServers := make(map[string]struct{}, len(definition.MCPServers))
-	for _, server := range definition.MCPServers {
-		if !mcpServerNamePattern.MatchString(server.Name) {
-			return Definition{}, fmt.Errorf("invalid MCP server name %q", server.Name)
-		}
-		if _, exists := seenServers[server.Name]; exists {
-			return Definition{}, fmt.Errorf("duplicate MCP server %q", server.Name)
-		}
-		seenServers[server.Name] = struct{}{}
-		if err := validateMCPServer(server); err != nil {
-			return Definition{}, err
-		}
-	}
-	if definition.IssueTracker != "" {
-		if _, exists := seenServers[definition.IssueTracker]; !exists {
-			return Definition{}, fmt.Errorf(
-				"issue_tracker %q does not name a configured MCP server",
-				definition.IssueTracker,
-			)
-		}
+	// The roster is deployment-owned, so whether this names a live server is
+	// checked where both are known rather than here.
+	if definition.IssueTracker != "" &&
+		!mcpServerNamePattern.MatchString(definition.IssueTracker) {
+		return Definition{}, fmt.Errorf("invalid issue_tracker %q", definition.IssueTracker)
 	}
 	return definition, nil
 }
@@ -365,18 +339,15 @@ func LoadDefinition(path string) (Definition, error) {
 // and none belonging to another. It makes no judgement about which server runs.
 func validateMCPServer(server MCPServerDefinition) error {
 	hasURL := strings.TrimSpace(server.URL) != ""
-	hasURLEnv := strings.TrimSpace(server.URLEnv) != ""
 	hasCommand := strings.TrimSpace(server.Command) != ""
 	switch server.ResolvedTransport() {
 	case MCPTransportStreamable, MCPTransportSSE:
-		if hasURL == hasURLEnv {
-			return fmt.Errorf("MCP server %q requires exactly one of url or url_env", server.Name)
+		// An unset interpolation variable lands here as an empty endpoint.
+		if !hasURL {
+			return fmt.Errorf("MCP server %q requires a baseUrl", server.Name)
 		}
-		if hasURL && !validHTTPURL(server.URL) {
-			return fmt.Errorf("MCP server %q has invalid URL", server.Name)
-		}
-		if hasURLEnv && !environmentNamePattern.MatchString(server.URLEnv) {
-			return fmt.Errorf("MCP server %q has invalid url_env", server.Name)
+		if !validHTTPURL(server.URL) {
+			return fmt.Errorf("MCP server %q has invalid baseUrl", server.Name)
 		}
 		if hasCommand || len(server.Args) > 0 || len(server.Env) > 0 {
 			return fmt.Errorf("MCP server %q takes no command, args, or env", server.Name)
@@ -385,10 +356,10 @@ func validateMCPServer(server MCPServerDefinition) error {
 		if !hasCommand {
 			return fmt.Errorf("MCP server %q requires a command", server.Name)
 		}
-		if hasURL || hasURLEnv {
-			return fmt.Errorf("MCP server %q takes no url or url_env", server.Name)
+		if hasURL {
+			return fmt.Errorf("MCP server %q takes no baseUrl", server.Name)
 		}
-		for _, name := range server.Env {
+		for name := range server.Env {
 			if !environmentNamePattern.MatchString(name) {
 				return fmt.Errorf("MCP server %q has invalid env name %q", server.Name, name)
 			}
