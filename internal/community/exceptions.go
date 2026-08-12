@@ -32,6 +32,7 @@ const (
 	exceptionHTTPTurnContentRequired
 	exceptionHTTPTurnInputTooLong
 	exceptionHTTPTurnHistoryTooLong
+	exceptionHTTPTurnPromptFailed
 	exceptionHTTPTurnRateLimited
 	exceptionCodeCount
 )
@@ -181,6 +182,12 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The HTTP turn history exceeded the context limit.",
 		stage:    "http",
 		outcome:  "history_too_long",
+	},
+	exceptionHTTPTurnPromptFailed: {
+		typeName: "sirens_echo.http.turn_prompt_failed",
+		message:  "The selected MCP prompt could not be resolved.",
+		stage:    "http",
+		outcome:  "prompt_failed",
 	},
 	exceptionHTTPTurnRateLimited: {
 		typeName: "sirens_echo.http.turn_rate_limited",

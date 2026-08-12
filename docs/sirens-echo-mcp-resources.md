@@ -40,13 +40,29 @@ connected server a way to redirect the turn. The specification makes the same
 point: implementations must validate prompt and resource content to prevent
 injection.
 
-## Prompts are not consumed
+## Prompts are selected, never injected
 
-MCP prompts are user-controlled by design, meaning a person selects one
-explicitly, typically through something like a slash command. Echo has no such
-surface, so it lists no prompts and injects none. Adding one is an interface
-decision about how a Discord author or an HTTP caller names a prompt, not a
-context-composition decision.
+MCP prompts are user-controlled, so Echo never pulls one in on its own. An HTTP
+caller selects one explicitly:
+
+```json
+{
+  "author": "manual test",
+  "prompt": {"server": "eco", "name": "rules", "arguments": {"topic": "trade"}}
+}
+```
+
+`content` is optional when a prompt is named, because the prompt is then the
+request. The server's messages keep their user and assistant roles and enter the
+turn as conversation, not as system instruction. With no caller content, the
+prompt's final user message becomes the request and the rest becomes history.
+
+Required arguments are checked against `prompts/list` before the fetch, so a
+missing one names itself. A failure the caller can fix is returned verbatim. A
+transport failure returns a generic message, because its text could carry an
+endpoint.
+
+Discord has no selection surface yet, so prompts are HTTP-only for now.
 
 ## See also
 

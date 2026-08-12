@@ -3,6 +3,7 @@ package community
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -507,4 +508,102 @@ func spanStringAttribute(attributes []attribute.KeyValue, key attribute.Key) str
 		}
 	}
 	return ""
+}
+
+func promptFixtureServer(t *testing.T) string {
+	t.Helper()
+	server := mcp.NewServer(&mcp.Implementation{Name: "eco-test", Version: "1"}, nil)
+	server.AddPrompt(
+		&mcp.Prompt{
+			Name: "rules",
+			Arguments: []*mcp.PromptArgument{
+				{Name: "topic", Required: true},
+			},
+		},
+		func(_ context.Context, request *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
+			return &mcp.GetPromptResult{Messages: []*mcp.PromptMessage{
+				{Role: "assistant", Content: &mcp.TextContent{Text: "prior context"}},
+				{Role: "user", Content: &mcp.TextContent{
+					Text: "rules for " + request.Params.Arguments["topic"],
+				}},
+			}}, nil
+		},
+	)
+	httpServer := httptest.NewServer(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{JSONResponse: true},
+	))
+	t.Cleanup(httpServer.Close)
+	return httpServer.URL
+}
+
+func TestMCPProviderResolvesASelectedPrompt(t *testing.T) {
+	t.Parallel()
+	provider := &MCPProvider{Servers: []MCPServerDefinition{
+		{Name: "eco", URL: promptFixtureServer(t)},
+	}}
+	t.Cleanup(func() { _ = provider.Close() })
+
+	messages, err := provider.Prompt(
+		context.Background(), "eco", "rules", map[string]string{"topic": "trade"},
+	)
+	if err != nil {
+		t.Fatalf("Prompt: %v", err)
+	}
+	// Roles survive, because a prompt is a seeded conversation rather than a
+	// system instruction.
+	if len(messages) != 2 || messages[0].Role != "assistant" || messages[1].Role != "user" {
+		t.Fatalf("messages = %#v", messages)
+	}
+	if messages[1].Text != "rules for trade" {
+		t.Fatalf("argument was not applied: %#v", messages[1])
+	}
+}
+
+func TestMCPProviderReportsCallerFixablePromptFailures(t *testing.T) {
+	t.Parallel()
+	provider := &MCPProvider{Servers: []MCPServerDefinition{
+		{Name: "eco", URL: promptFixtureServer(t)},
+	}}
+	t.Cleanup(func() { _ = provider.Close() })
+
+	for _, testCase := range []struct {
+		name   string
+		server string
+		prompt string
+		args   map[string]string
+	}{
+		{name: "unknown server", server: "nope", prompt: "rules"},
+		{name: "unknown prompt", server: "eco", prompt: "nope"},
+		{name: "missing required argument", server: "eco", prompt: "rules"},
+	} {
+		_, err := provider.Prompt(context.Background(), testCase.server, testCase.prompt, testCase.args)
+		var caller PromptRequestError
+		if !errors.As(err, &caller) {
+			t.Fatalf("%s: error = %v, want a caller-fixable error", testCase.name, err)
+		}
+	}
+}
+
+func TestSeedFromPromptUsesTheFinalUserMessageAsTheRequest(t *testing.T) {
+	t.Parallel()
+	history, current := seedFromPrompt(nil, TranscriptEntry{Author: "caller"}, []PromptMessage{
+		{Role: "assistant", Text: "prior context"},
+		{Role: "user", Text: "the actual request"},
+	})
+	// No caller content, so the prompt itself is the request.
+	if current.Content != "the actual request" {
+		t.Fatalf("current = %#v", current)
+	}
+	if len(history) != 1 || history[0].Author != "assistant" {
+		t.Fatalf("history = %#v", history)
+	}
+
+	// With caller content, every prompt message stays history.
+	history, current = seedFromPrompt(nil, TranscriptEntry{
+		Author: "caller", Content: "my own question",
+	}, []PromptMessage{{Role: "user", Text: "seeded"}})
+	if current.Content != "my own question" || len(history) != 1 {
+		t.Fatalf("current = %#v history = %#v", current, history)
+	}
 }

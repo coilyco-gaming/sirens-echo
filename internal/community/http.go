@@ -27,6 +27,15 @@ type httpTurnRequest struct {
 	Author    string            `json:"author"`
 	Content   string            `json:"content"`
 	History   []TranscriptEntry `json:"history"`
+	// Prompt names a server prompt the caller selected. Naming one is what makes
+	// the selection user-controlled, which is how the spec defines prompts.
+	Prompt *httpPromptRequest `json:"prompt,omitempty"`
+}
+
+type httpPromptRequest struct {
+	Server    string            `json:"server"`
+	Name      string            `json:"name"`
+	Arguments map[string]string `json:"arguments,omitempty"`
 }
 
 type httpTurnResponse struct {
@@ -121,7 +130,9 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		)
 		return
 	}
-	if strings.TrimSpace(payload.Content) == "" {
+	// A selected prompt is itself the request, so content becomes optional only
+	// when the caller named one.
+	if strings.TrimSpace(payload.Content) == "" && payload.Prompt == nil {
 		a.writeHTTPError(
 			writer,
 			request,
@@ -158,13 +169,33 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		payload.RequestID = fmt.Sprintf("http-%d", time.Now().UnixNano())
 	}
 
+	history := append([]TranscriptEntry(nil), payload.History...)
+	current := TranscriptEntry{Author: payload.Author, Content: payload.Content}
+	if payload.Prompt != nil {
+		resolved, err := a.resolvePrompt(request.Context(), payload.Prompt)
+		if err != nil {
+			// Only a caller-fixable message is echoed back. A transport failure
+			// could carry an endpoint, so it stays generic.
+			message := "prompt could not be resolved"
+			var caller PromptRequestError
+			if errors.As(err, &caller) {
+				message = caller.Message
+			}
+			a.writeHTTPError(
+				writer,
+				request,
+				http.StatusBadRequest,
+				exceptionHTTPTurnPromptFailed,
+				message,
+			)
+			return
+		}
+		history, current = seedFromPrompt(history, current, resolved)
+	}
 	turn := &httpTurn{
 		requestID: payload.RequestID,
-		history:   append([]TranscriptEntry(nil), payload.History...),
-		current: TranscriptEntry{
-			Author:  payload.Author,
-			Content: payload.Content,
-		},
+		history:   history,
+		current:   current,
 	}
 	// HTTP shares the Discord admission policy, so a scripted client cannot
 	// outspend the guilds it shares a deployment with.
@@ -252,4 +283,48 @@ func (t *httpTurn) Reply(_ context.Context, content string) error {
 	}
 	t.reply = content
 	return nil
+}
+
+func (a *Agent) resolvePrompt(
+	ctx context.Context,
+	selected *httpPromptRequest,
+) ([]PromptMessage, error) {
+	if a.tools == nil {
+		return nil, fmt.Errorf("no MCP roster is configured")
+	}
+	if strings.TrimSpace(selected.Server) == "" || strings.TrimSpace(selected.Name) == "" {
+		return nil, PromptRequestError{"prompt requires a server and a name"}
+	}
+	messages, err := a.tools.Prompt(ctx, selected.Server, selected.Name, selected.Arguments)
+	if err != nil {
+		return nil, err
+	}
+	if len(messages) == 0 {
+		return nil, PromptRequestError{fmt.Sprintf(
+			"prompt %s/%s returned no readable messages", selected.Server, selected.Name)}
+	}
+	return messages, nil
+}
+
+// seedFromPrompt folds a prompt into the turn as conversation, which its roles
+// already are. With no caller content, its last user message is the request.
+func seedFromPrompt(
+	history []TranscriptEntry,
+	current TranscriptEntry,
+	messages []PromptMessage,
+) ([]TranscriptEntry, TranscriptEntry) {
+	tail := len(messages)
+	if strings.TrimSpace(current.Content) == "" &&
+		messages[tail-1].Role == "user" {
+		current.Content = messages[tail-1].Text
+		tail--
+	}
+	for _, message := range messages[:tail] {
+		author := current.Author
+		if message.Role == "assistant" {
+			author = "assistant"
+		}
+		history = append(history, TranscriptEntry{Author: author, Content: message.Text})
+	}
+	return history, current
 }

@@ -101,10 +101,18 @@ type supervisedServer struct {
 	session    *mcp.ClientSession
 	tools      []*mcp.Tool
 	resources  []*mcp.Resource
+	prompts    []*mcp.Prompt
 	refreshed  time.Time
 	retryAfter time.Time
 	backoff    time.Duration
 	stale      atomic.Bool
+}
+
+// PromptMessage is one message from a server prompt, rendered to text. Prompts
+// are user-controlled, so these enter a turn only when a caller names one.
+type PromptMessage struct {
+	Role string
+	Text string
 }
 
 // transportNotifies reports whether a transport can deliver server-initiated
@@ -211,8 +219,14 @@ func (p *MCPProvider) readyLocked(
 		entry.dropSession(now)
 		return err
 	}
+	prompts, err := discoverPrompts(listCtx, entry.session)
+	if err != nil {
+		entry.dropSession(now)
+		return err
+	}
 	entry.tools = discovered
 	entry.resources = resources
+	entry.prompts = prompts
 	entry.refreshed = now
 	return nil
 }
@@ -224,6 +238,7 @@ func (s *supervisedServer) dropSession(now time.Time) {
 	s.session = nil
 	s.tools = nil
 	s.resources = nil
+	s.prompts = nil
 	s.penalise(now)
 }
 
@@ -243,6 +258,9 @@ func (p *MCPProvider) connectLocked(base context.Context, entry *supervisedServe
 				entry.stale.Store(true)
 			},
 			ResourceListChangedHandler: func(context.Context, *mcp.ResourceListChangedRequest) {
+				entry.stale.Store(true)
+			},
+			PromptListChangedHandler: func(context.Context, *mcp.PromptListChangedRequest) {
 				entry.stale.Store(true)
 			},
 		},
@@ -618,4 +636,111 @@ func runeBoundary(value string, limit int) int {
 		limit--
 	}
 	return limit
+}
+
+func discoverPrompts(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Prompt, error) {
+	if session.InitializeResult().Capabilities.Prompts == nil {
+		return nil, nil
+	}
+	discovered := make([]*mcp.Prompt, 0)
+	cursor := ""
+	for {
+		result, err := session.ListPrompts(ctx, &mcp.ListPromptsParams{Cursor: cursor})
+		if err != nil {
+			return nil, err
+		}
+		discovered = append(discovered, result.Prompts...)
+		if result.NextCursor == "" {
+			return discovered, nil
+		}
+		cursor = result.NextCursor
+	}
+}
+
+// PromptRequestError marks a prompt failure the caller can fix, so its text is
+// safe to return. Transport failures stay generic to keep endpoints out of a body.
+type PromptRequestError struct{ Message string }
+
+func (e PromptRequestError) Error() string { return e.Message }
+
+// Prompt retrieves a named server prompt. It is reached only when a caller
+// selected one, because prompts are user-controlled by design.
+func (p *MCPProvider) Prompt(
+	ctx context.Context,
+	server, name string,
+	arguments map[string]string,
+) ([]PromptMessage, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.startLocked()
+	entry := p.entryLocked(server)
+	if entry == nil {
+		return nil, PromptRequestError{fmt.Sprintf("MCP server %q is not in the roster", server)}
+	}
+	if err := p.readyLocked(ctx, entry, time.Now()); err != nil {
+		return nil, fmt.Errorf("MCP server %s is unavailable: %w", server, err)
+	}
+	declared := findPrompt(entry.prompts, name)
+	if declared == nil {
+		return nil, PromptRequestError{fmt.Sprintf("MCP server %s publishes no prompt %q", server, name)}
+	}
+	// Checked here so a missing argument names itself rather than surfacing as
+	// whatever the server decides to return.
+	for _, argument := range declared.Arguments {
+		if argument.Required && strings.TrimSpace(arguments[argument.Name]) == "" {
+			return nil, PromptRequestError{
+				fmt.Sprintf("prompt %s/%s requires argument %q", server, name, argument.Name),
+			}
+		}
+	}
+	getCtx, cancel := context.WithTimeout(p.turnTraced(ctx), mcpListTimeout)
+	defer cancel()
+	result, err := entry.session.GetPrompt(getCtx, &mcp.GetPromptParams{
+		Name:      name,
+		Arguments: arguments,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get prompt %s/%s: %w", server, name, err)
+	}
+	messages := make([]PromptMessage, 0, len(result.Messages))
+	for _, message := range result.Messages {
+		text := promptContentText(message.Content)
+		if text == "" {
+			continue
+		}
+		messages = append(messages, PromptMessage{Role: string(message.Role), Text: text})
+	}
+	return messages, nil
+}
+
+func (p *MCPProvider) entryLocked(server string) *supervisedServer {
+	for _, entry := range p.entries {
+		if entry.definition.Name == server {
+			return entry
+		}
+	}
+	return nil
+}
+
+func findPrompt(prompts []*mcp.Prompt, name string) *mcp.Prompt {
+	for _, prompt := range prompts {
+		if prompt != nil && prompt.Name == name {
+			return prompt
+		}
+	}
+	return nil
+}
+
+// promptContentText renders a prompt message. An embedded resource carries its
+// text, which is the part a model can read.
+func promptContentText(content mcp.Content) string {
+	switch typed := content.(type) {
+	case *mcp.TextContent:
+		return typed.Text
+	case *mcp.EmbeddedResource:
+		if typed.Resource != nil {
+			return typed.Resource.Text
+		}
+	}
+	return ""
 }
