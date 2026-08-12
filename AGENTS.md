@@ -44,6 +44,9 @@ pre-commit gate must pass. Never use `--no-verify`.
 
 `ward exec eval-deep` runs 5 times. `ward exec eval-echo` runs once.
 
+Deep's pack is a deterministic battery of scoped checks. Never add a check that
+could fire on a correct reply. See [the battery](docs/sirens-echo-battery.md).
+
 `ward exec board-deep` is the human-graded board and gates nothing. It repeats
 each case 5 times inside one run, so it is invoked once and its stdout is the
 evidence. Never wire it into CI and never derive a pass or fail from its

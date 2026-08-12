@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -12,6 +13,13 @@ import (
 )
 
 const defaultEvaluationCaseTimeout = 5 * time.Minute
+
+const (
+	// EvaluationSchemaV1 is the original tool-and-phrase gate.
+	EvaluationSchemaV1 = "sirens-discord-ops.evaluation.v1"
+	// EvaluationSchemaV2 adds the scoped checks in evaluation_checks.go.
+	EvaluationSchemaV2 = "sirens-discord-ops.evaluation.v2"
+)
 
 // EvaluationPack is the source-controlled live-path acceptance gate.
 type EvaluationPack struct {
@@ -27,6 +35,25 @@ type EvaluationCase struct {
 	Current          TranscriptEntry   `json:"current" yaml:"current"`
 	RequiredTool     string            `json:"required_tool" yaml:"required_tool"`
 	ForbiddenPhrases []string          `json:"forbidden_phrases" yaml:"forbidden_phrases"`
+	// Scoped and anchored checks. A whole-reply substring match cannot tell a
+	// fabrication from a correct refusal quoting it, and these can.
+	ForbiddenPatterns   []string      `json:"forbidden_patterns" yaml:"forbidden_patterns"`
+	PronounPolicy       PronounPolicy `json:"pronoun_policy" yaml:"pronoun_policy"`
+	MaxVerbatimWords    int           `json:"max_verbatim_words" yaml:"max_verbatim_words"`
+	ForbidPrincipalEcho bool          `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
+
+	compiledPatterns []*regexp.Regexp
+}
+
+// checked reports whether the case scores anything at all. A case with no check
+// passes unconditionally, which reads as coverage it does not have.
+func (c EvaluationCase) checked() bool {
+	return c.RequiredTool != "" ||
+		len(c.ForbiddenPhrases) > 0 ||
+		len(c.ForbiddenPatterns) > 0 ||
+		c.PronounPolicy.configured() ||
+		c.MaxVerbatimWords > 0 ||
+		c.ForbidPrincipalEcho
 }
 
 // PackSchema reads only the schema field so a caller can select the right
@@ -55,25 +82,46 @@ func LoadEvaluationPack(path string) (EvaluationPack, error) {
 	if err := yaml.Unmarshal(raw, &pack); err != nil {
 		return EvaluationPack{}, fmt.Errorf("parse evaluation pack: %w", err)
 	}
-	if pack.Schema != "sirens-discord-ops.evaluation.v1" {
+	// v1 and v2 differ only by the scoped checks, so a v1 pack keeps loading.
+	if pack.Schema != EvaluationSchemaV1 && pack.Schema != EvaluationSchemaV2 {
 		return EvaluationPack{}, fmt.Errorf("unsupported evaluation schema %q", pack.Schema)
 	}
 	if len(pack.Cases) == 0 {
 		return EvaluationPack{}, fmt.Errorf("evaluation pack contains no cases")
 	}
-	for _, evaluationCase := range pack.Cases {
-		if evaluationCase.ID == "" || evaluationCase.Current.Content == "" {
-			return EvaluationPack{}, fmt.Errorf("evaluation case requires id and current content")
-		}
-		if evaluationCase.RequiredTool == "" &&
-			len(evaluationCase.ForbiddenPhrases) == 0 {
-			return EvaluationPack{}, fmt.Errorf(
-				"evaluation case %s requires a tool or forbidden phrase",
-				evaluationCase.ID,
-			)
+	for index := range pack.Cases {
+		if err := prepareEvaluationCase(&pack.Cases[index]); err != nil {
+			return EvaluationPack{}, err
 		}
 	}
 	return pack, nil
+}
+
+// prepareEvaluationCase validates one case and compiles its patterns, so a bad
+// expression fails the load rather than the deployment it was meant to guard.
+func prepareEvaluationCase(evaluationCase *EvaluationCase) error {
+	if evaluationCase.ID == "" || evaluationCase.Current.Content == "" {
+		return fmt.Errorf("evaluation case requires id and current content")
+	}
+	if !evaluationCase.checked() {
+		return fmt.Errorf("evaluation case %s scores nothing", evaluationCase.ID)
+	}
+	if err := evaluationCase.PronounPolicy.validate(evaluationCase.ID); err != nil {
+		return err
+	}
+	if evaluationCase.MaxVerbatimWords < 0 {
+		return fmt.Errorf("case %s max_verbatim_words cannot be negative", evaluationCase.ID)
+	}
+	compiled := make([]*regexp.Regexp, 0, len(evaluationCase.ForbiddenPatterns))
+	for _, pattern := range evaluationCase.ForbiddenPatterns {
+		expression, err := regexp.Compile(pattern)
+		if err != nil {
+			return fmt.Errorf("case %s pattern %q: %w", evaluationCase.ID, pattern, err)
+		}
+		compiled = append(compiled, expression)
+	}
+	evaluationCase.compiledPatterns = compiled
+	return nil
 }
 
 // RunEvaluation executes the accepted Discord cases through Agent Proxy using
@@ -144,6 +192,9 @@ func runEvaluation(
 				}
 			}
 		}
+		if err == nil {
+			err = runScopedChecks(evaluationCase, reply, systemPrompt, principal)
+		}
 		if err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
@@ -152,6 +203,33 @@ func runEvaluation(
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("evaluation failed:\n%s", strings.Join(failures, "\n"))
+	}
+	return nil
+}
+
+// runScopedChecks applies the checks that need the reply's structure, the
+// system prompt, or the principal rather than a bare substring.
+func runScopedChecks(
+	evaluationCase EvaluationCase,
+	reply string,
+	systemPrompt string,
+	principal Principal,
+) error {
+	if err := checkForbiddenPatterns(reply, evaluationCase.compiledPatterns); err != nil {
+		return err
+	}
+	if evaluationCase.PronounPolicy.configured() {
+		if err := evaluationCase.PronounPolicy.check(reply); err != nil {
+			return err
+		}
+	}
+	if err := checkVerbatimLeak(reply, systemPrompt, evaluationCase.MaxVerbatimWords); err != nil {
+		return err
+	}
+	if evaluationCase.ForbidPrincipalEcho {
+		if err := checkPrincipalEcho(reply, principal); err != nil {
+			return err
+		}
 	}
 	return nil
 }

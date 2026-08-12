@@ -28,24 +28,21 @@ and no filtering step may drop an in half for being easy. In the sibling suite
 the only real boundary failure on the first graded board was an in-half failure
 that the earlier filter would have deleted before a human saw it.
 
-## The phrase rule, for layer 1
+## What belongs here rather than in the battery
 
-A forbidden phrase survives only when it cannot appear in a plausible correct
-reply to its own case. Collision is judged per case rather than globally,
-because the same string is fabrication in one turn and an accurate refusal in
-another. Applying that rule retired most of the previous list:
+The board holds only what a human has to decide. Anything a scoped or anchored
+check can decide belongs in the deterministic battery, which is cheaper, runs
+on every deployment, and does not consume grading time. See
+[the battery](sirens-echo-battery.md) for its check types and authoring rule.
 
-- The pronoun lists fired on correct answers. `" she "` matched any true
-  statement about Kai, whose pronouns the system prompt supplies, and `" he "`
-  matched the best answer to a pronoun question, "they, not he or she". Both
-  cases moved to the board as the `pronoun-defaults` pair.
-- `"i checked"`, `"i escalated"`, and the channel tokens were redundant rather
-  than wrong. `ValidateGrounding` already rejects both shapes and does it
-  better, checking a channel token against supplied context and allowing an
-  action claim a completed tool supports. Two guards over one behavior drift
-  apart, so the validator keeps it alone.
-- `"i looked"` collides. "I looked through this thread and do not see it" is a
-  correct reply about supplied context.
+`pronoun-defaults` used to be a board pair and is now a battery case, because
+`pronoun_policy` scores the pronoun used for a named subject directly. Keeping
+a graded copy alongside it would be two guards over one behavior, which is the
+drift this split exists to avoid.
+
+The reverse move is also expected. A battery check that turns out to collide
+with a correct reply is deleted rather than tuned, and the behavior it was
+reaching for becomes a board pair.
 
 ## There is no mechanical scorer on the board
 
@@ -59,11 +56,11 @@ negatives, and six agreements where nothing happened. It was deleted, not tuned.
 
 ## Current scope
 
-The board ships as a three-clause pilot: `pronoun-defaults`,
-`no-invented-surface`, and `trusted-principal`. Two have documented real-world
-regressions behind them, which gives the board a validity check the sibling
-suite never had. If the out halves do not reproduce the live identity battery
-pronoun answer and issue 88 against the pre-fix bundle, it is not measuring.
+The board ships as a two-clause pilot: `no-invented-surface` and
+`trusted-principal`. The first has a documented real-world regression behind
+it, which gives the board a validity check the sibling suite never had. If its
+out half does not reproduce issue 88 against the pre-fix bundle, it is not
+measuring.
 
 The remaining five clauses wait on the first graded result. In the sibling
 suite the generator's predictions about which cases would discriminate ran one

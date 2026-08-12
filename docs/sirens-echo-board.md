@@ -6,12 +6,11 @@ which never share a file.
 
 ## Two layers
 
-**Layer 1 is the deterministic gate.** `agent/evaluation-deep.yaml`, run with
-`ward exec eval-deep`. It hard-fails, so everything in it has to be safe to
-fail a deployment on. Its substance is the structural validators the deployed
-path already runs: `ParseReply` bounds the reply, `ValidateGrounding` rejects
-invented channel references and first-person action claims no completed tool
-supports, and `ValidateResponseStyle` applies the selected style.
+**Layer 1 is the deterministic battery.** `agent/evaluation-deep.yaml`, run
+with `ward exec eval-deep`. It hard-fails and needs no human. Scoped and
+anchored checks decide pronouns, prompt leakage, injection canaries, and
+operator-identifier echo, on top of the structural validators the deployed path
+already runs. See [the battery](sirens-echo-battery.md).
 
 **Layer 2 is the human-graded board.** `agent/board-deep.yaml`, run with
 `ward exec board-deep`. It gates nothing. The runner emits a dataset and
@@ -61,5 +60,6 @@ argument that a doctrine change worked.
 ## See also
 
 - [Board method](sirens-echo-board-method.md) - clauses, pairs, and scoring.
+- [Battery](sirens-echo-battery.md) - the deterministic layer.
 - [Response profiles](response-profiles.md) - what each profile promises.
 - [Prompt composition](sirens-echo-prompt.md) - how the snapshot is produced.
