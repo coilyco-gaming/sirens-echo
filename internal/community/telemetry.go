@@ -240,12 +240,16 @@ func telemetryOrNoop(telemetry *Telemetry) *Telemetry {
 	return noop
 }
 
-// StartSpan starts a child span using the service instrumentation scope.
+// StartSpan starts a child span using the service instrumentation scope. A
+// span under a job carries the job id, so every span is queryable by it.
 func (t *Telemetry) StartSpan(
 	ctx context.Context,
 	name string,
 	attributes ...attribute.KeyValue,
 ) (context.Context, trace.Span) {
+	if id := JobIDFromContext(ctx); id != "" {
+		attributes = append(attributes, attribute.String("sirens_echo.job.id", id))
+	}
 	return t.tracer.Start(ctx, name, trace.WithAttributes(attributes...))
 }
 

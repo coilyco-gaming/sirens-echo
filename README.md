@@ -81,6 +81,7 @@ See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [.ward/ward.ya
 [role record](docs/sirens-echo-role-record.md),
 [jobs](docs/sirens-echo-jobs.md),
 [job lifecycle](docs/sirens-echo-jobs-lifecycle.md),
+[job telemetry](docs/sirens-echo-jobs-telemetry.md),
 [capability ledger](docs/harness-design-capability-ledger.md), and
 [docs/deploy.md](docs/deploy.md).
 Cross-reference convention from [features-release-tooling.md](docs/features-release-tooling.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

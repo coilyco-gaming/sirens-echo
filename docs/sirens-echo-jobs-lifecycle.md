@@ -76,4 +76,5 @@ Progress is advisory. Every update is logged; only an admitted one reaches the
 origin, rate limited per job so a chatty job cannot flood a channel. An executor
 must never depend on an update being delivered.
 
-See [job telemetry](sirens-echo-jobs.md) and [notices](sirens-echo-notices.md).
+See [job telemetry](sirens-echo-jobs-telemetry.md) and
+[notices](sirens-echo-notices.md).

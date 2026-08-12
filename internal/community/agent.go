@@ -228,7 +228,7 @@ func (a *Agent) buildJobRunner() error {
 		}
 		store = opened
 	}
-	reporter := discordJobReporter{session: a.session}
+	reporter := newDiscordJobReporter(a.session)
 	a.jobs = &JobRunner{
 		Store:     store,
 		Telemetry: a.telemetry,
