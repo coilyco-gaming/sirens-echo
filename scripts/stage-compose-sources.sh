@@ -22,8 +22,13 @@ load_points:
   claude: $scratch_home/.claude/CLAUDE.md
 YAML
 
-generator=$scratch_home/sirens-echo-compose
-go build -o "$generator" ./cmd/sirens-echo-compose
+# The image build hands in a binary already compiled by the build stage, so
+# that stage needs no Go toolchain work of its own.
+generator=${SIRENS_ECHO_COMPOSE_BIN:-}
+if [ -z "$generator" ]; then
+    generator=$scratch_home/sirens-echo-compose
+    go build -o "$generator" ./cmd/sirens-echo-compose
+fi
 
 roles=$(grep -oE '^[[:space:]]*role[[:space:]]+"[^"]+"' "$compose_dir/roles.kdl" | sed 's/.*"\(.*\)"/\1/')
 if [ -z "$roles" ]; then
