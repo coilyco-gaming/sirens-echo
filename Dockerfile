@@ -1,16 +1,3 @@
-# The release image ships agent-compose but not the composed catalogue, so the
-# bundle stage fetches it. Pinning the ref keeps the bundle deterministic and
-# makes a catalogue change a reviewed bump. See docs/sirens-echo-compose.md.
-FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS compose
-ARG AOS_CATALOG_REF=main
-USER root
-WORKDIR /src
-RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
-    https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog
-COPY agent/compose ./agent/compose
-COPY scripts/stage-compose-sources.sh ./scripts/
-RUN bash scripts/stage-compose-sources.sh /tmp/aos-catalog /out/bundles
-
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS build
 
 USER root
@@ -26,7 +13,25 @@ COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
 COPY docs ./docs
 RUN CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo ./cmd/sirens-echo \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-policy-check ./cmd/sirens-echo-policy-check \
+    && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-compose ./cmd/sirens-echo-compose \
     && /out/sirens-echo-policy-check
+
+# The release image ships agent-compose but not the composed catalogue, so this
+# stage fetches it. Pinning the ref keeps the bundle deterministic and makes a
+# catalogue change a reviewed bump. See docs/sirens-echo-compose.md.
+FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS compose
+ARG AOS_CATALOG_REF=main
+USER root
+WORKDIR /src
+RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
+    https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog
+COPY agent/compose ./agent/compose
+COPY scripts/stage-compose-sources.sh ./scripts/
+# The expander comes from the build stage, so this stage needs no Go toolchain
+# work and the binary is the one the suite already exercised.
+COPY --from=build /out/sirens-echo-compose /usr/local/bin/sirens-echo-compose
+RUN SIRENS_ECHO_COMPOSE_BIN=/usr/local/bin/sirens-echo-compose \
+    bash scripts/stage-compose-sources.sh /tmp/aos-catalog /out/bundles
 
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
 
