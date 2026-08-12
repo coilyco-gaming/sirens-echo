@@ -15,7 +15,7 @@ case "${1:-}" in
       echo "compose-bundles: set AOS_CATALOG to an agentic-os checkout" >&2
       exit 1
     fi
-    bash scripts/stage-compose-sources.sh "$catalog" agent/bundles
+    bash scripts/stage-compose-sources.sh agent/bundles "$catalog"
     ;;
   policy-check)
     go run ./cmd/sirens-echo-policy-check

@@ -31,7 +31,7 @@ COPY scripts/stage-compose-sources.sh ./scripts/
 # work and the binary is the one the suite already exercised.
 COPY --from=build /out/sirens-echo-compose /usr/local/bin/sirens-echo-compose
 RUN SIRENS_ECHO_COMPOSE_BIN=/usr/local/bin/sirens-echo-compose \
-    bash scripts/stage-compose-sources.sh /tmp/aos-catalog /out/bundles
+    bash scripts/stage-compose-sources.sh /out/bundles /tmp/aos-catalog
 
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
 
@@ -41,6 +41,7 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo /usr/local/bin/sirens-echo
 # Shipped so another layer can expand the same allowlist with catalogues this
 # build cannot see. See docs/sirens-echo-compose.md.
 COPY --from=build --chown=1000:1000 /out/sirens-echo-compose /usr/local/bin/sirens-echo-compose
+COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
 COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge

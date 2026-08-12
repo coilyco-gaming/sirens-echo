@@ -45,12 +45,6 @@ The image runs it against a pinned `AOS_CATALOG_REF` clone, so the bundle is
 deterministic and a catalogue change is a reviewed bump. Locally,
 `ward exec compose-bundles` uses an `AOS_CATALOG` checkout.
 
-## Reviewing a wider compile
-
-The image ships `sirens-echo-compose`, so a layer holding catalogues this build
-cannot reach expands the same `roles.kdl` against them for review, under this
-repository's allowlist and deny list rather than a second implementation.
-
 ## Runtime
 
 `composed: true` in the definition makes a bundle mandatory. `SIRENS_DEEP_ROLE`
@@ -77,4 +71,5 @@ The seat carries its own name and pronouns, so the agent has an identity of its
 own rather than borrowing a person's. It never claims to be a specific person.
 ## See also
 
-See [the prompt](sirens-echo-prompt.md), [profiles](response-profiles.md), [config](sirens-echo-config.md).
+See [the wider compile](sirens-echo-compose-review.md),
+[the prompt](sirens-echo-prompt.md), [profiles](response-profiles.md), [config](sirens-echo-config.md).

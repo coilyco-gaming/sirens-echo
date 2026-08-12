@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
@@ -15,11 +16,12 @@ import (
 const sourceID = "aos-public"
 
 func main() {
-	catalog := flag.String("catalog", "", "agentic-os checkout supplying the composed catalogue")
+	var catalogs catalogList
+	flag.Var(&catalogs, "catalog", "checkout supplying a composed catalogue; repeatable")
 	role := flag.String("role", "", "role whose bindings to expand")
 	compose := flag.String("compose-dir", "agent/compose", "directory holding roles.kdl")
 	flag.Parse()
-	if *catalog == "" || *role == "" {
+	if len(catalogs) == 0 || *role == "" {
 		log.Fatal("--catalog and --role are required")
 	}
 
@@ -34,17 +36,19 @@ func main() {
 		}
 	}
 
-	names, err := community.ExpandRole(*catalog, *role, graph)
+	admitted, excluded, err := community.ExpandRoleWithExclusions(catalogs, *role, graph)
 	if err != nil {
 		log.Fatal(err)
 	}
+	names := community.SortedNames(admitted)
 
 	staged := filepath.Join(*compose, "skills")
 	if err := os.RemoveAll(staged); err != nil {
 		log.Fatalf("clear staged tree: %v", err)
 	}
 	for _, name := range names {
-		if err := stage(filepath.Join(*catalog, ".agents", "composed", name), filepath.Join(staged, name)); err != nil {
+		source := filepath.Join(admitted[name], ".agents", "composed", name)
+		if err := stage(source, filepath.Join(staged, name)); err != nil {
 			log.Fatalf("stage %s: %v", name, err)
 		}
 	}
@@ -52,10 +56,24 @@ func main() {
 	if err := os.WriteFile(declaration, []byte(community.RenderDeclaration(sourceID, names)), 0o644); err != nil {
 		log.Fatalf("write declaration: %v", err)
 	}
-	fmt.Printf("role %s: %d sources admitted from %s\n", *role, len(names), *catalog)
+	fmt.Printf("role %s: %d sources admitted\n", *role, len(names))
 	for _, name := range names {
-		fmt.Printf("  %s\n", name)
+		fmt.Printf("  %s\t%s\n", name, admitted[name])
 	}
+	for _, drop := range excluded {
+		fmt.Printf("  denied: %s\n", drop)
+	}
+}
+
+// catalogList collects a repeatable --catalog, so a layer holding more than one
+// checkout expands the same graph across all of them.
+type catalogList []string
+
+func (c *catalogList) String() string { return strings.Join(*c, ",") }
+
+func (c *catalogList) Set(value string) error {
+	*c = append(*c, value)
+	return nil
 }
 
 // stage copies one composed body under its declared path. agent-compose expects

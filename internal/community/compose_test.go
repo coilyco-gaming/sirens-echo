@@ -34,21 +34,40 @@ func TestGraphPatternsNeverReachDeniedSources(t *testing.T) {
 	catalog := catalogRoot(t)
 	_, graph := roleGraph(t)
 	for role := range graph.Patterns {
-		if _, err := ExpandRole(catalog, role, graph); err != nil {
+		if _, err := ExpandRole([]string{catalog}, role, graph); err != nil {
 			t.Fatalf("role %q: %v", role, err)
 		}
 	}
 	widened := RoleGraph{Patterns: map[string][]string{"creator": {"kai-*"}}}
-	if _, err := ExpandRole(catalog, "creator", widened); err == nil {
+	if _, err := ExpandRole([]string{catalog}, "creator", widened); err == nil {
 		t.Fatal("expansion accepted a pattern reaching the private kai- family")
 	}
 	social := RoleGraph{Patterns: map[string][]string{"creator": {"personal-preference-social"}}}
-	if _, err := ExpandRole(catalog, "creator", social); err == nil {
+	if _, err := ExpandRole([]string{catalog}, "creator", social); err == nil {
 		t.Fatal("expansion accepted the one member-owned preference source")
 	}
+	// A family glob must survive a denied member by dropping it, or a wider
+	// catalogue would make every broad pattern unusable.
+	brush := RoleGraph{Patterns: map[string][]string{"creator": {"personal-preference-*"}}}
+	admitted, dropped, err := ExpandRoleWithExclusions([]string{catalog}, "creator", brush)
+	if err != nil {
+		t.Fatalf("family glob failed on a denied member: %v", err)
+	}
+	if _, leaked := admitted["personal-preference-social"]; leaked {
+		t.Fatal("a denied source survived a family glob")
+	}
+	if len(admitted) == 0 {
+		t.Fatal("the family glob dropped everything")
+	}
+	_ = dropped
 	empty := RoleGraph{Patterns: map[string][]string{"creator": {"writing-nothing-*"}}}
-	if _, err := ExpandRole(catalog, "creator", empty); err == nil {
+	if _, err := ExpandRole([]string{catalog}, "creator", empty); err == nil {
 		t.Fatal("expansion accepted a pattern matching nothing")
+	}
+	// A wider layer passes several catalogues, and one name owned by two of them
+	// is ambiguous rather than a silent first-wins.
+	if _, err := ExpandRole([]string{catalog, catalog}, "creator", graph); err == nil {
+		t.Fatal("expansion accepted the same skill from two catalogues")
 	}
 }
 
