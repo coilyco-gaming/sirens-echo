@@ -38,6 +38,9 @@ FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
 USER root
 WORKDIR /app
 COPY --from=build --chown=1000:1000 /out/sirens-echo /usr/local/bin/sirens-echo
+# Shipped so another layer can expand the same allowlist with catalogues this
+# build cannot see. See docs/sirens-echo-compose.md.
+COPY --from=build --chown=1000:1000 /out/sirens-echo-compose /usr/local/bin/sirens-echo-compose
 COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
 COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge

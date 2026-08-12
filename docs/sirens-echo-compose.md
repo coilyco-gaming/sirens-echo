@@ -21,32 +21,35 @@ derived, so hand-writing it is boilerplate with a chance of drift.
 
 ## Globs stay safe
 
-`cmd/sirens-echo-compose` expands the graph against the pinned catalogue and
-fails when a pattern reaches a name in `DeniedComposedSkills`, when a pattern
-matches nothing, or when a global resolves to a private repository. A silently
-empty selector is how an allowlist rots into permitting whatever an upstream
-rename produced, so it is an error rather than a shrug.
+`cmd/sirens-echo-compose` expands the graph and fails when a pattern reaches a
+name in `DeniedComposedSkills`, matches nothing, or globalizes a private
+repository. An empty selector hides an upstream rename, so it is an error.
 
 ## Where the sources live
 
-Every admitted source is in `coilyco-flight-deck/agentic-os`, which is public.
-The house-taste sources were promoted there from the private personal
-catalogue for exactly this reason. The rule that decides placement, and the
-sources that fail it, are in that repository's `docs/composed-house-taste.md`.
+Every admitted source is in the public `coilyco-flight-deck/agentic-os`. The
+house-taste sources were promoted there from the private personal catalogue for
+exactly this reason; the placement rule is that repository's
+`docs/composed-house-taste.md`.
 
 ## Build
 
 `scripts/stage-compose-sources.sh` runs the generator per declared role, which
-copies each admitted `COMPOSED.md` to `agent/compose/skills/<name>/SKILL.md` and
-writes the declaration, because a declaration's paths resolve beneath its own
-directory. It then composes and verifies one bundle per role.
-
-The staged tree, the generated declaration, and the per-role requests are build
-output. The script removes them on exit and a test fails if any is committed.
+stages each admitted `COMPOSED.md` as `SKILL.md` and writes the declaration,
+because a declaration's paths resolve beneath its own directory. It then
+composes and verifies one bundle per role. The staged tree, the declaration, and
+the per-role requests are build output: removed on exit, and a test fails if any
+is committed.
 
 The image runs it against a pinned `AOS_CATALOG_REF` clone, so the bundle is
 deterministic and a catalogue change is a reviewed bump. Locally,
 `ward exec compose-bundles` uses an `AOS_CATALOG` checkout.
+
+## Reviewing a wider compile
+
+The image ships `sirens-echo-compose`, so a layer holding catalogues this build
+cannot reach expands the same `roles.kdl` against them for review, under this
+repository's allowlist and deny list rather than a second implementation.
 
 ## Runtime
 
@@ -55,10 +58,10 @@ selects which baked bundle loads, so flipping the role needs no rebuild.
 A missing or unreadable bundle stops the process: a profile that asks for an
 identity never answers without one.
 
-`ValidateSystemPrompt` inverts per profile. A composing profile must carry
-`<composed-identity>` and the bundle's surface; the neutral profile must carry
-none of it. The anchors are strings a real bundle contains, not the historical
-`<aos-community-bundle>` marker, which appears in no bundle today.
+`ValidateSystemPrompt` inverts per profile: a composing profile must carry
+`<composed-identity>` and the bundle's surface, the neutral profile none of it.
+The anchors are strings a real bundle contains, not the historical
+`<aos-community-bundle>`, which appears in no bundle today.
 
 ## Enforcement
 
@@ -72,9 +75,7 @@ the suite enforce one list rather than two copies.
 
 The seat carries its own name and pronouns, so the agent has an identity of its
 own rather than borrowing a person's. It never claims to be a specific person.
-
 ## See also
 
 See [the rendered prompt](sirens-echo-prompt.md),
-[response profiles](response-profiles.md), and
-[configuration](sirens-echo-config.md).
+[response profiles](response-profiles.md), [configuration](sirens-echo-config.md).
