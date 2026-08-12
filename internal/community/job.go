@@ -94,9 +94,8 @@ type Job struct {
 	ID string `json:"id"`
 	// IdempotencyKey collapses a redelivered submission onto one job.
 	IdempotencyKey string `json:"idempotency_key"`
-	// Principal is the account that asked. Carried from the start because
-	// retrofitting an owner onto existing records is worse than storing one.
-	// It grants nothing on its own.
+	// Principal is the account that asked, carried from the start because
+	// adding an owner later is worse. It grants nothing. See docs/sirens-echo-jobs.md.
 	Principal string `json:"principal"`
 	// Kind names what the job does, from a closed set the harness declares.
 	Kind      string    `json:"kind"`

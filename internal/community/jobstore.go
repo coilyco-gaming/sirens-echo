@@ -28,18 +28,16 @@ type JobStore interface {
 	Get(id string) (Job, error)
 	// ListByPrincipal returns a principal's jobs, newest first.
 	ListByPrincipal(principal string) ([]Job, error)
-	// Transition moves a job's state under the state machine, applying mutate
-	// to the record before it is written. A refused move is a
-	// jobTransitionError and leaves the stored record untouched.
+	// Transition moves a job under the state machine, applying mutate before
+	// the write. A refused move leaves the stored record untouched.
 	Transition(id string, next JobState, mutate func(*Job)) (Job, error)
 }
 
 // Clock is the store's only source of time, so a test does not sleep.
 type Clock func() time.Time
 
-// MemoryJobStore holds jobs in memory. It satisfies every behaviour except
-// durability, which makes it the right store for a test and the wrong one for
-// a deployment.
+// MemoryJobStore holds jobs in memory: every behaviour except durability,
+// which makes it right for a test and wrong for a deployment.
 type MemoryJobStore struct {
 	Now Clock
 

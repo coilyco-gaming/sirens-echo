@@ -26,8 +26,7 @@ var JobKinds = map[string]string{
 }
 
 // DeriveIdempotencyKey builds a key from the origin when a caller supplies
-// none. Discord redelivers a message with the same id, so the message is the
-// natural unit of "the same request".
+// none. Discord redelivers a message under one id. See docs/sirens-echo-jobs.md.
 func DeriveIdempotencyKey(submission Submission) string {
 	if trimmed := strings.TrimSpace(submission.IdempotencyKey); trimmed != "" {
 		return trimmed
