@@ -24,7 +24,8 @@ roles {
     role "creator" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-customer-success-*"
-        composed-skill "personal-preference*"
+        composed-skill "personal-preference-*"
+        composed-skill "personal-preference"
         composed-skill "writing-*"
     }
 }
