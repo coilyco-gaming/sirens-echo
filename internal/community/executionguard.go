@@ -29,6 +29,11 @@ func CheckExecutionAdmission(policy *AccessPolicy) error {
 			Reason: "direct messages are open to every account through the environment path",
 		}
 	}
+	if len(policy.Agents.Allow) > 0 {
+		return ExecutionAdmissionError{
+			Reason: "a counterpart agent is admitted, so requesters are no longer one account",
+		}
+	}
 	if len(policy.Guilds) > 0 || policy.catchAll != nil {
 		return ExecutionAdmissionError{
 			Reason: "a guild is admitted, so requesters are no longer one account",

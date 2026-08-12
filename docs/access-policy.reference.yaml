@@ -16,11 +16,17 @@
 #
 # See docs/sirens-echo-access.md.
 
+# agents.allow names counterpart agents that are answered. Empty answers none,
+# which is the shipped posture. See docs/sirens-echo-counterparts.md.
+
 schema: coilyco-harness.access.v1
 
 deny:
   users:
     - "9990000000000000001"
+
+agents:
+  allow: []
 
 direct_messages:
   allow:

@@ -25,6 +25,7 @@ const (
 	accessDeniedChannel  accessReason = "denied_channel"
 	accessDeniedMember   accessReason = "denied_member"
 	accessNeedsThreadRef accessReason = "needs_thread_lookup"
+	accessDeniedExchange accessReason = "denied_agent_exchange"
 )
 
 // Allowlist is either the literal `all` or an explicit ID list. See
@@ -99,11 +100,18 @@ type DirectMessageAccess struct {
 	Allow []string `yaml:"allow"`
 }
 
+// AgentAccess allowlists the counterpart agents whose messages are answered.
+// Empty answers none, which is the shipped posture.
+type AgentAccess struct {
+	Allow []string `yaml:"allow"`
+}
+
 // AccessPolicy is the deployment-owned allowlist for one process.
 type AccessPolicy struct {
 	Schema         string              `yaml:"schema"`
 	Deny           DenyList            `yaml:"deny"`
 	DirectMessages DirectMessageAccess `yaml:"direct_messages"`
+	Agents         AgentAccess         `yaml:"agents"`
 	Guilds         []GuildAccess       `yaml:"guilds"`
 
 	byGuild  map[string]*GuildAccess
@@ -149,7 +157,8 @@ func (p *AccessPolicy) validate() error {
 	if len(p.Guilds) == 0 && len(p.DirectMessages.Allow) == 0 {
 		return fmt.Errorf("access policy grants nothing: add a guild or a direct_messages allow entry")
 	}
-	for _, id := range append(append([]string{}, p.Deny.Users...), p.DirectMessages.Allow...) {
+	ids := append(append([]string{}, p.Deny.Users...), p.DirectMessages.Allow...)
+	for _, id := range append(ids, p.Agents.Allow...) {
 		if !discordSnowflake.MatchString(id) {
 			return fmt.Errorf("access policy IDs must be numeric snowflakes, got %q", id)
 		}
@@ -286,6 +295,20 @@ func (g *GuildAccess) permitsMember(userID string, roles []string) bool {
 			if granted == held {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+// PermitsAgent reports whether a counterpart agent is answered at all. A bot
+// account is refused unless the deployment named it.
+func (p *AccessPolicy) PermitsAgent(userID string) bool {
+	if p == nil {
+		return false
+	}
+	for _, allowed := range p.Agents.Allow {
+		if allowed == userID {
+			return true
 		}
 	}
 	return false

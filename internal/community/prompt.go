@@ -37,6 +37,18 @@ are DM'ing Kai directly.`, principal.Handle, principal.UserID)
 type TranscriptEntry struct {
 	Author  string
 	Content string
+	// Counterpart is what Discord says the author is. Empty means human, so a
+	// caller that does not set it is unchanged.
+	Counterpart CounterpartKind
+}
+
+// agentSuffix marks an author Discord flagged as a bot, so the model reads a
+// grounded fact rather than guessing from prose.
+func (e TranscriptEntry) agentSuffix() string {
+	if e.Counterpart == CounterpartAgent {
+		return " (an agent, not a person)"
+	}
+	return ""
 }
 
 // BuildSystemPrompt joins the prompt sections with a blank line. An empty
@@ -253,20 +265,21 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 		if speaker == "" {
 			return ""
 		}
-		return fmt.Sprintf("The request that follows is from %s.", speaker)
+		return fmt.Sprintf("The request that follows is from %s%s.", speaker, current.agentSuffix())
 	}
 	var output strings.Builder
 	output.WriteString("Recent conversation, oldest first:\n")
 	for _, entry := range history {
 		fmt.Fprintf(
 			&output,
-			"- %s: %s\n",
+			"- %s%s: %s\n",
 			cleanTranscriptText(entry.Author, 80),
+			entry.agentSuffix(),
 			cleanTranscriptText(entry.Content, 1000),
 		)
 	}
 	if speaker != "" {
-		fmt.Fprintf(&output, "\nThe request that follows is from %s.", speaker)
+		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.", speaker, current.agentSuffix())
 	}
 	return strings.TrimRight(output.String(), "\n")
 }

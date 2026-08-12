@@ -44,6 +44,8 @@ type Agent struct {
 	lookups *rateLimiter
 	// jobs is nil when the deployment enables no job kinds.
 	jobs *JobRunner
+	// exchanges bounds a run of agent-to-agent turns per channel.
+	exchanges *exchangeLimiter
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -174,6 +176,9 @@ func (a *Agent) ensureRuntimeDefaults() {
 	}
 	if a.access == nil {
 		a.access = synthesizeAccessPolicy(a.cfg)
+	}
+	if a.exchanges == nil {
+		a.exchanges = newExchangeLimiter(nil)
 	}
 }
 
@@ -346,7 +351,13 @@ func (c summonContext) Key() string {
 
 func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCreate) {
 	message := event.Message
-	if !eligibleMessage(session, message) {
+	if !eligibleMessage(session, message, a.access) {
+		return
+	}
+	// Two agents that each answer the other is a runaway, so the exchange is
+	// bounded before anything else spends budget on it.
+	if !a.exchanges.admit(message.ChannelID, counterpartOf(message)) {
+		a.telemetry.RecordAccess(context.Background(), string(accessDeniedExchange))
 		return
 	}
 	origin := summonContextFor(message)
@@ -390,15 +401,35 @@ func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCr
 	go a.handleMessage(session, message, origin, decision.Guild.Overrides())
 }
 
-// eligibleMessage rejects the payloads that can never be a member summon.
-func eligibleMessage(session *discordgo.Session, message *discordgo.Message) bool {
-	return message != nil &&
-		message.Author != nil &&
-		!message.Author.Bot &&
-		session.State != nil &&
-		session.State.User != nil &&
-		message.Author.ID != session.State.User.ID &&
-		message.ChannelID != ""
+// eligibleMessage rejects payloads that can never be a summon. A bot author
+// passes only when named. See docs/sirens-echo-counterparts.md.
+func eligibleMessage(
+	session *discordgo.Session,
+	message *discordgo.Message,
+	policy *AccessPolicy,
+) bool {
+	if message == nil || message.Author == nil || message.ChannelID == "" {
+		return false
+	}
+	if session.State == nil || session.State.User == nil {
+		return false
+	}
+	if message.Author.ID == session.State.User.ID {
+		return false
+	}
+	if message.Author.Bot && !policy.PermitsAgent(message.Author.ID) {
+		return false
+	}
+	return true
+}
+
+// counterpartOf reads what Discord asserted about the author. Ground truth,
+// never a guess from writing style.
+func counterpartOf(message *discordgo.Message) CounterpartKind {
+	if message != nil && message.Author != nil && message.Author.Bot {
+		return CounterpartAgent
+	}
+	return CounterpartHuman
 }
 
 // memberRoles returns the author's guild roles, which arrive on the Gateway
@@ -840,8 +871,9 @@ func (t *discordMessageTurn) Transport() string { return transportDiscord }
 
 func (t *discordMessageTurn) Current() TranscriptEntry {
 	return TranscriptEntry{
-		Author:  displayName(t.message),
-		Content: t.message.ContentWithMentionsReplaced(),
+		Author:      displayName(t.message),
+		Content:     t.message.ContentWithMentionsReplaced(),
+		Counterpart: counterpartOf(t.message),
 	}
 }
 
@@ -863,8 +895,9 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 			continue
 		}
 		history = append(history, TranscriptEntry{
-			Author:  displayName(message),
-			Content: message.ContentWithMentionsReplaced(),
+			Author:      displayName(message),
+			Content:     message.ContentWithMentionsReplaced(),
+			Counterpart: counterpartOf(message),
 		})
 	}
 	return history, nil
