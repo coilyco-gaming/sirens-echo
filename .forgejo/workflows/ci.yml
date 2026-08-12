@@ -38,6 +38,30 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
         run: python3 scripts/alert-telegram.py
 
+  image-build-probe:
+    runs-on: docker
+    container: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
+    timeout-minutes: 10
+    steps:
+      - name: Probe the docker client and daemon reachability
+        continue-on-error: true
+        run: |
+          echo "== docker-related env =="
+          env | grep -i docker || echo "no docker env"
+          echo "== client on PATH =="
+          command -v docker || echo "no docker client"
+          docker --version || true
+          echo "== socket =="
+          ls -l /var/run/docker.sock || echo "no socket"
+          echo "== routes =="
+          ip route || cat /proc/net/route || true
+          echo "== candidate daemons =="
+          for host in "$DOCKER_HOST" tcp://localhost:2375 tcp://172.17.0.1:2375 tcp://host.docker.internal:2375 unix:///var/run/docker.sock; do
+            [ -n "$host" ] || continue
+            echo "-- trying $host"
+            DOCKER_HOST="$host" timeout 15 docker version --format '{{.Server.Version}}' || echo "unreachable"
+          done
+
   publish-echo-image:
     if: >-
       github.event_name == 'push' &&
