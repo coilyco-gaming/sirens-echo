@@ -30,6 +30,12 @@ commands:
   prompt-check:
     run: go run ./cmd/sirens-echo-prompt --check
     description: Fail when a rendered-prompt snapshot no longer matches its sources.
+  guardfile-skill:
+    run: go run ./cmd/sirens-echo-guardfile --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl
+    description: Regenerate the agent's own-authority skill from the deployed guardfile.
+  guardfile-skill-check:
+    run: go run ./cmd/sirens-echo-guardfile --check --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl
+    description: Fail when the own-authority skill is stale against the deployed guardfile.
   role-snapshot:
     run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles
     description: Rewrite the tracked per-role selection record from baked bundles.
