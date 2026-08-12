@@ -39,6 +39,7 @@ type Telemetry struct {
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
 	failures             metric.Int64Counter
+	jobs                 metric.Int64Counter
 	healthRequests       metric.Int64Counter
 	readinessDuration    metric.Float64Histogram
 	readinessState       metric.Int64Gauge
@@ -174,6 +175,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	jobs, err := meter.Int64Counter("sirens_echo.jobs")
+	if err != nil {
+		return nil, err
+	}
 	healthRequests, err := meter.Int64Counter("sirens_echo.health.requests")
 	if err != nil {
 		return nil, err
@@ -209,6 +214,7 @@ func newTelemetry(
 		admissions:           admissions,
 		accessChecks:         accessChecks,
 		failures:             failures,
+		jobs:                 jobs,
 		healthRequests:       healthRequests,
 		readinessDuration:    readinessDuration,
 		readinessState:       readinessState,
@@ -267,7 +273,38 @@ func (t *Telemetry) log(
 			slog.String("span_id", spanContext.SpanID().String()),
 		)
 	}
+	// A job id joins trace_id and span_id as a row field, so a job's whole log
+	// history is retrievable by id. See docs/sirens-echo-jobs-lifecycle.md.
+	if id := JobIDFromContext(ctx); id != "" {
+		attrs = append(attrs, slog.String("job_id", id))
+	}
 	t.logger.LogAttrs(ctx, level, message, attrs...)
+}
+
+// RecordJob counts a job reaching a state. Kind and state are closed sets, so
+// neither is an unbounded label.
+func (t *Telemetry) RecordJob(ctx context.Context, kind, state string) {
+	t.jobs.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("kind", kind),
+		attribute.String("state", state),
+	))
+}
+
+// StartJobSpan opens the span every one of a job's spans descends from, and
+// puts the job id in the context so logs carry it too.
+func (t *Telemetry) StartJobSpan(
+	ctx context.Context,
+	job Job,
+) (context.Context, trace.Span) {
+	ctx = ContextWithJobID(ctx, job.ID)
+	return t.StartSpan(
+		ctx,
+		"job.execute",
+		attribute.String("sirens_echo.job.id", job.ID),
+		attribute.String("sirens_echo.job.kind", job.Kind),
+		attribute.String("sirens_echo.job.transport", job.Origin.Transport),
+		attribute.Int("sirens_echo.job.attempt", job.Attempts),
+	)
 }
 
 // RecordTurn records the terminal state and latency of one accepted summon.

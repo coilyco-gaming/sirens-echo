@@ -77,4 +77,4 @@ keeps jobs in memory and loses them on restart.
 `JobKinds` is a closed set. A kind is a capability, so widening it is a reviewed
 act here rather than something a caller picks.
 
-See [configuration](sirens-echo-config.md) and [the service](sirens-echo.md).
+See [the lifecycle](sirens-echo-jobs-lifecycle.md).

@@ -53,6 +53,9 @@ func (a *Agent) HTTPHandler() http.Handler {
 	mux.HandleFunc(healthzPath, a.handleHealthz)
 	mux.HandleFunc(readyzPath, a.handleReadyz)
 	mux.Handle(httpTurnPath, instrumentHTTPRoute(telemetry, httpTurnPath, a.handleHTTPTurn))
+	// Submit, poll, and cancel share the turn path's network boundary.
+	mux.Handle("/v1/jobs", instrumentHTTPRoute(telemetry, "/v1/jobs", a.handleJobs))
+	mux.Handle(jobsPath, instrumentHTTPRoute(telemetry, jobsPath, a.handleJob))
 	// Same listener and therefore the same network boundary as the turn path.
 	mux.Handle(mcpServerPath, a.mcpHandler())
 	return mux

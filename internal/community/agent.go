@@ -42,6 +42,8 @@ type Agent struct {
 	// lookups bounds Discord REST calls forced during gate evaluation, so an
 	// unscoped channel cannot make the process call the API per message.
 	lookups *rateLimiter
+	// jobs is nil when the deployment enables no job kinds.
+	jobs *JobRunner
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -129,6 +131,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		access:            accessPolicy,
 	}
 	agent.ensureRuntimeDefaults()
+	if err := agent.buildJobRunner(); err != nil {
+		return nil, err
+	}
 	if session != nil {
 		session.AddHandler(agent.onReady)
 		session.AddHandler(agent.onMessage)
@@ -210,8 +215,58 @@ func loadRoster(cfg Config) ([]MCPServerDefinition, error) {
 	return nil, fmt.Errorf("issue_tracker %q names no server in the MCP roster", tracker)
 }
 
+// buildJobRunner wires durable work when the deployment asked for it. An empty
+// store directory keeps jobs in memory. See docs/sirens-echo-jobs.md.
+func (a *Agent) buildJobRunner() error {
+	var store JobStore
+	if a.cfg.JobStoreDir == "" {
+		store = NewMemoryJobStore(nil)
+	} else {
+		opened, err := OpenFileJobStore(a.cfg.JobStoreDir, nil)
+		if err != nil {
+			return err
+		}
+		store = opened
+	}
+	reporter := discordJobReporter{session: a.session}
+	a.jobs = &JobRunner{
+		Store:     store,
+		Telemetry: a.telemetry,
+		Executors: DefaultJobExecutors(),
+		Notifier:  reporter,
+		Progress:  reporter,
+	}
+	return nil
+}
+
+// recoverJobs settles whatever a restart found mid-flight, so no record sits
+// live forever after a crash.
+func (a *Agent) recoverJobs(ctx context.Context) {
+	memory, ok := a.jobs.Store.(interface{ All() []Job })
+	if !ok {
+		return
+	}
+	stranded := StrandedJobIDs(memory.All())
+	if len(stranded) == 0 {
+		return
+	}
+	recovered, err := RecoverStrandedJobs(a.jobs.Store, stranded, "interrupted by a restart")
+	if err != nil {
+		a.telemetry.Error(ctx, "job.recovery.failed", slog.Int("stranded", len(stranded)))
+		return
+	}
+	a.telemetry.Info(ctx, "job.recovery.settled", slog.Int("jobs", len(recovered)))
+}
+
 // Run opens the Gateway session and blocks until shutdown.
 func (a *Agent) Run(ctx context.Context) error {
+	if a.jobs != nil {
+		if err := a.jobs.Start(ctx); err != nil {
+			return err
+		}
+		defer a.jobs.Stop()
+		a.recoverJobs(ctx)
+	}
 	if a.session != nil {
 		if err := a.session.Open(); err != nil {
 			return fmt.Errorf("Discord open: %w", err)
