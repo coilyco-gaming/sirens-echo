@@ -1,17 +1,16 @@
 # Runtime MCP tools
 
-Each source-controlled definition owns its own MCP roster and optional
-automatic issue tracker.
+Each source-controlled definition owns its MCP roster and optional issue tracker.
 
 The Sirens Echo community definition contains public Eco MCP and an
 environment-backed private Forgejo MCP URL. Eco needs no client credential or
-tailnet identity. Echo sends no credential to the private MCP. The separate
+tailnet identity, Echo sends no credential to the private MCP, and the separate
 MCP workload holds its Forgejo token.
 
 The CoilyCo general-purpose definition selects a Steam reader and the same
-repository-fixed Forgejo MCP Echo uses. It names no automatic issue tracker, so
-a write happens because the model chose a tool, never because a turn ended.
-General-purpose describes topic scope, not universal mutation authority.
+repository-fixed Forgejo MCP. It names no issue tracker, so a write happens
+because the model chose a tool. General-purpose describes topic scope, not
+universal mutation authority.
 
 ## Tool loop
 
@@ -42,8 +41,9 @@ The harness rejects:
 
 A server that fails to connect or list contributes no tools and the turn goes on
 with the rest, named to the model so it reports the gap. Only an unreachable
-roster stops the turn, and a name collision stays fatal. Invocation failures give
-the neutral retry reply, and MCP error results stay available as grounded data.
+roster stops the turn, and a name collision stays fatal. An invocation failure
+ends the turn with the tool-failure notice, and an MCP error result is grounded
+data the model self-corrects from. See [notices](sirens-echo-notices.md).
 
 ## Sirens Echo issue ownership
 
@@ -54,24 +54,24 @@ and remove. There is no owner or repository argument to redirect. There is no
 issue-body edit, comment edit, delete, reopen, pin, release, pull-request,
 repository, organization, or account tool.
 
-The community definition names that server as `issue_tracker`. Its automatic
-knowledge-gap reporter calls `list_issue` and `create_issue` through the
-MCP's matching HTTP tool API. Echo keeps exact-title reuse and sanitized
-unlabeled creation without holding a Forgejo credential.
+Naming that server as `issue_tracker` selects the prompt's issue-filing policy,
+which tells the model to search by title and then file a sanitized unlabeled
+issue through the MCP tool it already holds. There is no worker-side path and no
+Forgejo credential in Echo. The CoilyCo definition names no tracker and gets the
+plain uncertainty instruction, so the two differ in what the prompt asks for and
+not in what the model can reach.
 
-The CoilyCo definition reaches the same server but does not inherit that
-automatic action path, because it names no `issue_tracker`. Future tools belong
-in its tracked roster only after their scope and authority are explicitly
-reviewed.
+Connecting, listing, and calling each carry their own ceiling. See [the
+budget](sirens-echo-budget.md).
 
 ## Acceptance coverage
 
 The official in-process MCP fixture proves schema discovery, a tool-call-only
-first model response, complete tool result continuation, a grounded
-user-facing reply, and alternate compatible content forms. Separate profile
-tests prove the CoilyCo definition selects exactly its Steam and Forgejo
-surfaces, resolves both addresses from deployment rather than a literal URL, and
-names no issue tracker.
+first model response, complete tool result continuation, a grounded user-facing
+reply, alternate content forms, and that a tool which never answers fails on the
+call bound rather than on the turn's. Separate profile tests prove the CoilyCo
+definition selects exactly its Steam and Forgejo surfaces, resolves both
+addresses from deployment, and names no issue tracker.
 
 The live Echo evaluation selects only static MCP URLs, then requires an
 `eco__get_eco_server_status` call without sending Discord or Forgejo writes.

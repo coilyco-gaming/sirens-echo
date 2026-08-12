@@ -71,6 +71,10 @@ const (
 	mcpBackoffMin        = 5 * time.Second
 	mcpBackoffMax        = 2 * time.Minute
 
+	// defaultCallTimeout keeps one tool call well inside the turn budget, so a
+	// server that never answers cannot spend the whole turn.
+	defaultCallTimeout = 45 * time.Second
+
 	// Grounding bounds. Reference material must not crowd out the turn it is
 	// meant to support.
 	maxGroundingBytes     = 8 * 1024
@@ -85,6 +89,8 @@ type MCPProvider struct {
 	// RefreshInterval bounds staleness where notifications cannot arrive. Zero
 	// uses defaultRosterRefresh.
 	RefreshInterval time.Duration
+	// CallTimeout bounds one tool call. Zero uses defaultCallTimeout.
+	CallTimeout time.Duration
 
 	mu      sync.Mutex
 	started bool
@@ -137,6 +143,7 @@ type mcpToolSession struct {
 	registered  map[string]registeredMCPTool
 	sessions    []*mcp.ClientSession
 	unavailable []string
+	callTimeout time.Duration
 }
 
 // Open returns this turn's view over the supervised roster. It connects only
@@ -146,7 +153,8 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 	defer p.mu.Unlock()
 	p.startLocked()
 	opened := &mcpToolSession{
-		registered: make(map[string]registeredMCPTool),
+		registered:  make(map[string]registeredMCPTool),
+		callTimeout: p.callTimeout(),
 	}
 	now := time.Now()
 	for _, entry := range p.entries {
@@ -286,6 +294,13 @@ func (p *MCPProvider) refreshInterval() time.Duration {
 		return p.RefreshInterval
 	}
 	return defaultRosterRefresh
+}
+
+func (p *MCPProvider) callTimeout() time.Duration {
+	if p.CallTimeout > 0 {
+		return p.CallTimeout
+	}
+	return defaultCallTimeout
 }
 
 // needsTools is true on a first listing, on a list_changed notification, and on
@@ -557,7 +572,15 @@ func (s *mcpToolSession) Call(
 	if !exists {
 		return ToolResult{}, fmt.Errorf("model requested unavailable MCP tool %q", name)
 	}
-	result, err := tool.session.CallTool(ctx, &mcp.CallToolParams{
+	// Bounded below the turn budget, so a server that never answers fails as a
+	// tool failure with time left to report it. See docs/sirens-echo-tools.md.
+	bound := s.callTimeout
+	if bound <= 0 {
+		bound = defaultCallTimeout
+	}
+	callCtx, cancel := context.WithTimeout(ctx, bound)
+	defer cancel()
+	result, err := tool.session.CallTool(callCtx, &mcp.CallToolParams{
 		Name:      tool.toolName,
 		Arguments: arguments,
 	})
