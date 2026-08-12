@@ -41,9 +41,11 @@ composes and verifies one bundle per role. The staged tree, the declaration, and
 the per-role requests are build output: removed on exit, and a test fails if any
 is committed.
 
-The image runs it against a pinned `AOS_CATALOG_REF` clone, so the bundle is
-deterministic and a catalogue change is a reviewed bump. Locally,
-`ward exec compose-bundles` uses an `AOS_CATALOG` checkout.
+The image clones the catalogue at `AOS_CATALOG_REF`, which floats on `main` by
+design, so a rebuild takes the catalogue as it stands. Override the build arg to
+reproduce an older bundle. Locally, `ward exec compose-bundles` uses an
+`AOS_CATALOG` checkout, which fails closed when it is too old to satisfy a
+pattern.
 
 ## Runtime
 

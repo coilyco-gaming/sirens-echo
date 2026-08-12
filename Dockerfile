@@ -17,8 +17,9 @@ RUN CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo ./cmd/sirens-echo \
     && /out/sirens-echo-policy-check
 
 # The release image ships agent-compose but not the composed catalogue, so this
-# stage fetches it. Pinning the ref keeps the bundle deterministic and makes a
-# catalogue change a reviewed bump. See docs/sirens-echo-compose.md.
+# stage fetches it. The ref floats on main by design, so a rebuild takes the
+# catalogue as it stands; override it to reproduce an older bundle.
+# See docs/sirens-echo-compose.md.
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS compose
 ARG AOS_CATALOG_REF=main
 USER root
