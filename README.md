@@ -1,10 +1,10 @@
-![sirens-echo and sirens-deep, a discord community agent harness](assets/banner.jpg)
-
 # sirens-echo
 
 A discord community agent harness - home of sirens echo and sirens deep
 
-## Sirens Echo
+![sirens-echo and sirens-deep, a discord community agent harness](assets/banner.jpg)
+
+## About
 
 Sirens Echo is an automated community response service. Its model context is a
 repository-owned neutral profile plus approved Sirens knowledge. The Discord
@@ -24,7 +24,7 @@ deployment remains Sirens Echo.
 No automatic memory. Guarded investigations use
 `.agents/skills/ops-social-discord/`. See [the walkthrough](docs/sirens-echo.md).
 
-## CoilyCo harness
+## Coilyco harness
 
 The `sirens-deep` deployment selects `agent/sirens-deep.yaml`. Its model
 identity is Sirens Deep of Coilyco and its scope is general-purpose.
