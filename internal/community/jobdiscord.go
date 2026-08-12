@@ -131,3 +131,44 @@ func jobTerminalNotice(job Job) string {
 		return harnessNotice(fmt.Sprintf("job %s failed", job.ID))
 	}
 }
+
+// discordTurnProgress posts and edits one progress line in a turn's channel.
+type discordTurnProgress struct {
+	session *discordgo.Session
+	channel string
+}
+
+func (p discordTurnProgress) Post(_ context.Context, notice string) (string, error) {
+	if p.session == nil {
+		return "", fmt.Errorf("no Discord session")
+	}
+	sent, err := p.session.ChannelMessageSendComplex(p.channel, &discordgo.MessageSend{
+		Content:         truncateRunes(notice, 1990),
+		AllowedMentions: &discordgo.MessageAllowedMentions{Parse: []discordgo.AllowedMentionType{}},
+	})
+	if err != nil {
+		return "", err
+	}
+	return sent.ID, nil
+}
+
+func (p discordTurnProgress) Edit(_ context.Context, messageID, notice string) error {
+	if p.session == nil {
+		return fmt.Errorf("no Discord session")
+	}
+	content := truncateRunes(notice, 1990)
+	_, err := p.session.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Channel:         p.channel,
+		ID:              messageID,
+		Content:         &content,
+		AllowedMentions: &discordgo.MessageAllowedMentions{Parse: []discordgo.AllowedMentionType{}},
+	})
+	return err
+}
+
+func (p discordTurnProgress) Delete(_ context.Context, messageID string) error {
+	if p.session == nil {
+		return fmt.Errorf("no Discord session")
+	}
+	return p.session.ChannelMessageDelete(p.channel, messageID)
+}

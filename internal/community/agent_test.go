@@ -656,7 +656,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 			Content: "Can you check now?",
 		},
 	}
-	if err := agent.runTurn(context.Background(), turn); err != nil {
+	if err := agent.runTurn(context.Background(), turn, nil); err != nil {
 		t.Fatalf("runTurn: %v", err)
 	}
 	if turn.reply != "Eco is online now." {

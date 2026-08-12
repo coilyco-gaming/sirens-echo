@@ -101,7 +101,7 @@ func TestFailedTurnRepliesInsteadOfGoingSilent(t *testing.T) {
 		Content: "can you create a fj issue",
 	}}
 
-	err := agent.runTurn(context.Background(), turn)
+	err := agent.runTurn(context.Background(), turn, nil)
 
 	if err == nil {
 		t.Fatal("runTurn returned no error for a failed model call")
@@ -144,7 +144,7 @@ func TestToolSurfaceFailureIsReportedAsAToolFailure(t *testing.T) {
 	})
 	turn := &httpTurn{requestID: "tool-turn"}
 
-	if err := agent.runTurn(context.Background(), turn); err == nil {
+	if err := agent.runTurn(context.Background(), turn, nil); err == nil {
 		t.Fatal("runTurn returned no error for a failed tool call")
 	}
 	if turn.reply != noticeToolFailed {
@@ -160,7 +160,7 @@ func TestFailureNoticeLeaksNothingFromTheCause(t *testing.T) {
 	agent := failingAgent(errors.New(secret))
 	turn := &httpTurn{requestID: "leak-turn"}
 
-	if err := agent.runTurn(context.Background(), turn); err == nil {
+	if err := agent.runTurn(context.Background(), turn, nil); err == nil {
 		t.Fatal("runTurn returned no error")
 	}
 	for _, fragment := range []string{"sirens-deep", "8080", "abc123", "refused"} {

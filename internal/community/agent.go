@@ -599,7 +599,9 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 		stopTyping := startTyping(turnCtx, notifier)
 		defer stopTyping()
 	}
-	return a.runTurn(turnCtx, turn)
+	progress := a.progressFor(turn)
+	defer progress.Finish(context.WithoutCancel(turnCtx))
+	return a.runTurn(turnCtx, turn, progress)
 }
 
 // replyQueueTimeout tells the caller its turn gave up waiting. Returning
@@ -651,7 +653,24 @@ type turnIO interface {
 	Reply(ctx context.Context, content string) error
 }
 
-func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
+// progressFor gives a Discord turn a progress line. Other transports answer
+// synchronously, so there is nothing to narrate to.
+func (a *Agent) progressFor(turn turnIO) *turnProgress {
+	discord, ok := turn.(*discordMessageTurn)
+	if !ok || discord.session == nil {
+		return nil
+	}
+	return newTurnProgress(discordTurnProgress{
+		session: discord.session,
+		channel: discord.message.ChannelID,
+	}, nil)
+}
+
+func (a *Agent) runTurn(
+	ctx context.Context,
+	turn turnIO,
+	progress *turnProgress,
+) (turnErr error) {
 	started := time.Now()
 	turnCtx, turnSpan := a.telemetry.StartSpan(
 		ctx,
@@ -685,6 +704,7 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	receiveSpan.SetAttributes(attribute.Int("input.bytes", len(current.Content)))
 	receiveSpan.End()
 
+	progress.Stage(turnCtx, stagePhraseHistory)
 	historyCtx, historySpan := a.telemetry.StartSpan(turnCtx, "community.history")
 	history, err := turn.History(historyCtx)
 	if err != nil {
@@ -713,11 +733,13 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	)
 	contextSpan.End()
 
+	progress.Stage(turnCtx, stagePhraseThinking)
 	result, err := a.completions.Complete(turnCtx, prompt, turn.RequestID())
 	if err != nil {
 		return a.failTurn(turnCtx, turn, stageModel, err)
 	}
 
+	progress.Stage(turnCtx, stagePhraseChecking)
 	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
 	if err == nil {
