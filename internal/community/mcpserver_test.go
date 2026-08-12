@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -118,4 +119,71 @@ func callResultText(result *mcp.CallToolResult) string {
 		}
 	}
 	return strings.Join(parts, "\n")
+}
+
+// queueBlockedAgent holds the only execution slot, so the next turn can never
+// acquire it and must give up on the queue timeout.
+func queueBlockedAgent(t *testing.T) *Agent {
+	t.Helper()
+	agent := &Agent{
+		cfg: Config{
+			Definition:   Definition{MaxContextMessages: 12},
+			QueueTimeout: 10 * time.Millisecond,
+			// The packaged policy, because a zero one disables the notify window
+			// and would make the throttle assertion vacuous.
+			RateLimit: defaultRateLimitPolicy,
+		},
+		completions:  fixedCompletionClient{reply: "Echo is ready."},
+		systemPrompt: "neutral model policy and local knowledge",
+		telemetry:    telemetryOrNoop(nil),
+		slots:        make(chan struct{}, 1),
+	}
+	agent.ensureRuntimeDefaults()
+	agent.slots <- struct{}{}
+	t.Cleanup(func() { <-agent.slots })
+	return agent
+}
+
+func TestQueueTimeoutTellsTheCallerInsteadOfReturningSilently(t *testing.T) {
+	t.Parallel()
+	agent := queueBlockedAgent(t)
+	turn := &httpTurn{requestID: "queued", transport: transportHTTP}
+
+	err := agent.runSerialized(context.Background(), turn, transportHTTP)
+	if err == nil {
+		t.Fatal("a turn that never got the slot must still fail")
+	}
+	// The regression: this reply was empty, so a queued caller learned nothing.
+	if turn.reply != queueTimeoutNotice {
+		t.Fatalf("reply = %q, want the queue timeout notice", turn.reply)
+	}
+}
+
+func TestQueueTimeoutNoticeIsThrottledForDiscordOnly(t *testing.T) {
+	t.Parallel()
+	agent := queueBlockedAgent(t)
+
+	// A shared channel gets one notice per window, matching the pending-cap
+	// denial, so saturation cannot become an amplifier.
+	if !agent.limiter.notifyQueueTimeout("guild-1") {
+		t.Fatal("the first Discord notice was suppressed")
+	}
+	if agent.limiter.notifyQueueTimeout("guild-1") {
+		t.Fatal("a second Discord notice was allowed inside the window")
+	}
+	// A different context keeps its own notice.
+	if !agent.limiter.notifyQueueTimeout("guild-2") {
+		t.Fatal("one guild's saturation muted another")
+	}
+
+	// A synchronous caller is never throttled: its reply reaches only itself.
+	for attempt := 0; attempt < 3; attempt++ {
+		turn := &httpTurn{requestID: "queued", transport: transportHTTP}
+		if err := agent.runSerialized(context.Background(), turn, transportHTTP); err == nil {
+			t.Fatal("expected a queue timeout")
+		}
+		if turn.reply != queueTimeoutNotice {
+			t.Fatalf("attempt %d reply = %q", attempt, turn.reply)
+		}
+	}
 }

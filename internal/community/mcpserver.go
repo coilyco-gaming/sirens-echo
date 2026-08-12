@@ -99,7 +99,7 @@ func (a *Agent) handleMCPTurn(
 		history:   append([]TranscriptEntry(nil), input.History...),
 		current:   TranscriptEntry{Author: input.Author, Content: input.Content},
 	}
-	if err := a.runSerialized(ctx, turn); err != nil {
+	if err := a.runSerialized(ctx, turn, transportMCP); err != nil {
 		// The reply is the runtime's own failure text, which is safe to return.
 		return toolFailure(turn.reply), TurnOutput{}, nil
 	}
