@@ -77,5 +77,4 @@ The seat carries its own name and pronouns, so the agent has an identity of its
 own rather than borrowing a person's. It never claims to be a specific person.
 ## See also
 
-See [the rendered prompt](sirens-echo-prompt.md),
-[response profiles](response-profiles.md), [configuration](sirens-echo-config.md).
+See [the prompt](sirens-echo-prompt.md), [profiles](response-profiles.md), [config](sirens-echo-config.md).
