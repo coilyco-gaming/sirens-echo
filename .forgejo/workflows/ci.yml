@@ -38,16 +38,28 @@ jobs:
           CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
         run: python3 scripts/alert-telegram.py
 
-  image-build-probe:
+  image-build:
     runs-on: docker
     container: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
 
-      - name: Probe the docker client and daemon reachability
+      - name: Build the image without publishing
+        run: bash scripts/ci-image-build.sh
+
+      - name: Report what the job container can see of the daemon
+        if: ${{ failure() }}
         continue-on-error: true
         run: bash scripts/ci-docker-probe.sh
+
+      - name: Alert Telegram on main failure
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
+        run: python3 scripts/alert-telegram.py
 
   publish-echo-image:
     if: >-
