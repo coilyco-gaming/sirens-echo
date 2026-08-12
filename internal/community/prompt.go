@@ -203,17 +203,64 @@ func ValidateNeutralSystemPrompt(prompt string) error {
 	return nil
 }
 
-// BuildUserPrompt renders a small ordered transcript and marks the current
-// request separately.
-func BuildUserPrompt(history []TranscriptEntry, current TranscriptEntry) string {
+// TurnPrompt is what one turn sends the model. Context and Message are separate
+// messages, so the final user turn carries only what the member typed.
+type TurnPrompt struct {
+	System  string
+	Context string
+	Message string
+}
+
+// Supplied renders everything the model was given this turn, which is what the
+// grounding validator checks a reply against.
+func (p TurnPrompt) Supplied() string {
+	present := make([]string, 0, 3)
+	for _, section := range []string{p.System, p.Context, p.Message} {
+		if section != "" {
+			present = append(present, section)
+		}
+	}
+	return strings.Join(present, "\n")
+}
+
+// BuildTurnPrompt splits the turn into the conversation around it and the
+// request itself. See docs/sirens-echo-prompt.md.
+func BuildTurnPrompt(
+	system string,
+	history []TranscriptEntry,
+	current TranscriptEntry,
+) TurnPrompt {
+	return TurnPrompt{
+		System:  system,
+		Context: buildTurnContext(history, current),
+		Message: cleanTranscriptText(current.Content, 2000),
+	}
+}
+
+// buildTurnContext keeps the transcript flattened and labelled. A Discord
+// channel is multi-party, which the assistant and user roles cannot express.
+func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string {
+	speaker := cleanTranscriptText(current.Author, 80)
+	if len(history) == 0 {
+		if speaker == "" {
+			return ""
+		}
+		return fmt.Sprintf("The request that follows is from %s.", speaker)
+	}
 	var output strings.Builder
 	output.WriteString("Recent conversation, oldest first:\n")
 	for _, entry := range history {
-		fmt.Fprintf(&output, "- %s: %s\n", cleanTranscriptText(entry.Author, 80), cleanTranscriptText(entry.Content, 1000))
+		fmt.Fprintf(
+			&output,
+			"- %s: %s\n",
+			cleanTranscriptText(entry.Author, 80),
+			cleanTranscriptText(entry.Content, 1000),
+		)
 	}
-	output.WriteString("\nCurrent request:\n")
-	fmt.Fprintf(&output, "%s: %s", cleanTranscriptText(current.Author, 80), cleanTranscriptText(current.Content, 2000))
-	return output.String()
+	if speaker != "" {
+		fmt.Fprintf(&output, "\nThe request that follows is from %s.", speaker)
+	}
+	return strings.TrimRight(output.String(), "\n")
 }
 
 func cleanTranscriptText(value string, limit int) string {

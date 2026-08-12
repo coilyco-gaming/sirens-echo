@@ -89,7 +89,8 @@ type CompletionResult struct {
 type CompletionClient interface {
 	Complete(
 		ctx context.Context,
-		systemPrompt, userPrompt, requestID string,
+		prompt TurnPrompt,
+		requestID string,
 	) (CompletionResult, error)
 }
 
@@ -230,7 +231,8 @@ func (c *chatContent) UnmarshalJSON(raw []byte) error {
 // continues until Agent Proxy returns member-facing content.
 func (c ProxyClient) Complete(
 	ctx context.Context,
-	systemPrompt, userPrompt, requestID string,
+	prompt TurnPrompt,
+	requestID string,
 ) (CompletionResult, error) {
 	telemetry := telemetryOrNoop(c.Telemetry)
 	var toolSession ToolSession
@@ -295,13 +297,18 @@ func (c ProxyClient) Complete(
 		}
 	}
 
-	messages := []chatMessage{{Role: "system", Content: systemPrompt}}
+	messages := []chatMessage{{Role: "system", Content: prompt.System}}
 	// Below the local policy and labelled as data, because a server publishes
 	// reference material, not instructions for how Echo behaves.
 	if grounding := groundingMessage(groundingDocuments); grounding != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: grounding})
 	}
-	messages = append(messages, chatMessage{Role: "user", Content: userPrompt})
+	// The conversation around the request is its own user turn. Merged into the
+	// request, it made the canonical user message unreadable downstream.
+	if prompt.Context != "" {
+		messages = append(messages, chatMessage{Role: "user", Content: prompt.Context})
+	}
+	messages = append(messages, chatMessage{Role: "user", Content: prompt.Message})
 	// Named so the model reports the gap rather than answering as though the
 	// surface had been consulted and returned nothing.
 	if len(unavailable) > 0 {

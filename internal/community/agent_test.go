@@ -576,18 +576,26 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 		}
 		switch modelRound.Add(1) {
 		case 1:
-			userPrompt, ok := body.Messages[1].Content.(string)
+			if len(body.Messages) != 3 {
+				t.Fatalf("messages = %#v", body.Messages)
+			}
+			turnContext, ok := body.Messages[1].Content.(string)
 			if !ok {
-				t.Errorf("user prompt type = %T", body.Messages[1].Content)
+				t.Errorf("turn context type = %T", body.Messages[1].Content)
 			}
 			for _, expected := range []string{
 				"first member: Is Eco online?",
 				"Sirens Echo: I can check if you summon me.",
-				"current member: Can you check now?",
+				"The request that follows is from current member.",
 			} {
-				if !strings.Contains(userPrompt, expected) {
-					t.Errorf("prompt missing %q:\n%s", expected, userPrompt)
+				if !strings.Contains(turnContext, expected) {
+					t.Errorf("context missing %q:\n%s", expected, turnContext)
 				}
+			}
+			// The last user message is exactly what the member typed, which is
+			// what agentproxy.user_message reads downstream. See #104.
+			if got := body.Messages[2].Content; got != "Can you check now?" {
+				t.Errorf("final user message = %#v", got)
 			}
 			writer.Header().Set("Content-Type", "application/json")
 			_, _ = writer.Write([]byte(

@@ -100,14 +100,9 @@ func runEvaluation(
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {
-		userPrompt := BuildUserPrompt(evaluationCase.History, evaluationCase.Current)
+		prompt := BuildTurnPrompt(systemPrompt, evaluationCase.History, evaluationCase.Current)
 		caseCtx, cancel := context.WithTimeout(ctx, caseTimeout)
-		result, err := completions.Complete(
-			caseCtx,
-			systemPrompt,
-			userPrompt,
-			evaluationCase.ID,
-		)
+		result, err := completions.Complete(caseCtx, prompt, evaluationCase.ID)
 		cancel()
 		if err != nil {
 			failures = append(failures, fmt.Sprintf("%s: inference: %v", evaluationCase.ID, err))
@@ -115,7 +110,7 @@ func runEvaluation(
 		}
 		reply, err := ParseReply(result.Content)
 		if err == nil {
-			err = ValidateGrounding(reply, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
+			err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 		}
 		if err == nil {
 			err = ValidateResponseStyle(definition.ResponseStyle, reply)

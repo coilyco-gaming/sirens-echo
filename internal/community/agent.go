@@ -634,28 +634,24 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	historySpan.End()
 
 	contextCtx, contextSpan := a.telemetry.StartSpan(turnCtx, "context.assemble")
-	userPrompt := BuildUserPrompt(history, current)
-	systemPrompt := a.systemPrompt
+	prompt := BuildTurnPrompt(a.systemPrompt, history, current)
 	a.telemetry.Info(
 		contextCtx,
 		"context.rendered",
 		slog.Int("history_count", len(history)),
-		slog.Int("system_prompt_bytes", len(systemPrompt)),
-		slog.Int("user_prompt_bytes", len(userPrompt)),
+		slog.Int("system_prompt_bytes", len(prompt.System)),
+		slog.Int("context_prompt_bytes", len(prompt.Context)),
+		slog.Int("user_prompt_bytes", len(prompt.Message)),
 	)
 	contextSpan.SetAttributes(
 		attribute.Int("history.count", len(history)),
-		attribute.Int("prompt.system.bytes", len(systemPrompt)),
-		attribute.Int("prompt.user.bytes", len(userPrompt)),
+		attribute.Int("prompt.system.bytes", len(prompt.System)),
+		attribute.Int("prompt.context.bytes", len(prompt.Context)),
+		attribute.Int("prompt.user.bytes", len(prompt.Message)),
 	)
 	contextSpan.End()
 
-	result, err := a.completions.Complete(
-		turnCtx,
-		systemPrompt,
-		userPrompt,
-		turn.RequestID(),
-	)
+	result, err := a.completions.Complete(turnCtx, prompt, turn.RequestID())
 	if err != nil {
 		return a.failTurn(turnCtx, turn, stageModel, err)
 	}
@@ -663,7 +659,7 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
 	if err == nil {
-		err = ValidateGrounding(reply, systemPrompt+"\n"+userPrompt, result.ToolCalls...)
+		err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 	}
 	if err == nil {
 		err = ValidateResponseStyle(a.cfg.Definition.ResponseStyle, reply)

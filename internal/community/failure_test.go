@@ -13,7 +13,8 @@ type failingCompletionClient struct{ err error }
 
 func (f failingCompletionClient) Complete(
 	context.Context,
-	string, string, string,
+	TurnPrompt,
+	string,
 ) (CompletionResult, error) {
 	return CompletionResult{}, f.err
 }

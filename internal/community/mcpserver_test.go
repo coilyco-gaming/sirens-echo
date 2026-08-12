@@ -17,7 +17,8 @@ type fixedCompletionClient struct{ reply string }
 
 func (f fixedCompletionClient) Complete(
 	context.Context,
-	string, string, string,
+	TurnPrompt,
+	string,
 ) (CompletionResult, error) {
 	return CompletionResult{Content: f.reply}, nil
 }
