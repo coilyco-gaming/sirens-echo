@@ -201,7 +201,27 @@ func (g *GuildAccess) validate() error {
 	if g.Users.empty() && len(g.Roles) == 0 {
 		return fmt.Errorf("guild %q allows no member: use `all`, list users, or list roles", g.ID)
 	}
-	return g.resolveOverrides()
+	if err := g.resolveOverrides(); err != nil {
+		return err
+	}
+	// See docs/sirens-echo-access.md. The deployment tier an open guild would
+	// otherwise inherit is process-wide.
+	if g.Users.All && !g.boundsPerUser() {
+		return fmt.Errorf(
+			"guild %q opens to every member: set rate_limit.per_user to a real bound such as 1/60s",
+			g.ID,
+		)
+	}
+	return nil
+}
+
+// boundsPerUser reports whether the guild states a per-user tier that
+// constrains. Absent inherits the deployment tier and `off` removes limiting.
+func (g *GuildAccess) boundsPerUser() bool {
+	if g.overrides == nil || g.overrides.PerUser == nil {
+		return false
+	}
+	return g.overrides.PerUser.enabled()
 }
 
 func (g *GuildAccess) resolveOverrides() error {
