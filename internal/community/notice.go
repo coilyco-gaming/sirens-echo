@@ -1,6 +1,8 @@
 package community
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -41,9 +43,42 @@ func harnessNotice(phrase string) string {
 // Every member-facing harness string is one of these. Adding a case means
 // adding a phrase here, not a sentence at the call site.
 var (
-	noticeTurnFailed   = harnessNotice("turn failed")
-	noticeQueueTimeout = harnessNotice("busy, retry shortly")
-	noticeRateLimited  = harnessNotice("rate limit exceeded, retry shortly")
+	noticeTurnFailed    = harnessNotice("turn failed")
+	noticeQueueTimeout  = harnessNotice("busy, retry shortly")
+	noticeRateLimited   = harnessNotice("rate limit exceeded, retry shortly")
+	noticeTimedOut      = harnessNotice("turn timed out, retry shortly")
+	noticeHistoryFailed = harnessNotice("channel history unavailable")
+	noticeModelFailed   = harnessNotice("model backend unavailable, retry shortly")
+	noticeToolFailed    = harnessNotice("tool call failed")
+	noticeReplyBlocked  = harnessNotice("reply blocked by response check, rephrase")
+	noticeTurnCrashed   = harnessNotice("turn crashed")
+)
+
+// turnFailureNotice names the class a member can act on. The next useful move
+// differs per class, which is the whole reason these are not one string.
+func turnFailureNotice(stage string, cause error) string {
+	switch {
+	case errors.Is(cause, context.DeadlineExceeded):
+		return noticeTimedOut
+	case isToolFailure(cause):
+		return noticeToolFailed
+	}
+	switch stage {
+	case stageHistory:
+		return noticeHistoryFailed
+	case stageModel:
+		return noticeModelFailed
+	case stageValidation:
+		return noticeReplyBlocked
+	}
+	return noticeTurnFailed
+}
+
+// The turn stages, which are also the failure metric's label values.
+const (
+	stageHistory    = "history"
+	stageModel      = "model"
+	stageValidation = "validation"
 )
 
 // cooldownNotice names the wait when the limiter knows one. A sub-second retry

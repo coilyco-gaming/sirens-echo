@@ -39,6 +39,30 @@ asserts each rendered notice against the shape.
 strips the disallowed alphabet, and falls back to a fixed phrase when nothing
 usable survives, so a caller bug still reaches the member as a notice.
 
+## Failure classes
+
+A failed turn always replies. The class is chosen from the stage that failed
+and the cause, because the member's next useful move differs per class.
+
+| condition | notice |
+| --- | --- |
+| turn deadline expired | `turn timed out, retry shortly` |
+| MCP surface or tool call failed | `tool call failed` |
+| channel history unreadable | `channel history unavailable` |
+| model or Agent Proxy failed | `model backend unavailable, retry shortly` |
+| reply failed grounding or style | `reply blocked by response check, rephrase` |
+| anything else | `turn failed` |
+
+A deadline and a tool failure outrank the stage, since both name the surface to
+stop waiting on more precisely than the stage does.
+
+The notice is sent on a context detached from the turn deadline. A turn that
+failed by expiring has no budget left to say so otherwise, which is how the
+slowest failures used to end as silence.
+
+No model round trip is involved. The error path cannot inherit a model failure
+it was written to report.
+
 ## What a notice never carries
 
 A notice carries a condition class and nothing else. Model output, prompt text,
@@ -48,12 +72,9 @@ error strings all stay out of it.
 That boundary is why the phrases are a closed set. A formatted upstream error
 would put an arbitrary internal string in front of a member.
 
-## Relationship to the response contract
-
-Response style validation binds model replies. It does not bind notices,
-because a notice never reaches the model and never passes through
-`ParseReply`. The shape here is the equivalent guarantee for the strings the
-harness writes.
+Response style validation binds model replies and not notices, since a notice
+never reaches the model or passes through `ParseReply`. The shape here is the
+equivalent guarantee for the strings the harness writes.
 
 See [the prompt](sirens-echo-prompt.md), [admission
 control](sirens-echo-admission.md), and [the service](sirens-echo.md).

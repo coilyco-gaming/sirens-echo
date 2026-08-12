@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -47,6 +48,29 @@ apologies, thanks, sign-offs, personality, and offers of more help.`
 const socialResponseRepairPrompt = `The previous assistant response violated the required response contract.
 Preserve the useful answer and the selected social tone while fixing the
 reported problem.`
+
+// ToolFailure marks a turn that died on a tool surface rather than on the
+// model, so the member is told which surface to stop waiting on.
+type ToolFailure struct {
+	Server string
+	Tool   string
+	Err    error
+}
+
+func (e ToolFailure) Error() string {
+	if e.Tool == "" {
+		return fmt.Sprintf("MCP surface %s: %v", e.Server, e.Err)
+	}
+	return fmt.Sprintf("MCP tool %s/%s: %v", e.Server, e.Tool, e.Err)
+}
+
+func (e ToolFailure) Unwrap() error { return e.Err }
+
+// isToolFailure reports a cause that reached the turn from an MCP surface.
+func isToolFailure(cause error) bool {
+	var failure ToolFailure
+	return errors.As(cause, &failure)
+}
 
 // ExecutedTool records one model-requested tool that the runtime completed.
 type ExecutedTool struct {
@@ -220,7 +244,7 @@ func (c ProxyClient) Complete(
 		if err != nil {
 			telemetry.MarkSpanError(listSpan, exceptionMCPToolsListFailed)
 			listSpan.End()
-			return CompletionResult{}, err
+			return CompletionResult{}, ToolFailure{Server: "roster", Err: err}
 		}
 		toolSession = opened
 		defer func() {
@@ -433,7 +457,11 @@ func (c ProxyClient) Complete(
 				telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "error")
 				telemetry.MarkSpanError(toolSpan, exceptionMCPToolCallFailed)
 				toolSpan.End()
-				return CompletionResult{}, err
+				return CompletionResult{}, ToolFailure{
+					Server: definition.Server,
+					Tool:   definition.Original,
+					Err:    err,
+				}
 			}
 			// A tool that reports its own failure is a result the model must see
 			// and self-correct from, not a transport error that ends the turn.

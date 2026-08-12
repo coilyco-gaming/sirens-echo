@@ -443,6 +443,13 @@ func (a *Agent) handleMessage(
 				"discord.turn.panicked",
 				slog.String("error_type", "turn_panicked"),
 			)
+			// A crashed turn told the member nothing, which reads as being
+			// ignored. See docs/sirens-echo-notices.md.
+			_ = a.notifyFailure(
+				context.Background(),
+				&discordMessageTurn{session: session, message: message},
+				noticeTurnCrashed,
+			)
 		}
 	}()
 
@@ -621,7 +628,7 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	if err != nil {
 		a.telemetry.MarkSpanError(historySpan, exceptionHistoryFailed)
 		historySpan.End()
-		return a.failTurn(turnCtx, turn, "history", err)
+		return a.failTurn(turnCtx, turn, stageHistory, err)
 	}
 	historySpan.SetAttributes(attribute.Int("history.count", len(history)))
 	historySpan.End()
@@ -650,7 +657,7 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 		turn.RequestID(),
 	)
 	if err != nil {
-		return a.failTurn(turnCtx, turn, "model", err)
+		return a.failTurn(turnCtx, turn, stageModel, err)
 	}
 
 	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
@@ -664,7 +671,7 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	if err != nil {
 		a.telemetry.MarkSpanError(validateSpan, exceptionResponseValidationFailed)
 		validateSpan.End()
-		return a.failTurn(turnCtx, turn, "validation", err)
+		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
 	validateSpan.End()
 
@@ -680,15 +687,31 @@ func (a *Agent) failTurn(
 	stage string,
 	cause error,
 ) error {
+	notice := turnFailureNotice(stage, cause)
 	a.telemetry.RecordFailure(ctx, stage)
 	a.telemetry.Error(
 		ctx,
 		"turn.stage.failed",
 		slog.String("stage", stage),
 		slog.String("error_type", stage+"_failed"),
+		slog.String("notice", notice),
 	)
-	replyErr := a.sendReply(ctx, turn, noticeTurnFailed)
-	return errors.Join(cause, replyErr)
+	return errors.Join(cause, a.notifyFailure(ctx, turn, notice))
+}
+
+// failureNoticeTimeout bounds the notice's own send. It is short because the
+// member has already waited out whatever failed.
+const failureNoticeTimeout = 10 * time.Second
+
+// notifyFailure sends a notice on a context detached from the turn deadline. A
+// turn that failed by expiring has no budget left to say so otherwise.
+func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) error {
+	noticeCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(ctx),
+		failureNoticeTimeout,
+	)
+	defer cancel()
+	return a.sendReply(noticeCtx, turn, notice)
 }
 
 func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) error {
