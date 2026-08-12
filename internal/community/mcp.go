@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -300,7 +300,7 @@ func clientTransport(
 		// Bound to the caller's context, so the child dies with the session
 		// rather than outliving it.
 		command := exec.CommandContext(ctx, server.Command, server.Args...)
-		command.Env = forwardedEnv(server.Env)
+		command.Env = environSlice(server.Env)
 		return &mcp.CommandTransport{Command: command}, nil
 	}
 	return nil, fmt.Errorf(
@@ -310,16 +310,15 @@ func clientTransport(
 	)
 }
 
-// forwardedEnv passes only the named variables to a stdio child. Echo holds the
-// Discord token and proxy route, so inheriting wholesale would leak them.
-func forwardedEnv(names []string) []string {
-	forwarded := make([]string, 0, len(names))
-	for _, name := range names {
-		if value, found := os.LookupEnv(name); found {
-			forwarded = append(forwarded, name+"="+value)
-		}
+// environSlice renders the roster's declared environment for a stdio child.
+// Echo's own variables are never inherited, so nothing rides along by accident.
+func environSlice(env map[string]string) []string {
+	pairs := make([]string, 0, len(env))
+	for key, value := range env {
+		pairs = append(pairs, key+"="+value)
 	}
-	return forwarded
+	sort.Strings(pairs)
+	return pairs
 }
 
 func discoverTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool, error) {

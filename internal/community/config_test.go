@@ -36,19 +36,6 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 	if definition.Channel != "" {
 		t.Fatalf("channel = %q", definition.Channel)
 	}
-	want := map[string]string{
-		"steam":   "SIRENS_ECHO_STEAM_MCP_URL",
-		"forgejo": "SIRENS_ECHO_FORGEJO_MCP_URL",
-	}
-	if len(definition.MCPServers) != len(want) {
-		t.Fatalf("MCP servers = %#v", definition.MCPServers)
-	}
-	for _, server := range definition.MCPServers {
-		// Deployment owns each address, so a literal URL would pin one cluster.
-		if server.URLEnv != want[server.Name] || server.URL != "" {
-			t.Fatalf("server = %#v", server)
-		}
-	}
 	// Forgejo carries bounded writes, so the automatic tracker stays absent.
 	// See docs/sirens-echo-tools.md.
 	if definition.IssueTracker != "" {
@@ -234,38 +221,39 @@ func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
 	}
 }
 
-func TestLoadConfigResolvesMCPURLFromEnvironment(t *testing.T) {
+func TestLoadConfigCarriesTheRosterPath(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
-	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://forgejo-mcp:8080/mcp")
+	t.Setenv("SIRENS_ECHO_MCP_ROSTER", "/etc/sirens-echo/mcp.json")
 
 	cfg, err := LoadConfig()
 	if err != nil {
 		t.Fatalf("LoadConfig: %v", err)
 	}
-	url, err := mcpServerURL(cfg.Definition, "forgejo")
-	if err != nil {
-		t.Fatalf("mcpServerURL: %v", err)
-	}
-	if url != "http://forgejo-mcp:8080/mcp" {
-		t.Fatalf("Forgejo MCP URL = %q", url)
+	if cfg.MCPRosterPath != "/etc/sirens-echo/mcp.json" {
+		t.Fatalf("roster path = %q", cfg.MCPRosterPath)
 	}
 }
 
-func TestLoadConfigRequiresEnvironmentBackedMCPURL(t *testing.T) {
+func TestLoadConfigAcceptsNoRoster(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
-	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "")
+	t.Setenv("SIRENS_ECHO_MCP_ROSTER", "")
 
-	_, err := LoadConfig()
-	if err == nil || !strings.Contains(err.Error(), "SIRENS_ECHO_FORGEJO_MCP_URL") {
-		t.Fatalf("LoadConfig error = %v", err)
+	// An absent roster is a valid no-tool boundary. Echo names no server, so it
+	// cannot require one either.
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("LoadConfig without a roster: %v", err)
+	}
+	if cfg.MCPRosterPath != "" {
+		t.Fatalf("roster path = %q", cfg.MCPRosterPath)
 	}
 }
 
@@ -299,7 +287,7 @@ func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
 			name: "stdio forwards named env",
 			server: MCPServerDefinition{
 				Name: "local", Transport: MCPTransportStdio,
-				Command: "/usr/bin/mcp", Env: []string{"SOME_TOKEN"},
+				Command: "/usr/bin/mcp", Env: map[string]string{"SOME_TOKEN": "value"},
 			},
 			valid: true,
 		},
@@ -318,7 +306,7 @@ func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
 			name: "stdio with an invalid env name",
 			server: MCPServerDefinition{
 				Name: "local", Transport: MCPTransportStdio,
-				Command: "/usr/bin/mcp", Env: []string{"not-an-env-name"},
+				Command: "/usr/bin/mcp", Env: map[string]string{"not-an-env-name": "value"},
 			},
 		},
 		{
@@ -328,7 +316,7 @@ func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
 			},
 		},
 		{
-			name:   "url transport with neither url nor url_env",
+			name:   "url transport with no baseUrl",
 			server: MCPServerDefinition{Name: "eco"},
 		},
 		{

@@ -71,7 +71,7 @@ func TestMCPProviderConnectsOverStdio(t *testing.T) {
 		Name:      "local",
 		Transport: MCPTransportStdio,
 		Command:   os.Args[0],
-		Env:       []string{stdioFixtureEnv},
+		Env:       map[string]string{stdioFixtureEnv: "1"},
 	}}}).Open(context.Background())
 	if err != nil {
 		t.Fatalf("Open over stdio: %v", err)
@@ -179,13 +179,12 @@ func TestMCPProviderRelistsWhenMarkedStale(t *testing.T) {
 	}
 }
 
-func TestForwardedEnvPassesOnlyNamedVariables(t *testing.T) {
-	t.Setenv("SIRENS_ECHO_TEST_FORWARDED", "carried")
-	t.Setenv("SIRENS_ECHO_TEST_WITHHELD", "secret")
-
-	forwarded := forwardedEnv([]string{"SIRENS_ECHO_TEST_FORWARDED", "SIRENS_ECHO_TEST_ABSENT"})
-	if len(forwarded) != 1 || forwarded[0] != "SIRENS_ECHO_TEST_FORWARDED=carried" {
-		t.Fatalf("forwarded = %#v", forwarded)
+func TestEnvironSliceRendersOnlyTheDeclaredEnvironment(t *testing.T) {
+	t.Parallel()
+	// Echo's own variables are never inherited, so a child sees exactly this.
+	pairs := environSlice(map[string]string{"B_TOKEN": "two", "A_TOKEN": "one"})
+	if len(pairs) != 2 || pairs[0] != "A_TOKEN=one" || pairs[1] != "B_TOKEN=two" {
+		t.Fatalf("pairs = %#v", pairs)
 	}
 }
 
