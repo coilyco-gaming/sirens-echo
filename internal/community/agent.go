@@ -27,6 +27,7 @@ const (
 type Agent struct {
 	cfg               Config
 	session           *discordgo.Session
+	tools             *MCPProvider
 	completions       CompletionClient
 	systemPrompt      string
 	telemetry         *Telemetry
@@ -87,9 +88,14 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			otelhttp.WithPropagators(telemetry.propagator),
 		),
 	}
+	tools := &MCPProvider{
+		Servers:    cfg.Definition.MCPServers,
+		HTTPClient: httpClient,
+	}
 	agent := &Agent{
 		cfg:     cfg,
 		session: session,
+		tools:   tools,
 		completions: ProxyClient{
 			BaseURL:       cfg.AgentProxyURL,
 			Model:         cfg.AgentProxyModel,
@@ -98,11 +104,8 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			ResponseStyle: cfg.Definition.ResponseStyle,
 			Harness:       deploymentHarness(cfg),
 			HTTPClient:    httpClient,
-			Tools: MCPProvider{
-				Servers:    cfg.Definition.MCPServers,
-				HTTPClient: httpClient,
-			},
-			Telemetry: telemetry,
+			Tools:         tools,
+			Telemetry:     telemetry,
 		},
 		systemPrompt:      systemPrompt,
 		telemetry:         telemetry,
@@ -190,6 +193,11 @@ func (a *Agent) Run(ctx context.Context) error {
 			return fmt.Errorf("Discord open: %w", err)
 		}
 		defer a.session.Close()
+	}
+	if a.tools != nil {
+		// Supervised MCP connections outlive every turn, so shutdown is the only
+		// thing that closes them and stops any stdio child.
+		defer func() { _ = a.tools.Close() }()
 	}
 	httpServer := &http.Server{
 		Addr:              a.cfg.HTTPListenAddr,

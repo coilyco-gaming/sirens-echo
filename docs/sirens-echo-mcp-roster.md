@@ -53,6 +53,20 @@ mounts. It does mean the roster source deserves the write protection the pod
 spec gets, and that sourcing it from a channel with weaker controls grants more
 than it appears to.
 
+## Connection lifetime
+
+Connections are held across turns, so a turn pays no handshake and no
+rediscovery. A turn borrows the supervised session and returns it. Only process
+shutdown closes one, which is also what stops a stdio child.
+
+A tool listing is cached until something invalidates it. A transport carrying
+server-initiated messages invalidates on `tools/list_changed`. Streamable cannot
+while its standalone SSE stream stays disabled, so those listings expire on an
+interval instead, bounding staleness rather than removing it. A failed
+connection retries with backoff between five seconds and two minutes. Connection
+and discovery traffic carries the calling turn's trace context even though the
+connection outlives that turn.
+
 ## Failure
 
 Connection is per server. One that cannot connect or list contributes no tools

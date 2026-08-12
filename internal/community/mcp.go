@@ -10,8 +10,12 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const maxProxyToolNameBytes = 64
@@ -47,11 +51,53 @@ type ToolProvider interface {
 	Open(ctx context.Context) (ToolSession, error)
 }
 
-// MCPProvider connects a definition's source-controlled MCP roster through the
-// official Go SDK. An empty roster is a valid no-tool capability boundary.
+const (
+	// defaultRosterRefresh bounds staleness for a transport that cannot push
+	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
+	defaultRosterRefresh = 5 * time.Minute
+	mcpConnectTimeout    = 10 * time.Second
+	mcpListTimeout       = 15 * time.Second
+	mcpBackoffMin        = 5 * time.Second
+	mcpBackoffMax        = 2 * time.Minute
+)
+
+// MCPProvider supervises the configured MCP roster through the official Go SDK.
+// An empty roster is a valid no-tool capability boundary.
 type MCPProvider struct {
 	Servers    []MCPServerDefinition
 	HTTPClient *http.Client
+	// RefreshInterval bounds staleness where notifications cannot arrive. Zero
+	// uses defaultRosterRefresh.
+	RefreshInterval time.Duration
+
+	mu      sync.Mutex
+	started bool
+	root    context.Context
+	cancel  context.CancelFunc
+	entries []*supervisedServer
+}
+
+// supervisedServer holds one server's connection across turns, so a turn pays
+// no handshake and a tool listing survives until something invalidates it.
+type supervisedServer struct {
+	definition MCPServerDefinition
+	notifies   bool
+	session    *mcp.ClientSession
+	tools      []*mcp.Tool
+	refreshed  time.Time
+	retryAfter time.Time
+	backoff    time.Duration
+	stale      atomic.Bool
+}
+
+// transportNotifies reports whether a transport can deliver server-initiated
+// messages. Streamable cannot while its standalone SSE stream stays disabled.
+func transportNotifies(server MCPServerDefinition) bool {
+	switch server.ResolvedTransport() {
+	case MCPTransportStdio, MCPTransportSSE:
+		return true
+	}
+	return false
 }
 
 type registeredMCPTool struct {
@@ -67,48 +113,168 @@ type mcpToolSession struct {
 	unavailable []string
 }
 
-// Open initializes every configured MCP server and discovers its complete tool
-// list before Agent Proxy chooses a tool.
-func (p MCPProvider) Open(ctx context.Context) (ToolSession, error) {
-	client := mcp.NewClient(
-		&mcp.Implementation{Name: "sirens-echo", Version: "1"},
-		nil,
-	)
+// Open returns this turn's view over the supervised roster. It connects only
+// what is not already connected and lists only what is stale or expired.
+func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.startLocked()
 	opened := &mcpToolSession{
 		registered: make(map[string]registeredMCPTool),
 	}
-	for _, server := range p.Servers {
-		transport, err := clientTransport(ctx, server, p.HTTPClient)
-		if err != nil {
-			_ = opened.Close()
-			return nil, err
-		}
+	now := time.Now()
+	for _, entry := range p.entries {
 		// A server that cannot answer contributes no tools and the turn goes on
 		// with the rest. One transient outage must not cost every turn.
-		session, err := client.Connect(ctx, transport, nil)
-		if err != nil {
-			opened.unavailable = append(opened.unavailable, server.Name)
+		if err := p.readyLocked(ctx, entry, now); err != nil {
+			opened.unavailable = append(opened.unavailable, entry.definition.Name)
 			continue
 		}
-		discovered, err := discoverTools(ctx, session)
-		if err != nil {
-			_ = session.Close()
-			opened.unavailable = append(opened.unavailable, server.Name)
-			continue
-		}
-		opened.sessions = append(opened.sessions, session)
 		// A collision stays fatal. That is a roster mistake, and degrading past
 		// it would silently drop whichever tool lost the race.
-		if err := opened.register(server.Name, session, discovered); err != nil {
-			_ = opened.Close()
+		if err := opened.register(entry.definition.Name, entry.session, entry.tools); err != nil {
 			return nil, err
 		}
 	}
-	if len(p.Servers) > 0 && len(opened.unavailable) == len(p.Servers) {
-		_ = opened.Close()
+	if len(p.entries) > 0 && len(opened.unavailable) == len(p.entries) {
 		return nil, fmt.Errorf("no configured MCP server is reachable")
 	}
 	return opened, nil
+}
+
+func (p *MCPProvider) startLocked() {
+	if p.started {
+		return
+	}
+	p.started = true
+	// Detached from any turn, because these connections outlive the turn that
+	// first needed them.
+	p.root, p.cancel = context.WithCancel(context.Background())
+	for _, server := range p.Servers {
+		p.entries = append(p.entries, &supervisedServer{
+			definition: server,
+			notifies:   transportNotifies(server),
+		})
+	}
+}
+
+// readyLocked connects and lists only what this turn actually needs.
+func (p *MCPProvider) readyLocked(
+	turnCtx context.Context,
+	entry *supervisedServer,
+	now time.Time,
+) error {
+	base := p.turnTraced(turnCtx)
+	if entry.session == nil {
+		if now.Before(entry.retryAfter) {
+			return fmt.Errorf("MCP server %s is backing off", entry.definition.Name)
+		}
+		if err := p.connectLocked(base, entry); err != nil {
+			entry.penalise(now)
+			return err
+		}
+		entry.backoff = 0
+	}
+	if !entry.needsTools(p.refreshInterval(), now) {
+		return nil
+	}
+	listCtx, cancel := context.WithTimeout(base, mcpListTimeout)
+	defer cancel()
+	discovered, err := discoverTools(listCtx, entry.session)
+	if err != nil {
+		_ = entry.session.Close()
+		entry.session = nil
+		entry.tools = nil
+		entry.penalise(now)
+		return err
+	}
+	entry.tools = discovered
+	entry.refreshed = now
+	return nil
+}
+
+// turnTraced cancels with the pool but carries the calling turn's span context,
+// so a pooled connection outlives the turn while its traffic stays correlated.
+func (p *MCPProvider) turnTraced(turnCtx context.Context) context.Context {
+	return trace.ContextWithSpanContext(p.root, trace.SpanContextFromContext(turnCtx))
+}
+
+func (p *MCPProvider) connectLocked(base context.Context, entry *supervisedServer) error {
+	// One client per server, so its notification handler needs no way to map a
+	// request back to which server sent it.
+	client := mcp.NewClient(
+		&mcp.Implementation{Name: "sirens-echo", Version: "1"},
+		&mcp.ClientOptions{
+			ToolListChangedHandler: func(context.Context, *mcp.ToolListChangedRequest) {
+				entry.stale.Store(true)
+			},
+		},
+	)
+	transport, err := clientTransport(base, entry.definition, p.HTTPClient)
+	if err != nil {
+		return err
+	}
+	connectCtx, cancel := context.WithTimeout(base, mcpConnectTimeout)
+	defer cancel()
+	session, err := client.Connect(connectCtx, transport, nil)
+	if err != nil {
+		return err
+	}
+	entry.session = session
+	entry.tools = nil
+	entry.stale.Store(false)
+	return nil
+}
+
+func (p *MCPProvider) refreshInterval() time.Duration {
+	if p.RefreshInterval > 0 {
+		return p.RefreshInterval
+	}
+	return defaultRosterRefresh
+}
+
+// needsTools is true on a first listing, on a list_changed notification, and on
+// expiry for a transport that cannot send one.
+func (s *supervisedServer) needsTools(interval time.Duration, now time.Time) bool {
+	if s.tools == nil || s.stale.Swap(false) {
+		return true
+	}
+	return !s.notifies && now.Sub(s.refreshed) >= interval
+}
+
+func (s *supervisedServer) penalise(now time.Time) {
+	if s.backoff == 0 {
+		s.backoff = mcpBackoffMin
+	} else if s.backoff < mcpBackoffMax {
+		s.backoff *= 2
+	}
+	if s.backoff > mcpBackoffMax {
+		s.backoff = mcpBackoffMax
+	}
+	s.retryAfter = now.Add(s.backoff)
+}
+
+// Close shuts down every supervised connection. A stdio child exits with the
+// root context rather than outliving the process that started it.
+func (p *MCPProvider) Close() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	errs := make([]error, 0, len(p.entries))
+	for _, entry := range p.entries {
+		if entry.session == nil {
+			continue
+		}
+		if err := entry.session.Close(); err != nil {
+			errs = append(errs, err)
+		}
+		entry.session = nil
+	}
+	if p.cancel != nil {
+		p.cancel()
+	}
+	p.entries = nil
+	p.started = false
+	return errors.Join(errs...)
 }
 
 // clientTransport builds the transport one roster entry asks for. Validation

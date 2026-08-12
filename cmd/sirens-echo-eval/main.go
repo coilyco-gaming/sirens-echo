@@ -60,7 +60,7 @@ func main() {
 		Attribution:   definition.Identity,
 		ResponseStyle: definition.ResponseStyle,
 		HTTPClient:    httpClient,
-		Tools: community.MCPProvider{
+		Tools: &community.MCPProvider{
 			Servers:    staticMCPServers(definition.MCPServers),
 			HTTPClient: httpClient,
 		},
