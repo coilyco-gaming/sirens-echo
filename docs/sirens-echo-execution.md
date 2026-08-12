@@ -16,18 +16,19 @@ The consequence is plain: **every job runs under pod authority with no
 per-requester attribution**. Whoever asked, the job acts as the same identity
 with the same grants, and nothing in the audit trail distinguishes them.
 
-That is acceptable while the admission policy is a direct-message allowlist of
-one account, because the requester set and the trusted principal are the same
-person. It stops being acceptable the moment the surface widens.
+That was acceptable while admission was a direct-message allowlist of one
+account, because the requester set and the trusted principal were the same
+person.
 
-That sequencing note is a gate rather than a comment. `CheckExecutionAdmission`
-refuses to build the executing kind when the surface is wider than one account:
-any guild entry, more than one direct-message account, the environment path's
-open-DM widening, or no policy at all. Opening the guild therefore **disables
-execution** rather than silently outrunning its own assumptions.
+`CheckExecutionAdmission` makes that a gate rather than a comment. With no
+[grant table](sirens-echo-grants.md) it refuses any surface wider than one
+account: a guild entry, several direct-message accounts, an admitted counterpart
+agent, the environment path's open-DM widening, or no policy.
 
-To have both, items 5 and 6 come first. That is the ordering #145 asked for, now
-expressed where it cannot be forgotten.
+A declared grant table is what that rule stood in for, so once it exists a wider
+surface is bounded by grants instead of by there being one requester. The guard
+then asks only that some principal actually be granted `ward-exec`, since a
+table granting it to nobody would start a runner that can never run.
 
 ## What is bounded
 

@@ -262,3 +262,36 @@ func TestExecutingKindIsOnlyBuiltWhenTheSurfaceAllowsIt(t *testing.T) {
 		t.Error("execution was enabled without a workspace root")
 	}
 }
+
+// Once per-principal authority exists, a wider surface is bounded by grants
+// rather than by there being only one requester. See #150 and #145.
+func TestAGrantTableUnblocksExecutionOnAWiderSurface(t *testing.T) {
+	t.Parallel()
+	widened := &AccessPolicy{
+		Schema: accessPolicySchema,
+		Guilds: []GuildAccess{{ID: "1300204416229441587"}},
+	}
+	if err := CheckExecutionAdmission(widened); err == nil {
+		t.Fatal("a widened surface with no grant table permitted execution")
+	}
+	widened.Grants = GrantTable{Principals: []PrincipalGrant{{
+		ID:    "318190481467244544",
+		Kinds: Allowlist{IDs: []string{"ward-exec"}},
+	}}}
+	if err := CheckExecutionAdmission(widened); err != nil {
+		t.Errorf("a granted surface still refused execution: %v", err)
+	}
+	// A table nobody is granted execution in enables nothing, so saying so
+	// beats starting a runner that can never run anything.
+	ungranted := &AccessPolicy{
+		Schema: accessPolicySchema,
+		Guilds: []GuildAccess{{ID: "1300204416229441587"}},
+		Grants: GrantTable{Principals: []PrincipalGrant{{
+			ID:    "318190481467244544",
+			Kinds: Allowlist{IDs: []string{"echo"}},
+		}}},
+	}
+	if err := CheckExecutionAdmission(ungranted); err == nil {
+		t.Error("execution was enabled with no principal granted it")
+	}
+}

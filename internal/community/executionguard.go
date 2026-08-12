@@ -24,6 +24,11 @@ func CheckExecutionAdmission(policy *AccessPolicy) error {
 	if policy == nil {
 		return ExecutionAdmissionError{Reason: "no access policy is loaded"}
 	}
+	// A grant table is what the single-account rule stood in for.
+	// See docs/sirens-echo-execution.md.
+	if len(policy.Grants.Principals) > 0 {
+		return checkExecutionGrants(policy)
+	}
 	if policy.legacyOpenDMs {
 		return ExecutionAdmissionError{
 			Reason: "direct messages are open to every account through the environment path",
@@ -54,6 +59,19 @@ func CheckExecutionAdmission(policy *AccessPolicy) error {
 	}
 }
 
+// checkExecutionGrants requires that execution be granted deliberately rather
+// than inherited by a principal holding everything.
+func checkExecutionGrants(policy *AccessPolicy) error {
+	for _, grant := range policy.Grants.Principals {
+		if grant.Kinds.Permits("ward-exec") {
+			return nil
+		}
+	}
+	return ExecutionAdmissionError{
+		Reason: "no principal is granted ward-exec, so enabling execution would grant nobody anything",
+	}
+}
+
 // ExecutionAdmissionSummary describes the current surface for an operator
 // reading a startup log, without naming an account.
 func ExecutionAdmissionSummary(policy *AccessPolicy) string {
@@ -63,6 +81,7 @@ func ExecutionAdmissionSummary(policy *AccessPolicy) string {
 	parts := []string{
 		fmt.Sprintf("guilds=%d", len(policy.Guilds)),
 		fmt.Sprintf("dm_accounts=%d", len(policy.DirectMessages.Allow)),
+		fmt.Sprintf("granted_principals=%d", len(policy.Grants.Principals)),
 	}
 	if policy.legacyOpenDMs {
 		parts = append(parts, "open_dms=true")
