@@ -177,6 +177,9 @@ func runEvaluation(
 			err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 		}
 		if err == nil {
+			err = ValidateIdentityClaim(reply, principal)
+		}
+		if err == nil {
 			err = ValidateResponseStyle(definition.ResponseStyle, reply)
 		}
 		if err == nil && evaluationCase.RequiredTool != "" &&

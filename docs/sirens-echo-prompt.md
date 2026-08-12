@@ -7,10 +7,10 @@ a reviewable diff rather than something a reader concatenates by hand.
 ## Sources
 
 * `internal/community/prompt.go` - the scaffolding: harness identity line,
-  pronoun policy, admission sentence, trust policy, untrusted-input clause,
-  tool-use clause, plain-text reply contract, issue-draft policy, and the
-  neutral style block in `responseInstructions`. Sections join with a blank line
-  and an empty one drops out, so a social profile renders no style block.
+  pronoun policy, [identity policy](sirens-echo-identity.md), admission
+  sentence, trust policy, untrusted-input clause, tool-use clause, reply
+  contract, issue-draft policy, and the neutral style block. Sections join with
+  a blank line and an empty one drops out, so a social profile renders none.
 * `agent/*.yaml` - selects identity, response style, channel label, issue
   tracker, and which policy roots load.
 * `.agents/skills/<root>/SKILL.md`, or `COMPOSED.md` for an agent-compose

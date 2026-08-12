@@ -661,6 +661,11 @@ func (a *Agent) runTurn(ctx context.Context, turn turnIO) (turnErr error) {
 	if err == nil {
 		err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 	}
+	// Bound for every style. Not being mistaken for a human is a safety
+	// property, not a voice preference. See docs/sirens-echo-prompt.md.
+	if err == nil {
+		err = ValidateIdentityClaim(reply, a.cfg.Principal)
+	}
 	if err == nil {
 		err = ValidateResponseStyle(a.cfg.Definition.ResponseStyle, reply)
 	}

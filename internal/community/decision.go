@@ -48,6 +48,39 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	return nil
 }
 
+// Impersonation patterns. Deliberately narrow: naming its own identity and
+// saying it is an agent are the honest answers and must stay allowed.
+var (
+	// humanClaim covers "I am a person" and its plural and contracted forms.
+	humanClaim = regexp.MustCompile(`(?i)\b(?:i|we)\s*(?:'m|’m|'re|’re| am| are)\s+(?:a|an|the)?\s*(?:real\s+|actual\s+|genuine\s+)?(?:human(?:\s+being)?s?|person|people|woman|man|guy|girl|lady|dude|folk)\b`)
+	// agentDenial covers "I am not a bot", which misleads exactly as much as
+	// claiming to be human does.
+	agentDenial = regexp.MustCompile(`(?i)\b(?:i|we)\s*(?:'m|’m|'re|’re| am| are)\s+not\s+(?:a|an)?\s*(?:bots?|ai|a\.i\.|robots?|machines?|programs?|scripts?|agents?|llms?|language\s+models?|chat\s?bots?|assistants?)\b`)
+)
+
+// ValidateIdentityClaim rejects a reply that claims to be a person, denies
+// being an agent, or answers as the configured principal.
+func ValidateIdentityClaim(reply string, principal Principal) error {
+	if humanClaim.MatchString(reply) {
+		return fmt.Errorf("model claimed to be a person")
+	}
+	if agentDenial.MatchString(reply) {
+		return fmt.Errorf("model denied being an agent")
+	}
+	if !principal.Configured() {
+		return nil
+	}
+	// The handle is deployment-owned, so this matches the one account the
+	// prompt already trusts rather than guessing at names.
+	claim := regexp.MustCompile(
+		`(?i)\b(?:i|this)\s*(?:'m|’m| am| is)\s+@?` + regexp.QuoteMeta(principal.Handle) + `\b`,
+	)
+	if claim.MatchString(reply) {
+		return fmt.Errorf("model answered as the configured principal")
+	}
+	return nil
+}
+
 // ValidateNeutralStyle rejects the model-facing traits that make a service
 // reply read as a person or character instead of a direct result.
 func ValidateNeutralStyle(reply string) error {
