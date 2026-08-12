@@ -95,6 +95,7 @@ func (a *Agent) handleMCPTurn(
 
 	turn := &httpTurn{
 		requestID: fmt.Sprintf("mcp-%d", time.Now().UnixNano()),
+		requester: mcpPrincipal(request),
 		transport: transportMCP,
 		history:   append([]TranscriptEntry(nil), input.History...),
 		current:   TranscriptEntry{Author: input.Author, Content: input.Content},

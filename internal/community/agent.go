@@ -106,6 +106,14 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Servers:    roster,
 		HTTPClient: httpClient,
 	}
+	// The roster handle stays concrete because the agent closes it and serves
+	// prompts through it. Only what the model sees is composed.
+	var modelTools ToolProvider = tools
+	if cfg.ScratchDir != "" {
+		modelTools = &CompositeProvider{
+			Providers: []ToolProvider{tools, &ScratchProvider{Root: cfg.ScratchDir}},
+		}
+	}
 	agent := &Agent{
 		cfg:     cfg,
 		session: session,
@@ -118,7 +126,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			ResponseStyle: cfg.Definition.ResponseStyle,
 			Harness:       deploymentHarness(cfg),
 			HTTPClient:    httpClient,
-			Tools:         tools,
+			Tools:         modelTools,
 			Telemetry:     telemetry,
 		},
 		systemPrompt:      systemPrompt,
@@ -689,6 +697,9 @@ func startTyping(ctx context.Context, notifier typingNotifier) func() {
 
 type turnIO interface {
 	RequestID() string
+	// Requester is the principal the turn is attributed to. Capabilities that
+	// partition per account read it from the turn context.
+	Requester() string
 	Transport() string
 	Current() TranscriptEntry
 	History(ctx context.Context) ([]TranscriptEntry, error)
@@ -724,6 +735,9 @@ func (a *Agent) runTurn(
 	if turn.Transport() == transportDiscord {
 		turnSpan.SetAttributes(attribute.String("discord.channel", a.cfg.Definition.Channel))
 	}
+	// Attribution reaches the tool layer here. The requester is deliberately
+	// not a span attribute, because an account id is not operational telemetry.
+	turnCtx = WithRequester(turnCtx, turn.Requester())
 	outcome := "ok"
 	defer func() {
 		if turnErr != nil {
@@ -876,6 +890,13 @@ type discordMessageTurn struct {
 
 func (t *discordMessageTurn) RequestID() string {
 	return t.message.ID
+}
+
+func (t *discordMessageTurn) Requester() string {
+	if t.message == nil || t.message.Author == nil {
+		return ""
+	}
+	return t.message.Author.ID
 }
 
 func (t *discordMessageTurn) Transport() string { return transportDiscord }

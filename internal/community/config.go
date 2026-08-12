@@ -162,7 +162,10 @@ type Config struct {
 	JobVerb       string
 	// JobStoreDir is the durable job store's directory. Empty keeps jobs in
 	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
-	JobStoreDir    string
+	JobStoreDir string
+	// ScratchDir mounts the per-requester scratchpad. Empty offers no scratchpad
+	// tools at all. See docs/sirens-echo-scratchpad.md.
+	ScratchDir     string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
 	RateLimit      RateLimitPolicy
@@ -227,6 +230,7 @@ func LoadConfig() (Config, error) {
 		MCPRosterPath:          strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
+		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		RequestTimeout:         requestTimeout,
 		QueueTimeout:           queueTimeout,
 		RateLimit:              rateLimit,

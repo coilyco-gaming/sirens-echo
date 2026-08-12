@@ -471,6 +471,7 @@ func TestHTTPHandlerContinuesRemoteTraceContext(t *testing.T) {
 
 type fixtureTurn struct {
 	requestID string
+	requester string
 	history   []TranscriptEntry
 	current   TranscriptEntry
 	reply     string
@@ -478,6 +479,13 @@ type fixtureTurn struct {
 
 func (t *fixtureTurn) RequestID() string {
 	return t.requestID
+}
+
+func (t *fixtureTurn) Requester() string {
+	if t.requester == "" {
+		return "318190481467244544"
+	}
+	return t.requester
 }
 
 func (t *fixtureTurn) Transport() string { return transportDiscord }

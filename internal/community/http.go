@@ -199,6 +199,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 	}
 	turn := &httpTurn{
 		requestID: payload.RequestID,
+		requester: httpPrincipal(request),
 		history:   history,
 		current:   current,
 	}
@@ -269,6 +270,7 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 // through a different ingress. Only the transport label differs.
 type httpTurn struct {
 	requestID string
+	requester string
 	transport string
 	history   []TranscriptEntry
 	current   TranscriptEntry
@@ -276,6 +278,8 @@ type httpTurn struct {
 }
 
 func (t *httpTurn) RequestID() string { return t.requestID }
+
+func (t *httpTurn) Requester() string { return t.requester }
 
 func (t *httpTurn) Transport() string {
 	if t.transport == "" {
