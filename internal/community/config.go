@@ -150,9 +150,12 @@ type Config struct {
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
-	RequestTimeout   time.Duration
-	QueueTimeout     time.Duration
-	RateLimit        RateLimitPolicy
+	// JobStoreDir is the durable job store's directory. Empty keeps jobs in
+	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
+	JobStoreDir    string
+	RequestTimeout time.Duration
+	QueueTimeout   time.Duration
+	RateLimit      RateLimitPolicy
 }
 
 // LoadConfig loads the Sirens Echo deployment from environment and its
@@ -208,6 +211,7 @@ func LoadConfig() (Config, error) {
 		HTTPListenAddr:    valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
 		MCPRosterPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
+		JobStoreDir:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		RequestTimeout:    requestTimeout,
 		QueueTimeout:      queueTimeout,
 		RateLimit:         rateLimit,
