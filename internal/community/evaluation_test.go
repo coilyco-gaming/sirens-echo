@@ -13,8 +13,9 @@ type fakeCompletionClient struct {
 }
 
 func (f fakeCompletionClient) Complete(
-	ctx context.Context,
-	systemPrompt, userPrompt, requestID string,
+	_ context.Context,
+	_ TurnPrompt,
+	requestID string,
 ) (CompletionResult, error) {
 	return f.responses[requestID], nil
 }
@@ -129,7 +130,8 @@ type deadlineRecordingCompletionClient struct {
 
 func (c *deadlineRecordingCompletionClient) Complete(
 	ctx context.Context,
-	systemPrompt, userPrompt, requestID string,
+	_ TurnPrompt,
+	requestID string,
 ) (CompletionResult, error) {
 	deadline, ok := ctx.Deadline()
 	if !ok {

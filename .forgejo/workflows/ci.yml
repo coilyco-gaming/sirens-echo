@@ -19,13 +19,13 @@ jobs:
         run: bash scripts/ci-command.sh ward exec build
 
       - name: Neutral response policy
-        run: ward exec policy-check
+        run: bash scripts/ci-command.sh ward exec policy-check
 
       - name: vet
-        run: ward exec vet
+        run: bash scripts/ci-command.sh ward exec vet
 
       - name: test
-        run: ward exec test
+        run: bash scripts/ci-command.sh ward exec test
 
       - name: pre-commit
         run: bash scripts/ci-command.sh pre-commit run --all-files --show-diff-on-failure

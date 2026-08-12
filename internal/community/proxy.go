@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -48,6 +49,29 @@ const socialResponseRepairPrompt = `The previous assistant response violated the
 Preserve the useful answer and the selected social tone while fixing the
 reported problem.`
 
+// ToolFailure marks a turn that died on a tool surface rather than on the
+// model, so the member is told which surface to stop waiting on.
+type ToolFailure struct {
+	Server string
+	Tool   string
+	Err    error
+}
+
+func (e ToolFailure) Error() string {
+	if e.Tool == "" {
+		return fmt.Sprintf("MCP surface %s: %v", e.Server, e.Err)
+	}
+	return fmt.Sprintf("MCP tool %s/%s: %v", e.Server, e.Tool, e.Err)
+}
+
+func (e ToolFailure) Unwrap() error { return e.Err }
+
+// isToolFailure reports a cause that reached the turn from an MCP surface.
+func isToolFailure(cause error) bool {
+	var failure ToolFailure
+	return errors.As(cause, &failure)
+}
+
 // ExecutedTool records one model-requested tool that the runtime completed.
 type ExecutedTool struct {
 	Name      string
@@ -65,7 +89,8 @@ type CompletionResult struct {
 type CompletionClient interface {
 	Complete(
 		ctx context.Context,
-		systemPrompt, userPrompt, requestID string,
+		prompt TurnPrompt,
+		requestID string,
 	) (CompletionResult, error)
 }
 
@@ -206,7 +231,8 @@ func (c *chatContent) UnmarshalJSON(raw []byte) error {
 // continues until Agent Proxy returns member-facing content.
 func (c ProxyClient) Complete(
 	ctx context.Context,
-	systemPrompt, userPrompt, requestID string,
+	prompt TurnPrompt,
+	requestID string,
 ) (CompletionResult, error) {
 	telemetry := telemetryOrNoop(c.Telemetry)
 	var toolSession ToolSession
@@ -220,7 +246,7 @@ func (c ProxyClient) Complete(
 		if err != nil {
 			telemetry.MarkSpanError(listSpan, exceptionMCPToolsListFailed)
 			listSpan.End()
-			return CompletionResult{}, err
+			return CompletionResult{}, ToolFailure{Server: "roster", Err: err}
 		}
 		toolSession = opened
 		defer func() {
@@ -271,13 +297,18 @@ func (c ProxyClient) Complete(
 		}
 	}
 
-	messages := []chatMessage{{Role: "system", Content: systemPrompt}}
+	messages := []chatMessage{{Role: "system", Content: prompt.System}}
 	// Below the local policy and labelled as data, because a server publishes
 	// reference material, not instructions for how Echo behaves.
 	if grounding := groundingMessage(groundingDocuments); grounding != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: grounding})
 	}
-	messages = append(messages, chatMessage{Role: "user", Content: userPrompt})
+	// The conversation around the request is its own user turn. Merged into the
+	// request, it made the canonical user message unreadable downstream.
+	if prompt.Context != "" {
+		messages = append(messages, chatMessage{Role: "user", Content: prompt.Context})
+	}
+	messages = append(messages, chatMessage{Role: "user", Content: prompt.Message})
 	// Named so the model reports the gap rather than answering as though the
 	// surface had been consulted and returned nothing.
 	if len(unavailable) > 0 {
@@ -433,7 +464,11 @@ func (c ProxyClient) Complete(
 				telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "error")
 				telemetry.MarkSpanError(toolSpan, exceptionMCPToolCallFailed)
 				toolSpan.End()
-				return CompletionResult{}, err
+				return CompletionResult{}, ToolFailure{
+					Server: definition.Server,
+					Tool:   definition.Original,
+					Err:    err,
+				}
 			}
 			// A tool that reports its own failure is a result the model must see
 			// and self-correct from, not a transport error that ends the turn.

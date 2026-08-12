@@ -138,11 +138,14 @@ Never claim that an issue, message, lookup, escalation, or other action happened
 unless a tool result in this turn confirms it.
 Reply with plain text and keep it under 1800 characters.
 
-===== USER PROMPT (fixed sample) =====
+===== TURN CONTEXT (fixed sample) =====
 
 Recent conversation, oldest first:
 - member: Is the server up?
 - CoilyCo: Checking now.
 
-Current request:
-member: What changed in the last update?
+The request that follows is from member.
+
+===== USER MESSAGE (fixed sample) =====
+
+What changed in the last update?

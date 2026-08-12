@@ -5,21 +5,73 @@ import (
 	"testing"
 )
 
-func TestBuildUserPromptBoundsAndMarksCurrentMessage(t *testing.T) {
+// The final user turn is the member's message and nothing else. Anything
+// reading "what did the user ask" gets the question. See #104.
+func TestBuildTurnPromptLeavesTheMessageAlone(t *testing.T) {
 	t.Parallel()
-	prompt := BuildUserPrompt(
+	prompt := BuildTurnPrompt(
+		"system policy",
 		[]TranscriptEntry{{Author: "first member", Content: "hello\nthere"}},
 		TranscriptEntry{Author: "current member", Content: "what is happening?"},
 	)
+	if prompt.Message != "what is happening?" {
+		t.Fatalf("message = %q", prompt.Message)
+	}
+	for _, forbidden := range []string{
+		"Recent conversation",
+		"first member",
+		"current member",
+	} {
+		if strings.Contains(prompt.Message, forbidden) {
+			t.Errorf("message %q carries scaffolding %q", prompt.Message, forbidden)
+		}
+	}
 	for _, expected := range []string{
 		"Recent conversation, oldest first:",
 		"- first member: hello there",
-		"Current request:",
-		"current member: what is happening?",
+		"The request that follows is from current member.",
 	} {
-		if !strings.Contains(prompt, expected) {
-			t.Fatalf("prompt missing %q:\n%s", expected, prompt)
+		if !strings.Contains(prompt.Context, expected) {
+			t.Fatalf("context missing %q:\n%s", expected, prompt.Context)
 		}
+	}
+}
+
+// With no history the context is one speaker line, so a first message still
+// tells the model who is talking without wrapping the message itself.
+func TestBuildTurnPromptNamesTheSpeakerWithoutHistory(t *testing.T) {
+	t.Parallel()
+	prompt := BuildTurnPrompt(
+		"system policy",
+		nil,
+		TranscriptEntry{Author: "coilysiren", Content: "ping"},
+	)
+	if prompt.Message != "ping" {
+		t.Fatalf("message = %q", prompt.Message)
+	}
+	if prompt.Context != "The request that follows is from coilysiren." {
+		t.Fatalf("context = %q", prompt.Context)
+	}
+}
+
+// Supplied is what grounding validates against, so it has to carry every
+// section the model was given.
+func TestTurnPromptSuppliedCoversEverySection(t *testing.T) {
+	t.Parallel()
+	prompt := BuildTurnPrompt(
+		"policy mentioning #bots",
+		[]TranscriptEntry{{Author: "member", Content: "earlier"}},
+		TranscriptEntry{Author: "member", Content: "now"},
+	)
+	supplied := prompt.Supplied()
+	for _, expected := range []string{"policy mentioning #bots", "earlier", "now"} {
+		if !strings.Contains(supplied, expected) {
+			t.Errorf("supplied missing %q:\n%s", expected, supplied)
+		}
+	}
+	empty := TurnPrompt{Message: "only a message"}
+	if empty.Supplied() != "only a message" {
+		t.Errorf("supplied = %q", empty.Supplied())
 	}
 }
 

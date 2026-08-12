@@ -77,7 +77,7 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		Harness:     transportDiscord,
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestProxyClientDiscoversCallsAndContinuesWithEcoMCP(t *testing.T) {
 			HTTPClient: &http.Client{Timeout: time.Second},
 		},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -231,7 +231,7 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 		HTTPClient:  &http.Client{Timeout: time.Second},
 		Tools:       fixtureToolProvider{},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -317,7 +317,7 @@ func TestProxyClientRepairsStyleViolationOnce(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -375,7 +375,7 @@ func TestProxyClientRepairsEmptyReplyOnce(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestProxyClientRepairsPersonalityOnce(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -485,7 +485,7 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 		ResponseStyle: ResponseStyleSocial,
 		HTTPClient:    &http.Client{Timeout: time.Second},
 	}
-	got, err := client.Complete(context.Background(), "system", "user", "request")
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -516,7 +516,7 @@ func TestProxyClientRejectsPersistentStyleViolation(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	_, err := client.Complete(context.Background(), "system", "user", "request")
+	_, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err == nil || !strings.Contains(err.Error(), "invalid response after 1 repair attempt") {
 		t.Fatalf("error = %v", err)
 	}
@@ -555,7 +555,7 @@ func TestProxyClientRejectsToolCallDuringResponseRepair(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	_, err := client.Complete(context.Background(), "system", "user", "request")
+	_, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
 	if err == nil || !strings.Contains(err.Error(), "tool call during response repair") {
 		t.Fatalf("error = %v", err)
 	}
@@ -575,7 +575,7 @@ func TestProxyClientRejectsNonSuccess(t *testing.T) {
 		Model:      "selected-model",
 		HTTPClient: &http.Client{Timeout: time.Second},
 	}
-	if _, err := client.Complete(context.Background(), "system", "user", "request"); err == nil {
+	if _, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request"); err == nil {
 		t.Fatal("expected HTTP error")
 	}
 }
@@ -626,7 +626,7 @@ func TestCompleteRaisesTheBudgetOnTruncatedEmptyContent(t *testing.T) {
 	defer server.Close()
 
 	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
-	result, err := client.Complete(context.Background(), "system", "user", "req")
+	result, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "req")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
@@ -658,7 +658,7 @@ func TestCompleteStopsRaisingAfterTheAllowedAttempts(t *testing.T) {
 	defer server.Close()
 
 	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
-	_, err := client.Complete(context.Background(), "system", "user", "req")
+	_, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "req")
 	if err == nil {
 		t.Fatal("a permanently truncated completion was accepted")
 	}
@@ -684,7 +684,7 @@ func TestCompleteAcceptsTruncatedContentThatIsNotEmpty(t *testing.T) {
 	defer server.Close()
 
 	client := ProxyClient{BaseURL: server.URL, Model: "m", HTTPClient: server.Client()}
-	result, err := client.Complete(context.Background(), "system", "user", "req")
+	result, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "req")
 	if err != nil {
 		t.Fatalf("Complete: %v", err)
 	}
