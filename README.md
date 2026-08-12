@@ -3,7 +3,7 @@
 # sirens-echo
 
 A discord community agent harness - home of sirens echo and sirens deep 
- 
+
 ## Sirens Echo
 
 Sirens Echo is an automated community response service. Its model context is a
