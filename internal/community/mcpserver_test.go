@@ -154,7 +154,7 @@ func TestQueueTimeoutTellsTheCallerInsteadOfReturningSilently(t *testing.T) {
 		t.Fatal("a turn that never got the slot must still fail")
 	}
 	// The regression: this reply was empty, so a queued caller learned nothing.
-	if turn.reply != queueTimeoutNotice {
+	if turn.reply != noticeQueueTimeout {
 		t.Fatalf("reply = %q, want the queue timeout notice", turn.reply)
 	}
 }
@@ -182,7 +182,7 @@ func TestQueueTimeoutNoticeIsThrottledForDiscordOnly(t *testing.T) {
 		if err := agent.runSerialized(context.Background(), turn, transportHTTP); err == nil {
 			t.Fatal("expected a queue timeout")
 		}
-		if turn.reply != queueTimeoutNotice {
+		if turn.reply != noticeQueueTimeout {
 			t.Fatalf("attempt %d reply = %q", attempt, turn.reply)
 		}
 	}

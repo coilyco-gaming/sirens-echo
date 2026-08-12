@@ -16,8 +16,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const genericFailureReply = "there was an error generating your reply"
-
 const (
 	transportDiscord = "discord"
 	transportHTTP    = "http"
@@ -510,16 +508,6 @@ func (a *Agent) onDenied(
 	}
 }
 
-func cooldownNotice(retryAfter time.Duration) string {
-	if retryAfter < time.Second {
-		return "Rate limit reached. Try again shortly."
-	}
-	return fmt.Sprintf(
-		"Rate limit reached. Try again in about %s.",
-		retryAfter.Round(time.Second),
-	)
-}
-
 // runSerialized waits for the execution slot, then runs the turn. The request
 // budget starts after admission, not on arrival.
 func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey string) error {
@@ -529,7 +517,7 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 	case a.slots <- struct{}{}:
 	case <-queueCtx.Done():
 		a.telemetry.RecordAdmission(ctx, string(admissionQueue), turn.Transport())
-		a.noticeQueueTimeout(ctx, turn, contextKey)
+		a.replyQueueTimeout(ctx, turn, contextKey)
 		return fmt.Errorf("turn waited longer than %s for the execution slot", a.cfg.QueueTimeout)
 	}
 	defer func() { <-a.slots }()
@@ -545,23 +533,19 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 	return a.runTurn(turnCtx, turn)
 }
 
-// noticeQueueTimeout tells the caller its turn gave up waiting. Returning
+// replyQueueTimeout tells the caller its turn gave up waiting. Returning
 // silently left a queued member with no reply at all.
-func (a *Agent) noticeQueueTimeout(ctx context.Context, turn turnIO, contextKey string) {
+func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO, contextKey string) {
 	// A Discord reply lands in a shared channel, so it shares the throttle the
 	// pending-cap denial uses. A synchronous caller always learns why it ended.
 	if turn.Transport() == transportDiscord &&
 		!a.limiter.notifyQueueTimeout(contextKey) {
 		return
 	}
-	if err := turn.Reply(ctx, queueTimeoutNotice); err != nil {
+	if err := turn.Reply(ctx, noticeQueueTimeout); err != nil {
 		a.telemetry.RecordFailure(ctx, "reply")
 	}
 }
-
-// queueTimeoutNotice matches the cooldown notice's impersonal shape, since the
-// neutral style rules bind every member-facing string.
-const queueTimeoutNotice = "Busy with another turn. Try again shortly."
 
 // typingNotifier is implemented by transports that can show progress.
 type typingNotifier interface {
@@ -703,7 +687,7 @@ func (a *Agent) failTurn(
 		slog.String("stage", stage),
 		slog.String("error_type", stage+"_failed"),
 	)
-	replyErr := a.sendReply(ctx, turn, genericFailureReply)
+	replyErr := a.sendReply(ctx, turn, noticeTurnFailed)
 	return errors.Join(cause, replyErr)
 }
 

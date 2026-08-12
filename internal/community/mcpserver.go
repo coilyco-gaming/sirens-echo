@@ -112,7 +112,7 @@ func (a *Agent) handleMCPTurn(
 // protocol error, so the calling model can see it and correct itself.
 func toolFailure(message string) *mcp.CallToolResult {
 	if strings.TrimSpace(message) == "" {
-		message = genericFailureReply
+		message = noticeTurnFailed
 	}
 	return &mcp.CallToolResult{
 		IsError: true,
