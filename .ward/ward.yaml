@@ -48,6 +48,9 @@ commands:
   eval-echo:
     run: bash scripts/ward-command.sh eval-echo
     description: Run the non-mutating Sirens Echo cases through Agent Proxy.
+  eval-deep:
+    run: bash scripts/ward-command.sh eval-deep
+    description: Run the non-mutating Sirens Deep cases through Agent Proxy.
   pre-commit-all:
     run: pre-commit run --all-files
     description: Run the complete repository pre-commit suite.

@@ -16,8 +16,13 @@ import (
 // to the receiver they actually target.
 const defaultEvaluationOTLPEndpoint = "http://localhost:4318"
 
+const (
+	defaultEvaluationDefinition = "agent/sirens-echo.yaml"
+	defaultEvaluationPack       = "agent/evaluation.yaml"
+)
+
 func main() {
-	definition, err := community.LoadDefinition("agent/sirens-echo.yaml")
+	definition, err := community.LoadDefinition(evaluationDefinitionPath())
 	if err != nil {
 		log.Fatalf("definition: %v", err)
 	}
@@ -25,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("skillpack: %v", err)
 	}
-	pack, err := community.LoadEvaluationPack("agent/evaluation.yaml")
+	pack, err := community.LoadEvaluationPack(evaluationPackPath())
 	if err != nil {
 		log.Fatalf("evaluation pack: %v", err)
 	}
@@ -91,6 +96,22 @@ func evaluationMCPServers() []community.MCPServerDefinition {
 		log.Fatalf("evaluation roster: %v", err)
 	}
 	return servers
+}
+
+// A case addresses its agent by name and expects that profile's tools, so the
+// pack travels with the definition rather than being selected independently.
+func evaluationDefinitionPath() string {
+	return valueOrDefault(
+		os.Getenv("SIRENS_ECHO_DEFINITION"),
+		defaultEvaluationDefinition,
+	)
+}
+
+func evaluationPackPath() string {
+	return valueOrDefault(
+		os.Getenv("SIRENS_ECHO_EVALUATION_PACK"),
+		defaultEvaluationPack,
+	)
 }
 
 func evaluationOTLPEndpoint() string {

@@ -40,6 +40,24 @@ Route every dev verb through Ward: `ward exec build`, `policy-check`, `vet`,
 Run `ward exec vet` and `ward exec test` before committing. The full
 pre-commit gate must pass. Never use `--no-verify`.
 
+### Live evaluation cadence
+
+`ward exec eval-deep` runs 5 times. `ward exec eval-echo` runs once.
+
+The split is load on `kai-tower-3026`, not confidence. Echo's route
+`sirens-echo/default` resolves to `ornith:35b` on ollama and the AOSH router
+puts `default_server` on that tower, so every Echo case pins a 35B model on the
+daily driver and a run takes minutes. Deep's route `sirens-echo/deepseek`
+carries `direct: null` and resolves upstream to `deepseek-v4-flash`, so it never
+touches the tower and repeats are cheap.
+
+Both need `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL` naming the profile's route, and
+`OTEL_EXPORTER_OTLP_ENDPOINT` pointed at the deployment's receiver. Supply
+`SIRENS_ECHO_MCP_ROSTER` when a case requires a tool; without one the roster is
+empty and a tool case fails for a reason that is not the agent's.
+
+Unit tests never leave the machine, so the cadence does not apply to them.
+
 ## Safety
 
 Required secrets live in SSM. Echo's ExternalSecret maps the Discord token,

@@ -17,12 +17,26 @@ func main() {
 	} {
 		verify(path)
 	}
+	for _, path := range []string{
+		"agent/evaluation.yaml",
+		"agent/evaluation-deep.yaml",
+	} {
+		verifyEvaluationPack(path)
+	}
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
 	if path := os.Getenv("SIRENS_ECHO_ACCESS_POLICY"); path != "" {
 		verifyAccessPolicy(path)
 	}
+}
+
+func verifyEvaluationPack(path string) {
+	pack, err := community.LoadEvaluationPack(path)
+	if err != nil {
+		log.Fatalf("evaluation pack %s: %v", path, err)
+	}
+	fmt.Printf("verified evaluation pack %s with %d cases\n", path, len(pack.Cases))
 }
 
 func verifyAccessPolicy(path string) {

@@ -26,6 +26,11 @@ case "${1:-}" in
   eval-echo)
     go run ./cmd/sirens-echo-eval
     ;;
+  eval-deep)
+    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agent/evaluation-deep.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   format)
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;
