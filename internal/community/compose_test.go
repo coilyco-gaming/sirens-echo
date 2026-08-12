@@ -76,15 +76,28 @@ func TestGraphPatternsNeverReachDeniedSources(t *testing.T) {
 func TestGraphGlobalsAreNeverPrivate(t *testing.T) {
 	t.Parallel()
 	_, graph := roleGraph(t)
-	for _, id := range graph.Globals {
-		path, declared := graph.Repositories[id]
-		if !declared {
-			t.Errorf("global %q names no declared repository", id)
-			continue
-		}
-		if reason, private := PrivateRepositories[path]; private {
-			t.Errorf("global %q resolves to private %s: %s", id, path, reason)
-		}
+	// The graph declares no provider today. Sources reach a bundle through the
+	// request's declaration entries, which is the reviewed path. See #126.
+	if len(graph.Globals) != 0 || len(graph.Repositories) != 0 {
+		t.Errorf("the graph globalizes %v from %v", graph.Globals, graph.Repositories)
+	}
+	// The guard stays wired regardless, so re-adding a block cannot quietly
+	// globalize a private repository.
+	guarded := RoleGraph{
+		Repositories: map[string]string{"lore": "coilysiren/lore"},
+		Globals:      []string{"lore"},
+	}
+	if err := CheckGraphGlobals(guarded); err == nil {
+		t.Error("a private global was accepted")
+	}
+	if err := CheckGraphGlobals(RoleGraph{
+		Repositories: map[string]string{"echo": "coilyco-gaming/sirens-echo"},
+		Globals:      []string{"echo"},
+	}); err != nil {
+		t.Errorf("a public global was refused: %v", err)
+	}
+	if err := CheckGraphGlobals(RoleGraph{Globals: []string{"absent"}}); err == nil {
+		t.Error("a global naming no repository was accepted")
 	}
 }
 

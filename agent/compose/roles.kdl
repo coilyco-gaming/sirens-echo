@@ -9,19 +9,9 @@
 // the roster identity alone, which is a valid, deliberately bare agent, and a
 // role added to agent-compose later needs no change here.
 //
-// The repositories block declares ordinary-skill providers. The build does not
-// clone them yet, so it is inert: tracked at
-// https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/126.
-repositories {
-    repository acompose path="coilyco-flight-deck/agent-compose"
-    global acompose
-
-    repository echo path="coilyco-gaming/sirens-echo"
-    global echo
-
-    repository profile path="coilysiren/coilysiren"
-    global profile
-}
+// It declares no ordinary-skill provider repositories. Sources reach a bundle
+// through the request's declaration entries, which is the reviewed path, and a
+// globalized provider would bypass that review. See docs/sirens-echo-compose.md.
 
 roles {
     role "creator" {

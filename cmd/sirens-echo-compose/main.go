@@ -30,10 +30,8 @@ func main() {
 		log.Fatalf("read role graph: %v", err)
 	}
 	graph := community.ParseRoleGraph(string(raw))
-	for _, id := range graph.Globals {
-		if reason, private := community.PrivateRepositories[graph.Repositories[id]]; private {
-			log.Fatalf("global %q resolves to private %s: %s", id, graph.Repositories[id], reason)
-		}
+	if err := community.CheckGraphGlobals(graph); err != nil {
+		log.Fatal(err)
 	}
 
 	admitted, excluded, err := community.ExpandRoleWithExclusions(catalogs, *role, graph)

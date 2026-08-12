@@ -180,3 +180,18 @@ func RenderDeclaration(id string, names []string) string {
 	out.WriteString("}\n")
 	return out.String()
 }
+
+// checkGraphGlobals refuses a globalized private repository. The graph declares
+// none today, and this keeps re-adding one from being quiet. See #126.
+func CheckGraphGlobals(graph RoleGraph) error {
+	for _, id := range graph.Globals {
+		path, declared := graph.Repositories[id]
+		if !declared {
+			return fmt.Errorf("global %q names no declared repository", id)
+		}
+		if reason, private := PrivateRepositories[path]; private {
+			return fmt.Errorf("global %q resolves to private %s: %s", id, path, reason)
+		}
+	}
+	return nil
+}
