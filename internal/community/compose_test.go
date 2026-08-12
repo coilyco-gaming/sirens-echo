@@ -8,102 +8,74 @@ import (
 	"testing"
 )
 
-// approvedComposedSkills is duplicated on purpose, so widening the reviewed set
-// changes a test rather than only a config file. See docs/sirens-echo-compose.md.
-var approvedComposedSkills = map[string]struct{}{
-	"tooling-discord-community-host":          {},
-	"tooling-customer-success-signal-routing": {},
-	"tooling-customer-success-trust-repair":   {},
-	"writing-kai-voice":                       {},
-	"writing-social-cultural-reading":         {},
-	"writing-social-editorial-loop":           {},
-	"writing-social-trust-boundaries":         {},
-	"writing-system-improvement-vocab":        {},
-	"writing-voice-adaptation":                {},
-	"writing-voice-guide-linter":              {},
-	"personal-preference-colors":              {},
-	"personal-preference-games":               {},
-	"personal-preference-animals":             {},
-	"personal-preference-shows":               {},
-	"personal-preference-anime":               {},
-	"personal-preference-books":               {},
-	"personal-preference-movies":              {},
-	"personal-preference-fabrication":         {},
-	"personal-preferences":                    {},
-}
-
-// deniedComposedSkills must never compose into an agent that answers
-// strangers. Every one of these stays in the private catalogue.
-var deniedComposedSkills = map[string]string{
-	"kai-career":                 "private career context",
-	"kai-job-search":             "private job search",
-	"kai-grill-me":               "private operating context",
-	"kai-collaboration":          "private collaboration context",
-	"kai-kapwing-pr-review":      "employer team and domain context",
-	"kai-linkedin-voice":         "a member's personal channel voice",
-	"kai-linkedin-video":         "a member's personal channel format",
-	"kai-bio-surface":            "resume and identity surface, points at private lore",
-	"kai-public-repos":           "names private sibling repositories",
-	"kai-engineering-voice":      "code review and eng-channel posts, not this agent",
-	"kai-design-language":        "art direction, and low-context: required",
-	"personal-preference-social": "an organization cannot own a person's social accounts",
-	"tooling-cross-repo-infra":   "fleet mutation surface",
-}
-
-var (
-	declaredSkill = regexp.MustCompile(`^\s*skill\s+"([^"]+)"\s+path="([^"]+)"`)
-	requestSource = regexp.MustCompile(`^\s*source\s+"([^"]+)"\s+(\w+)="([^"]+)"`)
-)
-
-func readCompose(t *testing.T, name string) string {
+func roleGraph(t *testing.T) (string, RoleGraph) {
 	t.Helper()
-	path := filepath.Join("..", "..", "agent", "compose", name)
+	path := filepath.Join("..", "..", "agent", "compose", "roles.kdl")
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
-	return string(raw)
+	return string(raw), ParseRoleGraph(string(raw))
 }
 
-// The declaration is the allowlist. A name outside the reviewed set reaching an
-// agent that answers strangers is the failure this whole mechanism exists for.
-func TestDeclarationAdmitsOnlyReviewedSources(t *testing.T) {
+func catalogRoot(t *testing.T) string {
+	t.Helper()
+	root := os.Getenv("AOS_CATALOG")
+	if root == "" {
+		t.Skip("set AOS_CATALOG to an agentic-os checkout to expand the graph")
+	}
+	return root
+}
+
+// The graph keeps globs, so the invariant is that no pattern can reach a denied
+// source. Expansion enforces it; this proves the enforcement bites.
+func TestGraphPatternsNeverReachDeniedSources(t *testing.T) {
 	t.Parallel()
-	seen := map[string]struct{}{}
-	for _, line := range strings.Split(readCompose(t, "aos-public.kdl"), "\n") {
-		match := declaredSkill.FindStringSubmatch(line)
-		if match == nil {
+	catalog := catalogRoot(t)
+	_, graph := roleGraph(t)
+	for role := range graph.Patterns {
+		if _, err := ExpandRole(catalog, role, graph); err != nil {
+			t.Fatalf("role %q: %v", role, err)
+		}
+	}
+	widened := RoleGraph{Patterns: map[string][]string{"creator": {"kai-*"}}}
+	if _, err := ExpandRole(catalog, "creator", widened); err == nil {
+		t.Fatal("expansion accepted a pattern reaching the private kai- family")
+	}
+	social := RoleGraph{Patterns: map[string][]string{"creator": {"personal-preference-social"}}}
+	if _, err := ExpandRole(catalog, "creator", social); err == nil {
+		t.Fatal("expansion accepted the one member-owned preference source")
+	}
+	empty := RoleGraph{Patterns: map[string][]string{"creator": {"writing-nothing-*"}}}
+	if _, err := ExpandRole(catalog, "creator", empty); err == nil {
+		t.Fatal("expansion accepted a pattern matching nothing")
+	}
+}
+
+// A global naming a private repository would hand a public agent private
+// context without any composed-skill pattern being involved.
+func TestGraphGlobalsAreNeverPrivate(t *testing.T) {
+	t.Parallel()
+	_, graph := roleGraph(t)
+	for _, id := range graph.Globals {
+		path, declared := graph.Repositories[id]
+		if !declared {
+			t.Errorf("global %q names no declared repository", id)
 			continue
 		}
-		name, path := match[1], match[2]
-		if _, approved := approvedComposedSkills[name]; !approved {
-			t.Errorf("declaration admits unreviewed source %q", name)
+		if reason, private := PrivateRepositories[path]; private {
+			t.Errorf("global %q resolves to private %s: %s", id, path, reason)
 		}
-		if reason, denied := deniedComposedSkills[name]; denied {
-			t.Errorf("declaration admits denied source %q: %s", name, reason)
-		}
-		if path != "skills/"+name {
-			t.Errorf("source %q declares path %q, want skills/%s", name, path, name)
-		}
-		if _, duplicate := seen[name]; duplicate {
-			t.Errorf("declaration names %q twice", name)
-		}
-		seen[name] = struct{}{}
-	}
-	if len(seen) == 0 {
-		t.Fatal("declaration admits nothing")
 	}
 }
 
-// A glob would reintroduce exactly the accident the declaration form prevents,
-// since a pattern silently widens when the upstream catalogue grows.
-func TestDeclarationNamesNoGlobs(t *testing.T) {
+// The declaration is build output. Nothing tracked should carry those paths.
+func TestDeclarationIsNeverTracked(t *testing.T) {
 	t.Parallel()
-	for _, line := range strings.Split(readCompose(t, "aos-public.kdl"), "\n") {
-		if match := declaredSkill.FindStringSubmatch(line); match != nil {
-			if strings.ContainsAny(match[1], "*?[") {
-				t.Errorf("declaration uses a glob %q; enumerate instead", match[1])
-			}
+	for _, name := range []string{"aos-public.kdl", "skills"} {
+		path := filepath.Join("..", "..", "agent", "compose", name)
+		if _, err := os.Stat(path); err == nil {
+			t.Errorf("%s is build output and must not be committed", path)
 		}
 	}
 }
@@ -112,18 +84,22 @@ func TestDeclarationNamesNoGlobs(t *testing.T) {
 // private catalogue deliberately binds Kai's career and LinkedIn context.
 func TestRequestSourcesAlwaysUseADeclaration(t *testing.T) {
 	t.Parallel()
+	path := filepath.Join("..", "..", "agent", "compose", "request.kdl")
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	pattern := regexp.MustCompile(`^\s*source\s+"([^"]+)"\s+(\w+)=`)
 	sources := 0
-	for _, line := range strings.Split(readCompose(t, "request.kdl"), "\n") {
+	for _, line := range strings.Split(string(raw), "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "//") {
 			continue
 		}
-		match := requestSource.FindStringSubmatch(line)
-		if match == nil {
-			continue
-		}
-		sources++
-		if match[2] != "declaration" {
-			t.Errorf("source %q uses %s=, want declaration=", match[1], match[2])
+		if match := pattern.FindStringSubmatch(line); match != nil {
+			sources++
+			if match[2] != "declaration" {
+				t.Errorf("source %q uses %s=, want declaration=", match[1], match[2])
+			}
 		}
 	}
 	if sources == 0 {

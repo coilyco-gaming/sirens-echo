@@ -1,0 +1,30 @@
+// The allowlist, in agent-compose's own role-graph format. Globs are fine here:
+// scripts/stage-compose-sources.sh expands them against the pinned catalogue
+// and fails on any match in the denied set, so a pattern cannot quietly reach
+// private context. See docs/sirens-echo-compose.md.
+//
+// Each role listed here bakes its own bundle. A role with no entry composes the
+// roster identity alone, which is a valid, deliberately bare agent.
+//
+// The repositories block declares ordinary-skill providers. The build does not
+// clone them yet, so it is inert: tracked at
+// https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/126.
+repositories {
+    repository acompose path="coilyco-flight-deck/agent-compose"
+    global acompose
+
+    repository echo path="coilyco-gaming/sirens-echo"
+    global echo
+
+    repository profile path="coilysiren/coilysiren"
+    global profile
+}
+
+roles {
+    role "creator" {
+        composed-skill "tooling-discord-community-host"
+        composed-skill "tooling-customer-success-*"
+        composed-skill "personal-preference*"
+        composed-skill "writing-*"
+    }
+}
