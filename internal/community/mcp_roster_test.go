@@ -55,6 +55,43 @@ func TestLoadMCPRosterReadsTheSharedMCPServersShape(t *testing.T) {
 	}
 }
 
+// The deployment roster converts to YAML one lane at a time, so both forms
+// have to yield the same servers while the conversion is in flight.
+func TestLoadMCPRosterReadsYAMLAndJSONIdentically(t *testing.T) {
+	t.Setenv("ROSTER_TEST_FORGEJO", "http://forgejo-mcp:8080/mcp")
+	jsonPath := writeRoster(t, `{
+	  "mcpServers": {
+	    "forgejo": {"url": "${ROSTER_TEST_FORGEJO}"},
+	    "steam": {"url": "http://steam-mcp:9112/mcp"}
+	  }
+	}`)
+	yamlPath := writeRoster(t, `mcpServers:
+  forgejo:
+    url: ${ROSTER_TEST_FORGEJO}
+  steam:
+    url: http://steam-mcp:9112/mcp
+`)
+
+	fromJSON, err := LoadMCPRoster(jsonPath)
+	if err != nil {
+		t.Fatalf("LoadMCPRoster(json): %v", err)
+	}
+	fromYAML, err := LoadMCPRoster(yamlPath)
+	if err != nil {
+		t.Fatalf("LoadMCPRoster(yaml): %v", err)
+	}
+	if len(fromYAML) != 2 {
+		t.Fatalf("yaml servers = %#v", fromYAML)
+	}
+	for i := range fromJSON {
+		if fromJSON[i].Name != fromYAML[i].Name ||
+			fromJSON[i].URL != fromYAML[i].URL ||
+			fromJSON[i].ResolvedTransport() != fromYAML[i].ResolvedTransport() {
+			t.Fatalf("entry %d differs: json %#v yaml %#v", i, fromJSON[i], fromYAML[i])
+		}
+	}
+}
+
 func TestLoadMCPRosterRejectsAnUnresolvedVariable(t *testing.T) {
 	t.Setenv("ROSTER_TEST_ABSENT", "")
 	path := writeRoster(t, `{"mcpServers": {"eco": {"baseUrl": "${ROSTER_TEST_ABSENT}"}}}`)

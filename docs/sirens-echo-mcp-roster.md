@@ -29,22 +29,22 @@ no-tool boundary. Any string field resolves `${VAR}` from Echo's environment, so
 a secret reaches an entry without being written into it. An unset variable
 expands to empty, which fails validation against the named server.
 
-```json
-{
-  "mcpServers": {
-    "eco": {"baseUrl": "https://eco-mcp:9000/mcp"},
-    "forgejo": {"baseUrl": "${SIRENS_ECHO_FORGEJO_MCP_URL}"},
-    "local": {
-      "command": "/usr/bin/some-mcp",
-      "args": ["--read-only"],
-      "env": {"SOME_TOKEN": "${SOME_TOKEN}"}
-    }
-  }
-}
+```yaml
+mcpServers:
+  eco:
+    baseUrl: https://eco-mcp:9000/mcp
+  forgejo:
+    baseUrl: ${SIRENS_ECHO_FORGEJO_MCP_URL}
+  local:
+    command: /usr/bin/some-mcp
+    args: [--read-only]
+    env: {SOME_TOKEN: "${SOME_TOKEN}"}
 ```
 
-Keys Echo does not read, such as `description`, `imports`, or an `x-` extension,
-belong to another tool and are ignored rather than rejected.
+JSON is a YAML subset, so a roster still written as JSON parses unchanged and a
+lane converts on its own schedule. Keys stay camelCase: the shape is the shared
+one. Keys Echo does not read, such as `description`, `imports`, or an `x-`
+extension, belong to another tool and are ignored rather than rejected.
 
 ## Trust and stdio
 

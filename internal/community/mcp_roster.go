@@ -1,11 +1,12 @@
 package community
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"regexp"
 	"sort"
+
+	"gopkg.in/yaml.v3"
 )
 
 // rosterVariable matches the ${VAR} interpolation the shared mcpServers format
@@ -15,27 +16,27 @@ var rosterVariable = regexp.MustCompile(`\$\{([A-Z][A-Z0-9_]*)\}`)
 // rosterFile is the deployment-owned inventory, in the mcpServers shape shared
 // with mcporter, Claude Code, and Codex. Unknown keys are ignored.
 type rosterFile struct {
-	MCPServers map[string]rosterEntry `json:"mcpServers"`
+	MCPServers map[string]rosterEntry `json:"mcpServers" yaml:"mcpServers"`
 }
 
 type rosterEntry struct {
-	Transport string            `json:"transport,omitempty"`
-	BaseURL   string            `json:"baseUrl,omitempty"`
-	URL       string            `json:"url,omitempty"`
-	Command   string            `json:"command,omitempty"`
-	Args      []string          `json:"args,omitempty"`
-	Env       map[string]string `json:"env,omitempty"`
+	Transport string            `json:"transport,omitempty" yaml:"transport,omitempty"`
+	BaseURL   string            `json:"baseUrl,omitempty" yaml:"baseUrl,omitempty"`
+	URL       string            `json:"url,omitempty" yaml:"url,omitempty"`
+	Command   string            `json:"command,omitempty" yaml:"command,omitempty"`
+	Args      []string          `json:"args,omitempty" yaml:"args,omitempty"`
+	Env       map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 }
 
-// LoadMCPRoster reads the deployment-owned MCP inventory. Echo names no server
-// itself: deployment decides which ones exist and how each is reached.
+// LoadMCPRoster reads the deployment-owned MCP inventory. YAML, and JSON is a
+// subset of it, so a roster still written as JSON parses unchanged.
 func LoadMCPRoster(path string) ([]MCPServerDefinition, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read MCP roster: %w", err)
 	}
 	var file rosterFile
-	if err := json.Unmarshal(raw, &file); err != nil {
+	if err := yaml.Unmarshal(raw, &file); err != nil {
 		return nil, fmt.Errorf("parse MCP roster: %w", err)
 	}
 	names := make([]string, 0, len(file.MCPServers))
