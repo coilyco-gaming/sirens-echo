@@ -21,6 +21,9 @@ commands:
   image-publish-check:
     run: bash -n scripts/publish-image.sh
     description: Parse the trusted Forgejo OCI publisher shell contract.
+  compose-bundles:
+    run: bash scripts/ward-command.sh compose-bundles
+    description: Stage the reviewed composed sources and materialize one bundle per role.
   prompt-dump:
     run: go run ./cmd/sirens-echo-prompt
     description: Rewrite the tracked rendered-prompt snapshots for every definition.

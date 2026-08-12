@@ -1,0 +1,13 @@
+// Sirens Deep's composed identity. `SIRENS_DEEP_ROLE` picks which role the
+// image bakes; this file is composed once per role at build time.
+//
+// Every source uses `declaration=`, never `root=`. With `root=` the source
+// repository's own .agents/roles.kdl decides, and agentic-os-kai's roles
+// deliberately bind Kai's career, job-search, and LinkedIn context because
+// they serve Kai rather than a public Discord agent. A declaration enumerates
+// exactly what this repository admits. See docs/sirens-echo-compose.md.
+compose {
+    role "creator"
+    delivery "native-skills"
+    source "aos-public" declaration="aos-public.kdl" required=#true
+}

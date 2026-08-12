@@ -78,7 +78,11 @@ func render(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	systemPrompt := community.BuildSystemPrompt(definition, community.PlaceholderPrincipal, localPolicy)
+	composed := ""
+	if definition.Composed {
+		composed = community.PlaceholderComposed
+	}
+	systemPrompt := community.BuildSystemPrompt(definition, community.PlaceholderPrincipal, composed, localPolicy)
 	if err := community.ValidateSystemPrompt(definition, community.PlaceholderPrincipal, systemPrompt); err != nil {
 		return "", err
 	}

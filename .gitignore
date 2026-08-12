@@ -8,3 +8,7 @@
 .claude/worktrees/
 
 .DS_Store
+agent/compose/skills/
+agent/bundles/
+agent/compose/aos-public.kdl
+agent/compose/request.*.kdl

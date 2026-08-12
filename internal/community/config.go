@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,6 +17,8 @@ const (
 	defaultDefinitionPath = "agent/sirens-echo.yaml"
 	defaultHTTPListenAddr = "127.0.0.1:8080"
 	defaultInstanceName   = "sirens-echo"
+	defaultBundleDir      = "/app/agent/bundles"
+	defaultComposedRole   = "creator"
 
 	ResponseStyleNeutral = "neutral"
 	ResponseStyleSocial  = "social"
@@ -50,6 +53,7 @@ var (
 	environmentNamePattern = regexp.MustCompile(`^[A-Z][A-Z0-9_]*$`)
 	discordSnowflake       = regexp.MustCompile(`^[0-9]{15,20}$`)
 	discordHandlePattern   = regexp.MustCompile(`^[a-z0-9._]{2,32}$`)
+	composedRolePattern    = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 	// channelLabelPattern matches the grounding validator's channel form, so a
 	// label cannot introduce a reference the model is rejected for repeating.
 	channelLabelPattern = regexp.MustCompile(`^#[A-Za-z_][A-Za-z0-9_-]*$`)
@@ -95,6 +99,9 @@ type Definition struct {
 	MaxContextMessages int                   `json:"max_context_messages" yaml:"max_context_messages"`
 	LocalSkillRoots    []string              `json:"local_skill_roots" yaml:"local_skill_roots"`
 	IssueTracker       string                `json:"issue_tracker,omitempty" yaml:"issue_tracker,omitempty"`
+	// Composed requires a materialized agent-compose bundle, so a profile that
+	// asks for an identity fails startup rather than answering without one.
+	Composed bool `json:"composed,omitempty" yaml:"composed,omitempty"`
 }
 
 // Principal identifies the one speaker the prompt trusts. The values are
@@ -118,7 +125,10 @@ type Config struct {
 	DefinitionPath string
 	InstanceName   string
 	// Principal is empty until deployment names the trusted account.
-	Principal      Principal
+	Principal Principal
+	// BundlePath is the materialized bundle for the deployment's role, empty
+	// when the definition composes nothing.
+	BundlePath     string
 	DiscordEnabled bool
 	DiscordToken   string
 	// DiscordChannelIDs are the channels that may summon this deployment, plus
@@ -208,6 +218,13 @@ func LoadConfig() (Config, error) {
 	if err := validatePrincipal(cfg.Principal); err != nil {
 		return Config{}, err
 	}
+	if cfg.Definition.Composed {
+		path, err := resolveBundlePath()
+		if err != nil {
+			return Config{}, err
+		}
+		cfg.BundlePath = path
+	}
 	for _, id := range append(append([]string{}, cfg.DiscordChannelIDs...), cfg.DiscordGuildIDs...) {
 		if !discordSnowflake.MatchString(id) {
 			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
@@ -258,6 +275,21 @@ func validatePrincipal(principal Principal) error {
 		)
 	}
 	return nil
+}
+
+// resolveBundlePath selects the baked bundle for the deployment's role. The
+// image bakes one per role, so a role flip needs no rebuild.
+func resolveBundlePath() (string, error) {
+	role := valueOrDefault(strings.TrimSpace(os.Getenv("SIRENS_DEEP_ROLE")), defaultComposedRole)
+	if !composedRolePattern.MatchString(role) {
+		return "", fmt.Errorf("SIRENS_DEEP_ROLE must be a lowercase role slug, got %q", role)
+	}
+	dir := valueOrDefault(strings.TrimSpace(os.Getenv("SIRENS_ECHO_BUNDLE_DIR")), defaultBundleDir)
+	path := filepath.Join(dir, role)
+	if _, err := os.Stat(filepath.Join(path, "manifest.json")); err != nil {
+		return "", fmt.Errorf("no composed bundle for role %q under %s: %w", role, dir, err)
+	}
+	return path, nil
 }
 
 // LoadDefinition reads and validates the repository-owned agent definition.

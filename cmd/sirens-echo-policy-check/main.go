@@ -48,7 +48,11 @@ func verify(path string) {
 		log.Fatalf("local policy %s: %v", path, err)
 	}
 	principal := community.PlaceholderPrincipal
-	prompt := community.BuildSystemPrompt(definition, principal, localPolicy)
+	composed := ""
+	if definition.Composed {
+		composed = community.PlaceholderComposed
+	}
+	prompt := community.BuildSystemPrompt(definition, principal, composed, localPolicy)
 	if err := community.ValidateSystemPrompt(definition, principal, prompt); err != nil {
 		log.Fatalf("response policy %s: %v", path, err)
 	}
