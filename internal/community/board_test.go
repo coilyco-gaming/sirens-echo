@@ -20,7 +20,8 @@ type scriptedCompletionClient struct {
 
 func (c *scriptedCompletionClient) Complete(
 	ctx context.Context,
-	systemPrompt, userPrompt, requestID string,
+	prompt TurnPrompt,
+	requestID string,
 ) (CompletionResult, error) {
 	c.requests = append(c.requests, requestID)
 	return c.reply(requestID)

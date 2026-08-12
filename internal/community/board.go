@@ -224,7 +224,7 @@ func runBoard(
 	}
 	silent := make([]string, 0)
 	for _, boardCase := range pack.Cases {
-		userPrompt := BuildUserPrompt(boardCase.History, boardCase.Current)
+		prompt := BuildTurnPrompt(systemPrompt, boardCase.History, boardCase.Current)
 		record := BoardRecord{
 			ID:           boardCase.ID,
 			Clause:       boardCase.Clause,
@@ -241,8 +241,7 @@ func runBoard(
 				boardCase,
 				epoch,
 				definition.ResponseStyle,
-				systemPrompt,
-				userPrompt,
+				prompt,
 				completions,
 				caseTimeout,
 			)
@@ -277,8 +276,7 @@ func runBoardEpoch(
 	boardCase BoardCase,
 	epoch int,
 	responseStyle string,
-	systemPrompt string,
-	userPrompt string,
+	prompt TurnPrompt,
 	completions CompletionClient,
 	caseTimeout time.Duration,
 ) BoardResponse {
@@ -287,8 +285,7 @@ func runBoardEpoch(
 	// The request id separates epochs so a transport trace resolves to one run.
 	result, err := completions.Complete(
 		caseCtx,
-		systemPrompt,
-		userPrompt,
+		prompt,
 		fmt.Sprintf("%s#%d", boardCase.ID, epoch),
 	)
 	cancel()
@@ -312,8 +309,7 @@ func runBoardEpoch(
 		boardCase,
 		responseStyle,
 		reply,
-		systemPrompt,
-		userPrompt,
+		prompt.Supplied(),
 		result,
 	)
 	return response
@@ -325,12 +321,11 @@ func boardStructuralNote(
 	boardCase BoardCase,
 	responseStyle string,
 	reply string,
-	systemPrompt string,
-	userPrompt string,
+	supplied string,
 	result CompletionResult,
 ) string {
 	notes := make([]string, 0, 3)
-	if err := ValidateGrounding(reply, systemPrompt+"\n"+userPrompt, result.ToolCalls...); err != nil {
+	if err := ValidateGrounding(reply, supplied, result.ToolCalls...); err != nil {
 		notes = append(notes, err.Error())
 	}
 	if err := ValidateResponseStyle(responseStyle, reply); err != nil {
