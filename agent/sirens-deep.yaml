@@ -2,6 +2,7 @@ schema: coilyco-harness.agent.v1
 identity: Sirens Deep of Coilyco
 audit_role: general
 response_style: social
+composed: true
 channel: ""
 max_context_messages: 12
 local_skill_roots:

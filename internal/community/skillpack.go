@@ -64,6 +64,61 @@ func LoadSkillpack(roots []string) (string, error) {
 	return strings.TrimSpace(output.String()), nil
 }
 
+// PlaceholderComposed keeps the tracked snapshot and the build-time policy
+// check hermetic. It carries the surface the validator anchors on.
+const PlaceholderComposed = `# Role instructions
+
+Agent-compose assigned the ` + "`<role>`" + ` role from the caller's compose request.
+
+**Role skill // ` + "`role-<role>`" + `**
+**Agent // <seat>**
+
+## Personality meld
+
+Placeholder. Deployment selects the role and the image bakes the real bundle.`
+
+// LoadBundle reads one materialized agent-compose bundle: the identity card
+// plus every selected skill as its own policy root. See docs/sirens-echo-compose.md.
+func LoadBundle(dir string) (string, error) {
+	card, err := os.ReadFile(filepath.Join(dir, "content", "instructions.md"))
+	if err != nil {
+		return "", fmt.Errorf("read bundle identity card: %w", err)
+	}
+	skillsDir := filepath.Join(dir, "content", "skills")
+	sources, err := os.ReadDir(skillsDir)
+	if err != nil {
+		return "", fmt.Errorf("read bundle skills: %w", err)
+	}
+	roots := make([]string, 0)
+	for _, source := range sources {
+		if !source.IsDir() {
+			continue
+		}
+		skills, err := os.ReadDir(filepath.Join(skillsDir, source.Name()))
+		if err != nil {
+			return "", fmt.Errorf("read bundle source %s: %w", source.Name(), err)
+		}
+		for _, skill := range skills {
+			if skill.IsDir() {
+				roots = append(roots, filepath.Join(skillsDir, source.Name(), skill.Name()))
+			}
+		}
+	}
+	if len(roots) == 0 {
+		return "", fmt.Errorf("bundle %s selected no skills", dir)
+	}
+	sort.Strings(roots)
+	pack, err := LoadSkillpack(roots)
+	if err != nil {
+		return "", err
+	}
+	body := stripFrontmatter(string(card))
+	if body == "" {
+		return "", fmt.Errorf("bundle identity card is empty")
+	}
+	return body + "\n\n" + pack, nil
+}
+
 func isSkillEntrypoint(slashed string) bool {
 	for _, name := range skillEntrypoints {
 		if slashed == name {

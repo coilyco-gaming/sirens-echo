@@ -63,6 +63,7 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
@@ -88,6 +89,7 @@ func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
@@ -116,6 +118,7 @@ func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
@@ -154,6 +157,7 @@ func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
 func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "#bots")
@@ -168,6 +172,7 @@ func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 func TestLoadConfigAcceptsANonLoopbackListener(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
@@ -212,6 +217,7 @@ func TestLoadRateLimitPolicyOverridesAndDisables(t *testing.T) {
 func TestLoadConfigRejectsInvalidDiscordSwitch(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "sometimes")
 
 	_, err := LoadConfig()
@@ -223,6 +229,7 @@ func TestLoadConfigRejectsInvalidDiscordSwitch(t *testing.T) {
 func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://forgejo-mcp:8080/mcp")
@@ -237,6 +244,7 @@ func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
 func TestLoadConfigResolvesMCPURLFromEnvironment(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
@@ -258,6 +266,7 @@ func TestLoadConfigResolvesMCPURLFromEnvironment(t *testing.T) {
 func TestLoadConfigRequiresEnvironmentBackedMCPURL(t *testing.T) {
 	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
@@ -304,7 +313,7 @@ func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
 			valid: true,
 		},
 		{
-			name: "stdio without a command",
+			name:   "stdio without a command",
 			server: MCPServerDefinition{Name: "local", Transport: MCPTransportStdio},
 		},
 		{

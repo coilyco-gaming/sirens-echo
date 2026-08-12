@@ -25,6 +25,9 @@ by default, and `SIRENS_ECHO_DISCORD_ENABLED=false` removes the token and
 channel requirements while retaining the HTTP turn path. `SIRENS_ECHO_INSTANCE`
 sets a distinct lowercase service name for telemetry.
 
+`SIRENS_DEEP_ROLE` selects the baked bundle a `composed: true` definition
+loads, from `SIRENS_ECHO_BUNDLE_DIR`. See [composing](sirens-echo-compose.md).
+
 `SIRENS_ECHO_PRINCIPAL_HANDLE` and `SIRENS_ECHO_PRINCIPAL_USER_ID` name the one
 speaker the prompt trusts. Set both or neither: a half-configured principal
 stops the process, and an unset one renders no identity signals at all. See

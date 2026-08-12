@@ -2,7 +2,7 @@
 
 ## Discord response service
 
-- AOS release substrate with no composed role, identity card, or lore source
+- Deploy-selected verified role bundle for Deep, none for Echo
 - Neutral Sirens Echo and social CoilyCo profiles with independent policy roots,
   a Kai-only trust boundary, and build-time checks
 - Definition-selected history budget, skill roots, MCP roster, issue tracker

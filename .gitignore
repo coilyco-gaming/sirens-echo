@@ -8,3 +8,5 @@
 .claude/worktrees/
 
 .DS_Store
+agent/compose/skills/
+agent/bundles/

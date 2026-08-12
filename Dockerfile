@@ -1,3 +1,16 @@
+# The release image ships agent-compose but not the composed catalogue, so the
+# bundle stage fetches it. Pinning the ref keeps the bundle deterministic and
+# makes a catalogue change a reviewed bump. See docs/sirens-echo-compose.md.
+FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS compose
+ARG AOS_CATALOG_REF=main
+USER root
+WORKDIR /src
+RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
+    https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog
+COPY agent/compose ./agent/compose
+COPY scripts/stage-compose-sources.sh ./scripts/
+RUN bash scripts/stage-compose-sources.sh /tmp/aos-catalog /out/bundles
+
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS build
 
 USER root
@@ -24,5 +37,6 @@ COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
 COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge
 COPY --chown=1000:1000 .agents/skills/coilyco-general /app/.agents/skills/coilyco-general
+COPY --from=compose --chown=1000:1000 /out/bundles /app/agent/bundles
 USER 1000:1000
 ENTRYPOINT ["/usr/local/bin/sirens-echo"]

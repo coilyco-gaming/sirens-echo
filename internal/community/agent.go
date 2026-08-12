@@ -57,7 +57,14 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if err != nil {
 		return nil, err
 	}
-	systemPrompt := BuildSystemPrompt(cfg.Definition, cfg.Principal, localSkillpack)
+	composed := ""
+	if cfg.Definition.Composed {
+		composed, err = LoadBundle(cfg.BundlePath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	systemPrompt := BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack)
 	if err := ValidateSystemPrompt(cfg.Definition, cfg.Principal, systemPrompt); err != nil {
 		return nil, err
 	}

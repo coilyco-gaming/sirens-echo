@@ -3,50 +3,66 @@
 Sirens Deep composes an Agent Compose role bundle so it has a real identity.
 Sirens Echo composes nothing and stays void of personality. Tracked at issue 98.
 
-## The allowlist
+## The allowlist is a source declaration
 
-`agent/compose/roles.kdl` names every composed source Sirens Deep may load.
-Two rules govern it.
+`agent/compose/request.kdl` names the role and its sources.
+`agent/compose/aos-public.kdl` enumerates every composed source Sirens Deep may
+load, by exact name.
 
-**No private global repositories.** A public repository is fine to globalize.
-`coilysiren/lore` and the private overlays are not, and a global naming one of
-them fails the suite. Banning globals outright was a proxy that rejected
-agent-compose, sirens-echo, and the public profile, all of which are public.
+A request `source` takes either `root=` or `declaration=`. Only `declaration=`
+is permitted here. With `root=` the **source repository's own**
+`.agents/roles.kdl` decides, and `coilyco-bridge/agentic-os-kai`'s creator role
+deliberately binds Kai's career, job-search, and LinkedIn context because that
+role serves Kai rather than an agent that answers strangers. A declaration
+enumerates exactly what this repository admits.
 
-**Tastes and style only.** An organization can own a favorite colour. It cannot
-own a person's social accounts, career, or job search. Every entry is
-public-safe and mirrored on the public Coilyco website.
+Declarations name exact skills, never globs. A glob silently widens when the
+upstream catalogue grows; an enumeration makes widening a visible line in a
+diff.
 
-## Globs are allowed, denied reach is not
+## Where the sources live
 
-An earlier revision banned globs outright. That was a proxy for the real rule
-and it blocked legitimate widening once `personal-preference-social` was
-reframed onto the organization and became safe to pull.
+Every admitted source is in `coilyco-flight-deck/agentic-os`, which is public.
+The house-taste sources were promoted there from the private personal
+catalogue for exactly this reason. The rule that decides placement, and the
+sources that fail it, are in that repository's `docs/composed-house-taste.md`.
 
-The invariant is now direct: no pattern may match a denied source. `kai-*`,
-`writing-kai-*`, and a bare denied name all fail, while
-`personal-preference-*` passes.
+An earlier revision of this page argued that renaming sources to a `kai-`
+prefix beat moving them, because "a move only changes which one a glob finds a
+skill in". That held for `root=` and globs. With `declaration=` and exact
+names, which catalogue holds a source is precisely what matters.
+
+## Build
+
+`scripts/stage-compose-sources.sh` copies each admitted `COMPOSED.md` to
+`agent/compose/skills/<name>/SKILL.md`, because a declaration's paths resolve
+beneath its own directory. It then composes one bundle per role and verifies
+each.
+
+The image runs it against a pinned `AOS_CATALOG_REF` clone, so the bundle is
+deterministic and a catalogue change is a reviewed bump. Locally,
+`ward exec compose-bundles` uses an `AOS_CATALOG` checkout.
+
+## Runtime
+
+`composed: true` in the definition makes a bundle mandatory. `SIRENS_DEEP_ROLE`
+selects which baked bundle loads, so flipping the role needs no rebuild.
+A missing or unreadable bundle stops the process: a profile that asks for an
+identity never answers without one.
+
+`ValidateSystemPrompt` inverts per profile. A composing profile must carry
+`<composed-identity>` and the bundle's own surface. The neutral profile must
+carry none of it. The anchors are strings a real bundle contains, not the
+historical `<aos-community-bundle>` marker, which appears in no current bundle
+and would fail every startup if required.
 
 ## Enforcement
 
-`internal/community/compose_test.go` parses the file and fails when a source is
-outside the reviewed set, when an entry is a glob, or when a global repository
-appears. The approved set is duplicated in the test on purpose, so widening the
+`internal/community/compose_test.go` parses the tracked files and fails when the
+declaration admits an unreviewed or denied source, uses a glob, declares a
+mismatched path, or names a source twice, and when any request source uses
+`root=`. The approved set is duplicated in the test on purpose, so widening the
 surface changes a test rather than only a config file.
-
-Each guard is negative-tested. `kai-*`, `kai-career`, `writing-kai-*`,
-`global lore`, and an unapproved name each fail the suite.
-
-## Why the writing glob is safe
-
-`writing-*` now means house writing craft in both catalogs. Getting there took
-renaming the personal sources to the `kai-` prefix rather than moving them
-between repositories, because Sirens Deep composes both catalogs and a move
-only changes which one a glob finds a skill in.
-
-`tooling-discord-community-host` is listed separately because the aos creator
-role is `writing-*` and cannot reach a `tooling-*` source. It is the closest
-match in the catalog to what this agent does.
 
 ## Identity, not impersonation
 
@@ -54,9 +70,6 @@ The seat carries its own name and pronouns, so the agent has an identity of its
 own rather than borrowing a person's. It shares house taste and house style and
 never claims to be a specific person. Someone in a guild the operator does not
 moderate cannot be left unsure whether they are talking to a human.
-
-The seat colour and the organization palette do not collide: the accent belongs
-to the seat, purple and black belong to Coilyco.
 
 ## See also
 

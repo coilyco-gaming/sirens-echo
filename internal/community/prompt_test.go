@@ -35,6 +35,7 @@ func TestBuildSystemPromptBoundsToolActionsAndAutomaticFollowUp(t *testing.T) {
 	prompt := BuildSystemPrompt(
 		definition,
 		PlaceholderPrincipal,
+		"",
 		"approved Sirens facts",
 	)
 	for _, expected := range []string{
@@ -77,7 +78,7 @@ func TestBuildSystemPromptSelectsSocialPolicy(t *testing.T) {
 		AuditRole:     "general",
 		ResponseStyle: ResponseStyleSocial,
 	}
-	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "general CoilyCo policy")
+	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general CoilyCo policy")
 	for _, expected := range []string{
 		"You are Sirens Deep of Coilyco, an agent running the custom sirens-echo harness",
 		"Coilyco Gaming Intelligence Team",
@@ -119,7 +120,7 @@ func TestBuildSystemPromptCarriesTrustPolicyInEveryStyle(t *testing.T) {
 			AuditRole:     "general",
 			ResponseStyle: style,
 		}
-		prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "general CoilyCo policy")
+		prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general CoilyCo policy")
 		if !strings.Contains(prompt, trustPolicy) {
 			t.Fatalf("%s system prompt missing the trust policy", style)
 		}
@@ -145,7 +146,7 @@ func TestBuildSystemPromptOmitsAnUnconfiguredPrincipal(t *testing.T) {
 		AuditRole:     "general",
 		ResponseStyle: ResponseStyleSocial,
 	}
-	prompt := BuildSystemPrompt(definition, Principal{}, "general CoilyCo policy")
+	prompt := BuildSystemPrompt(definition, Principal{}, "", "general CoilyCo policy")
 	if !strings.Contains(prompt, trustPolicy) {
 		t.Fatal("dropping the principal also dropped the trust policy")
 	}
@@ -158,7 +159,7 @@ func TestBuildSystemPromptOmitsAnUnconfiguredPrincipal(t *testing.T) {
 		t.Fatalf("ValidateSystemPrompt: %v", err)
 	}
 	// The reverse must fail: a rendered principal the deployment never named.
-	invented := BuildSystemPrompt(definition, PlaceholderPrincipal, "general CoilyCo policy")
+	invented := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general CoilyCo policy")
 	if err := ValidateSystemPrompt(definition, Principal{}, invented); err == nil {
 		t.Fatal("validator accepted a principal the deployment did not configure")
 	}
@@ -173,7 +174,7 @@ func TestBuildSystemPromptCarriesPronounPolicyInEveryStyle(t *testing.T) {
 			AuditRole:     "general",
 			ResponseStyle: style,
 		}
-		prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "general CoilyCo policy")
+		prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general CoilyCo policy")
 		// Anchored on the constant plus the two pronouns rather than on wording,
 		// so a copy edit cannot quietly drop either half of the rule.
 		for _, expected := range []string{pronounPolicy, "she/her", "they/them"} {
