@@ -6,6 +6,10 @@ set -euo pipefail
 
 catalog=${1:?usage: stage-compose-sources.sh <agentic-os checkout> <bundle out dir>}
 bundles=${2:?usage: stage-compose-sources.sh <agentic-os checkout> <bundle out dir>}
+mkdir -p "$bundles"
+# The compose step runs from the declaration's directory, so the output path
+# has to be absolute before that cd.
+bundles=$(cd "$bundles" && pwd)
 compose_dir=agent/compose
 staged=$compose_dir/skills
 
@@ -30,13 +34,25 @@ for name in $names; do
 done
 echo "staged $(echo "$names" | wc -w | tr -d ' ') composed sources from $catalog"
 
+# A scratch HOME with a minimal config keeps this hermetic. Without the config
+# the run converges a whole home tree instead of materializing a bundle.
+scratch_home=$(mktemp -d)
+# The staged tree is build output, and documentation-layout rejects it in place.
+trap 'rm -rf "$scratch_home" "$staged"' EXIT
+export HOME=$scratch_home
+mkdir -p "$scratch_home/.agent-compose" "$scratch_home/.claude"
+cat > "$scratch_home/.agent-compose/agent-compose.yaml" <<YAML
+load_points:
+  claude: $scratch_home/.claude/CLAUDE.md
+YAML
+
 mkdir -p "$bundles"
 for role in creator director engineer qa ops design ai; do
     out=$bundles/$role
     rm -rf "$out"
     mkdir -p "$out"
     sed "s/^    role \".*\"$/    role \"$role\"/" "$compose_dir/request.kdl" > "$compose_dir/request.$role.kdl"
-    ( cd "$compose_dir" && agent-compose compose "request.$role.kdl" --out "$OLDPWD/$out" >/dev/null )
+    ( cd "$compose_dir" && agent-compose compose "request.$role.kdl" --out "$out" >/dev/null )
     rm -f "$compose_dir/request.$role.kdl"
     tree=$(find "$out" -mindepth 1 -maxdepth 1 -type d | head -1)
     # The materializer names the tree by content hash; flatten it so the role

@@ -24,6 +24,12 @@ var approvedComposedSkills = map[string]struct{}{
 	"personal-preference-colors":              {},
 	"personal-preference-games":               {},
 	"personal-preference-animals":             {},
+	"personal-preference-shows":               {},
+	"personal-preference-anime":               {},
+	"personal-preference-books":               {},
+	"personal-preference-movies":              {},
+	"personal-preference-fabrication":         {},
+	"personal-preferences":                    {},
 }
 
 // deniedComposedSkills must never compose into an agent that answers

@@ -18,4 +18,10 @@ source "aos-public" {
     skill "personal-preference-colors" path="skills/personal-preference-colors"
     skill "personal-preference-games" path="skills/personal-preference-games"
     skill "personal-preference-animals" path="skills/personal-preference-animals"
+    skill "personal-preference-shows" path="skills/personal-preference-shows"
+    skill "personal-preference-anime" path="skills/personal-preference-anime"
+    skill "personal-preference-books" path="skills/personal-preference-books"
+    skill "personal-preference-movies" path="skills/personal-preference-movies"
+    skill "personal-preference-fabrication" path="skills/personal-preference-fabrication"
+    skill "personal-preferences" path="skills/personal-preferences"
 }
