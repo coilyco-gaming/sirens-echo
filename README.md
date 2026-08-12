@@ -2,7 +2,7 @@
 
 # sirens-echo
 
-A discord community agent harness - home of sirens echo and sirens deep 
+A discord community agent harness - home of sirens echo and sirens deep
 
 ## Sirens Echo
 
