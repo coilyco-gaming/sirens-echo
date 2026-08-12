@@ -77,5 +77,6 @@ See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [.ward/ward.ya
 [admission](docs/sirens-echo-admission.md), [access](docs/sirens-echo-access.md),
 [HTTP](docs/sirens-echo-http.md), [health](docs/sirens-echo-health.md),
 [notices](docs/sirens-echo-notices.md),
-[design](docs/harness-design-fundamentals.md), and [docs/deploy.md](docs/deploy.md).
+[capability ledger](docs/harness-design-capability-ledger.md), and
+[docs/deploy.md](docs/deploy.md).
 Cross-reference convention from [features-release-tooling.md](docs/features-release-tooling.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).
