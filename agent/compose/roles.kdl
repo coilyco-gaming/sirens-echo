@@ -3,8 +3,11 @@
 // and fails on any match in the denied set, so a pattern cannot quietly reach
 // private context. See docs/sirens-echo-compose.md.
 //
-// Each role listed here bakes its own bundle. A role with no entry composes the
-// roster identity alone, which is a valid, deliberately bare agent.
+// This file is purely additive. It grants a role its allowlisted skills and
+// does not decide which roles exist: the agent-compose roster does, and the
+// build bakes a bundle for every role in it. A role with no entry here composes
+// the roster identity alone, which is a valid, deliberately bare agent, and a
+// role added to agent-compose later needs no change here.
 //
 // The repositories block declares ordinary-skill providers. The build does not
 // clone them yet, so it is inert: tracked at

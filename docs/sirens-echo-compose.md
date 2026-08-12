@@ -6,7 +6,10 @@ Sirens Echo composes nothing and stays void of personality. Tracked at issue 98.
 ## The allowlist is a role graph
 
 `agent/compose/roles.kdl` is the one tracked allowlist, in agent-compose's own
-role-graph format, with globs. Every role it declares bakes its own bundle.
+role-graph format, with globs. It is purely additive: it grants a role its
+skills and does not decide which roles exist. The roster does that, and the
+build bakes a bundle for every role in it, so a role with no entry here composes
+the roster identity alone and a new roster role needs no change here.
 
 `agent/compose/request.kdl` is the second tracked file, and the grammar forces
 it: `agent-compose compose` takes a request, and a request source needs a
@@ -34,10 +37,10 @@ exactly this reason; the placement rule is that repository's
 
 ## Build
 
-`scripts/stage-compose-sources.sh` runs the generator per declared role, which
-stages each admitted `COMPOSED.md` as `SKILL.md` and writes the declaration,
-because a declaration's paths resolve beneath its own directory. It then
-composes and verifies one bundle per role. The staged tree, the declaration, and
+`scripts/stage-compose-sources.sh` reads the roster for the role list, then runs
+the generator per role, staging each admitted `COMPOSED.md` as `SKILL.md` and
+writing the declaration, because a declaration's paths resolve beneath its own
+directory. It then composes and verifies one bundle per role. The staged tree, the declaration, and
 the per-role requests are build output: removed on exit, and a test fails if any
 is committed.
 

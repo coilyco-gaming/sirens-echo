@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Bake one verified bundle per role declared in agent/compose/roles.kdl.
-# sirens-echo-compose expands that graph against the pinned catalogue and writes
-# the declaration agent-compose consumes. See docs/sirens-echo-compose.md.
+# Bake one verified bundle per roster role. roles.kdl is purely additive: it
+# grants a role its allowlisted skills, it does not decide which roles exist.
+# sirens-echo-compose expands the graph and writes the declaration agent-compose
+# consumes. See docs/sirens-echo-compose.md.
 set -euo pipefail
 
 # Usage: stage-compose-sources.sh <bundle out dir> <catalogue> [catalogue...]
@@ -37,11 +38,20 @@ if [ -z "$generator" ]; then
     go build -o "$generator" ./cmd/sirens-echo-compose
 fi
 
-roles=$(grep -oE '^[[:space:]]*role[[:space:]]+"[^"]+"' "$compose_dir/roles.kdl" | sed 's/.*"\(.*\)"/\1/')
-if [ -z "$roles" ]; then
-    echo "stage-compose-sources: roles.kdl declares no role" >&2
+# The roster is the authority on which roles exist, not roles.kdl. That file is
+# purely additive: it grants skills to a role, it does not create one.
+HOME=$scratch_home agent-compose roster >/dev/null
+person=$scratch_home/.agent-compose/sources/personality/person.json
+if [ ! -f "$person" ]; then
+    echo "stage-compose-sources: agent-compose roster wrote no person.json" >&2
     exit 1
 fi
+roles=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("\n".join(d.get("role_order") or sorted(d["roles"])))' "$person")
+if [ -z "$roles" ]; then
+    echo "stage-compose-sources: the roster declares no role" >&2
+    exit 1
+fi
+echo "stage-compose-sources: baking $(echo "$roles" | wc -w | tr -d ' ') roster roles"
 
 for role in $roles; do
     "$generator" "${catalog_flags[@]}" --role "$role" --compose-dir "$compose_dir"
