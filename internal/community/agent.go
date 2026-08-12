@@ -231,11 +231,15 @@ func (a *Agent) buildJobRunner() error {
 		}
 		store = opened
 	}
+	executors, err := buildExecutingKinds(a.cfg, a.access)
+	if err != nil {
+		return err
+	}
 	reporter := newDiscordJobReporter(a.session)
 	a.jobs = &JobRunner{
 		Store:     store,
 		Telemetry: a.telemetry,
-		Executors: DefaultJobExecutors(),
+		Executors: executors,
 		Notifier:  reporter,
 		Progress:  reporter,
 	}

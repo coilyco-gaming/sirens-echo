@@ -153,6 +153,13 @@ type Config struct {
 	// DiscordCommandsEnabled registers and serves application commands. Off by
 	// default because registering is a write to Discord's API.
 	DiscordCommandsEnabled bool
+	// JobWorkspaceRoot enables executing jobs. Empty means no execution at all,
+	// which is the default posture.
+	JobWorkspaceRoot string
+	// JobRepository and JobVerb fix what an executing job does, both from
+	// closed sets in this repository.
+	JobRepository string
+	JobVerb       string
 	// JobStoreDir is the durable job store's directory. Empty keeps jobs in
 	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
 	JobStoreDir    string

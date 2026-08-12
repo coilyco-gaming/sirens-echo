@@ -22,7 +22,8 @@ type Submission struct {
 // JobKinds is the closed set of work this harness will accept. A kind is a
 // capability, so widening it is a reviewed act rather than a caller's choice.
 var JobKinds = map[string]string{
-	"echo": "return the submitted request, for proving the lifecycle end to end",
+	"echo":      "return the submitted request, for proving the lifecycle end to end",
+	"ward-exec": "check out a repository and run one allowlisted ward verb",
 }
 
 // DeriveIdempotencyKey builds a key from the origin when a caller supplies
