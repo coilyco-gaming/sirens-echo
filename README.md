@@ -1,8 +1,8 @@
 # sirens-echo
 
-A discord community agent harness - home of sirens echo and sirens deep
-
 ![sirens-echo and sirens-deep, a discord community agent harness](assets/banner.jpg)
+
+A discord community agent harness - home of sirens echo and sirens deep
 
 ## About
 
