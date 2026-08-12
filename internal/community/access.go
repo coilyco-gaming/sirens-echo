@@ -112,6 +112,7 @@ type AccessPolicy struct {
 	Deny           DenyList            `yaml:"deny"`
 	DirectMessages DirectMessageAccess `yaml:"direct_messages"`
 	Agents         AgentAccess         `yaml:"agents"`
+	Grants         GrantTable          `yaml:"grants"`
 	Guilds         []GuildAccess       `yaml:"guilds"`
 
 	byGuild  map[string]*GuildAccess
@@ -162,6 +163,9 @@ func (p *AccessPolicy) validate() error {
 		if !discordSnowflake.MatchString(id) {
 			return fmt.Errorf("access policy IDs must be numeric snowflakes, got %q", id)
 		}
+	}
+	if err := p.Grants.validate(); err != nil {
+		return err
 	}
 	p.byGuild = make(map[string]*GuildAccess, len(p.Guilds))
 	for index := range p.Guilds {

@@ -46,6 +46,9 @@ type JobRunner struct {
 	Telemetry *Telemetry
 	Executors map[string]JobExecutor
 	Notifier  JobNotifier
+	// Grants decides what a principal may cause. Nil grants everything, which
+	// is only correct before a deployment adopts a table.
+	Grants *GrantTable
 	// Progress delivers intermediate updates. Optional.
 	Progress JobProgressReporter
 	// Timeout bounds one execution. Zero uses defaultJobTimeout.
@@ -123,6 +126,21 @@ func (r *JobRunner) Submit(ctx context.Context, submission Submission) (Job, err
 	if _, known := r.Executors[prepared.Kind]; !known {
 		return Job{}, fmt.Errorf("no executor for job kind %q", prepared.Kind)
 	}
+	// A denial is a recorded outcome with a reason, so a refused request is
+	// attributable rather than invisible. See docs/sirens-echo-grants.md.
+	if denial := r.permits(prepared); denial != nil {
+		refused, _, storeErr := r.Store.Submit(prepared)
+		if storeErr != nil {
+			return Job{}, denial
+		}
+		_, _ = r.Store.Transition(refused.ID, JobFailed, func(target *Job) {
+			target.Outcome = "not permitted"
+		})
+		r.Telemetry.RecordJob(ctx, prepared.Kind, string(JobFailed))
+		r.Telemetry.Info(ctx, "job.denied",
+			slog.String("job_id", refused.ID), slog.String("kind", prepared.Kind))
+		return Job{}, denial
+	}
 	job, existed, err := r.Store.Submit(prepared)
 	if err != nil {
 		return Job{}, err
@@ -145,6 +163,18 @@ func (r *JobRunner) Submit(ctx context.Context, submission Submission) (Job, err
 		slog.String("kind", job.Kind),
 		slog.String("transport", job.Origin.Transport))
 	return job, nil
+}
+
+// permits applies the grant table. No table grants everything, which is only
+// correct before a deployment adopts one.
+func (r *JobRunner) permits(job Job) error {
+	if r.Grants == nil {
+		return nil
+	}
+	if err := r.Grants.Permits(job.Principal, job.Kind); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (r *JobRunner) enqueue(id string) error {

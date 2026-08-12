@@ -247,8 +247,19 @@ func (a *Agent) buildJobRunner() error {
 		Executors: executors,
 		Notifier:  reporter,
 		Progress:  reporter,
+		Grants:    jobGrants(a.access),
 	}
 	return nil
+}
+
+// jobGrants returns the deployment's grant table, or nil when it declares none.
+// Nil grants everything, which is only correct before a table is adopted.
+func jobGrants(policy *AccessPolicy) *GrantTable {
+	if policy == nil || len(policy.Grants.Principals) == 0 {
+		return nil
+	}
+	table := policy.Grants
+	return &table
 }
 
 // recoverJobs settles whatever a restart found mid-flight, so no record sits
