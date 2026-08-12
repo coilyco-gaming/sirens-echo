@@ -4,9 +4,16 @@
 # the declaration agent-compose consumes. See docs/sirens-echo-compose.md.
 set -euo pipefail
 
-catalog=${1:?usage: stage-compose-sources.sh <agentic-os checkout> <bundle out dir>}
-bundles=${2:?usage: stage-compose-sources.sh <agentic-os checkout> <bundle out dir>}
-compose_dir=agent/compose
+# Usage: stage-compose-sources.sh <bundle out dir> <catalogue> [catalogue...]
+# A wider layer passes several catalogues; the image build passes one.
+bundles=${1:?usage: stage-compose-sources.sh <bundle out dir> <catalogue>...}
+shift
+[ $# -gt 0 ] || { echo "stage-compose-sources: name at least one catalogue" >&2; exit 1; }
+catalog_flags=()
+for catalog in "$@"; do
+    catalog_flags+=(--catalog "$catalog")
+done
+compose_dir=${SIRENS_ECHO_COMPOSE_DIR:-agent/compose}
 
 mkdir -p "$bundles"
 # Composition runs from the declaration's directory, so this must be absolute.
@@ -37,7 +44,7 @@ if [ -z "$roles" ]; then
 fi
 
 for role in $roles; do
-    "$generator" --catalog "$catalog" --role "$role" --compose-dir "$compose_dir"
+    "$generator" "${catalog_flags[@]}" --role "$role" --compose-dir "$compose_dir"
     out=$bundles/$role
     rm -rf "$out"
     mkdir -p "$out"

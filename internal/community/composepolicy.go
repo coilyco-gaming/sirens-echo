@@ -86,46 +86,87 @@ func ParseRoleGraph(body string) RoleGraph {
 	return graph
 }
 
-// ExpandRole resolves one role's patterns against a catalogue. A pattern that
-// matches nothing is an error, since an empty selector hides a rename.
-func ExpandRole(catalog, role string, graph RoleGraph) ([]string, error) {
-	entries, err := os.ReadDir(filepath.Join(catalog, ".agents", "composed"))
-	if err != nil {
-		return nil, fmt.Errorf("read composed catalogue: %w", err)
-	}
-	available := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
+// ExpandRole resolves one role's patterns across every catalogue. A pattern
+// that matches nothing is an error, since an empty selector hides a rename.
+func ExpandRole(catalogs []string, role string, graph RoleGraph) (map[string]string, error) {
+	admitted, _, err := ExpandRoleWithExclusions(catalogs, role, graph)
+	return admitted, err
+}
+
+// ExpandRoleWithExclusions also reports what the deny list dropped, so a wider
+// compile can show which sources it refused rather than only what it took.
+func ExpandRoleWithExclusions(catalogs []string, role string, graph RoleGraph) (map[string]string, []string, error) {
+	// A wider layer composes the same graph against catalogues the public build
+	// cannot read, so the source of each name is an output, not an assumption.
+	home := map[string]string{}
+	available := make([]string, 0)
+	for _, catalog := range catalogs {
+		entries, err := os.ReadDir(filepath.Join(catalog, ".agents", "composed"))
+		if err != nil {
+			return nil, nil, fmt.Errorf("read composed catalogue %s: %w", catalog, err)
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			if previous, clash := home[entry.Name()]; clash {
+				return nil, nil, fmt.Errorf(
+					"skill %q is in both %s and %s; one catalogue must own it",
+					entry.Name(), previous, catalog,
+				)
+			}
+			home[entry.Name()] = catalog
 			available = append(available, entry.Name())
 		}
 	}
 	selected := map[string]struct{}{}
+	excluded := []string{}
 	for _, pattern := range graph.Patterns[role] {
 		matched := 0
 		for _, name := range available {
 			ok, err := filepath.Match(pattern, name)
 			if err != nil {
-				return nil, fmt.Errorf("role %q: bad pattern %q: %w", role, pattern, err)
+				return nil, nil, fmt.Errorf("role %q: bad pattern %q: %w", role, pattern, err)
 			}
 			if !ok {
 				continue
 			}
 			if reason, denied := DeniedComposedSkills[name]; denied {
-				return nil, fmt.Errorf("role %q: pattern %q reaches denied %q: %s", role, pattern, name, reason)
+				// Naming one exactly asks for it. A family glob merely brushes
+				// past, so the denied member drops out and the rest stands.
+				if pattern == name {
+					return nil, nil, fmt.Errorf("role %q: pattern %q is denied: %s", role, pattern, reason)
+				}
+				excluded = append(excluded, fmt.Sprintf("%s (via %q): %s", name, pattern, reason))
+				matched++
+				continue
 			}
 			selected[name] = struct{}{}
 			matched++
 		}
 		if matched == 0 {
-			return nil, fmt.Errorf("role %q: pattern %q matches nothing in %s", role, pattern, catalog)
+			return nil, nil, fmt.Errorf(
+				"role %q: pattern %q matches nothing in %s",
+				role, pattern, strings.Join(catalogs, ", "),
+			)
 		}
 	}
-	names := make([]string, 0, len(selected))
+	admitted := map[string]string{}
 	for name := range selected {
+		admitted[name] = home[name]
+	}
+	sort.Strings(excluded)
+	return admitted, excluded, nil
+}
+
+// SortedNames orders an admitted set so callers render it deterministically.
+func SortedNames(admitted map[string]string) []string {
+	names := make([]string, 0, len(admitted))
+	for name := range admitted {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	return names, nil
+	return names
 }
 
 // RenderDeclaration emits the source declaration agent-compose consumes. It is

@@ -91,14 +91,14 @@ func (s MCPServerDefinition) ResolvedTransport() string {
 
 // Definition is the source-controlled attribution, route, and policy selection.
 type Definition struct {
-	Schema             string                `json:"schema" yaml:"schema"`
-	Identity           string                `json:"identity" yaml:"identity"`
-	AuditRole          string                `json:"audit_role" yaml:"audit_role"`
-	ResponseStyle      string                `json:"response_style" yaml:"response_style"`
-	Channel            string                `json:"channel" yaml:"channel"`
-	MaxContextMessages int                   `json:"max_context_messages" yaml:"max_context_messages"`
-	LocalSkillRoots    []string              `json:"local_skill_roots" yaml:"local_skill_roots"`
-	IssueTracker       string                `json:"issue_tracker,omitempty" yaml:"issue_tracker,omitempty"`
+	Schema             string   `json:"schema" yaml:"schema"`
+	Identity           string   `json:"identity" yaml:"identity"`
+	AuditRole          string   `json:"audit_role" yaml:"audit_role"`
+	ResponseStyle      string   `json:"response_style" yaml:"response_style"`
+	Channel            string   `json:"channel" yaml:"channel"`
+	MaxContextMessages int      `json:"max_context_messages" yaml:"max_context_messages"`
+	LocalSkillRoots    []string `json:"local_skill_roots" yaml:"local_skill_roots"`
+	IssueTracker       string   `json:"issue_tracker,omitempty" yaml:"issue_tracker,omitempty"`
 	// Composed requires a materialized agent-compose bundle, so a profile that
 	// asks for an identity fails startup rather than answering without one.
 	Composed bool `json:"composed,omitempty" yaml:"composed,omitempty"`
