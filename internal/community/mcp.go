@@ -13,6 +13,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"go.opentelemetry.io/otel/trace"
@@ -38,9 +39,19 @@ type ToolResult struct {
 	IsError bool
 }
 
+// GroundingDocument is one resource a server marked for the assistant, already
+// read and bounded. See docs/sirens-echo-mcp-roster.md.
+type GroundingDocument struct {
+	Server string
+	URI    string
+	Title  string
+	Text   string
+}
+
 // ToolSession is the per-turn MCP capability available to Agent Proxy.
 type ToolSession interface {
 	Tools() []ToolDefinition
+	Grounding() []GroundingDocument
 	Unavailable() []string
 	Call(ctx context.Context, name string, arguments map[string]any) (ToolResult, error)
 	Close() error
@@ -59,6 +70,11 @@ const (
 	mcpListTimeout       = 15 * time.Second
 	mcpBackoffMin        = 5 * time.Second
 	mcpBackoffMax        = 2 * time.Minute
+
+	// Grounding bounds. Reference material must not crowd out the turn it is
+	// meant to support.
+	maxGroundingBytes     = 8 * 1024
+	maxGroundingDocuments = 8
 )
 
 // MCPProvider supervises the configured MCP roster through the official Go SDK.
@@ -78,12 +94,13 @@ type MCPProvider struct {
 }
 
 // supervisedServer holds one server's connection across turns, so a turn pays
-// no handshake and a tool listing survives until something invalidates it.
+// no handshake and a listing survives until something invalidates it.
 type supervisedServer struct {
 	definition MCPServerDefinition
 	notifies   bool
 	session    *mcp.ClientSession
 	tools      []*mcp.Tool
+	resources  []*mcp.Resource
 	refreshed  time.Time
 	retryAfter time.Time
 	backoff    time.Duration
@@ -108,6 +125,7 @@ type registeredMCPTool struct {
 
 type mcpToolSession struct {
 	tools       []ToolDefinition
+	grounding   []GroundingDocument
 	registered  map[string]registeredMCPTool
 	sessions    []*mcp.ClientSession
 	unavailable []string
@@ -135,6 +153,7 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		if err := opened.register(entry.definition.Name, entry.session, entry.tools); err != nil {
 			return nil, err
 		}
+		opened.grounding = append(opened.grounding, p.readGrounding(p.turnTraced(ctx), entry)...)
 	}
 	if len(p.entries) > 0 && len(opened.unavailable) == len(p.entries) {
 		return nil, fmt.Errorf("no configured MCP server is reachable")
@@ -182,15 +201,30 @@ func (p *MCPProvider) readyLocked(
 	defer cancel()
 	discovered, err := discoverTools(listCtx, entry.session)
 	if err != nil {
-		_ = entry.session.Close()
-		entry.session = nil
-		entry.tools = nil
-		entry.penalise(now)
+		entry.dropSession(now)
+		return err
+	}
+	// A server may publish tools without resources, so an unsupported listing
+	// is an empty one rather than a failure.
+	resources, err := discoverResources(listCtx, entry.session)
+	if err != nil {
+		entry.dropSession(now)
 		return err
 	}
 	entry.tools = discovered
+	entry.resources = resources
 	entry.refreshed = now
 	return nil
+}
+
+func (s *supervisedServer) dropSession(now time.Time) {
+	if s.session != nil {
+		_ = s.session.Close()
+	}
+	s.session = nil
+	s.tools = nil
+	s.resources = nil
+	s.penalise(now)
 }
 
 // turnTraced cancels with the pool but carries the calling turn's span context,
@@ -206,6 +240,9 @@ func (p *MCPProvider) connectLocked(base context.Context, entry *supervisedServe
 		&mcp.Implementation{Name: "sirens-echo", Version: "1"},
 		&mcp.ClientOptions{
 			ToolListChangedHandler: func(context.Context, *mcp.ToolListChangedRequest) {
+				entry.stale.Store(true)
+			},
+			ResourceListChangedHandler: func(context.Context, *mcp.ResourceListChangedRequest) {
 				entry.stale.Store(true)
 			},
 		},
@@ -337,6 +374,120 @@ func discoverTools(ctx context.Context, session *mcp.ClientSession) ([]*mcp.Tool
 	}
 }
 
+func discoverResources(
+	ctx context.Context,
+	session *mcp.ClientSession,
+) ([]*mcp.Resource, error) {
+	// A server without the resources capability answers nothing here, which the
+	// SDK surfaces as an error rather than an empty list.
+	if session.InitializeResult().Capabilities.Resources == nil {
+		return nil, nil
+	}
+	discovered := make([]*mcp.Resource, 0)
+	cursor := ""
+	for {
+		result, err := session.ListResources(ctx, &mcp.ListResourcesParams{Cursor: cursor})
+		if err != nil {
+			return nil, err
+		}
+		discovered = append(discovered, result.Resources...)
+		if result.NextCursor == "" {
+			return discovered, nil
+		}
+		cursor = result.NextCursor
+	}
+}
+
+// groundingCandidate reports whether a server marked this resource for the
+// assistant, so a large catalogue does not reach the prompt by default.
+func groundingCandidate(resource *mcp.Resource) bool {
+	if resource == nil || resource.Annotations == nil {
+		return false
+	}
+	for _, role := range resource.Annotations.Audience {
+		if role == "assistant" {
+			return true
+		}
+	}
+	return false
+}
+
+func resourcePriority(resource *mcp.Resource) float64 {
+	if resource.Annotations == nil {
+		return 0
+	}
+	return resource.Annotations.Priority
+}
+
+// readGrounding reads the marked resources in priority order, stopping at the
+// document and byte bounds so a large catalogue cannot crowd out the turn.
+func (p *MCPProvider) readGrounding(
+	base context.Context,
+	entry *supervisedServer,
+) []GroundingDocument {
+	candidates := make([]*mcp.Resource, 0, len(entry.resources))
+	for _, resource := range entry.resources {
+		if groundingCandidate(resource) {
+			candidates = append(candidates, resource)
+		}
+	}
+	sort.SliceStable(candidates, func(i, j int) bool {
+		if resourcePriority(candidates[i]) != resourcePriority(candidates[j]) {
+			return resourcePriority(candidates[i]) > resourcePriority(candidates[j])
+		}
+		return candidates[i].URI < candidates[j].URI
+	})
+	documents := make([]GroundingDocument, 0, len(candidates))
+	budget := maxGroundingBytes
+	for _, resource := range candidates {
+		if len(documents) >= maxGroundingDocuments || budget <= 0 {
+			break
+		}
+		readCtx, cancel := context.WithTimeout(base, mcpListTimeout)
+		result, err := entry.session.ReadResource(
+			readCtx,
+			&mcp.ReadResourceParams{URI: resource.URI},
+		)
+		cancel()
+		if err != nil {
+			continue
+		}
+		text := resourceText(result)
+		if text == "" {
+			continue
+		}
+		if len(text) > budget {
+			text = text[:runeBoundary(text, budget)] + "\n[truncated by the runtime]"
+		}
+		budget -= len(text)
+		documents = append(documents, GroundingDocument{
+			Server: entry.definition.Name,
+			URI:    resource.URI,
+			Title:  resourceTitle(resource),
+			Text:   text,
+		})
+	}
+	return documents
+}
+
+// resourceText keeps the readable parts. A blob has no meaning to the model.
+func resourceText(result *mcp.ReadResourceResult) string {
+	parts := make([]string, 0, len(result.Contents))
+	for _, contents := range result.Contents {
+		if contents != nil && contents.Text != "" {
+			parts = append(parts, contents.Text)
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+func resourceTitle(resource *mcp.Resource) string {
+	if resource.Title != "" {
+		return resource.Title
+	}
+	return resource.Name
+}
+
 func (s *mcpToolSession) register(
 	serverName string,
 	session *mcp.ClientSession,
@@ -368,6 +519,10 @@ func (s *mcpToolSession) register(
 
 func (s *mcpToolSession) Tools() []ToolDefinition {
 	return append([]ToolDefinition(nil), s.tools...)
+}
+
+func (s *mcpToolSession) Grounding() []GroundingDocument {
+	return append([]GroundingDocument(nil), s.grounding...)
 }
 
 // Unavailable names the configured servers that did not answer this turn.
@@ -451,4 +606,16 @@ func proxyToolName(server, tool string) (string, error) {
 		)
 	}
 	return name, nil
+}
+
+// runeBoundary returns the largest offset at or below limit that does not split
+// a rune, so a bounded document stays valid UTF-8.
+func runeBoundary(value string, limit int) int {
+	if limit >= len(value) {
+		return len(value)
+	}
+	for limit > 0 && !utf8.RuneStart(value[limit]) {
+		limit--
+	}
+	return limit
 }

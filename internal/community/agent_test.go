@@ -532,6 +532,10 @@ func (fixtureToolSession) Call(
 	return ToolResult{Text: "online"}, nil
 }
 
+func (fixtureToolSession) Grounding() []GroundingDocument {
+	return nil
+}
+
 func (fixtureToolSession) Unavailable() []string {
 	return nil
 }

@@ -13,8 +13,7 @@ import (
 var rosterVariable = regexp.MustCompile(`\$\{([A-Z][A-Z0-9_]*)\}`)
 
 // rosterFile is the deployment-owned inventory, in the mcpServers shape shared
-// with mcporter, Claude Code, and Codex. Unknown keys are another tool's
-// extension and are ignored rather than rejected.
+// with mcporter, Claude Code, and Codex. Unknown keys are ignored.
 type rosterFile struct {
 	MCPServers map[string]rosterEntry `json:"mcpServers"`
 }

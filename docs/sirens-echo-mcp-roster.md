@@ -76,5 +76,5 @@ Only an entirely unreachable roster stops the turn.
 
 ## See also
 
-See [configuration](sirens-echo-config.md) and
-[runtime MCP tools](sirens-echo-tools.md).
+See [configuration](sirens-echo-config.md), [runtime MCP tools](sirens-echo-tools.md),
+and [MCP resources](sirens-echo-mcp-resources.md).
