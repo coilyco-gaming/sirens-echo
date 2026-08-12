@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,8 +28,12 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		if request.Header.Get("X-Ward-Harness") != "discord" {
 			t.Errorf("harness header = %q", request.Header.Get("X-Ward-Harness"))
 		}
+		raw, err := io.ReadAll(request.Body)
+		if err != nil {
+			t.Errorf("read body: %v", err)
+		}
 		var body chatRequest
-		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+		if err := json.Unmarshal(raw, &body); err != nil {
 			t.Errorf("decode body: %v", err)
 		}
 		if body.Model != "selected-model" {
@@ -40,8 +45,14 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		if body.Stream {
 			t.Error("stream must be false")
 		}
-		if body.ResponseFormat.Type != "json_object" {
-			t.Errorf("response format = %#v", body.ResponseFormat)
+		// The reply contract is plain text, so the request must not ask the
+		// backend for a JSON object. See coilyco-gaming/sirens-echo#102.
+		var fields map[string]json.RawMessage
+		if err := json.Unmarshal(raw, &fields); err != nil {
+			t.Errorf("decode raw body: %v", err)
+		}
+		if _, present := fields["response_format"]; present {
+			t.Errorf("request carries response_format = %s", fields["response_format"])
 		}
 		if len(body.Messages) != 2 ||
 			body.Messages[0].Role != "system" ||
@@ -116,9 +127,6 @@ func TestProxyClientDiscoversCallsAndContinuesWithEcoMCP(t *testing.T) {
 		var body chatRequest
 		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
 			t.Errorf("decode body: %v", err)
-		}
-		if body.ResponseFormat.Type != "json_object" {
-			t.Errorf("response format = %#v", body.ResponseFormat)
 		}
 		currentRound := round.Add(1)
 		writer.Header().Set("Content-Type", "application/json")

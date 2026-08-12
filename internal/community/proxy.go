@@ -85,19 +85,16 @@ type ProxyClient struct {
 	Telemetry  *Telemetry
 }
 
+// chatRequest names no response_format. The reply contract is plain text, so a
+// JSON completion would reach the member as a serialized object.
 type chatRequest struct {
-	Model          string             `json:"model"`
-	Messages       []chatMessage      `json:"messages"`
-	Tools          []chatTool         `json:"tools,omitempty"`
-	ResponseFormat chatResponseFormat `json:"response_format"`
-	Stream         bool               `json:"stream"`
-	Temperature    float64            `json:"temperature"`
-	MaxTokens      int                `json:"max_tokens"`
-	Metadata       chatMetadata       `json:"metadata"`
-}
-
-type chatResponseFormat struct {
-	Type string `json:"type"`
+	Model       string        `json:"model"`
+	Messages    []chatMessage `json:"messages"`
+	Tools       []chatTool    `json:"tools,omitempty"`
+	Stream      bool          `json:"stream"`
+	Temperature float64       `json:"temperature"`
+	MaxTokens   int           `json:"max_tokens"`
+	Metadata    chatMetadata  `json:"metadata"`
 }
 
 type chatMessage struct {
@@ -301,13 +298,12 @@ func (c ProxyClient) Complete(
 			requestTools = nil
 		}
 		payload := chatRequest{
-			Model:          c.Model,
-			Messages:       messages,
-			Tools:          requestTools,
-			ResponseFormat: chatResponseFormat{Type: "json_object"},
-			Stream:         false,
-			Temperature:    0,
-			MaxTokens:      completionTokens,
+			Model:       c.Model,
+			Messages:    messages,
+			Tools:       requestTools,
+			Stream:      false,
+			Temperature: 0,
+			MaxTokens:   completionTokens,
 			Metadata: chatMetadata{
 				RequestID: requestID,
 				Role:      c.AuditRole,
@@ -531,11 +527,6 @@ func responseRepairPrompt(style string) string {
 		return socialResponseRepairPrompt
 	}
 	return neutralResponseRepairPrompt
-}
-
-func validJSONObject(raw string) bool {
-	var object map[string]json.RawMessage
-	return json.Unmarshal([]byte(raw), &object) == nil && object != nil
 }
 
 func (c ProxyClient) completeOnce(
