@@ -10,6 +10,7 @@ request is never counted against the service's own error rate.
 | --- | --- |
 | any method but `POST` | `405` with `Allow: POST` |
 | body that is not a JSON object | `400` `request body must be a JSON object` |
+| a field this contract does not define | `400` naming the offending field |
 | absent, empty, or blank `content`, with no `prompt` | `400` `content is required` |
 | `author` over 256 runes, or `content` over 16000 runes | `400` `author or content is too long` |
 | `history` longer than `max_context_messages` | `400` `history exceeds the configured context limit` |
