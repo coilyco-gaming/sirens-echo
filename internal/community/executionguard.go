@@ -2,7 +2,6 @@ package community
 
 import (
 	"fmt"
-	"strings"
 )
 
 // Execution runs under pod authority with no per-requester attribution.
@@ -70,24 +69,4 @@ func checkExecutionGrants(policy *AccessPolicy) error {
 	return ExecutionAdmissionError{
 		Reason: "no principal is granted ward-exec, so enabling execution would grant nobody anything",
 	}
-}
-
-// ExecutionAdmissionSummary describes the current surface for an operator
-// reading a startup log, without naming an account.
-func ExecutionAdmissionSummary(policy *AccessPolicy) string {
-	if policy == nil {
-		return "no policy"
-	}
-	parts := []string{
-		fmt.Sprintf("guilds=%d", len(policy.Guilds)),
-		fmt.Sprintf("dm_accounts=%d", len(policy.DirectMessages.Allow)),
-		fmt.Sprintf("granted_principals=%d", len(policy.Grants.Principals)),
-	}
-	if policy.legacyOpenDMs {
-		parts = append(parts, "open_dms=true")
-	}
-	if policy.catchAll != nil {
-		parts = append(parts, "catch_all=true")
-	}
-	return strings.Join(parts, " ")
 }
