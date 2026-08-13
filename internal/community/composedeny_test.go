@@ -142,8 +142,7 @@ func TestExpansionReportsTheOwningCatalogue(t *testing.T) {
 }
 
 // A missing catalogue is an error. Treating it as empty would turn a bad path
-// into a bundle that is merely bare, which the matches-nothing guard exists to
-// prevent from passing quietly.
+// into a bundle that is merely bare, which is the quiet failure to avoid.
 func TestExpansionRefusesAnUnreadableCatalogue(t *testing.T) {
 	t.Parallel()
 	absent := filepath.Join(t.TempDir(), "not-a-checkout")

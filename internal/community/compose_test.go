@@ -27,9 +27,8 @@ func catalogRoot(t *testing.T) string {
 	return root
 }
 
-// What only the real catalogue can answer: whether the patterns in roles.kdl
-// still match anything. Enforcement itself is covered offline in
-// composedeny_test.go, because this skips wherever AOS_CATALOG is unset.
+// What only a real catalogue answers: whether roles.kdl still matches anything.
+// This skips without AOS_CATALOG, so enforcement lives in composedeny_test.go.
 func TestGraphPatternsNeverReachDeniedSources(t *testing.T) {
 	t.Parallel()
 	catalog := catalogRoot(t)
