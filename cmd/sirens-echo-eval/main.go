@@ -23,6 +23,9 @@ const defaultEvaluationOTLPEndpoint = "http://localhost:4318"
 const (
 	defaultEvaluationDefinition = "agent/sirens-echo.yaml"
 	defaultEvaluationPack       = "agent/evaluation.yaml"
+	// An evaluation run is not the deployment. Left unset it reported as
+	// sirens-echo and mixed into production. See sirens-echo#533.
+	evaluationInstanceName = "sirens-echo-eval"
 )
 
 func main() {
@@ -49,6 +52,7 @@ func main() {
 	// The dataset goes to stdout, so logs must not. See sirens-echo#313.
 	telemetry, err := community.NewTelemetry(context.Background(), community.Config{
 		Definition:   definition,
+		InstanceName: evaluationInstanceName,
 		OTLPEndpoint: evaluationOTLPEndpoint(),
 		LogWriter:    os.Stderr,
 	})
