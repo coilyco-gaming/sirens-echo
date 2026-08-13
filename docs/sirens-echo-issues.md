@@ -16,6 +16,35 @@ Forgejo MCP's HTTP tool projection to reuse an exact-title open issue or create
 an ordinary issue. A reviewed change updates the local skill and regression
 case.
 
+## Linking what a turn observed or filed
+
+A short reference such as `#233` resolves against no repository once it leaves
+the channel, and an issue filed without being mentioned leaves no trace at all.
+Prose prompting has not stopped either habit, so the harness appends the links
+instead of asking the model to write them.
+
+After the response checks pass, the runtime appends a `Referenced issues:` block
+carrying the canonical URL for a short-form reference whose number a tool result
+in this same turn returned, and for any issue this turn filed, whether or not
+the reply named it. Every appended URL came back from a tool call, so the block
+can state no reference the runtime did not observe. A number the turn never
+observed stays unlinked rather than guessed at.
+
+The block is service-authored text and is added after validation, so it carries
+no first person, no exclamation, and no emoji of its own. A block that cannot
+fit the send budget is dropped rather than truncated into a broken URL by the
+transport.
+
+The API URL for an issue rides along in the same tool payload and is skipped,
+because it is not a link a member can follow. The created issue is read from the
+response's `html_url` rather than matched anywhere in the payload, so an issue
+quoted inside a new issue's body is not mistaken for the issue just filed.
+
+A link is not prose, so the grounding and neutral-style checks mask links before
+reading the reply. Without that mask the host `coilysiren.me` reads as the
+pronoun "me" and a fragment such as `#issue-8117` reads as an invented channel,
+which rejected every reply that carried a link.
+
 ## When the write fails
 
 `forgejo.issue.failed` carries the failing MCP tool, the HTTP status, and

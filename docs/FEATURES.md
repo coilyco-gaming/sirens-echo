@@ -28,6 +28,8 @@
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
 - Model-filed ordinary Forgejo issues through the guarded tool, with
   exact-title reuse and no labels
+- Appended canonical links for every issue a turn observed or filed, built only
+  from returned tool results and bounded by the send budget
 - Transport-aware OpenTelemetry ingress and joined turn traces end to end
 - Trace-correlated metadata logs with byte counts and no member or model text
 - Turn, latency, model-call, tool-call, admission, and failure metrics, plus 23

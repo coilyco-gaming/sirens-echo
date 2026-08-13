@@ -816,6 +816,10 @@ func (a *Agent) runTurn(
 	}
 	validateSpan.End()
 
+	// Service-authored, so it runs after the checks rather than through them.
+	// See docs/sirens-echo-issues.md.
+	reply = AppendIssueReferences(reply, result.ToolCalls...)
+
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return err
 	}
@@ -949,7 +953,7 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 		"",
 	)...)
 	reply, err := t.session.ChannelMessageSendComplex(t.message.ChannelID, &discordgo.MessageSend{
-		Content:   truncateRunes(content, 1990),
+		Content:   truncateRunes(content, discordReplyLimit),
 		Reference: t.message.SoftReference(),
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse:       []discordgo.AllowedMentionType{},
@@ -993,6 +997,10 @@ func displayName(message *discordgo.Message) string {
 	}
 	return "member"
 }
+
+// discordReplyLimit is the send budget for one message. It sits under
+// Discord's own 2000 so a reply the harness extended still arrives whole.
+const discordReplyLimit = 1990
 
 func truncateRunes(value string, limit int) string {
 	runes := []rune(value)
