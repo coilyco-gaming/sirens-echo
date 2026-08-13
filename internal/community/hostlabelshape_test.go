@@ -3,7 +3,7 @@ package community
 import "testing"
 
 // sirens-echo#680 excludes an empty prefix, a leading dot and a doubled dot by
-// name. Every other invalid label shape still matches. See sirens-echo#674.
+// name. Every other invalid label shape still matches. See sirens-echo#726.
 
 // labelRow is a host and what hostAllowed does with it today against what it
 // ought to do. A row where the two disagree is an open defect, not a target.
@@ -53,44 +53,44 @@ var mustRefuse = []labelRow{
 		// A hyphen cannot open or close a label. This is the shape the fourth
 		// acceptance row on 674 named and the merged guard still admits.
 		host: "-.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "a lone hyphen is not a label",
+		issue: "726", why: "a lone hyphen is not a label",
 	},
 	{
 		host: "-a.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "leading hyphen",
+		issue: "726", why: "leading hyphen",
 	},
 	{
 		host: "a-.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "trailing hyphen",
+		issue: "726", why: "trailing hyphen",
 	},
 	{
 		host: "_.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "underscore is not a hostname character",
+		issue: "726", why: "underscore is not a hostname character",
 	},
 	{
 		host: "a b.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "an interior space",
+		issue: "726", why: "an interior space",
 	},
 	{
 		// hostAllowed is documented as a predicate that must not depend on its
 		// caller. A slash inside a host means the string is not a host.
 		host: "a/b.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "a path separator inside a host",
+		issue: "726", why: "a path separator inside a host",
 	},
 	{
 		host: "a:80.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "a port separator inside a host",
+		issue: "726", why: "a port separator inside a host",
 	},
 	{
 		// A pattern holding a star is refused as a typo. A host holding one is
 		// not, so the two ends disagree about what a star means.
 		host: "*.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "674", why: "a star is not a label",
+		issue: "726", why: "a star is not a label",
 	},
 	{
 		host:       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.mozilla.com",
 		allowedNow: true, shouldAllow: false,
-		issue: "674", why: "64 octets, one over the limit",
+		issue: "726", why: "64 octets, one over the limit",
 	},
 }
 
@@ -120,7 +120,7 @@ func TestARealSubdomainKeepsMatching(t *testing.T) {
 }
 
 // The must-refuse half, asserted against what ships rather than what is wanted.
-// Three rows are closed and the rest name sirens-echo#674.
+// Three rows are closed and the rest name sirens-echo#726.
 func TestAnInvalidLabelShape(t *testing.T) {
 	t.Parallel()
 	runLabelRows(t, mustRefuse)
