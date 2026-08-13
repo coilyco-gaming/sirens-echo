@@ -114,10 +114,15 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	// The roster handle stays concrete because the agent closes it and serves
 	// prompts through it. Only what the model sees is composed.
 	var modelTools ToolProvider = tools
+	extras := []ToolProvider{tools}
 	if cfg.ScratchDir != "" {
-		modelTools = &CompositeProvider{
-			Providers: []ToolProvider{tools, &ScratchProvider{Root: cfg.ScratchDir}},
-		}
+		extras = append(extras, &ScratchProvider{Root: cfg.ScratchDir})
+	}
+	if len(cfg.FetchHosts) > 0 {
+		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
+	}
+	if len(extras) > 1 {
+		modelTools = &CompositeProvider{Providers: extras}
 	}
 	agent := &Agent{
 		cfg:     cfg,

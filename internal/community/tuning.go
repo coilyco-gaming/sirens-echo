@@ -22,6 +22,14 @@ const (
 	budgetRaisesAllowed = 1
 )
 
+// Fetch tool
+const (
+	// maxFetchBytes bounds a response, because a large body becomes prompt.
+	maxFetchBytes = 32 * 1024
+	// fetchTimeout bounds a slow host, which would otherwise spend the turn.
+	fetchTimeout = 10 * time.Second
+)
+
 // MCP: refresh, timeouts, backoff, and grounding size
 const (
 	// defaultRosterRefresh bounds staleness for a transport that cannot push
