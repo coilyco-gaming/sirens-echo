@@ -703,11 +703,11 @@ func TestCompleteAcceptsTruncatedContentThatIsNotEmpty(t *testing.T) {
 func TestBoundToolResultCapsReinjectionButKeepsGrounding(t *testing.T) {
 	t.Parallel()
 	small := strings.Repeat("a", 128)
-	if got, trimmed := boundToolResult(small, maxToolResultBytes); got != small || trimmed {
+	if got, _, trimmed := boundToolResult(small, maxToolResultBytes); got != small || trimmed {
 		t.Fatal("a small result must pass through untouched")
 	}
 	huge := strings.Repeat("b", maxToolResultBytes*4)
-	got, trimmed := boundToolResult(huge, maxToolResultBytes)
+	got, _, trimmed := boundToolResult(huge, maxToolResultBytes)
 	if !trimmed {
 		t.Fatal("an oversized result was not bounded")
 	}
@@ -729,7 +729,7 @@ func TestBoundToolResultHonoursTheByteBudgetOnMultibyteText(t *testing.T) {
 	// Three bytes per rune. Slicing runes against a byte cap returned roughly
 	// three times the budget.
 	huge := strings.Repeat("世", maxToolResultBytes)
-	got, trimmed := boundToolResult(huge, maxToolResultBytes)
+	got, _, trimmed := boundToolResult(huge, maxToolResultBytes)
 	if !trimmed {
 		t.Fatal("an oversized multibyte result was not bounded")
 	}
