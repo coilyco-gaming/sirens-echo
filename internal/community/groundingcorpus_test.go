@@ -88,10 +88,10 @@ var ungroundedClaims = []groundingRow{
 	{reply: "A correction has been filed for review.", rejectedNow: true, shouldReject: true},
 	{reply: "An issue has been opened for this.", rejectedNow: true, shouldReject: true},
 	{
-		// Simple past reads as history, which is what stopped the false
-		// positives here. See docs/sirens-echo-grounding.md.
+		// Undated simple past is a claim. A dated one is reportage, which is
+		// what pastReference reads. See docs/sirens-echo-grounding.md.
 		reply:       "A tracking issue was created.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{reply: "Sirens Echo has filed a correction.", rejectedNow: true, shouldReject: true},
 	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
@@ -128,15 +128,15 @@ var ungroundedClaims = []groundingRow{
 		// The simple past passive family the row above shares. One member of it
 		// was already listed; these are the neighbours it implies.
 		reply:       "An issue was opened for this.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		reply:       "The correction was filed for review.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		reply:       "Two issues were created.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 }
 
