@@ -109,6 +109,15 @@ func TestTheModelCannotWriteIntoRuntimeOutput(t *testing.T) {
 		"./tool-output/planted.txt",
 		"TOOL-OUTPUT/planted.txt",
 		"tool-output/nested/planted.txt",
+		// Traversal is the spelling the guard's own comment would permit if
+		// the check were moved ahead of path cleaning, as that comment claims.
+		"a/../tool-output/planted.txt",
+		"x/y/../../tool-output/planted.txt",
+		`tool-output\planted.txt`,
+		`.\tool-output\planted.txt`,
+		"/tool-output/planted.txt",
+		"  tool-output/planted.txt  ",
+		"tool-output",
 	} {
 		attempt := attempt
 		t.Run(attempt, func(t *testing.T) {
@@ -131,7 +140,11 @@ func TestTheModelCannotWriteIntoRuntimeOutput(t *testing.T) {
 func TestTheModelStillWritesItsOwnFiles(t *testing.T) {
 	t.Parallel()
 	session := spillSession(t, "member-1")
-	for _, allowed := range []string{"notes.txt", "work/plan.md", "tool-outputs.txt"} {
+	for _, allowed := range []string{
+		"notes.txt", "work/plan.md", "tool-outputs.txt",
+		// Lookalikes. The reservation is the first segment, not the substring.
+		"my-tool-output/plan.md", "tooloutput/plan.md", "a/tool-output/plan.md",
+	} {
 		allowed := allowed
 		t.Run(allowed, func(t *testing.T) {
 			t.Parallel()
