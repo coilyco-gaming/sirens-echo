@@ -27,6 +27,13 @@ in the payloads the turn was built from. It is also the narrowest of the
 plausible rosters: the only people reachable are people in the room. Widening
 to guild members or roles later is a change of source, not a change of shape.
 
+Two of those three sources are member-authored, so a member naming someone puts
+that person in the candidate set. That is correct, because reaching the person a
+conversation is about is the point. The harness still decides whether to deliver
+a mention, and those are separate: the candidate set is member-influenced, the
+delivery decision is not. Anyone widening the roster is widening a set that
+member text already reaches into.
+
 ## What it will not do
 
 **A name shorter than three characters never resolves.** It matches too much
