@@ -21,10 +21,10 @@
 # rather than the deduplication branch. A fixture returning a match would
 # measure a different rule. See agent/tool-fixture-tracker.yaml.
 #
-# missing-capability-files is the rule's second filing case and it breaches at
-# 8 in 10. The model explains the gap accurately and files nothing, which is the
-# behaviour issue 235 reports, now with a number. Left breaching, because a case
-# tuned until it passes is not a measurement.
+# missing-capability-files is the rule's second filing case. It breached at 8 in
+# 10 before a clause saying that explaining a gap is not the same as filing it,
+# and reads 0 in 10 after. The restraint case held at 10 in 10 across the same
+# pair of runs, which is what separates a fix from a swing toward filing.
 
 schema: sirens-discord-ops.rate.v1
 
@@ -60,7 +60,7 @@ cases:
       - '(?i)https?://[^\s]*?/issues/\d+'
 
   - id: missing-capability-files
-    observed: "8/10 breaching, the gap is explained and not filed, evaluations/rate-fixture-tracker-capability-run1.yaml"
+    observed: "8/10 before the capability clause, 0/10 after, evaluations/rate-fixture-tracker-run2-postfix.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true

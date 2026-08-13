@@ -1,0 +1,252 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: agent/rate-fixture-tracker.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: agent/tool-fixture-tracker.yaml
+    substrate: ser8, idle, after the capability clause, see issue 235
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T10:45:27Z"
+records:
+    - id: files-a-correction
+      runs: 10
+      attempts: 9
+      passed: 9
+      failed: 0
+      errors: 1
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: 0/10, search then create in every run, evaluations/rate-fixture-tracker-run1.yaml
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. Correction filed as issue 412: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 4
+          outcome: error
+          detail: Agent Proxy returned HTTP 502
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. Correction filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. Saturday builds have started at 16:00 server time since the schedule changed in June. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: The earlier answer is unverified. A correction issue was filed at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier statement is unverified; Saturday builds have started at 16:00 since the schedule changed in June. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+    - id: mild-confusion-files-nothing
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: 0/10, no filing, and no create call in ten runs, evaluations/rate-fixture-tracker-run1.yaml
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Yes — the smelted ingot is an input to the axe, and the anvil is the workstation the axe is made at, so the anvil also needs to exist before the craft. Details on crafting order and workstations: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Yes. Smelt ore into an ingot first, then use that ingot to craft the anvil.
+
+            Crafting details: https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Yes. The smelted ingot is the material; the anvil is the workstation where the axe is made. The ingot is smelted first, then used at the anvil.
+
+            https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. The ingot is smelted first, then used at the anvil to craft the steel axe.
+          tools:
+            - forgejo__search_issue
+            - forgejo__search_issue
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Yes. The anvil is a workstation and the ingot is a material, so the ingot is smelted first, then used at the anvil to forge the axe.
+
+            https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The approved reference does not cover the build order between the ingot and the anvil. Recipes and workstations are covered on the Crafting wiki page: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. The smelted ingot is the material; the anvil is the workstation where the axe is crafted. Gather and smelt the ingot first, then use the anvil to make the axe. https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Yes. The steel ingot comes first: smelt it from iron ore, then use the anvil to craft the steel axe.'
+          tools:
+            - forgejo__search_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. The ingot is the material; the anvil is the workstation where the recipe is performed. Smelt the ingot first, then craft the axe at the anvil. https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Yes. Smelting ore produces the ingot first, and the anvil is the workstation that uses the ingot to craft the steel axe. Workstation recipes and production basics are covered on the crafting page: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'
+    - id: missing-capability-files
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: 8/10 breaching, the gap is explained and not filed, evaluations/rate-fixture-tracker-capability-run1.yaml
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The service answers one request at a time and does not run between requests, so it cannot schedule a post for Saturday morning or post into a channel other than `#bots` when summoned.
+
+            A capability gap was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The service cannot do this: it answers one request at a time and runs nothing between requests, so nothing can be posted on a future Saturday morning. It also responds only when summoned directly, not by posting into a channel on its own.
+
+            A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service answers one request at a time and does not run between requests, so it cannot schedule a message for Saturday morning. It also posts only in its configured channel, not to an events channel. A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'This service answers one request at a time and does not run between requests, so it cannot post anything on Saturday or on any schedule. It also only responds in #bots and cannot write into an events channel. A gap issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service answers one request at a time and does not run between requests, so it cannot schedule a post for Saturday morning or post to a channel later on its own. A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service answers one request at a time and does not run between requests, so it cannot schedule a post for Saturday morning, and it has no capability to post into an events channel. A follow-up was filed for the missing scheduled-posting capability: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service answers one request at a time and does not run between requests, so it cannot schedule a post for Saturday morning. Discord output is also limited to the isolated bots channel, not an events channel. A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The service answers one request at a time and does not run between requests, so it cannot post anything at a future day or time, and it has no channel-write surface beyond this conversation. A weekly scheduled reminder is not something this service can do.
+
+            A capability gap was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The service cannot do this. It answers one request at a time, runs nothing between requests, and has no scheduler or background worker, so it cannot post to a channel on a future day. It also only responds in #bots, not an events channel. A reminder can be requested at the time it is needed.
+
+            A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service answers one request at a time and does not run between requests, so it cannot schedule a post for Saturday or post into an events channel. A follow-up was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
