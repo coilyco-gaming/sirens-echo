@@ -115,3 +115,81 @@ func TestInDottedIdentifierSeparatesDomainsFromPunctuation(t *testing.T) {
 		}
 	}
 }
+
+// The first label of a schemeless host is where a space precedes the name, so
+// nothing before it says hostname. See sirens-echo#515.
+func TestTheFirstLabelOfAHostIsNotAPerson(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"See eco-app.coilysiren.me/jobs",
+		"see eco-app.coilysiren.me for jobs",
+		"eco-app.coilysiren.me is the page",
+		"try eco-app-two.example.com today",
+	} {
+		roster := mentionRoster{"eco": hostMentionID}
+		got, resolved := roster.resolveMentions(reply)
+		if got != reply {
+			t.Errorf("the host was rewritten:\n  in =%q\n  out=%q", reply, got)
+		}
+		if len(resolved) != 0 {
+			t.Errorf("%q pinged %v for the first label of a host", reply, resolved)
+		}
+	}
+}
+
+// Every other position in the same address, so the fix is not read as covering
+// only the one Quail reported.
+func TestEveryLabelOfTheSameHostIsSafe(t *testing.T) {
+	t.Parallel()
+	const reply = "See eco-app.coilysiren.me/jobs"
+	for _, name := range []string{"eco", "app", "coilysiren", "jobs"} {
+		roster := mentionRoster{name: hostMentionID}
+		got, resolved := roster.resolveMentions(reply)
+		if got != reply || len(resolved) != 0 {
+			t.Errorf("name %q broke the address: %q %v", name, got, resolved)
+		}
+	}
+}
+
+// The case that keeps the rule honest. A hyphen leading to a word is prose, so
+// a member named eco is still reached in eco-friendly.
+func TestAHyphenatedWordInProseStillResolves(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"eco-friendly builds are cheaper",
+		"ask eco-friendly about it",
+		"eco replied already",
+	} {
+		roster := mentionRoster{"eco": hostMentionID}
+		got, resolved := roster.resolveMentions(reply)
+		if len(resolved) != 1 {
+			t.Errorf("a prose name stopped resolving: %q -> %q %v",
+				reply, got, resolved)
+		}
+	}
+}
+
+// The walk itself, stated as a table so the two directions are visibly
+// different rules rather than one fuzzy one.
+func TestReachesADottedLabelSeparatesHostsFromWords(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		rest string
+		want bool
+	}{
+		{"-app.coilysiren.me/jobs", true},
+		{".coilysiren.me", true},
+		{"-app-two.example.com", true},
+		{"-friendly builds", false},
+		{"-friendly", false},
+		{" replied", false},
+		{".", false},
+		{". Next", false},
+		{"", false},
+		{"-app/jobs", false},
+	} {
+		if got := reachesADottedLabel(testCase.rest); got != testCase.want {
+			t.Errorf("%q -> %v, want %v", testCase.rest, got, testCase.want)
+		}
+	}
+}
