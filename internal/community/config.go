@@ -115,6 +115,19 @@ type ModelBudget struct {
 	MaxCompletionTokens  int `json:"max_completion_tokens,omitempty" yaml:"max_completion_tokens,omitempty"`
 	BudgetRaises         int `json:"budget_raises,omitempty" yaml:"budget_raises,omitempty"`
 	ToolResultBytes      int `json:"tool_result_bytes,omitempty" yaml:"tool_result_bytes,omitempty"`
+
+	// Keyed by the model-facing tool name. One ceiling across every tool is
+	// more suspect than its value, so a tool may name its own. See #635.
+	ToolResultBytesByTool map[string]int `json:"tool_result_bytes_by_tool,omitempty" yaml:"tool_result_bytes_by_tool,omitempty"`
+}
+
+// ToolResultBytesFor resolves the bound for one tool, falling back to the
+// budget-wide ceiling so an unnamed tool keeps exactly today's behaviour.
+func (b ModelBudget) ToolResultBytesFor(tool string) int {
+	if bound, ok := b.ToolResultBytesByTool[tool]; ok {
+		return bound
+	}
+	return b.ToolResultBytes
 }
 
 // resolved fills each unset field from the packaged default, so a definition
@@ -154,6 +167,15 @@ func (b ModelBudget) validate() error {
 		if field.value < 0 {
 			return fmt.Errorf("model_budget %s must not be negative, got %d",
 				field.name, field.value)
+		}
+	}
+	// An absent key inherits. A present one is deliberate, so zero here means
+	// deliver nothing rather than unset, and that is never what anyone meant.
+	for tool, bound := range b.ToolResultBytesByTool {
+		if bound <= 0 {
+			return fmt.Errorf(
+				"model_budget tool_result_bytes_by_tool[%q] must be positive, got %d: "+
+					"remove the entry to inherit tool_result_bytes", tool, bound)
 		}
 	}
 	resolved := b.resolved()

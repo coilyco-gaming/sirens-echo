@@ -2,6 +2,7 @@ package community
 
 import (
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -128,7 +129,9 @@ func TestTheShippedDefinitionsDoNotShareACeiling(t *testing.T) {
 		t.Fatalf("load the Deep definition: %v", err)
 	}
 
-	if echo.ModelBudget != (ModelBudget{}) {
+	// reflect.DeepEqual since #635 gave the budget a map field. The assertion
+	// is unchanged: Echo names nothing and inherits every packaged default.
+	if !reflect.DeepEqual(echo.ModelBudget, ModelBudget{}) {
 		t.Errorf("Echo names a budget %+v, and its route is the tower",
 			echo.ModelBudget)
 	}

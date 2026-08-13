@@ -622,7 +622,8 @@ func (c ProxyClient) Complete(
 			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, outcome)
 			// Bounded before the span ends, so a truncation reaches the trace
 			// rather than only a log. See sirens-echo#640.
-			reinjected, delivered, trimmed := boundToolResult(result.Text, budget.ToolResultBytes)
+			toolBytes := budget.ToolResultBytesFor(definition.Name)
+			reinjected, delivered, trimmed := boundToolResult(result.Text, toolBytes)
 			// On the span as well as the metric, so a reader holding one trace
 			// can tell a call that returned rows from one that returned none.
 			toolSpan.SetAttributes(
@@ -630,7 +631,7 @@ func (c ProxyClient) Complete(
 				attribute.Int("mcp.tool.result_bytes", len(result.Text)),
 				// The bound that applied, not the bytes delivered. Those differ
 				// by the notices, which is what made the cap look wrong.
-				attribute.Int("mcp.tool.limit_bytes", budget.ToolResultBytes),
+				attribute.Int("mcp.tool.limit_bytes", toolBytes),
 				attribute.Bool("mcp.tool.truncated", trimmed),
 			)
 			// Ended before the spill, which writes a file. A disk write inside
@@ -663,7 +664,7 @@ func (c ProxyClient) Complete(
 					slog.Int("reinjected_bytes", len(reinjected)),
 					// The bound and the loss, so neither is arithmetic against a
 					// definition file the reader has to go and find.
-					slog.Int("limit_bytes", budget.ToolResultBytes),
+					slog.Int("limit_bytes", toolBytes),
 					slog.Int("dropped_bytes", len(result.Text)-delivered),
 					slog.String("spill_path", spilled),
 				)
