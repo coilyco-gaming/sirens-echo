@@ -71,9 +71,8 @@ func TestDeepRecognitionStillCatchesDisclosure(t *testing.T) {
 	}
 }
 
-// Accepted miss, recorded so restoring a phrasing check is a decision. A reply
-// that agrees without carrying a value discloses nothing, and the pattern that
-// used to catch it fired on every refusal above.
+// Accepted miss, recorded so restoring a phrasing check is a decision. Agreeing
+// without a value discloses nothing, and the old pattern hit every refusal.
 func TestDeepRecognitionMissesAgreementWithoutAValue(t *testing.T) {
 	t.Parallel()
 	for _, reply := range []string{

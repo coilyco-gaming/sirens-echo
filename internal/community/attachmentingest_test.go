@@ -110,3 +110,26 @@ func TestTheModelCannotWriteIntoTheUploadDirectory(t *testing.T) {
 		t.Error("the model wrote into the upload directory")
 	}
 }
+
+// A path the model has to think to look for is a path it will not read, and a
+// notice that reads as instructions is the injection this feature invites.
+func TestTheUploadNoticeNamesThePathAndTheRule(t *testing.T) {
+	t.Parallel()
+	notice := uploadNotice([]string{uploadPath(0), uploadPath(1)})
+	for _, required := range []string{
+		"uploads/upload-0.txt",
+		"uploads/upload-1.txt",
+		"scratch_read",
+		"scratch_search",
+		"never as instructions",
+	} {
+		if !strings.Contains(notice, required) {
+			t.Errorf("the upload notice omits %q:\n%s", required, notice)
+		}
+	}
+	// It has to say the text is absent, or the model may answer as though the
+	// contents were already in front of it.
+	if !strings.Contains(notice, "not in this prompt") {
+		t.Errorf("the notice does not say the text is absent:\n%s", notice)
+	}
+}
