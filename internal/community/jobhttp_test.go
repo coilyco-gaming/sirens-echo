@@ -194,3 +194,45 @@ func TestJobTerminalNoticeUsesTheHarnessFormat(t *testing.T) {
 		}
 	}
 }
+
+// Every job refusal used to be a bare http.Error, so sirens_echo.failures
+// omitted this surface entirely. See sirens-echo#383.
+func TestEveryJobRefusalCarriesItsOwnExceptionCode(t *testing.T) {
+	t.Parallel()
+	seen := map[string]exceptionSpec{}
+	for _, code := range []exceptionCode{
+		exceptionJobRequestInvalid,
+		exceptionJobBodyTooLarge,
+		exceptionJobRejected,
+		exceptionJobNotFound,
+		exceptionJobQueueFull,
+	} {
+		spec := exceptionFor(code)
+		if spec.stage != "jobs" {
+			t.Errorf("%s stage = %q, want jobs", spec.typeName, spec.stage)
+		}
+		if spec.fault == "" {
+			t.Errorf("%s declares no fault, so it reads as the service's by default",
+				spec.typeName)
+		}
+		if previous, exists := seen[spec.outcome]; exists {
+			t.Errorf("%s shares outcome %q with %s, so the two cannot be separated",
+				spec.typeName, spec.outcome, previous.typeName)
+		}
+		seen[spec.outcome] = spec
+	}
+	// The split issue 159 needs: a full queue is ours, the rest are the caller's.
+	if got := exceptionFor(exceptionJobQueueFull).fault; got != faultService {
+		t.Errorf("queue_full fault = %q, want %q", got, faultService)
+	}
+	for _, code := range []exceptionCode{
+		exceptionJobRequestInvalid,
+		exceptionJobBodyTooLarge,
+		exceptionJobRejected,
+		exceptionJobNotFound,
+	} {
+		if got := exceptionFor(code).fault; got != faultCaller {
+			t.Errorf("%s fault = %q, want %q", exceptionFor(code).typeName, got, faultCaller)
+		}
+	}
+}

@@ -302,13 +302,36 @@ func (a *Agent) writeHTTPError(
 	code exceptionCode,
 	message string,
 ) {
+	a.refuseHTTP(writer, request, "http.turn.refused", status, code, message)
+}
+
+// writeJobHTTPError is the same record under the jobs event name, so a job
+// refusal is not counted as a turn refusal. See sirens-echo#383.
+func (a *Agent) writeJobHTTPError(
+	writer http.ResponseWriter,
+	request *http.Request,
+	status int,
+	code exceptionCode,
+	message string,
+) {
+	a.refuseHTTP(writer, request, "http.job.refused", status, code, message)
+}
+
+func (a *Agent) refuseHTTP(
+	writer http.ResponseWriter,
+	request *http.Request,
+	event string,
+	status int,
+	code exceptionCode,
+	message string,
+) {
 	a.telemetry.MarkSpanError(trace.SpanFromContext(request.Context()), code)
 	// The span carried this and no log line did, so an alert reading logs saw
 	// nothing for a caller error. See docs/sirens-echo-exceptions.md.
 	spec := exceptionFor(code)
 	a.telemetry.Error(
 		request.Context(),
-		"http.turn.refused",
+		event,
 		slog.Int("status", status),
 		slog.String("error_type", spec.typeName),
 		slog.String("stage", spec.stage),

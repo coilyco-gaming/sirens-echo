@@ -56,13 +56,18 @@ func (a *Agent) handleJobs(writer http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
 	var payload jobSubmitRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		// This endpoint has no exception catalog, so it gets an honest message
-		// and not an honest telemetry bucket. See sirens-echo#351.
 		if oversizeBody(err) {
-			http.Error(writer, oversizeBodyMessage, http.StatusBadRequest)
+			a.writeJobHTTPError(
+				writer, request,
+				http.StatusBadRequest, exceptionJobBodyTooLarge, oversizeBodyMessage,
+			)
 			return
 		}
-		http.Error(writer, "request body must be a JSON object", http.StatusBadRequest)
+		a.writeJobHTTPError(
+			writer, request,
+			http.StatusBadRequest, exceptionJobRequestInvalid,
+			"request body must be a JSON object",
+		)
 		return
 	}
 	principal := httpPrincipal(request)
@@ -76,7 +81,7 @@ func (a *Agent) handleJobs(writer http.ResponseWriter, request *http.Request) {
 		},
 	})
 	if err != nil {
-		writeJobError(writer, err)
+		a.writeJobError(writer, request, err)
 		return
 	}
 	writeJSON(writer, http.StatusAccepted, viewOfJob(job))
@@ -99,14 +104,14 @@ func (a *Agent) handleJob(writer http.ResponseWriter, request *http.Request) {
 	case action == "" && request.Method == http.MethodGet:
 		job, err := a.jobs.Get(id, principal)
 		if err != nil {
-			writeJobError(writer, err)
+			a.writeJobError(writer, request, err)
 			return
 		}
 		writeJSON(writer, http.StatusOK, viewOfJob(job))
 	case action == "cancel" && request.Method == http.MethodPost:
 		job, err := a.jobs.Cancel(request.Context(), id, principal)
 		if err != nil {
-			writeJobError(writer, err)
+			a.writeJobError(writer, request, err)
 			return
 		}
 		writeJSON(writer, http.StatusOK, viewOfJob(job))
@@ -116,15 +121,29 @@ func (a *Agent) handleJob(writer http.ResponseWriter, request *http.Request) {
 }
 
 // writeJobError maps a runner error onto a status without echoing internals.
-func writeJobError(writer http.ResponseWriter, err error) {
+// The response bodies are unchanged; only the record behind them is new.
+func (a *Agent) writeJobError(
+	writer http.ResponseWriter,
+	request *http.Request,
+	err error,
+) {
 	switch {
 	case errors.Is(err, ErrJobNotFound), errors.Is(err, ErrNotJobOwner):
 		// Another principal's job is indistinguishable from one that does not
-		// exist, so an id cannot be probed for.
-		http.Error(writer, "job not found", http.StatusNotFound)
+		// exist, so an id cannot be probed for. One code keeps it that way.
+		a.writeJobHTTPError(
+			writer, request,
+			http.StatusNotFound, exceptionJobNotFound, "job not found",
+		)
 	case errors.Is(err, ErrJobQueueFull):
-		http.Error(writer, "job queue is full", http.StatusServiceUnavailable)
+		a.writeJobHTTPError(
+			writer, request,
+			http.StatusServiceUnavailable, exceptionJobQueueFull, "job queue is full",
+		)
 	default:
-		http.Error(writer, "job could not be accepted", http.StatusBadRequest)
+		a.writeJobHTTPError(
+			writer, request,
+			http.StatusBadRequest, exceptionJobRejected, "job could not be accepted",
+		)
 	}
 }
