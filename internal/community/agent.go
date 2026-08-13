@@ -493,6 +493,26 @@ func counterpartOf(message *discordgo.Message) CounterpartKind {
 	return CounterpartHuman
 }
 
+// attachmentTypes returns each attachment's media type. Bytes and filenames
+// stay out, so nothing member-authored enters the transcript by this route.
+func attachmentTypes(message *discordgo.Message) []string {
+	if message == nil || len(message.Attachments) == 0 {
+		return nil
+	}
+	kinds := make([]string, 0, len(message.Attachments))
+	for _, attachment := range message.Attachments {
+		if attachment == nil {
+			continue
+		}
+		kind := attachment.ContentType
+		if strings.TrimSpace(kind) == "" {
+			kind = "application/octet-stream"
+		}
+		kinds = append(kinds, kind)
+	}
+	return kinds
+}
+
 // memberRoles returns the author's guild roles, which arrive on the Gateway
 // payload. A role grant therefore costs no Discord API call.
 func memberRoles(message *discordgo.Message) []string {
@@ -993,6 +1013,7 @@ func (t *discordMessageTurn) Current() TranscriptEntry {
 		Author:      displayName(t.message),
 		Content:     t.message.ContentWithMentionsReplaced(),
 		Counterpart: counterpartOf(t.message),
+		Attachments: attachmentTypes(t.message),
 	}
 }
 
@@ -1017,6 +1038,7 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 			Author:      displayName(message),
 			Content:     message.ContentWithMentionsReplaced(),
 			Counterpart: counterpartOf(message),
+			Attachments: attachmentTypes(message),
 		})
 	}
 	return history, nil

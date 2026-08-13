@@ -12,6 +12,10 @@ Gaming beyond Eco is in scope as a subject. Evidence is not. A game with no
 tool behind it is an unknown, recalling a detail is not a source, and the
 breadth of the subject is not evidence that a source exists.
 
+An attachment is announced by its type and cannot be read. A message carrying
+one is an incomplete question, so say the attachment cannot be read rather than
+answering as though it had been.
+
 Read [references/community.md](references/community.md) for the current bounded
 knowledge base.
 

@@ -43,6 +43,9 @@ type TranscriptEntry struct {
 	// Asserted marks an entry a caller supplied rather than the runtime
 	// observing it. See docs/sirens-echo-http.md.
 	Asserted bool
+	// Attachments carries media types only, never filenames or bytes. Without
+	// it a screenshot reads as text alone. See docs/sirens-echo-attachments.md.
+	Attachments []string
 }
 
 // agentSuffix marks an author Discord flagged as a bot, so the model reads a
@@ -61,6 +64,50 @@ func (e TranscriptEntry) assertedSuffix() string {
 		return " (asserted by the caller, not observed)"
 	}
 	return ""
+}
+
+// attachmentSuffix reports what was attached without claiming to have read it.
+// Silence here reads as a text-only message, which is the defect it prevents.
+func (e TranscriptEntry) attachmentSuffix() string {
+	kinds := make([]string, 0, len(e.Attachments))
+	for _, kind := range e.Attachments {
+		if clean := cleanMediaType(kind); clean != "" {
+			kinds = append(kinds, clean)
+		}
+	}
+	if len(kinds) == 0 {
+		return ""
+	}
+	noun := "attachments"
+	if len(kinds) == 1 {
+		noun = "attachment"
+	}
+	return fmt.Sprintf(
+		" (with %d %s this service cannot read: %s)",
+		len(kinds), noun, strings.Join(kinds, ", "),
+	)
+}
+
+// cleanMediaType keeps a media type to its grammar. The value arrives with an
+// upload, so anything outside that grammar is discarded rather than rendered.
+func cleanMediaType(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if len(value) > 60 {
+		return ""
+	}
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+		case r == '/', r == '-', r == '+', r == '.':
+		default:
+			return ""
+		}
+	}
+	if strings.Count(value, "/") != 1 || strings.HasPrefix(value, "/") ||
+		strings.HasSuffix(value, "/") {
+		return ""
+	}
+	return value
 }
 
 // BuildSystemPrompt joins the prompt sections with a blank line. An empty
@@ -301,22 +348,25 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 		if speaker == "" {
 			return ""
 		}
-		return fmt.Sprintf("The request that follows is from %s%s.", speaker, current.agentSuffix())
+		return fmt.Sprintf("The request that follows is from %s%s.%s",
+			speaker, current.agentSuffix(), current.attachmentSuffix())
 	}
 	var output strings.Builder
 	output.WriteString("Recent conversation, oldest first:\n")
 	for _, entry := range history {
 		fmt.Fprintf(
 			&output,
-			"- %s%s%s: %s\n",
+			"- %s%s%s: %s%s\n",
 			cleanTranscriptText(entry.Author, 80),
 			entry.agentSuffix(),
 			entry.assertedSuffix(),
 			cleanTranscriptText(entry.Content, 1000),
+			entry.attachmentSuffix(),
 		)
 	}
 	if speaker != "" {
-		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.", speaker, current.agentSuffix())
+		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.%s",
+			speaker, current.agentSuffix(), current.attachmentSuffix())
 	}
 	return strings.TrimRight(output.String(), "\n")
 }
