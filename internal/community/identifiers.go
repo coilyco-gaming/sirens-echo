@@ -80,6 +80,10 @@ func (g *IdentifierGuard) addSnowflake(value string) {
 	g.digits = append(g.digits, value)
 }
 
+// minEncodedGuardBytes bounds the base64 reading. A short value's encoding is
+// short enough to appear in ordinary text.
+const minEncodedGuardBytes = 16
+
 // digitsOnly strips everything that is not a digit, so every separator-based
 // spelling of a number collapses into one comparison.
 func digitsOnly(text string) string {
@@ -142,12 +146,31 @@ func (g *IdentifierGuard) Validate(reply string) error {
 			return fmt.Errorf("model reply carried a configured identifier")
 		}
 	}
-	// The invariant is the value, not its spelling. Matching the stripped reply
-	// covers spacing, punctuation, and one-digit-at-a-time enumeration at once.
+	// The invariant is the value, not its spelling. Each reading collapses a
+	// different encoding. See docs/sirens-echo-principal-check.md.
 	if len(g.digits) > 0 {
-		stripped := digitsOnly(reply)
+		readings := []string{
+			digitsOnly(reply),
+			digitsOnly(spelledToDigits(reply)),
+		}
 		for _, value := range g.digits {
-			if strings.Contains(stripped, value) {
+			reversed := reverseString(value)
+			for _, reading := range readings {
+				if strings.Contains(reading, value) ||
+					strings.Contains(reading, reversed) {
+					return fmt.Errorf("model reply carried a configured identifier")
+				}
+			}
+		}
+	}
+	// Only long values, because base64 of a short one collides with ordinary
+	// text far more readily than it catches an exfiltration.
+	for _, value := range g.forbidden {
+		if len(value) < minEncodedGuardBytes {
+			continue
+		}
+		for _, encoded := range base64Of(value) {
+			if strings.Contains(reply, encoded) {
 				return fmt.Errorf("model reply carried a configured identifier")
 			}
 		}
