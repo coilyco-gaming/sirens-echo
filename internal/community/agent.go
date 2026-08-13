@@ -1146,6 +1146,7 @@ func (t *discordMessageTurn) channelAndThread() (channelID, threadID string) {
 		return channelID, ""
 	}
 	return channel.ParentID, channelID
+}
 
 // TraceLookup reads the referenced message too, because the id a member wants
 // is usually in the notice they replied to rather than in what they typed.
