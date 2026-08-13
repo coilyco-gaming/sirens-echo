@@ -1,6 +1,7 @@
 package community
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 
@@ -15,6 +16,11 @@ import (
 func discordFailureAttrs(err error) []slog.Attr {
 	if err == nil {
 		return nil
+	}
+	// Ahead of everything, because a budget this service chose ended this and
+	// nothing was wrong with Discord. See sirens-echo#648.
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return []slog.Attr{slog.String("discord_failure", "abandoned")}
 	}
 	var rest *discordgo.RESTError
 	if !errors.As(err, &rest) {

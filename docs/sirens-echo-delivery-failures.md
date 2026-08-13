@@ -23,6 +23,7 @@ not.
 
 `no_response` is a classification rather than a gap. A dropped gateway produces
 no HTTP exchange, and knowing Discord never answered is itself the diagnosis.
+`abandoned` is separate: our own budget ending a send is not an outage.
 
 ## What is deliberately absent
 
@@ -38,9 +39,9 @@ collapse into one value while showing a member two different notices. Both were
 countable through the notice string, which is prose rather than a label, so
 they could be counted after the fact and never alerted on.
 
-`failure_cause` is a closed set: `timeout`, `tool_failed`, `rounds_spent`,
-`stage_failed`. It is derived in the same order the notice is chosen, so the
-label and the phrase a member reads cannot disagree.
+`failure_cause` is a closed set: `shutdown`, `timeout`, `tool_failed`,
+`rounds_spent`, `stage_failed`. It is derived in the same order the notice is
+chosen, so the label and the phrase a member reads cannot disagree.
 
 ## The member is told, once
 
@@ -63,7 +64,6 @@ turn with less than they had, and dead air is the worst outcome this service has
 So a notice that cannot be sent is carried by that line instead. An edit is a
 different call against a message that already exists, so it can land where the
 send did not, and a claimed line is never deleted even when the edit fails too.
-
 A turn too short to have posted a line has nothing to carry and is unchanged.
 
 ## What this does not do
