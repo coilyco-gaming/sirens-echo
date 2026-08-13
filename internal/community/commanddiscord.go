@@ -115,6 +115,7 @@ func (a *Agent) onInteraction(
 		Principal:     user.ID,
 		Origin:        origin,
 		InteractionID: event.ID,
+		ThreadID:      threadOrigin(session, origin),
 	})
 	a.respondToCommand(session, event, notice)
 }
@@ -126,6 +127,22 @@ type commandRequest struct {
 	Principal     string
 	Origin        summonContext
 	InteractionID string
+	// ThreadID is set when the command was run inside a thread, so a job
+	// submitted here binds to it. See docs/sirens-echo-commands.md.
+	ThreadID string
+}
+
+// threadOrigin reports the thread a command was run in, or empty for an
+// ordinary channel. A channel is not a referent, so only a thread is returned.
+func threadOrigin(session *discordgo.Session, origin summonContext) string {
+	if session == nil || origin.ChannelID == "" {
+		return ""
+	}
+	channel := resolveChannel(session, origin.ChannelID)
+	if channel == nil || !channel.IsThread() {
+		return ""
+	}
+	return origin.ChannelID
 }
 
 // runCommand performs the declared action and returns the notice to answer
@@ -168,7 +185,24 @@ func (a *Agent) runCommand(ctx context.Context, request commandRequest) string {
 	if err != nil {
 		return harnessNotice("job could not be accepted")
 	}
+	a.bindJobThread(ctx, job, request.ThreadID)
 	return harnessNotice(fmt.Sprintf("job %s submitted", job.ID))
+}
+
+// bindJobThread records the thread a job was started in, so a follow-up there
+// needs no id. Best effort: a job must not fail because its binding did not.
+func (a *Agent) bindJobThread(ctx context.Context, job Job, threadID string) {
+	if threadID == "" {
+		return
+	}
+	if _, err := BindJobToThread(a.jobs.Store, job.ID, threadID); err != nil {
+		// The likeliest cause is a thread already bound to an earlier job,
+		// which is the documented singularity rather than a fault.
+		a.telemetry.Info(ctx, "job.thread.unbound",
+			slog.String("job_id", job.ID), slog.String("error", err.Error()))
+		return
+	}
+	a.telemetry.Info(ctx, "job.thread.bound", slog.String("job_id", job.ID))
 }
 
 func (a *Agent) respondToCommand(

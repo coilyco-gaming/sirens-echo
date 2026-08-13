@@ -69,9 +69,9 @@ state and makes no API call.
 
 ## What is not here
 
-Threads for jobs. `BindJobToThread` and `ResolveThreadJob` exist and are still
-unwired, which is a separate piece of work: a job outlives its turn, so the
-question of which thread it owns has a different answer.
+A thread created for a job. A job started inside a thread now binds to it, but
+nothing opens one, so a job started in a channel has no referent of its own.
+See [commands](sirens-echo-commands.md).
 
 ## See also
 

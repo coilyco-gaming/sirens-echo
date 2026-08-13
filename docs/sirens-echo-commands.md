@@ -64,10 +64,10 @@ binding, so a follow-up inside the thread repeats nothing. An explicit id always
 wins. Outside a bound thread with no id, the command says it has no referent
 rather than guessing.
 
-**Nothing binds a job to a thread today.** `BindJobToThread` is the only writer
-of `Origin.ThreadID` and nothing calls it, so the fallback never resolves and an
-id-less command always reports no referent. Whether a job gets its own thread is
-open. See [sirens-echo#620](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/620).
+**A job binds to the thread it was started in**, and only to a thread. Binding a
+channel would make it resolve to one arbitrary job of many. A thread already
+bound keeps its first job, so a second started there has no referent, and
+nothing opens a thread for a job, so one started in a channel has none.
 
 ## What a command does not do
 
