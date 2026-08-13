@@ -157,7 +157,26 @@ func (b ModelBudget) validate() error {
 			resolved.MaxCompletionTokens, resolved.BaseCompletionTokens,
 		)
 	}
+	// A ceiling the rungs stop short of never applies. See sirens-echo#522.
+	if reached := resolved.ladderTop(); reached < resolved.MaxCompletionTokens {
+		return fmt.Errorf(
+			"model_budget max_completion_tokens %d is unreachable: %d raises from %d "+
+				"tops out at %d",
+			resolved.MaxCompletionTokens, resolved.BudgetRaises,
+			resolved.BaseCompletionTokens, reached,
+		)
+	}
 	return nil
+}
+
+// ladderTop is where the raises stop climbing, by the same doubling
+// nextCompletionBudget performs. Stops early, so a large count cannot overflow.
+func (b ModelBudget) ladderTop() int {
+	reached := b.BaseCompletionTokens
+	for raise := 0; raise < b.BudgetRaises && reached < b.MaxCompletionTokens; raise++ {
+		reached *= completionBudgetStep
+	}
+	return reached
 }
 
 // Principal identifies the one speaker the prompt trusts. The values are
