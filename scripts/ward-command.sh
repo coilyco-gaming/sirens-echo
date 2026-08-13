@@ -8,9 +8,10 @@ if [ -z "${SIRENS_ECHO_RUNNER:-}" ]; then
   export SIRENS_ECHO_RUNNER
 fi
 
-# The gate only helps if it fires without being remembered. A fresh clone has no
-# hook, so pre-commit ran after the push. See sirens-echo#307.
-if [ -d .git ] && [ ! -e .git/hooks/pre-commit ] && command -v pre-commit >/dev/null 2>&1; then
+# Fires without being remembered. Resolved rather than spelled, because a linked
+# worktree has .git as a file and a -d test would skip it. See sirens-echo#307.
+hook_path=$(git rev-parse --git-path hooks/pre-commit 2>/dev/null || true)
+if [ -n "$hook_path" ] && [ ! -e "$hook_path" ] && command -v pre-commit >/dev/null 2>&1; then
   pre-commit install --install-hooks >/dev/null 2>&1 || true
 fi
 
