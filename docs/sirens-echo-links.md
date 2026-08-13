@@ -4,6 +4,12 @@ A reply may contain a URL only when that URL appears verbatim in the approved
 registry. A link written from memory is a fabrication even when the address
 turns out to be real, so an unlisted link is never preferable to no link.
 
+The rule governs what the model writes. The `Referenced issues:` block the
+runtime appends is built from URLs a tool returned this turn, so it is a
+receipt rather than a recollection and no registry entry could cover it. See
+[knowledge gaps and corrections](sirens-echo-issues.md). The model names a
+tracked issue by number and never builds the address itself.
+
 ## The registry
 
 The registry is knowledge rather than code. It lives in the
