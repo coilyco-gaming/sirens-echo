@@ -110,6 +110,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	tools := &MCPProvider{
 		Servers:    roster,
 		HTTPClient: httpClient,
+		Sandbox: sandboxLabelPolicy{
+			Tracker: cfg.Definition.IssueTracker,
+			LabelID: cfg.SandboxLabelID,
+		},
 	}
 	// The roster handle stays concrete because the agent closes it and serves
 	// prompts through it. Only what the model sees is composed.

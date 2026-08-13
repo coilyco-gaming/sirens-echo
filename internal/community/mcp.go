@@ -79,6 +79,8 @@ const refreshToolDescription = "Re-read which tools every configured server " +
 // MCPProvider supervises the configured MCP roster through the official Go SDK.
 // An empty roster is a valid no-tool capability boundary.
 type MCPProvider struct {
+	// Sandbox labels issues this service files. Zero applies nothing.
+	Sandbox    sandboxLabelPolicy
 	Servers    []MCPServerDefinition
 	HTTPClient *http.Client
 	// RefreshInterval bounds staleness where notifications cannot arrive. Zero
@@ -139,6 +141,8 @@ type mcpToolSession struct {
 	sessions    []*mcp.ClientSession
 	unavailable []string
 	callTimeout time.Duration
+	// sandbox labels an issue this service files. See sirens-echo#208.
+	sandbox sandboxLabelPolicy
 	// refresh is the one tool that is not an MCP server's. Nil leaves it
 	// unoffered. See docs/sirens-echo-mcp-roster.md.
 	refresh func() int
@@ -153,6 +157,7 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 	opened := &mcpToolSession{
 		registered:  make(map[string]registeredMCPTool),
 		callTimeout: p.callTimeout(),
+		sandbox:     p.Sandbox,
 	}
 	now := time.Now()
 	for _, entry := range p.entries {
@@ -640,6 +645,10 @@ func (s *mcpToolSession) Call(
 	}
 	callCtx, cancel := context.WithTimeout(ctx, bound)
 	defer cancel()
+	// The model never supplies this and cannot omit it. See sirens-echo#208.
+	if s.sandbox.applies(tool) {
+		arguments = s.sandbox.withSandboxLabel(arguments)
+	}
 	result, err := tool.session.CallTool(callCtx, &mcp.CallToolParams{
 		Name:      tool.toolName,
 		Arguments: arguments,
