@@ -24,7 +24,7 @@ the first tool error. Several tools may be requested together, but they are
 neither simultaneous nor independent, so a reply must not call them parallel or
 concurrent.
 
-A request allows at most six tool rounds and fails outright on the seventh.
+At most six tool rounds. After the sixth, the answer uses what they returned.
 A budget of ten model calls also covers repairs and raises, so a request can
 run out of steps sooner. Either ceiling is the real limit on how complex a
 request can be. Say so when a task would need a longer chain rather than starting one that
