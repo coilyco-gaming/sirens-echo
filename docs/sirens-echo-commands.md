@@ -64,6 +64,11 @@ binding, so a follow-up inside the thread repeats nothing. An explicit id always
 wins. Outside a bound thread with no id, the command says it has no referent
 rather than guessing.
 
+**Nothing binds a job to a thread today.** `BindJobToThread` is the only writer
+of `Origin.ThreadID` and nothing calls it, so the fallback never resolves and an
+id-less command always reports no referent. Whether a job gets its own thread is
+open. See [sirens-echo#620](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/620).
+
 ## What a command does not do
 
 It does not carry per-requester authority. Every job runs under pod-level
