@@ -58,6 +58,20 @@ func (c *contentCounter) moment() time.Time {
 	return time.Now().UTC()
 }
 
+// contentEffectStep names the message a job has already delivered. Keyed by
+// position, because that is what a re-execution repeats. See sirens-echo#621.
+func contentEffectStep(sequence int) string {
+	return fmt.Sprintf("content:%d", sequence)
+}
+
+// sequence reports how many messages this job has emitted, without admitting
+// another. Used to name the effect before the send.
+func (c *contentCounter) sequence(id string) int {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.sent[id]
+}
+
 // admit reports why this job may not emit, or nil. The window opens on the
 // first message rather than at submission, so queue time is not answer time.
 func (c *contentCounter) admit(id string) error {
@@ -118,6 +132,17 @@ func (r *JobRunner) contentFor(ctx context.Context, job Job) func(string) error 
 				slog.String("job_id", job.ID), slog.String("ceiling", err.Error()))
 			return err
 		}
+		// A re-execution repeats the executor's emits. Recorded per position, so
+		// the second run skips what the first delivered. See sirens-echo#621.
+		step := contentEffectStep(counter.sequence(job.ID))
+		if r.Store != nil {
+			current, err := r.Store.Get(job.ID)
+			if err == nil && EffectApplied(current, step) {
+				r.Telemetry.Info(ctx, "job.content.replayed",
+					slog.String("job_id", job.ID), slog.String("step", step))
+				return nil
+			}
+		}
 		r.Telemetry.Info(ctx, "job.content.emitted",
 			slog.String("job_id", job.ID), slog.Int("content_bytes", len(content)))
 		// Not detached from the job. An answer a cancelled job is still writing
@@ -125,6 +150,14 @@ func (r *JobRunner) contentFor(ctx context.Context, job Job) func(string) error 
 		if err := r.Content.EmitJobContent(ctx, job, content); err != nil {
 			r.Telemetry.RecordFailure(ctx, "job_content")
 			return err
+		}
+		// After the send. Recording first would skip a message the origin never
+		// received, which is the failure this guard exists to avoid.
+		if r.Store != nil {
+			if _, err := RecordEffect(r.Store, job.ID, step, "delivered"); err != nil {
+				r.Telemetry.Info(ctx, "job.content.effect.failed",
+					slog.String("job_id", job.ID), slog.String("step", step))
+			}
 		}
 		return nil
 	}

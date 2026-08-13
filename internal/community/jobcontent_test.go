@@ -269,3 +269,118 @@ func TestContentAndProgressDoNotShareABound(t *testing.T) {
 		t.Error("a job that spent its content allowance lost its progress line")
 	}
 }
+
+// A re-execution repeats the executor's emits. The member must not read the
+// same paragraph twice. See sirens-echo#621.
+
+// storedJob puts a real job in a real store, so the effect guard is exercised
+// against the machinery rather than a stub of it.
+func storedJob(t *testing.T) (*MemoryJobStore, Job) {
+	t.Helper()
+	store := NewMemoryJobStore(nil)
+	job, _, err := store.Submit(Job{
+		ID:             "job-content-replay",
+		Kind:           "test",
+		Principal:      "318190481467244544",
+		IdempotencyKey: "job-content-replay-key",
+		State:          JobRunning,
+		Origin:         JobOrigin{Transport: transportDiscord, ChannelID: "1024000000000000001"},
+	})
+	if err != nil {
+		t.Fatalf("submit: %v", err)
+	}
+	return store, job
+}
+
+func TestAReplayedMessageIsNotSentTwice(t *testing.T) {
+	t.Parallel()
+	store, job := storedJob(t)
+	sink := &recordingContentSink{}
+	runner := &JobRunner{
+		Telemetry: telemetryOrNoop(nil), Store: store,
+		Content: sink, ValidateContent: allow, content: newContentCounter(nil),
+	}
+	first := runner.contentFor(context.Background(), job)
+	for _, part := range []string{"one.", "two."} {
+		if err := first(part); err != nil {
+			t.Fatalf("first run: %v", err)
+		}
+	}
+
+	// A re-execution: same job, same store, a fresh counter, same emits.
+	runner.content = newContentCounter(nil)
+	replay := runner.contentFor(context.Background(), job)
+	for _, part := range []string{"one.", "two."} {
+		if err := replay(part); err != nil {
+			t.Fatalf("replay: %v", err)
+		}
+	}
+	if sent := sink.messages(); len(sent) != 2 {
+		t.Errorf("the member received %d messages across a replay, want 2: %v",
+			len(sent), sent)
+	}
+}
+
+// The replay skips only what was delivered. A message the first run never
+// reached still arrives, or a crash mid-answer truncates it forever.
+func TestAReplayStillDeliversWhatTheFirstRunDidNot(t *testing.T) {
+	t.Parallel()
+	store, job := storedJob(t)
+	sink := &recordingContentSink{}
+	runner := &JobRunner{
+		Telemetry: telemetryOrNoop(nil), Store: store,
+		Content: sink, ValidateContent: allow, content: newContentCounter(nil),
+	}
+	if err := runner.contentFor(context.Background(), job)("one."); err != nil {
+		t.Fatalf("first run: %v", err)
+	}
+
+	runner.content = newContentCounter(nil)
+	replay := runner.contentFor(context.Background(), job)
+	if err := replay("one."); err != nil {
+		t.Fatalf("replay of the delivered message: %v", err)
+	}
+	if err := replay("two."); err != nil {
+		t.Fatalf("the undelivered message was refused: %v", err)
+	}
+	sent := sink.messages()
+	if len(sent) != 2 || sent[0] != "one." || sent[1] != "two." {
+		t.Errorf("member received %v, want [one. two.]", sent)
+	}
+}
+
+// The effect is recorded after the send. Recording first would skip a message
+// the origin never received, which is worse than sending it twice.
+func TestAFailedSendRecordsNoEffect(t *testing.T) {
+	t.Parallel()
+	store, job := storedJob(t)
+	sink := &recordingContentSink{err: errors.New("discord refused")}
+	runner := &JobRunner{
+		Telemetry: telemetryOrNoop(nil), Store: store,
+		Content: sink, ValidateContent: allow, content: newContentCounter(nil),
+	}
+	if err := runner.contentFor(context.Background(), job)("one."); err == nil {
+		t.Fatal("a failed send reported success")
+	}
+	current, err := store.Get(job.ID)
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if EffectApplied(current, contentEffectStep(1)) {
+		t.Error("a message the origin never received was recorded as delivered")
+	}
+}
+
+// Without a store the path still works, because the in-memory deployment has
+// nothing to resume from and the guard must not become a requirement.
+func TestContentWorksWithoutAStore(t *testing.T) {
+	t.Parallel()
+	sink := &recordingContentSink{}
+	runner := contentRunner(sink, allow)
+	if err := runner.contentFor(context.Background(), notifiableJob())("one."); err != nil {
+		t.Fatalf("emitting without a store: %v", err)
+	}
+	if len(sink.messages()) != 1 {
+		t.Error("the message did not reach the origin")
+	}
+}

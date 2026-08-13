@@ -18,10 +18,11 @@ type unwiredCapability struct {
 
 var unwiredCapabilities = []unwiredCapability{
 	{"CommandFromPrompt", "renders an MCP prompt as a Discord command"},
-	{"RecordEffect", "marks a job step applied, for resume"},
-	{"EffectApplied", "reports whether a step already ran"},
 	{"IsGrantDenial", "classifies a refusal as record-do-not-retry"},
 }
+
+// RecordEffect and EffectApplied left this table when the job content path
+// wired them. See sirens-echo#621 and docs/sirens-echo-jobs-store.md.
 
 // declared reports whether the function still exists. All four have unit
 // tests, so this only fires on a deletion that took those tests with it.
