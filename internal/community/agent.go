@@ -1280,6 +1280,21 @@ func (t *discordMessageTurn) Current() TranscriptEntry {
 		Content:     t.message.ContentWithMentionsReplaced(),
 		Counterpart: counterpartOf(t.message),
 		Attachments: attachmentTypes(t.message),
+		ReplyTo:     replyTarget(t.message),
+	}
+}
+
+// replyTarget is the message a reply answers. Discord supplies it inline, so
+// this costs no lookup and does not depend on the history window.
+func replyTarget(message *discordgo.Message) *ReplySubject {
+	if message == nil || message.ReferencedMessage == nil {
+		return nil
+	}
+	referenced := message.ReferencedMessage
+	return &ReplySubject{
+		Author:      displayName(referenced),
+		Content:     referenced.ContentWithMentionsReplaced(),
+		Counterpart: counterpartOf(referenced),
 	}
 }
 
