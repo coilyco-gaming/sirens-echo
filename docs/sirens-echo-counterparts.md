@@ -73,3 +73,8 @@ and executing jobs are not enabled together by accident.
 
 See [access](sirens-echo-access.md) and [the identity
 eval](sirens-echo-recognition.md).
+
+## A refused agent is visible, not only counted
+
+Both refusals log without an identifier, since a counter never says how often
+in a row: `discord.agent.ignored` and `discord.exchange.bounded`.

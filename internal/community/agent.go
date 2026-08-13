@@ -413,12 +413,30 @@ func editSummons(session *discordgo.Session, event *discordgo.MessageUpdate) boo
 
 func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Message) {
 	if !eligibleMessage(session, message, a.access) {
+		// A misconfigured allowlist and a quiet channel looked identical, since
+		// this path recorded nothing at all. See docs/sirens-echo-counterparts.md.
+		if counterpartOf(message) == CounterpartAgent {
+			a.telemetry.Info(
+				context.Background(),
+				"discord.agent.ignored",
+				slog.String("reason", string(accessDeniedAgent)),
+				slog.String("counterpart", string(CounterpartAgent)),
+			)
+		}
 		return
 	}
 	// Two agents that each answer the other is a runaway, so the exchange is
 	// bounded before anything else spends budget on it.
 	if !a.exchanges.admit(message.ChannelID, counterpartOf(message)) {
 		a.telemetry.RecordAccess(context.Background(), string(accessDeniedExchange))
+		// A counter says the bound fired and never how often in a row, which is
+		// the shape a runaway has.
+		a.telemetry.Info(
+			context.Background(),
+			"discord.exchange.bounded",
+			slog.String("reason", string(accessDeniedExchange)),
+			slog.String("counterpart", string(CounterpartAgent)),
+		)
 		return
 	}
 	origin := summonContextFor(message)

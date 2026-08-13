@@ -176,3 +176,22 @@ func TestAdmittingAnAgentDisablesExecution(t *testing.T) {
 		t.Error("execution stayed enabled with a counterpart agent admitted")
 	}
 }
+
+// A bound that only moves a counter is a bound nobody can see fire, and a
+// runaway is a shape rather than a count. See issue 172.
+func TestBothAgentRefusalsCarryAReasonAndNoIdentifier(t *testing.T) {
+	t.Parallel()
+	for _, reason := range []accessReason{accessDeniedAgent, accessDeniedExchange} {
+		if reason == "" {
+			t.Error("an agent refusal reason is empty")
+		}
+		// The reason is a label, so it must stay a closed-set token rather than
+		// becoming a sentence someone formats a channel into.
+		if strings.ContainsAny(string(reason), " <>#@") {
+			t.Errorf("reason %q is not a closed-set token", reason)
+		}
+	}
+	if accessDeniedAgent == accessDeniedExchange {
+		t.Error("an unallowlisted bot and a bounded exchange share one reason")
+	}
+}

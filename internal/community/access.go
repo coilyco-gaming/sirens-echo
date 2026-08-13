@@ -26,6 +26,9 @@ const (
 	accessDeniedMember   accessReason = "denied_member"
 	accessNeedsThreadRef accessReason = "needs_thread_lookup"
 	accessDeniedExchange accessReason = "denied_agent_exchange"
+	// accessDeniedAgent is a bot the deployment never allowlisted. Separate
+	// from the exchange bound, which refuses an agent it does permit.
+	accessDeniedAgent accessReason = "denied_agent"
 )
 
 // Allowlist is either the literal `all` or an explicit ID list. See
