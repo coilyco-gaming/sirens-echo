@@ -348,6 +348,35 @@ func checkToolCallMarkup(reply string) error {
 	return nil
 }
 
+// toolNameMarkupFailures reports a tag built from the case's own tool name, which
+// is the form the model actually emits. See docs/sirens-echo-tool-call-markup.md.
+func toolNameMarkupFailures(reply, requiredTool string) []error {
+	names := toolNameForms(requiredTool)
+	if len(names) == 0 {
+		return nil
+	}
+	alternation := strings.Join(names, "|")
+	pattern := regexp.MustCompile(`(?i)</?\s*(?:` + alternation + `)\b[^>\n]{0,160}>`)
+	if match := pattern.FindString(reply); match != "" {
+		return []error{fmt.Errorf("emitted a tag built from the tool name %q", match)}
+	}
+	return nil
+}
+
+// toolNameForms is the qualified name and its bare suffix, since a model builds a
+// tag from either. Server-qualified names arrive as server__tool.
+func toolNameForms(requiredTool string) []string {
+	trimmed := strings.TrimSpace(requiredTool)
+	if trimmed == "" {
+		return nil
+	}
+	forms := []string{regexp.QuoteMeta(trimmed)}
+	if _, bare, found := strings.Cut(trimmed, "__"); found && bare != "" {
+		forms = append(forms, regexp.QuoteMeta(bare))
+	}
+	return forms
+}
+
 // containsToolCallMarkup is the same question without the matched text, for the
 // reply path, whose errors are logged and must carry no model output.
 func containsToolCallMarkup(reply string) bool {
