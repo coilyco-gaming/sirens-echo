@@ -99,9 +99,14 @@ func (r PhraseRegistry) Configured() bool { return len(r.Phrases) > 0 }
 // path can leave an ordinary reply untouched.
 func Invoked(reply string) bool { return phraseInvocation.MatchString(reply) }
 
-// Terminal reports whether an invocation is the whole reply. A prefix returns
+// Terminal reports whether one invocation is the whole reply. A prefix returns
 // every padding problem the registry exists to prevent. See sirens-echo#176.
 func Terminal(reply string) bool {
+	// Exactly one. Stripping them all and finding nothing left was also true of
+	// two, and two phrases is not a phrase. See sirens-echo#613.
+	if len(phraseInvocation.FindAllStringIndex(reply, -1)) != 1 {
+		return false
+	}
 	return strings.TrimSpace(phraseInvocation.ReplaceAllString(reply, "")) == ""
 }
 
