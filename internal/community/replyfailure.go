@@ -17,13 +17,15 @@ func discordFailureAttrs(err error) []slog.Attr {
 	if err == nil {
 		return nil
 	}
-	// Ahead of everything, because a budget this service chose ended this and
-	// nothing was wrong with Discord. See sirens-echo#648.
-	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
-		return []slog.Attr{slog.String("discord_failure", "abandoned")}
-	}
+	// Ahead of the context check, because the turn reports a join of the send
+	// and its notice, and Discord answering outranks our budget. See #292.
 	var rest *discordgo.RESTError
 	if !errors.As(err, &rest) {
+		// A budget this service chose ended this and nothing was wrong with
+		// Discord. See sirens-echo#648.
+		if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+			return []slog.Attr{slog.String("discord_failure", "abandoned")}
+		}
 		// No HTTP exchange happened, which is itself the classification: the
 		// gateway or the transport failed before Discord answered.
 		return []slog.Attr{slog.String("discord_failure", "no_response")}
