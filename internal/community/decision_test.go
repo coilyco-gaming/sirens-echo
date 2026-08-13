@@ -321,13 +321,12 @@ func TestValidateNeutralStyleStillRejectsEmoji(t *testing.T) {
 	}
 }
 
-// Characterization of ValidateGrounding alone, tracked in issue 241. One of the
-// two below is refused by a later check, so read the pipeline test beside it.
-func TestGroundingStillMissesTwoShapes(t *testing.T) {
+// Characterization of ValidateGrounding alone. The one below is refused by a
+// later check, so read the pipeline test beside it.
+func TestGroundingStillMissesOneShape(t *testing.T) {
 	t.Parallel()
 	missed := map[string]string{
-		"simple past passive": "A tracking issue was created.",
-		"third-person named":  "Sirens Echo has filed a correction.",
+		"third-person named": "Sirens Echo has filed a correction.",
 	}
 	for name, reply := range missed {
 		name, reply := name, reply
@@ -345,6 +344,7 @@ func TestGroundingStillMissesTwoShapes(t *testing.T) {
 		"An issue has been opened for this.",
 		"Filed a correction for review.",
 		"I filed a correction for review.",
+		"A tracking issue was created.",
 		"The system is now processing these requests sequentially as instructed.",
 	} {
 		if ValidateGrounding(reply, "The current channel is #bots.") == nil {
@@ -389,9 +389,10 @@ func TestTheTwoPinnedShapesAgainstTheWholeReplyPath(t *testing.T) {
 	t.Parallel()
 	identity := "Sirens Echo"
 	survives := map[string]bool{
-		// Simple past with no agent is how a member's own action reads, so this
-		// one is deliberately unread. See docs/sirens-echo-grounding.md.
-		"A tracking issue was created.": true,
+		// Undated simple past is caught since the tense widened. A dated one
+		// stays reportage. See docs/sirens-echo-grounding.md.
+		"A tracking issue was created.":                   false,
+		"The issue was created in June, before the wipe.": true,
 		// Caught by the check built for a named self-claim, not by grounding.
 		"Sirens Echo has filed a correction.": false,
 	}

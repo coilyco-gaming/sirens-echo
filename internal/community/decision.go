@@ -32,9 +32,19 @@ const trackerArtifact = `(?:issues?|corrections?|tickets?|bug report|feature req
 // passiveActionClaim is the neutral profile's voice for the claim the
 // first-person matcher catches. See docs/sirens-echo-grounding.md.
 var passiveActionClaim = regexp.MustCompile(
-	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:has|have)\s+been\s+` +
+	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:(?:has|have)\s+been|was|were)\s+` +
 		`(?:sent|posted|opened|filed|created|escalated|closed|` +
 		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
+)
+
+// pastReference places an event before this turn. The check asks whether this
+// turn wrote to the tracker, so a dated event is out of scope by construction.
+var pastReference = regexp.MustCompile(
+	`(?i)\b(?:yesterday|previously|originally|formerly|already|earlier|recently|` +
+		`since|ago|before|after|during|prior|` +
+		`last\s+(?:week|month|year|night|time|season|wipe|patch|cycle)|` +
+		`january|february|march|april|may|june|july|august|september|` +
+		`october|november|december|\d{4})\b`,
 )
 
 // subjectlessClaim is the clipped form, a sentence opening on the participle
@@ -68,7 +78,8 @@ var sentenceBreak = regexp.MustCompile(`[.!?]+`)
 // write finished. See docs/sirens-echo-grounding.md for what each gate excludes.
 func claimsCompletedTrackerAction(reply string) bool {
 	for _, sentence := range sentenceBreak.Split(reply, -1) {
-		if notAClaim.MatchString(sentence) {
+		// A dated event is reportage. This turn is what the check is about.
+		if notAClaim.MatchString(sentence) || pastReference.MatchString(sentence) {
 			continue
 		}
 		if passiveActionClaim.MatchString(sentence) || subjectlessClaim.MatchString(sentence) {
