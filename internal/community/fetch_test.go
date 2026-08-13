@@ -103,3 +103,47 @@ func TestTheAllowlistIsReadFromOneString(t *testing.T) {
 		t.Error("an empty allowlist produced hosts")
 	}
 }
+
+// The tailnet is carrier-grade NAT, which IsPrivate does not cover, so it read
+// as public to every predicate in the guard. See sirens-echo#428.
+func TestTheTailnetRangeIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, address := range []string{
+		"100.64.0.1:443",
+		"100.100.100.100:443",
+		"100.127.255.254:443",
+	} {
+		if err := refusePrivateAddress(address); err == nil {
+			t.Errorf("%s was dialled, so the fetch tool reaches the tailnet", address)
+		}
+	}
+}
+
+// The ranges that were already covered stay covered, and a public address still
+// dials. A guard that refuses everything is not a fix.
+func TestTheGuardKeepsItsExistingReachAndRefusals(t *testing.T) {
+	t.Parallel()
+	for _, address := range []string{
+		"10.0.0.1:443",
+		"192.168.1.1:443",
+		"172.16.0.1:443",
+		"127.0.0.1:443",
+		"169.254.169.254:443",
+		"[::1]:443",
+	} {
+		if err := refusePrivateAddress(address); err == nil {
+			t.Errorf("%s was dialled and should not have been", address)
+		}
+	}
+	// 100.63 and 100.128 sit either side of the range, so an off-by-one in the
+	// mask shows up here rather than as a silently widened block.
+	for _, address := range []string{
+		"93.184.216.34:443",
+		"100.63.255.255:443",
+		"100.128.0.0:443",
+	} {
+		if err := refusePrivateAddress(address); err != nil {
+			t.Errorf("%s was refused, so the guard blocks public destinations: %v", address, err)
+		}
+	}
+}
