@@ -10,18 +10,6 @@ import (
 // A long turn says what it is doing. A short one is untouched, because a
 // progress line for a two-second reply is noise. See docs/sirens-echo-progress.md.
 
-const (
-	// turnProgressAfter is how long a turn runs before it starts reporting. A
-	// reply that beats this never posts anything.
-	turnProgressAfter = 3 * time.Second
-	// turnProgressEvery is the grid every later message releases on, so an edit,
-	// a reply, and a failure notice all land on the same beat.
-	turnProgressEvery = turnProgressAfter * 2
-	// turnLongReplyAfter is when a turn has taken long enough that its reply
-	// wants somewhere of its own. Derived, so there is one number to move.
-	turnLongReplyAfter = turnProgressAfter + turnProgressEvery*2
-)
-
 // The stage phrases. They come from the closed notice vocabulary, so a progress
 // line reads as the harness speaking rather than as the model.
 const (

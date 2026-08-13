@@ -12,15 +12,6 @@ import (
 // A server prompt is user-selected instruction reaching the model through a
 // structured channel. See docs/sirens-echo-prompt-commands.md.
 
-const (
-	// Discord's limits. A breach fails the whole registration, so one
-	// server's prompt would otherwise cost every command.
-	maxCommandNameRunes        = 32
-	maxCommandDescriptionRunes = 100
-	// maxCommandOptions is Discord's ceiling on options per command.
-	maxCommandOptions = 25
-)
-
 // discordCommandName is the shape Discord accepts: lower case, no spaces.
 var discordCommandName = regexp.MustCompile(`^[-_a-z0-9]{1,32}$`)
 
