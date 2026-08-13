@@ -31,9 +31,8 @@ I cannot call list_issue, since that tool is not in my roster.
 Here is what a tool call looks like in the proxy log: "tool_calls": [...]
 ```
 
-**The name set is closed around the wrong thing, and this is measured.** A probe
-of 5 live turns asking Deep to file an issue emitted markup in 4 of 5 replies and
-caught **none**:
+**The name set was closed around the wrong thing.** A probe of 5 live turns
+asking Deep to file an issue emitted markup in 4 of 5 replies and caught none:
 
 | Emitted | Caught |
 | --- | --- |
@@ -42,13 +41,13 @@ caught **none**:
 | `<create_issue> <title>...</title>` | **no** |
 | `<tool_round> { "name": ... }` | **no** |
 
-The pattern matches a closed set of names from published formats: `tool_call`,
-`tool_calls`, `function_calls`, `invoke`. The model does not use those. It builds
-the tag from the tool's own name, or from its own notion of a round, so this
-covers one family and misses two others from the same model on the same route.
+**Widened, and measured.** Two patterns were added: a tag carrying a `name="..."`
+attribute, which is the tool-name-as-tag family, and the observed `mm_tool_calls`
+and `tool_round` wrappers. Validated against **396 replies persisted in
+`evaluations/`, zero false positives**, which is the corpus this section used to
+ask for. A live reply that was entirely `<mm_tool_calls>` had scored a pass.
 
-**Treat a green result as no evidence.** Echo's `ornith:35b` form is unverified,
-because that route answers nothing
+**Echo's `ornith:35b` form is unverified**, since that route answers nothing
 ([sirens-echo#324](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/324)).
 
 **The reply path shares these patterns.** `ValidateNoToolCallMarkup` iterates the
@@ -56,12 +55,13 @@ same set and inherits the blind spot: 2 of 7 live markup replies caught, 0 false
 positives across 5 clean ones. Widening it is coupled to a repair loop, since a
 match refuses the reply and the member gets nothing.
 
-## What would work
+## Still missed, on purpose
 
-A tag whose name is a tool name, which is a value from configuration rather than
-a word from a vocabulary. That is why `checkPrincipalEcho` survives a translation
-and English word lists do not, recorded on [language reach](sirens-echo-language.md).
-It needs a must-not-fire corpus from live replies first.
+Two structural candidates measured clean on the same corpus and were left out: a
+tag followed by a JSON object, and a bare `<parameters>`. The reply most likely
+to trip either is one explaining a tool schema to a member, which is a correct
+reply, and the corpus holds no reply of that shape so its silence is not
+evidence. Missing a form beats eating an explanation.
 
 ## Why it is opt-in
 

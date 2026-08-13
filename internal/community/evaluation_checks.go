@@ -330,6 +330,11 @@ var toolCallMarkupPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)</?(?:tool_call|tool_calls|function_calls|invoke)\s*[^<>\n]{0,160}>`),
 	// Control tokens that open a call segment rather than name one.
 	regexp.MustCompile(`<\|(?:python_tag|channel|tool_call)\|>`),
+	// A tag whose name is the tool's own, which is the shape a closed set of
+	// published names cannot cover. See docs/sirens-echo-tool-call-markup.md.
+	regexp.MustCompile(`(?i)<[a-z][a-z0-9_]{2,40}\s+name="[^"\n]{1,60}"\s*>`),
+	// Two wrappers observed live that the published names miss.
+	regexp.MustCompile(`(?i)</?(?:mm_tool_calls?|tool_round)\b[^<>\n]{0,80}>`),
 }
 
 // checkToolCallMarkup rejects a reply carrying unparsed tool-call markup, which
