@@ -8,6 +8,10 @@ description: Supply the shared, approved Sirens community facts used by every Si
 Treat facts absent from the approved reference as unknown unless the current
 conversation or an available MCP result supplies verified evidence.
 
+Gaming beyond Eco is in scope as a subject. Evidence is not. A game with no
+tool behind it is an unknown, recalling a detail is not a source, and the
+breadth of the subject is not evidence that a source exists.
+
 Read [references/community.md](references/community.md) for the current bounded
 knowledge base.
 
