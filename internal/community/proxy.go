@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -442,7 +443,7 @@ func (c ProxyClient) Complete(
 				Seat:      c.Attribution,
 			},
 		}
-		choice, err := c.completeOnce(ctx, payload, requestID, round)
+		choice, err := c.completeWithRetry(ctx, payload, requestID, round)
 		if err != nil {
 			return CompletionResult{}, err
 		}
@@ -785,6 +786,71 @@ func responseRepairPrompt(style string) string {
 	return neutralResponseRepairPrompt
 }
 
+// modelHTTPError carries the status so availability can be told from a
+// malformed request without parsing an error string. See sirens-echo#650.
+type modelHTTPError struct{ Status int }
+
+func (e modelHTTPError) Error() string {
+	return fmt.Sprintf("Agent Proxy returned HTTP %d", e.Status)
+}
+
+// retryableModel reports a failure worth trying again. Availability only: a
+// 4xx is the request being wrong and retrying it fails identically.
+func retryableModel(err error) bool {
+	if err == nil {
+		return false
+	}
+	var status modelHTTPError
+	if errors.As(err, &status) {
+		switch status.Status {
+		case http.StatusTooManyRequests, http.StatusBadGateway,
+			http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+			return true
+		}
+		return false
+	}
+	// A transport error never reached a server, so it carries no status and is
+	// the availability case this exists for.
+	return !errors.Is(err, context.Canceled) &&
+		!errors.Is(err, context.DeadlineExceeded)
+}
+
+// completeWithRetry retries only what fails fast. A slow failure cannot be
+// retried inside the turn ceiling. See sirens-echo#650 and sirens-echo#577.
+func (c ProxyClient) completeWithRetry(
+	ctx context.Context,
+	payload chatRequest,
+	requestID string,
+	round int,
+) (chatChoice, error) {
+	backoff := modelRetryBackoff
+	var err error
+	var choice chatChoice
+	for attempt := 1; attempt <= modelRetryAttempts; attempt++ {
+		choice, err = c.completeOnce(ctx, payload, requestID, round)
+		if err == nil || !retryableModel(err) || attempt == modelRetryAttempts {
+			return choice, err
+		}
+		telemetryOrNoop(c.Telemetry).Info(
+			ctx,
+			"model.retry",
+			slog.Int("round", round),
+			slog.Int("attempt", attempt),
+			slog.Int("attempts", modelRetryAttempts),
+			slog.String("backoff", backoff.String()),
+		)
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return chatChoice{}, err
+		case <-timer.C:
+		}
+		backoff *= 2
+	}
+	return choice, err
+}
+
 func (c ProxyClient) completeOnce(
 	ctx context.Context,
 	payload chatRequest,
@@ -854,7 +920,7 @@ func (c ProxyClient) completeOnce(
 		return chatChoice{}, err
 	}
 	if response.StatusCode != http.StatusOK {
-		err := fmt.Errorf("Agent Proxy returned HTTP %d", response.StatusCode)
+		err := modelHTTPError{Status: response.StatusCode}
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseHTTPError)
 		modelSpan.End()

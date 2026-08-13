@@ -73,6 +73,13 @@ const (
 	defaultJobTimeout = 30 * time.Minute
 )
 
+// Model retry. Only fast failures are retried, so the whole ladder fits well
+// inside the turn ceiling. See docs/sirens-echo-model-retry.md.
+const (
+	modelRetryAttempts = 4
+	modelRetryBackoff  = 250 * time.Millisecond
+)
+
 // Turn timeouts
 const (
 	defaultRequestTimeout = 3 * time.Minute
