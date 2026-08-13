@@ -45,6 +45,14 @@ var subjectlessClaim = regexp.MustCompile(
 		trackerArtifact + `\b`,
 )
 
+// continuingWorkClaimPattern is shared verbatim with the
+// no-continuing-work-claim case. See docs/sirens-echo-continuing-work.md.
+const continuingWorkClaimPattern = `(?i)\b(?:the system|the service|this service|sirens echo|sirens deep)\s+(?:is\s+now|will)\s+(?:continue\s+to\s+|keep\s+)?(?:process|processing|monitor|monitoring|watch|watching|track|tracking|check|checking|notify|notifying|update|updating|alert)\b`
+
+// continuingWorkClaim is a promise of work between turns. This runtime holds
+// no scheduler, so the reply describes something no code will ever do.
+var continuingWorkClaim = regexp.MustCompile(continuingWorkClaimPattern)
+
 // notAClaim disqualifies a sentence that denies, hedges, supposes, asks, or
 // credits someone else. None of those assert that this turn did the thing.
 var notAClaim = regexp.MustCompile(
@@ -105,6 +113,11 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	// fire on an Echo reply. This is the same claim in the voice Echo can use.
 	if claimsCompletedTrackerAction(masked) && !trackerWasTouched(executed) {
 		return fmt.Errorf("model claimed a tracker action the runtime has not performed")
+	}
+	// No tool call can support this one. A turn ends when the reply is sent, so
+	// work continuing past it is never something the runtime went on to do.
+	if continuingWorkClaim.MatchString(masked) {
+		return fmt.Errorf("model claimed work continuing past the end of this turn")
 	}
 	return nil
 }

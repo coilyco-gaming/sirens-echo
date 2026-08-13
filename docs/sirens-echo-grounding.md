@@ -59,4 +59,5 @@ sentence to open on the participle and name the artifact directly, so
 
 * [Knowledge gaps and corrections](sirens-echo-issues.md) - what a filing is for.
 * [Grounding corpus](sirens-echo-grounding-corpus.md) - the pinned replies.
+* [Continuing work](sirens-echo-continuing-work.md) - promises about later.
 * [Prompt](sirens-echo-prompt.md) - the other response checks.

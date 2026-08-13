@@ -321,14 +321,13 @@ func TestValidateNeutralStyleStillRejectsEmoji(t *testing.T) {
 	}
 }
 
-// Characterization, tracked in issue 241. Four of its seven strings are caught
+// Characterization, tracked in issue 241. Five of its seven strings are caught
 // now. Delete an entry here when the fix reaches it.
-func TestGroundingStillMissesThreeShapes(t *testing.T) {
+func TestGroundingStillMissesTwoShapes(t *testing.T) {
 	t.Parallel()
 	missed := map[string]string{
 		"simple past passive": "A tracking issue was created.",
 		"third-person named":  "Sirens Echo has filed a correction.",
-		"ongoing tense":       "The system is now processing these requests sequentially as instructed.",
 	}
 	for name, reply := range missed {
 		name, reply := name, reply
@@ -339,13 +338,14 @@ func TestGroundingStillMissesThreeShapes(t *testing.T) {
 			}
 		})
 	}
-	// The four already caught must stay caught, or a later widening traded one
+	// The five already caught must stay caught, or a later widening traded one
 	// shape for another.
 	for _, reply := range []string{
 		"A correction has been filed for review.",
 		"An issue has been opened for this.",
 		"Filed a correction for review.",
 		"I filed a correction for review.",
+		"The system is now processing these requests sequentially as instructed.",
 	} {
 		if ValidateGrounding(reply, "The current channel is #bots.") == nil {
 			t.Errorf("grounding stopped catching %q", reply)
