@@ -124,11 +124,32 @@ func (s *fetchSession) allowedURL(raw string) (string, error) {
 	}
 	host := strings.ToLower(parsed.Hostname())
 	for _, allowed := range s.hosts {
-		if host == strings.ToLower(allowed) {
+		if hostAllowed(host, allowed) {
 			return parsed.String(), nil
 		}
 	}
 	return "", fmt.Errorf("%s is not a host this service may reach", host)
+}
+
+// hostAllowed matches an entry against a hostname. A leading *. covers
+// subdomains and nothing else. See docs/sirens-echo-fetch.md.
+func hostAllowed(host, allowed string) bool {
+	allowed = strings.ToLower(strings.TrimSpace(allowed))
+	if allowed == "" {
+		return false
+	}
+	suffix, wildcard := strings.CutPrefix(allowed, "*.")
+	if !wildcard {
+		return host == allowed
+	}
+	// A bare "*." or a pattern with another star is a typo. Refusing beats
+	// matching everything, which is what a suffix test would do here.
+	if suffix == "" || strings.Contains(suffix, "*") {
+		return false
+	}
+	// The dot is part of the comparison, so notmozilla.com cannot match
+	// *.mozilla.com and the apex is a separate entry.
+	return strings.HasSuffix(host, "."+suffix)
 }
 
 // newFetchClient refuses a private destination at dial time. Checking the

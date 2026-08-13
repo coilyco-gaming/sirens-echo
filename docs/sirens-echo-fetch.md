@@ -20,7 +20,14 @@ scratchpad and the content gate.
 
 ## Five bounds, and what each one is for
 
-**Exact host match.** Not a suffix. `eco-app.coilysiren.me.evil.example` is a
+**A wildcard covers subdomains and nothing else.** `*.mozilla.com` matches
+`www.mozilla.com` and `a.b.mozilla.com`. It does **not** match `mozilla.com`,
+which is a separate entry, and it is not a suffix test: the leading dot is part
+of the comparison, so `mozilla.com.evil.example` and `notmozilla.com` are both
+refused. A pattern with a misplaced or missing star matches nothing rather than
+everything.
+
+**Exact host match otherwise.** Not a suffix. `eco-app.coilysiren.me.evil.example` is a
 different host that a suffix check would accept, and registering that domain
 costs an attacker nothing.
 
