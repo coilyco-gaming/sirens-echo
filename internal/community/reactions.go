@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"sync"
+	"time"
 )
 
 // A reaction is harness state on the member's own message, not model output. It
@@ -27,6 +28,16 @@ type reactor interface {
 	React(ctx context.Context, emoji string) error
 }
 
+// unreactor removes a mark the harness applied. A transport that can add a
+// reaction and not remove one implements nothing here and keeps its marks.
+type unreactor interface {
+	Unreact(ctx context.Context, emoji string) error
+}
+
+// transientReactions describe work in flight rather than an outcome, so they
+// stop being true when the turn ends. See docs/sirens-echo-reactions.md.
+var transientReactions = []string{reactionAccepted, reactionTool}
+
 // onceReactor applies each emoji once for the turn it belongs to. A turn that
 // calls ten tools marks the message once. See sirens-echo#460.
 type onceReactor struct {
@@ -46,6 +57,20 @@ func (o *onceReactor) React(ctx context.Context, emoji string) error {
 		return nil
 	}
 	return o.inner.React(ctx, emoji)
+}
+
+// appliedTransient names the in-flight marks this turn actually put on the
+// message, so a clear costs no call for a mark that was never applied.
+func (o *onceReactor) appliedTransient() []string {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	applied := make([]string, 0, len(transientReactions))
+	for _, emoji := range transientReactions {
+		if o.applied[emoji] {
+			applied = append(applied, emoji)
+		}
+	}
+	return applied
 }
 
 // reactionKey carries the turn's reactor to layers that hold no reference to
@@ -101,4 +126,42 @@ func reactFromContext(ctx context.Context, emoji string) {
 	// Nothing is logged here. This path has no telemetry handle, and a reaction
 	// failure is already reported wherever the agent applies one.
 	_ = target.React(ctx, emoji)
+}
+
+// reactionClearTimeout bounds the tidy-up. A turn that failed by expiring has
+// no budget left, which is why the clear detaches like the failure notice.
+const reactionClearTimeout = 10 * time.Second
+
+// clearTurnMarks removes the marks that described work in flight, leaving any
+// mark that describes the outcome. See docs/sirens-echo-reactions.md.
+func (a *Agent) clearTurnMarks(ctx context.Context) {
+	once, ok := ctx.Value(reactionKey{}).(*onceReactor)
+	if !ok {
+		return
+	}
+	remover, ok := once.inner.(unreactor)
+	if !ok {
+		return
+	}
+	applied := once.appliedTransient()
+	if len(applied) == 0 {
+		return
+	}
+	clearCtx, cancel := context.WithTimeout(
+		context.WithoutCancel(ctx),
+		reactionClearTimeout,
+	)
+	defer cancel()
+	for _, emoji := range applied {
+		if err := remover.Unreact(clearCtx, emoji); err != nil {
+			// Same posture as applying one. A tidy-up must never cost a member
+			// an answer they already received.
+			a.telemetry.Info(
+				clearCtx,
+				"discord.reaction.remove.failed",
+				slog.String("reaction", emoji),
+				slog.String("error", err.Error()),
+			)
+		}
+	}
 }

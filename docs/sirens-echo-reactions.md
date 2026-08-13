@@ -19,16 +19,8 @@ A turn shed for load and a message turned away at a boundary do not share a
 mark. One is a service that could not answer and the other is a service that
 would not, and a member reading the channel is entitled to tell them apart.
 
-## Marked before the notice, never instead of it
-
-A denial and a queue timeout both notify at most once per window, so a second
-member inside that window gets no words. The mark is applied before the throttle
-is consulted, so the outcome is still visible to whoever was throttled. Marking
-after it would leave that member with a message carrying nothing at all, which
-is the one state that reads as never processed. See sirens-echo#476.
-
-A queue timeout never reaches the accepted mark either, because that lands as
-the turn starts and this turn never started.
+When each mark is applied, and when it goes away, is its own concern. See [the
+life of a reaction](sirens-echo-reaction-lifecycle.md).
 
 ## Why the accepted mark earns its place
 
@@ -48,17 +40,6 @@ was refused would be worse than having no reactions at all. The agent logs the
 failure once as `discord.reaction.failed` so the permission gap is visible
 without becoming an error.
 
-## Each mark is applied once
-
-A turn holds one applied set, so a repeat is dropped before it reaches the
-transport. The tool mark is what makes this matter: it is applied in the tool
-round, and a turn spending fourteen tool calls asked for the same hammer
-fourteen times. Discord dedupes the visible reaction, so the member never saw
-the difference and the service paid a request for each one.
-
-The set is marked before the attempt rather than after it, so a reaction the bot
-has no permission for is refused once instead of once per round.
-
 ## How the tool round reaches it
 
 The tool loop sits behind the completion boundary and takes no transport
@@ -71,3 +52,5 @@ a transport with no reaction surface is simply inert.
 * [Progress](sirens-echo-progress.md) - the other harness-state surface.
 * [Notices](sirens-echo-notices.md) - harness words, as opposed to harness marks.
 * [Admission](sirens-echo-admission.md) - what a refusal means.
+* [Reaction lifecycle](sirens-echo-reaction-lifecycle.md) - when marks appear
+  and when they are cleared.
