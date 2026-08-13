@@ -255,7 +255,10 @@ type Config struct {
 	JobStoreDir string
 	// ScratchDir mounts the per-requester scratchpad. Empty offers no scratchpad
 	// tools at all. See docs/sirens-echo-scratchpad.md.
-	ScratchDir     string
+	ScratchDir string
+	// PhrasesPath names the canonical phrase registry. Empty renders nothing,
+	// which is today's behaviour. See docs/sirens-echo-phrases.md.
+	PhrasesPath    string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
 	RateLimit      RateLimitPolicy
@@ -325,6 +328,7 @@ func LoadConfig() (Config, error) {
 		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
+		PhrasesPath:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
 		RequestTimeout:         requestTimeout,
 		QueueTimeout:           queueTimeout,
 		RateLimit:              rateLimit,

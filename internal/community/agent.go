@@ -51,6 +51,9 @@ type Agent struct {
 	identifiers *IdentifierGuard
 	// taxonomy is empty when the deployment configures no content gate.
 	taxonomy ContentTaxonomy
+	// phrases is empty when the deployment names no registry, which renders
+	// nothing and is today's behaviour.
+	phrases PhraseRegistry
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -154,6 +157,13 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
+	}
+	if cfg.PhrasesPath != "" {
+		phrases, err := LoadPhraseRegistry(cfg.PhrasesPath)
+		if err != nil {
+			return nil, err
+		}
+		agent.phrases = phrases
 	}
 	if cfg.ContentClassesPath != "" {
 		taxonomy, err := LoadContentTaxonomy(cfg.ContentClassesPath)
@@ -1053,6 +1063,12 @@ func (a *Agent) runTurn(
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
 	validateSpan.End()
+
+	// A canonical phrase is a deployment artifact rather than model prose, so it
+	// renders after the checks. See docs/sirens-echo-phrases.md.
+	if reply, err = a.renderPhrases(reply); err != nil {
+		return a.failTurn(turnCtx, turn, stageValidation, err)
+	}
 
 	// Service-authored, so it runs after the checks rather than through them.
 	// One step, one budget. See docs/sirens-echo-issues.md and sirens-echo#413.
