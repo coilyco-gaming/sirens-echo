@@ -58,8 +58,9 @@ listing, carries a reason, and can be asked about afterwards.
 A denial that left no record would be the one event nobody could investigate,
 which is the opposite of what an authority model is for.
 
-The reason is stated to the caller. `GrantedKinds` also lists what a principal
-holds, so they can be told rather than discovering it by being refused.
+The reason is stated to the caller. `GrantedKinds` could list what a principal
+holds, but **no surface calls it**, so today they discover it by being refused
+([sirens-echo#620](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/620)).
 
 ## No table grants everything
 
