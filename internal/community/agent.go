@@ -1160,7 +1160,13 @@ func (a *Agent) failTurn(
 		slog.String("notice", notice),
 	)
 	settleFromContext(ctx)
-	failure := errors.Join(cause, a.notifyFailure(ctx, turn, notice))
+	noticeErr := a.notifyFailure(ctx, turn, notice)
+	// The send lost, so the line already in the channel becomes the answer.
+	// Deleting it leaves less than the acknowledgement. See sirens-echo#624.
+	if noticeErr != nil {
+		carryFromContext(context.WithoutCancel(ctx), notice)
+	}
+	failure := errors.Join(cause, noticeErr)
 	// The outcome mark stays. The in-flight ones have stopped being true.
 	a.clearTurnMarks(ctx)
 	return failure
