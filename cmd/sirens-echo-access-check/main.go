@@ -1,5 +1,5 @@
 // Offline validation of an access policy, for a caller that cannot import Go.
-// Reads files and nothing else. See docs/sirens-echo-access-check.md.
+// Reads files and stdin and nothing else. See docs/sirens-echo-access-check.md.
 package main
 
 import (
@@ -12,7 +12,11 @@ import (
 
 // usage names the argument rather than describing the tool, because the caller
 // is a CI step that already knows what it invoked.
-const usage = "usage: sirens-echo-access-check <access-policy.yaml> [...]"
+const usage = "usage: sirens-echo-access-check <access-policy.yaml|-> [...]"
+
+// stdinPath is the argument deploy uses, because its policies live inside a
+// ConfigMap and only the extracted key is a policy.
+const stdinPath = "-"
 
 func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
@@ -27,7 +31,8 @@ func run(paths []string, stdout, stderr io.Writer) int {
 	}
 	failed := false
 	for _, path := range paths {
-		if err := check(path); err != nil {
+		policy, err := check(path)
+		if err != nil {
 			// The path is repeated because a CI log shows one line, and which
 			// file failed is the first thing the reader needs.
 			fmt.Fprintf(stderr, "%s: %v\n", path, err)
@@ -35,6 +40,9 @@ func run(paths []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		fmt.Fprintf(stdout, "%s: ok\n", path)
+		// What it admits, not only that it loaded. A policy can be valid and
+		// still open a guild the reviewer did not mean to open.
+		fmt.Fprint(stdout, community.RenderAccessSummary(policy))
 	}
 	if failed {
 		return 1
@@ -44,13 +52,38 @@ func run(paths []string, stdout, stderr io.Writer) int {
 
 // check runs the same loader the runtime does, so this cannot drift from what
 // the pod will accept. A second implementation would be a worse gate than none.
-func check(path string) error {
+func check(path string) (*community.AccessPolicy, error) {
+	if path == stdinPath {
+		return checkStdin()
+	}
 	policy, err := community.LoadAccessPolicy(path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if policy == nil {
-		return fmt.Errorf("loaded no policy")
+		return nil, fmt.Errorf("loaded no policy")
 	}
-	return nil
+	return policy, nil
+}
+
+// checkStdin spools the piped policy to a file, so the runtime's loader stays
+// the only parser rather than gaining a second entry point.
+func checkStdin() (*community.AccessPolicy, error) {
+	raw, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		return nil, fmt.Errorf("read stdin: %w", err)
+	}
+	spooled, err := os.CreateTemp("", "access-policy-*.yaml")
+	if err != nil {
+		return nil, fmt.Errorf("spool stdin: %w", err)
+	}
+	defer os.Remove(spooled.Name())
+	if _, err := spooled.Write(raw); err != nil {
+		spooled.Close()
+		return nil, fmt.Errorf("spool stdin: %w", err)
+	}
+	if err := spooled.Close(); err != nil {
+		return nil, fmt.Errorf("spool stdin: %w", err)
+	}
+	return check(spooled.Name())
 }
