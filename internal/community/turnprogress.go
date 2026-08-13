@@ -16,7 +16,10 @@ const (
 	turnProgressAfter = 3 * time.Second
 	// turnProgressEvery is the grid every later message releases on, so an edit,
 	// a reply, and a failure notice all land on the same beat.
-	turnProgressEvery = 6 * time.Second
+	turnProgressEvery = turnProgressAfter * 2
+	// turnLongReplyAfter is when a turn has taken long enough that its reply
+	// wants somewhere of its own. Derived, so there is one number to move.
+	turnLongReplyAfter = turnProgressAfter + turnProgressEvery*2
 )
 
 // The stage phrases. They come from the closed notice vocabulary, so a progress

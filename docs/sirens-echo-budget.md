@@ -20,8 +20,9 @@ is kept for grounding validation, so a bounded result cannot make the runtime
 accept an action claim it should reject.
 
 **The budget escalates rather than repeating.** A completion that is truncated
-*and* empty raises the budget and retries, from 900 up to a cap of 3600 across
-two raises. Beyond that the turn fails with an error naming the truncation
+*and* empty raises the budget and retries, from 1800 up to a cap of 3600.
+A raise that cannot raise is exhaustion, since retrying at the same budget
+repeats the wall the first call hit. Beyond that the turn fails with an error naming the truncation
 rather than a generic contract failure.
 
 Truncated output that is not empty is a usable answer and does not raise.

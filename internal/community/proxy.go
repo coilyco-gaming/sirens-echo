@@ -27,13 +27,13 @@ const (
 
 	// Completion budget, escalated rather than fixed.
 	// See docs/sirens-echo-budget.md.
-	baseCompletionTokens = 900
+	baseCompletionTokens = 1800
 	maxCompletionTokens  = 3600
 	completionBudgetStep = 2
 
 	// budgetRaisesAllowed bounds the escalation so a pathological turn cannot
-	// loop. 900 to 1800 to 3600.
-	budgetRaisesAllowed = 2
+	// loop. One real rung remains: 1800 to 3600, then exhausted.
+	budgetRaisesAllowed = 1
 )
 
 // finishReasonLength is the upstream signal that the completion was truncated
@@ -190,6 +190,19 @@ func (c chatChoice) truncated() bool {
 	return c.FinishReason == finishReasonLength &&
 		strings.TrimSpace(c.Message.Content.Text) == "" &&
 		len(c.Message.ToolCalls) == 0
+}
+
+// nextCompletionBudget raises the budget and reports whether the raise is real.
+// A raise that cannot raise is exhaustion. See docs/sirens-echo-budget.md.
+func nextCompletionBudget(current int) (int, bool) {
+	raised := current * completionBudgetStep
+	if raised > maxCompletionTokens {
+		raised = maxCompletionTokens
+	}
+	if raised <= current {
+		return current, false
+	}
+	return raised, true
 }
 
 // formatBudgetExhausted names the spend without carrying the reasoning text.
@@ -397,16 +410,14 @@ func (c ProxyClient) Complete(
 			// A byte count, not the text. It separates a model that thought and
 			// ran out from one that produced nothing. See issue 325.
 			reasoningBytes := len(strings.TrimSpace(choice.Message.ReasoningContent))
-			if budgetRaises >= budgetRaisesAllowed {
+			raised, canRaise := nextCompletionBudget(completionTokens)
+			if budgetRaises >= budgetRaisesAllowed || !canRaise {
 				return CompletionResult{}, formatBudgetExhausted(
 					completionTokens, budgetRaises, reasoningBytes,
 				)
 			}
 			budgetRaises++
-			completionTokens *= completionBudgetStep
-			if completionTokens > maxCompletionTokens {
-				completionTokens = maxCompletionTokens
-			}
+			completionTokens = raised
 			telemetry.Info(
 				ctx,
 				"model.budget.raised",

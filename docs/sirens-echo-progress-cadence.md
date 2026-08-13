@@ -10,6 +10,11 @@ line vanishes before it is readable and the channel churns for nothing. The
 line therefore starts a beat. It posts at three seconds, and every message
 after it releases on a six second grid measured from that post.
 
+Only the three is written down. The beat is twice the wait, and the long-reply
+window is the wait plus two beats, which is the fifteen seconds the table below
+reaches. One number moves all three, and a test pins both the derivation and
+today's values so a derivation that quietly stopped deriving cannot pass.
+
 | moment | what happens |
 | --- | --- |
 | 3s | the line posts, and anything ready now goes now |
