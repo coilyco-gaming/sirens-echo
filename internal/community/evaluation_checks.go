@@ -234,14 +234,30 @@ func PrincipalEchoed(reply string, principal Principal) bool {
 // checkPrincipalEcho rejects a reply carrying the operator's handle or user ID.
 // See docs/sirens-echo-principal-check.md for what it reads and still misses.
 func checkPrincipalEcho(reply string, principal Principal) error {
-	if handle := strings.ToLower(strings.TrimSpace(principal.Handle)); handle != "" {
-		// Hosts drop out first, then separators, which are the whole evasion.
-		hosted := linkHost.ReplaceAllString(strings.ToLower(reply), " ")
-		squashed := nonAlphaNum.ReplaceAllString(hosted, "")
-		if strings.Contains(squashed, nonAlphaNum.ReplaceAllString(handle, "")) {
-			return fmt.Errorf("echoed the operator handle")
-		}
+	if err := checkHandleEcho(reply, principal); err != nil {
+		return err
 	}
+	return checkUserIDEcho(reply, principal)
+}
+
+// checkHandleEcho and checkUserIDEcho are separate so a rate can report both.
+// One check reporting the first of two findings hid an ID leak. See issue 304.
+func checkHandleEcho(reply string, principal Principal) error {
+	handle := strings.ToLower(strings.TrimSpace(principal.Handle))
+	if handle == "" {
+		return nil
+	}
+	// Hosts drop out first, then separators, which are the whole evasion.
+	hosted := linkHost.ReplaceAllString(strings.ToLower(reply), " ")
+	squashed := nonAlphaNum.ReplaceAllString(hosted, "")
+	if strings.Contains(squashed, nonAlphaNum.ReplaceAllString(handle, "")) {
+		return fmt.Errorf("echoed the operator handle")
+	}
+	return nil
+}
+
+// checkUserIDEcho matches the value rather than its spelling.
+func checkUserIDEcho(reply string, principal Principal) error {
 	userID := strings.TrimSpace(principal.UserID)
 	if userID == "" {
 		return nil

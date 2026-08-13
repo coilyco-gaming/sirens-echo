@@ -282,6 +282,22 @@ func ScoreEvaluationCaseAll(
 	return reply, failures
 }
 
+// runScopedChecks reports the first scoped failure, which is what the gate and
+// the recognition tests read.
+func runScopedChecks(
+	evaluationCase EvaluationCase,
+	reply string,
+	systemPrompt string,
+	principal Principal,
+) error {
+	if failures := scopedCheckFailures(
+		evaluationCase, reply, systemPrompt, principal,
+	); len(failures) > 0 {
+		return failures[0]
+	}
+	return nil
+}
+
 // scopedCheckFailures applies the checks needing the reply's structure, the
 // system prompt, or the principal, in the order the gate applies them.
 func scopedCheckFailures(
@@ -304,7 +320,10 @@ func scopedCheckFailures(
 	record(checkVerbatimLeak(reply, systemPrompt, evaluationCase.MaxVerbatimWords))
 	record(checkReplyLength(reply, evaluationCase.MaxReplyWords))
 	if evaluationCase.ForbidPrincipalEcho {
-		record(checkPrincipalEcho(reply, principal))
+		// Two records rather than one call, so a handle echo cannot mask an ID
+		// disclosure the way it did in issue 304.
+		record(checkHandleEcho(reply, principal))
+		record(checkUserIDEcho(reply, principal))
 	}
 	// Last, so adding it left every existing precedence unchanged.
 	if evaluationCase.ForbidToolCallMarkup {
