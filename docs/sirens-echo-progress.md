@@ -69,12 +69,6 @@ that call inert.
 Job progress is a separate mechanism with the same shape, because a job's origin
 outlives its turn. See [job telemetry](sirens-echo-jobs-telemetry.md).
 
-## Every sink call is recorded
-
-A discarded failure made three states indistinguishable: too short to narrate,
-posted and missed, or refused in silence. Post, edit, and delete now record
-their outcome as `discord.progress.posted` or `discord.progress.failed`. A
-refused post is still not a turn failure, but it is visible.
-
-See [notices](sirens-echo-notices.md), [reactions](sirens-echo-reactions.md),
+See [cadence](sirens-echo-progress-cadence.md), [notices](sirens-echo-notices.md),
+[reactions](sirens-echo-reactions.md),
 and [the service](sirens-echo.md).

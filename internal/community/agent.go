@@ -893,6 +893,10 @@ func (a *Agent) runTurn(
 	// See docs/sirens-echo-issues.md.
 	reply = AppendIssueReferences(reply, result.ToolCalls...)
 
+	// A line that just went up should be readable before the reply replaces it.
+	// See docs/sirens-echo-progress.md.
+	progress.Settle(turnCtx)
+
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return err
 	}
@@ -917,6 +921,7 @@ func (a *Agent) failTurn(
 		slog.String("error_type", stage+"_failed"),
 		slog.String("notice", notice),
 	)
+	settleFromContext(ctx)
 	return errors.Join(cause, a.notifyFailure(ctx, turn, notice))
 }
 

@@ -17,6 +17,9 @@ const (
 	// turnProgressEvery bounds edits, so a tool-heavy turn cannot spend its
 	// budget on Discord calls.
 	turnProgressEvery = 2 * time.Second
+	// minProgressVisible holds a reply back so a posted line stays readable
+	// rather than being replaced the instant the model returns.
+	minProgressVisible = 6 * time.Second
 )
 
 // The stage phrases. They come from the closed notice vocabulary, so a progress
@@ -44,6 +47,7 @@ type turnProgress struct {
 	now       func() time.Time
 
 	mu        sync.Mutex
+	postedAt  time.Time
 	messageID string
 	lastEdit  time.Time
 	lastStage string
@@ -123,6 +127,7 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 		// the line is already unwanted.
 		finished := p.finished
 		p.messageID = posted
+		p.postedAt = p.now()
 		p.mu.Unlock()
 		if finished {
 			p.record(ctx, "delete", p.sink.Delete(ctx, posted))
@@ -183,6 +188,7 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	// line is already unwanted.
 	finished := p.finished
 	p.messageID = posted
+	p.postedAt = p.now()
 	p.mu.Unlock()
 	if finished {
 		_ = p.sink.Delete(ctx, posted)
@@ -206,6 +212,45 @@ func WithTurnProgress(ctx context.Context, progress *turnProgress) context.Conte
 func reportStage(ctx context.Context, phrase string) {
 	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
 	progress.Stage(ctx, phrase)
+}
+
+// settleDelay is how much longer a posted line should stay up. A turn that
+// never posted one returns zero, so an ordinary reply is never delayed.
+func (p *turnProgress) settleDelay() time.Duration {
+	if p == nil || p.sink == nil {
+		return 0
+	}
+	p.mu.Lock()
+	posted := p.postedAt
+	p.mu.Unlock()
+	if posted.IsZero() {
+		return 0
+	}
+	if remaining := minProgressVisible - p.now().Sub(posted); remaining > 0 {
+		return remaining
+	}
+	return 0
+}
+
+// Settle waits out that delay, or returns early when the turn is cancelled.
+func (p *turnProgress) Settle(ctx context.Context) {
+	remaining := p.settleDelay()
+	if remaining <= 0 {
+		return
+	}
+	timer := time.NewTimer(remaining)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+	case <-timer.C:
+	}
+}
+
+// settleFromContext holds a reply from a layer that carries no progress
+// reference, which is how the failure path reaches it.
+func settleFromContext(ctx context.Context) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.Settle(ctx)
 }
 
 // Finish removes the progress line. The reply or the failure notice is the

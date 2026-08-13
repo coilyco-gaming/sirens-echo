@@ -342,3 +342,93 @@ func TestAFastTurnStillPostsNothingAtTheLowerThreshold(t *testing.T) {
 		t.Errorf("a fast turn touched Discord: %d posts, %d edits, %d deletes", posts, edits, deletes)
 	}
 }
+
+// Kai's scenario: a 4.1 second turn posts a line at 4 seconds and the reply
+// lands 0.1 seconds later, replacing it before anyone can read it.
+func TestAPostedLineIsHeldBeforeTheReplyReplacesIt(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter)
+	progress.refresh(context.Background())
+	if posts, _, _ := sink.counts(); posts != 1 {
+		t.Fatalf("expected one posted line, got %d", posts)
+	}
+
+	// The model returns a tenth of a second later.
+	advance(100 * time.Millisecond)
+	held := progress.settleDelay()
+	if held <= 0 {
+		t.Fatal("the reply was not held at all")
+	}
+	want := minProgressVisible - 100*time.Millisecond
+	if held != want {
+		t.Fatalf("held for %s, want %s", held, want)
+	}
+}
+
+// A turn that never posted a line must not be delayed, which is what keeps a
+// fast reply fast.
+func TestAnUnnarratedTurnIsNotHeld(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter - time.Second)
+	if held := progress.settleDelay(); held != 0 {
+		t.Fatalf("an unnarrated turn was held for %s", held)
+	}
+	var missing *turnProgress
+	if held := missing.settleDelay(); held != 0 {
+		t.Fatalf("a nil progress was held for %s", held)
+	}
+}
+
+// A line already visible long enough is not held again, so a genuinely long
+// turn does not pay the delay twice.
+func TestALongVisibleLineIsNotHeldAgain(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter)
+	progress.refresh(context.Background())
+	advance(minProgressVisible + time.Second)
+
+	if held := progress.settleDelay(); held != 0 {
+		t.Fatalf("an already visible line was held for %s", held)
+	}
+}
+
+// A cancelled turn stops waiting rather than holding the member's answer for
+// the full window.
+func TestSettleReturnsOnCancellation(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter)
+	progress.refresh(context.Background())
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	done := make(chan struct{})
+	go func() {
+		progress.Settle(ctx)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Settle ignored cancellation")
+	}
+}
