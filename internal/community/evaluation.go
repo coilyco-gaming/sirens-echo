@@ -48,8 +48,7 @@ type EvaluationCase struct {
 	MaxReplyWords       int  `json:"max_reply_words" yaml:"max_reply_words"`
 	ForbidPrincipalEcho bool `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
 	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call
-	// delimiters, which a member reads verbatim. Opt-in because the behavior is
-	// intermittent and an always-on check would turn the gate flaky.
+	// delimiters. Opt-in, since always-on would turn the gate flaky.
 	ForbidToolCallMarkup bool `json:"forbid_tool_call_markup" yaml:"forbid_tool_call_markup"`
 
 	compiledPatterns []*regexp.Regexp
