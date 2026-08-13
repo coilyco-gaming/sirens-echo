@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // The five acceptance rows of sirens-echo#356, one test each where they are
@@ -42,7 +43,7 @@ func contentRunner(sink JobContentReporter, validate func(string) error) *JobRun
 		Telemetry:       telemetryOrNoop(nil),
 		Content:         sink,
 		ValidateContent: validate,
-		content:         newContentCounter(),
+		content:         newContentCounter(nil),
 	}
 }
 
@@ -141,6 +142,63 @@ func TestTheFloodBoundRefusesRatherThanDropping(t *testing.T) {
 	}
 }
 
+// The window opens on the first message and closes ten minutes later, which
+// is the other half of the ceiling Kai decided on sirens-echo#236.
+func TestTheAnswerWindowClosesOnTime(t *testing.T) {
+	t.Parallel()
+	moment := time.Now()
+	counter := &contentCounter{
+		sent:    make(map[string]int),
+		started: make(map[string]time.Time),
+		now:     func() time.Time { return moment },
+	}
+	if err := counter.admit("job-1"); err != nil {
+		t.Fatalf("the first message was refused: %v", err)
+	}
+	// Inside the window, and well under the message bound.
+	moment = moment.Add(maxJobContentWindow - time.Second)
+	if err := counter.admit("job-1"); err != nil {
+		t.Fatalf("a message inside the window was refused: %v", err)
+	}
+	moment = moment.Add(2 * time.Second)
+	if err := counter.admit("job-1"); !errors.Is(err, ErrJobContentWindowClosed) {
+		t.Fatalf("past the window the error was %v, want ErrJobContentWindowClosed", err)
+	}
+}
+
+// Queue time is not answer time, so the window opens on the first message
+// rather than when the job was submitted.
+func TestTheWindowOpensOnTheFirstMessage(t *testing.T) {
+	t.Parallel()
+	moment := time.Now()
+	counter := &contentCounter{
+		sent:    make(map[string]int),
+		started: make(map[string]time.Time),
+		now:     func() time.Time { return moment },
+	}
+	// A job that sat in the queue for an hour still gets its full window.
+	moment = moment.Add(time.Hour)
+	if err := counter.admit("job-1"); err != nil {
+		t.Fatalf("the first message after a long queue was refused: %v", err)
+	}
+	moment = moment.Add(maxJobContentWindow / 2)
+	if err := counter.admit("job-1"); err != nil {
+		t.Errorf("a message half a window later was refused: %v", err)
+	}
+}
+
+// The two ceilings are distinguishable, or an operator cannot tell a job that
+// said too much from one that took too long.
+func TestTheTwoCeilingsAreDistinguishable(t *testing.T) {
+	t.Parallel()
+	if errors.Is(ErrJobContentExhausted, ErrJobContentWindowClosed) {
+		t.Error("the message bound and the time bound are the same error")
+	}
+	if !strings.Contains(ErrJobContentWindowClosed.Error(), "window") {
+		t.Errorf("the time ceiling does not name itself: %v", ErrJobContentWindowClosed)
+	}
+}
+
 // The bound is per job, or one long job silences the next one.
 func TestTheBoundIsPerJob(t *testing.T) {
 	t.Parallel()
@@ -200,11 +258,11 @@ func TestEmptyContentIsRefused(t *testing.T) {
 // counter, so emitting never consumes a progress slot or the reverse.
 func TestContentAndProgressDoNotShareABound(t *testing.T) {
 	t.Parallel()
-	counter := newContentCounter()
+	counter := newContentCounter(nil)
 	limiter := newProgressLimiter(nil)
 	for i := 0; i < maxJobContentMessages; i++ {
-		if !counter.admit("job-1") {
-			t.Fatalf("content allowance ended at %d", i)
+		if err := counter.admit("job-1"); err != nil {
+			t.Fatalf("content allowance ended at %d: %v", i, err)
 		}
 	}
 	if !limiter.admit("job-1") {

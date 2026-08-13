@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Content is an answer, so it is ordered, never edited, and validated the way
@@ -21,36 +22,69 @@ type JobContentReporter interface {
 // sirens-echo#236 is ten, and threading it is a separate change.
 const maxJobContentMessages = 10
 
+// maxJobContentWindow is the other half of the ceiling. Ten messages or ten
+// minutes, whichever comes first. See sirens-echo#236.
+const maxJobContentWindow = 10 * time.Minute
+
 // ErrJobContentExhausted ends a job that has said its ten messages, so the
 // bound is a refusal the executor sees rather than a silent drop.
 var ErrJobContentExhausted = fmt.Errorf("job reached its %d message limit", maxJobContentMessages)
 
-// contentCounter counts emitted messages per job. Separate from the progress
-// limiter, which is a rate and drops; this is a total and refuses.
+// ErrJobContentWindowClosed is the time half, separate so an executor and an
+// operator can tell which ceiling ended the answer.
+var ErrJobContentWindowClosed = fmt.Errorf("job reached its %s answer window", maxJobContentWindow)
+
+// contentCounter bounds one job's answer by count and by elapsed time. The
+// progress limiter is a rate and drops; this is a total and refuses.
 type contentCounter struct {
-	mu   sync.Mutex
-	sent map[string]int
+	mu      sync.Mutex
+	sent    map[string]int
+	started map[string]time.Time
+	now     Clock
 }
 
-func newContentCounter() *contentCounter {
-	return &contentCounter{sent: make(map[string]int)}
+func newContentCounter(now Clock) *contentCounter {
+	return &contentCounter{
+		sent:    make(map[string]int),
+		started: make(map[string]time.Time),
+		now:     now,
+	}
 }
 
-// admit reports whether this job may emit again, and records that it did.
-func (c *contentCounter) admit(id string) bool {
+func (c *contentCounter) moment() time.Time {
+	if c.now != nil {
+		return c.now()
+	}
+	return time.Now().UTC()
+}
+
+// admit reports why this job may not emit, or nil. The window opens on the
+// first message rather than at submission, so queue time is not answer time.
+func (c *contentCounter) admit(id string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	moment := c.moment()
+	opened, running := c.started[id]
+	if !running {
+		c.started[id] = moment
+		c.sent[id] = 1
+		return nil
+	}
+	if moment.Sub(opened) >= maxJobContentWindow {
+		return ErrJobContentWindowClosed
+	}
 	if c.sent[id] >= maxJobContentMessages {
-		return false
+		return ErrJobContentExhausted
 	}
 	c.sent[id]++
-	return true
+	return nil
 }
 
 func (c *contentCounter) forget(id string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	delete(c.sent, id)
+	delete(c.started, id)
 }
 
 // contentFor returns the emitter handed to an executor. It returns an error
@@ -76,10 +110,13 @@ func (r *JobRunner) contentFor(ctx context.Context, job Job) func(string) error 
 		r.mu.Lock()
 		counter := r.content
 		r.mu.Unlock()
-		if counter == nil || !counter.admit(job.ID) {
-			r.Telemetry.Info(ctx, "job.content.exhausted",
-				slog.String("job_id", job.ID))
+		if counter == nil {
 			return ErrJobContentExhausted
+		}
+		if err := counter.admit(job.ID); err != nil {
+			r.Telemetry.Info(ctx, "job.content.exhausted",
+				slog.String("job_id", job.ID), slog.String("ceiling", err.Error()))
+			return err
 		}
 		r.Telemetry.Info(ctx, "job.content.emitted",
 			slog.String("job_id", job.ID), slog.Int("content_bytes", len(content)))
