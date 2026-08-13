@@ -8,6 +8,12 @@ if [ -z "${SIRENS_ECHO_RUNNER:-}" ]; then
   export SIRENS_ECHO_RUNNER
 fi
 
+# The gate only helps if it fires without being remembered. A fresh clone has no
+# hook, so pre-commit ran after the push. See sirens-echo#307.
+if [ -d .git ] && [ ! -e .git/hooks/pre-commit ] && command -v pre-commit >/dev/null 2>&1; then
+  pre-commit install --install-hooks >/dev/null 2>&1 || true
+fi
+
 case "${1:-}" in
   gate)
     # One habit instead of six. Four red mains in one evening were all caught by
