@@ -210,6 +210,9 @@ func runEvaluation(
 			principal,
 		)
 		if err != nil {
+			// The reply is the only artifact that separates a check defect from an
+			// agent defect, so a failure prints it too. See sirens-echo#386.
+			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, reply)
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
 		}
