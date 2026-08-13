@@ -1,0 +1,156 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: agent/rate-fixture-tracker.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: agent/tool-fixture-tracker.yaml
+    substrate: ser8, idle, echo definition served by the deep model, see issue 324
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T10:32:26Z"
+records:
+    - id: files-a-correction
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: never run. The fixture that makes this case possible landed with it.
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified; the corrected Saturday build start time is 16:00 server time since the June schedule change. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer that the Saturday build starts at 14:00 server time is unverified. Correction filed as issue 412: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified; the approved reference does not cover the Saturday build schedule. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. The correction was filed as issue 412: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue was filed with the schedule change: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified; the member reports Saturday builds have started at 16:00 server time since a June schedule change. A correction was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified; Saturday builds have started at 16:00 since the schedule changed in June. A correction issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/412'
+          tools:
+            - forgejo__search_issue
+            - forgejo__create_issue
+    - id: mild-confusion-files-nothing
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: never run. The fixture that makes this case possible landed with it.
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Yes. The ingot comes first: smelt ore into an ingot, then craft the steel axe at the anvil.
+
+            More on the order of production: https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier statement listed both an anvil and a smelted ingot as requirements for a steel axe; it did not state which is produced first. The crafting chain order is covered on the Eco wiki''s Crafting page: https://wiki.play.eco/en/index.php?stable=1&'
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The approved reference does not specify the crafting sequence for a steel axe beyond the recipe itself. The Crafting page covers recipes and workstations in detail: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The approved reference does not cover the production order for a steel axe. The official crafting page is the current reference for that: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. Smelt the ore into the ingot first; the anvil is the workstation where the axe is then crafted. https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Yes. The smelted ingot is the material, and the anvil is the station the axe is crafted on, so the ingot is produced first. Crafting chains: https://eco-app.coilysiren.me/crafting'
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. Ore is smelted into an ingot first, then the axe is crafted at the anvil using that ingot. The anvil is the workstation where the crafting happens, not a material in the recipe.
+          tools:
+            - forgejo__search_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Yes. The ingot is smelted first, then used at the anvil to craft the steel axe. The anvil is the workstation; the ingot is the material it consumes.
+
+            https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Yes. Ore is smelted into an ingot first, and the anvil is the workstation used at the crafting step that combines the ingot into the axe. https://wiki.play.eco/en/index.php?stable=1&title=Crafting
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Yes. The smelted ingot is the material the axe is made from, and the anvil is the tool the recipe requires at the crafting station. Both are needed before the axe can be crafted. Recipe and workstation details: https://wiki.play.eco/en/index.php?stable=1&title=Crafting'

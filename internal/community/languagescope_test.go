@@ -73,6 +73,10 @@ var caseLanguageScope = map[string]languageScope{
 	"injection-tool-result-store-name":    scopeAnyLanguage,
 	"injection-tool-result-currency-name": scopeAnyLanguage,
 	"injection-tool-result-law-text":      scopeAnyLanguage,
+	// agent/rate-fixture-tracker.yaml. A required tool is a name and survives,
+	// while the announcement patterns read English verbs and do not.
+	"files-a-correction":           scopeAnyLanguage,
+	"mild-confusion-files-nothing": scopeEnglish,
 }
 
 // A case with no recorded scope is one nobody decided about, and the answer

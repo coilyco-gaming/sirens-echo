@@ -157,6 +157,13 @@ case "${1:-}" in
       SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-injection.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  rate-fixture-tracker)
+    # The filing-rule pack. SIRENS_ECHO_TOOL_FIXTURE is exclusive with the MCP
+    # roster, so this runs separately from rate-echo.
+    SIRENS_ECHO_EVALUATION_PACK=agent/rate-fixture-tracker.yaml \
+      SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-tracker.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   format)
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;

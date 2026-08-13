@@ -32,11 +32,13 @@ func main() {
 		"agent/rate-echo.yaml",
 		"agent/rate-deep.yaml",
 		"agent/rate-fixture-deep.yaml",
+		"agent/rate-fixture-tracker.yaml",
 	} {
 		verifyRatePack(path)
 	}
 	for _, path := range []string{
 		"agent/tool-fixture-injection.yaml",
+		"agent/tool-fixture-tracker.yaml",
 	} {
 		verifyFixturePack(path)
 	}
