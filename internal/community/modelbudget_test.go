@@ -159,3 +159,84 @@ func TestAMalformedBudgetIsRefusedAtLoad(t *testing.T) {
 		t.Fatal("a definition with a negative ceiling loaded")
 	}
 }
+
+// A ceiling the rungs stop short of is a number that never applies, which is
+// the argument the raise itself was made on. See sirens-echo#522.
+func TestACeilingTheLadderCannotReachIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name    string
+		budget  ModelBudget
+		refused bool
+	}{
+		{
+			"the reported case, a raised ceiling without a rung",
+			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 1},
+			true,
+		},
+		{
+			"Deep's shipped budget",
+			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 2},
+			false,
+		},
+		{
+			"the packaged defaults",
+			ModelBudget{},
+			false,
+		},
+		{
+			"slack upward, where the ceiling binds below the rung",
+			ModelBudget{BaseCompletionTokens: 1800, MaxCompletionTokens: 5000, BudgetRaises: 2},
+			false,
+		},
+		{
+			"a ladder with nowhere to climb, which is how never-raise is written",
+			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 3600, BudgetRaises: 1},
+			false,
+		},
+		{
+			"one token above the rung",
+			ModelBudget{BaseCompletionTokens: 1800, MaxCompletionTokens: 3601, BudgetRaises: 1},
+			true,
+		},
+	} {
+		err := testCase.budget.validate()
+		if testCase.refused && err == nil {
+			t.Errorf("%s: accepted a ceiling the ladder stops short of", testCase.name)
+		}
+		if !testCase.refused && err != nil {
+			t.Errorf("%s: refused, %v", testCase.name, err)
+		}
+	}
+}
+
+// The refusal has to name the rung, or it tells a deployment its number is
+// wrong without saying what would be right.
+func TestTheUnreachableCeilingErrorNamesWhereTheLadderStops(t *testing.T) {
+	t.Parallel()
+	err := ModelBudget{
+		BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 1,
+	}.validate()
+	if err == nil {
+		t.Fatal("accepted")
+	}
+	for _, want := range []string{"14400", "7200", "unreachable"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error does not carry %q: %v", want, err)
+		}
+	}
+}
+
+// A large raise count must not overflow on the way to a small ceiling.
+func TestTheLadderWalkStopsOnceItHasReachedTheCeiling(t *testing.T) {
+	t.Parallel()
+	budget := ModelBudget{
+		BaseCompletionTokens: 1800, MaxCompletionTokens: 3600, BudgetRaises: 1000,
+	}.resolved()
+	if got := budget.ladderTop(); got != 3600 {
+		t.Errorf("ladderTop = %d, want it to stop at the ceiling", got)
+	}
+	if err := budget.validate(); err != nil {
+		t.Errorf("refused a reachable ceiling: %v", err)
+	}
+}

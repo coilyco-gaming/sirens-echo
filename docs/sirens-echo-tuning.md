@@ -54,8 +54,14 @@ The constants stay the defaults rather than becoming dead, which keeps this
 file the answer to "what does this service do if nobody says otherwise".
 
 A budget is validated at load. Every field is a ceiling, so none may be
-negative, and a ceiling below the floor is refused because it is a ladder that
-cannot climb.
+negative. A ceiling below the floor is refused, and so is one the rungs stop
+short of: the ladder doubles, so `base` times the step to the power of the
+raises has to reach `max`. A ceiling that is never applied reads as granted.
+
+Slack upward is fine, and the ceiling binds where it is named. To say never
+raise, set `max_completion_tokens` equal to `base_completion_tokens`, because a
+raise that is not a raise does not happen. Setting `budget_raises` to zero does
+not do it: zero is unset and takes the default.
 
 ## Fewer numbers is a separate job
 
