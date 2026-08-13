@@ -33,6 +33,21 @@ A reply invoking a key that does not exist is an error, not a rendered marker.
 recoverable through the repair loop, and the leaked marker is not recoverable
 at all once it is on screen.
 
+## Render lands before the prompt does
+
+The reply path resolves an invocation, and nothing tells the model the syntax
+exists. That ordering is deliberate. `RenderPhrases` is the only thing that
+substitutes the marker, so adding the prompt half first would put the literal
+text in a member's channel the first time a model used it. Render first makes
+that impossible and changes nothing until the prompt half lands.
+
+A reply carrying no invocation is returned untouched, which is every reply
+today. An invocation with no registry configured fails the turn rather than
+reaching a member, because a marker is not a phrase.
+
+An invocation must be the whole reply. Surrounding whitespace is not other
+text. See sirens-echo#588.
+
 ## Changing a phrase
 
 The key stays and the text moves under it. A key is a contract with every reply

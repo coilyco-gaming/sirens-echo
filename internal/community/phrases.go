@@ -91,6 +91,20 @@ func (r PhraseRegistry) Keys() []string {
 	return keys
 }
 
+// Configured reports whether a registry was loaded. An empty one renders
+// nothing, which is the deployment that names no path.
+func (r PhraseRegistry) Configured() bool { return len(r.Phrases) > 0 }
+
+// Invoked reports whether a reply carries an invocation at all, so the reply
+// path can leave an ordinary reply untouched.
+func Invoked(reply string) bool { return phraseInvocation.MatchString(reply) }
+
+// Terminal reports whether an invocation is the whole reply. A prefix returns
+// every padding problem the registry exists to prevent. See sirens-echo#176.
+func Terminal(reply string) bool {
+	return strings.TrimSpace(phraseInvocation.ReplaceAllString(reply, "")) == ""
+}
+
 // RenderPhrases replaces every invocation with its rendered phrase. An unknown
 // key is an error rather than a marker a member reads.
 func (r PhraseRegistry) RenderPhrases(reply string) (string, error) {
@@ -108,4 +122,19 @@ func (r PhraseRegistry) RenderPhrases(reply string) (string, error) {
 		return "", fmt.Errorf("reply invokes unknown phrase %s", strings.Join(unknown, ", "))
 	}
 	return rendered, nil
+}
+
+// renderPhrases resolves an invocation the model wrote. A reply carrying none
+// is returned untouched, which is every reply until the prompt names the keys.
+func (a *Agent) renderPhrases(reply string) (string, error) {
+	if !Invoked(reply) {
+		return reply, nil
+	}
+	if !a.phrases.Configured() {
+		return "", fmt.Errorf("reply invokes a phrase and no registry is configured")
+	}
+	if !Terminal(reply) {
+		return "", fmt.Errorf("reply invokes a phrase alongside other text")
+	}
+	return a.phrases.RenderPhrases(reply)
 }
