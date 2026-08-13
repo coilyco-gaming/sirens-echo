@@ -2,6 +2,7 @@ package community
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -144,9 +145,17 @@ func TestScratchRefusesSymlinkEscape(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 	session := openScratch(t, root, "111")
-	partition := filepath.Join(root, "111")
+	// Derived, not spelled. The partition is a hash of the requester, so a
+	// literal name plants the door somewhere the session never looks.
+	partition := filepath.Join(root, scratchPartitionName("111"))
 	if err := os.Symlink(outside, filepath.Join(partition, "door")); err != nil {
-		t.Skipf("symlinks unavailable: %v", err)
+		// Only a platform that cannot make symlinks is a reason to skip. Any
+		// other error means the door was never planted and the escape below
+		// would pass without being attempted.
+		if errors.Is(err, errors.ErrUnsupported) {
+			t.Skipf("symlinks unsupported on this platform: %v", err)
+		}
+		t.Fatalf("plant a symlink in %s: %v", partition, err)
 	}
 
 	read := callScratch(t, session, "scratch_read", map[string]any{"path": "door/target.txt"})
