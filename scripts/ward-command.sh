@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Provenance nobody has to remember. A rate dataset that cannot name the checkout
+# that produced it cannot be compared to another one, and I spent tonight writing
+# the SHA into a free-text field by hand. See issue 311.
+if [ -z "${SIRENS_ECHO_RUNNER:-}" ]; then
+  SIRENS_ECHO_RUNNER=$(git rev-parse --short HEAD 2>/dev/null || echo "")
+  export SIRENS_ECHO_RUNNER
+fi
+
 case "${1:-}" in
   gate)
     # One habit instead of six. Four red mains in one evening were all caught by

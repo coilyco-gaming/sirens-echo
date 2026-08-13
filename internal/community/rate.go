@@ -53,11 +53,20 @@ type RateProvenance struct {
 	Model      string `yaml:"model"`
 	Transport  string `yaml:"transport"`
 	Roster     string `yaml:"roster"`
+	// Fixture names the tool fixture, which is exclusive with the roster. Without
+	// it a fixture run reads as roster: empty, which says no tools were available
+	// when three were served. See sirens-echo#311.
+	Fixture string `yaml:"fixture"`
 	// Substrate records host state at run time. A contended GPU returns a
 	// complete but degraded reply, which no in-process check can detect.
 	Substrate string `yaml:"substrate"`
-	// Image is what the measured service is running. A rate against an unknown
-	// build describes nothing, and half of main's pushes publish no image.
+	// Runner is the commit that produced the prompt, definition, skillpack and
+	// checks, which is what actually produced the numbers. A before-and-after
+	// pair whose halves cannot be attributed to commits is not a comparison.
+	Runner string `yaml:"runner"`
+	// Image records a deployed image only when one participates in the run. This
+	// runner posts to the proxy and never calls a pod, so it stays unrecorded
+	// here. Read Runner instead. See sirens-echo#311.
 	Image       string `yaml:"image"`
 	GeneratedAt string `yaml:"generated_at"`
 }
@@ -69,6 +78,14 @@ const SubstrateUnrecorded = "unrecorded"
 // ImageUnrecorded marks a dataset whose build is unknown, which makes it
 // unusable for before-and-after comparison. See docs/sirens-echo-sweep.md.
 const ImageUnrecorded = "unrecorded"
+
+// FixtureNone marks a run that served no fixture, so the absence is a statement
+// rather than a missing field. See sirens-echo#311.
+const FixtureNone = "none"
+
+// RunnerUnrecorded marks a dataset built without a revision stamp. A rate that
+// cannot name the checkout that produced it cannot be compared to another.
+const RunnerUnrecorded = "unrecorded"
 
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.

@@ -149,22 +149,7 @@ func runRatePack(
 	if err != nil {
 		log.Fatalf("rate pack: %v", err)
 	}
-	provenance := community.RateProvenance{
-		Definition: evaluationDefinitionPath(),
-		Pack:       packPath,
-		Model:      proxyModel,
-		Transport:  proxyURL,
-		Roster:     valueOrDefault(rosterPath, "empty"),
-		Substrate: valueOrDefault(
-			os.Getenv("SIRENS_ECHO_SUBSTRATE"),
-			community.SubstrateUnrecorded,
-		),
-		Image: valueOrDefault(
-			os.Getenv("SIRENS_ECHO_IMAGE"),
-			community.ImageUnrecorded,
-		),
-		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
-	}
+	provenance := rateProvenance(packPath, proxyURL, proxyModel, rosterPath)
 	if err := community.RunRate(
 		context.Background(),
 		definition,
@@ -256,4 +241,42 @@ func valueOrDefault(value, fallback string) string {
 		return trimmed
 	}
 	return fallback
+}
+
+// rateProvenance records what produced a dataset. Extracted so the fields that
+// decide whether a reader can interpret the numbers are covered by test rather
+// than by whoever last edited the struct literal. See sirens-echo#311.
+func rateProvenance(
+	packPath string,
+	proxyURL string,
+	proxyModel string,
+	rosterPath string,
+) community.RateProvenance {
+	return community.RateProvenance{
+		Definition: evaluationDefinitionPath(),
+		Pack:       packPath,
+		Model:      proxyModel,
+		Transport:  proxyURL,
+		Roster:     valueOrDefault(rosterPath, "empty"),
+		Fixture: valueOrDefault(
+			strings.TrimSpace(os.Getenv("SIRENS_ECHO_TOOL_FIXTURE")),
+			community.FixtureNone,
+		),
+		Substrate: valueOrDefault(
+			os.Getenv("SIRENS_ECHO_SUBSTRATE"),
+			community.SubstrateUnrecorded,
+		),
+		Runner: valueOrDefault(
+			valueOrDefault(
+				community.BuildRevision(),
+				strings.TrimSpace(os.Getenv("SIRENS_ECHO_RUNNER")),
+			),
+			community.RunnerUnrecorded,
+		),
+		Image: valueOrDefault(
+			os.Getenv("SIRENS_ECHO_IMAGE"),
+			community.ImageUnrecorded,
+		),
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+	}
 }
