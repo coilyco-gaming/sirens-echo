@@ -1,0 +1,26 @@
+# Canonical phrases the model invokes by key rather than composing. A prompt
+# rule asking for terseness is a behaviour and erodes; a key is a lookup and
+# does not. See docs/sirens-echo-phrases.md.
+#
+# A phrase takes the notice alphabet, so it is lowercase and carries no
+# punctuation beyond , . / -. That is enforced at load rather than assumed.
+#
+# Adding one is a pull request. Changing one changes what members read, so the
+# key stays and the text moves under it.
+schema: sirens-discord-ops.phrases.v1
+
+phrases:
+  - key: no-tool
+    text: no tool for that is available here
+  - key: not-permitted
+    text: that is outside what this service may do
+  - key: no-data
+    text: no data for that request
+  - key: cannot-verify
+    text: that cannot be verified from here
+  - key: out-of-scope
+    text: out of scope for this channel
+  - key: ask-narrower
+    text: ask a narrower question
+  - key: not-real-world
+    text: no live physical world data here
