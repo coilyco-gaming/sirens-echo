@@ -43,36 +43,8 @@ and a channel-less profile asserts no ingress the deployment did not select.
 
 ## Snapshots
 
-```sh
-ward exec prompt-dump    # rewrite the snapshots
-ward exec prompt-check   # fail when a snapshot is stale
-```
-
-`prompt-check` also runs as a pre-commit hook over `agent/`, `.agents/skills/`,
-`prompt.go`, `skillpack.go`, and the dumper, so a prompt change cannot land
-without its rendered diff.
-
-Each snapshot carries the definition path, identity, response style, policy
-roots, and system-prompt byte count, then the system prompt, the turn context,
-and the user message from a fixed sample. The sample keeps those sections
-deterministic, so a diff there means the framing changed.
-
-The turn is three messages. System prompt, then the conversation around the
-request as its own user turn, then the member's message alone, so a downstream
-reader of "what did the user ask" gets the question. History stays flattened
-and labelled inside the context message, because a Discord channel is
-multi-party and the assistant and user roles cannot say which human spoke.
-
-The files are byte-exact, so `trailing-whitespace` and `end-of-file-fixer` skip
-`agent/rendered/`. Editing one by hand is pointless: the hook regenerates from
-source and fails on the difference.
-
-## Reviewing a change
-
-A diff under `agent/rendered/` is the honest answer to "what did this change
-tell the model". Read it before approving a change to any policy root, since a
-one-line `SKILL.md` edit can move hundreds of bytes of context. The header byte
-count is the cheapest signal of an accidental blow-up.
+The rendered prompt is checked in and a change to it cannot land without its
+diff. See [prompt snapshots](sirens-echo-prompt-snapshots.md).
 
 ## See also
 

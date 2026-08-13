@@ -64,17 +64,9 @@ sits live forever and never later reports success.
 run. `Effects` records what a job already applied, keyed by a step its kind
 declares, so a resumed job skips work it did rather than double-applying it.
 
-## The store is an interface
+## The store and the kinds
 
-`JobStore` is an interface because the deployment picks the backend.
-`MemoryJobStore` satisfies every behaviour except durability, which makes it
-right for a test and wrong for a deployment. `FileJobStore` adds durability on
-any mounted volume, selected with `SIRENS_ECHO_JOB_STORE`. Unset keeps jobs in
-memory. Both are [single-process](sirens-echo-jobs-single-process.md).
-
-## Kinds
-
-`JobKinds` is a closed set. A kind is a capability, so widening it is a reviewed
-act here rather than something a caller picks.
+The deployment picks the backend, and the set of kinds is closed. See [the job
+store](sirens-echo-jobs-store.md).
 
 See [the lifecycle](sirens-echo-jobs-lifecycle.md).
