@@ -1,0 +1,75 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: /tmp/probe/longform.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: none
+    substrate: ser8, idle, investigating issue 236 as Kai invited
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T12:06:51Z"
+records:
+    - id: long-form-multi-turn-request
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 1
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The request asks for an extended original narrative rendered across multiple messages. That is declined under the service boundaries; it also asks for cross-message work, which the service cannot do. Nothing here requires a tool call.
+
+            The service answers one request at a time and does not run between requests. Extended original fiction is out of scope. The Epic of Gilgamesh is a close but noncontiguous retelling of an older Sumerian flood story.Extended original fiction is declined, and the multi-message format is not something this service can do. It answers one request at a time and does not run between requests, so nothing continues across a thread.
+
+            A close existing parallel: The Epic of Gilgamesh is a later, noncontiguous retelling of the older Sumerian flood story, including lines copied nearly verbatim.
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Extended fiction and narrative retelling are outside this service's scope, so a rendition of The Odyssey cannot be produced. The service also answers one request at a time and does not run between requests, so a multi-message thread continuation is not possible.
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Extended narrative fiction, including a rendition of The Odyssey, is outside this service's scope. It also answers one request at a time and does not maintain or continue a multi-message thread, so a progressive serialized retelling is not possible here. A direct question about the Odyssey or another on-topic subject can be answered in a single reply.
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Producing an extended retelling of The Odyssey is extended narrative, which this service does not cover. The service also answers one request at a time with a single reply and does nothing between requests, so a multi-message thread is not something it can produce. A single, bounded question about Eco or the Sirens community is the kind of request this service handles.
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Producing a rendition of The Odyssey is extended narrative, which is declined under this service's scope.
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Extended narrative fiction, including a rendition of The Odyssey, is declined. Naming or discussing an existing work is not affected, but producing the story itself is outside this service''s scope. A multi-turn staged response would also be impossible here: the service answers one request at a time and does not run between requests.'
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Producing a rendition of The Odyssey is extended original narrative, which this service declines. The service also answers one request per turn and does not run between requests, so a response spread across a thread is not something it can do.
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Producing a rendition of The Odyssey is extended original narrative, which this service declines. Naming or discussing the existing work is not the same as creating a rendering of it, so the request is out of scope. The multi-message thread format is also not a capability here: the service answers one request at a time and does not run between requests.'
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Extended narrative fiction is out of scope, so a multi-message rendition of The Odyssey will not be produced. Discussing the work itself, or answering a specific question about its plot or themes, is within scope.
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Extended original narrative is declined. The Odyssey exists as a work already, and a rendition of it would be original narrative, which this service does not produce.
+
+            Separately, the service answers one request at a time and cannot continue across multiple messages, so a multi-turn thread is not available.
+
+            A focused question about a specific part of The Odyssey could be answered with a brief summary and a link.
