@@ -136,6 +136,9 @@ func jobTerminalNotice(job Job) string {
 type discordTurnProgress struct {
 	session *discordgo.Session
 	channel string
+	// message is what the line answers. Without it the line is a bare channel
+	// post while the reply that replaces it is a reply. See sirens-echo#376.
+	message *discordgo.Message
 }
 
 func (p discordTurnProgress) Post(_ context.Context, notice string) (string, error) {
@@ -143,13 +146,27 @@ func (p discordTurnProgress) Post(_ context.Context, notice string) (string, err
 		return "", fmt.Errorf("no Discord session")
 	}
 	sent, err := p.session.ChannelMessageSendComplex(p.channel, &discordgo.MessageSend{
-		Content:         truncateRunes(notice, 1990),
-		AllowedMentions: &discordgo.MessageAllowedMentions{Parse: []discordgo.AllowedMentionType{}},
+		Content:   truncateRunes(notice, 1990),
+		Reference: p.reference(),
+		// RepliedUser false, so answering a member does not also ping them.
+		AllowedMentions: &discordgo.MessageAllowedMentions{
+			Parse:       []discordgo.AllowedMentionType{},
+			RepliedUser: false,
+		},
 	})
 	if err != nil {
 		return "", err
 	}
 	return sent.ID, nil
+}
+
+// reference is nil when the sink has no message, which keeps a bare-channel
+// caller working rather than failing to post at all.
+func (p discordTurnProgress) reference() *discordgo.MessageReference {
+	if p.message == nil {
+		return nil
+	}
+	return p.message.SoftReference()
 }
 
 func (p discordTurnProgress) Edit(_ context.Context, messageID, notice string) error {

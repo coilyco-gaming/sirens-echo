@@ -856,6 +856,7 @@ func (a *Agent) progressFor(turn turnIO) *turnProgress {
 	return newReportingTurnProgress(discordTurnProgress{
 		session: discord.session,
 		channel: discord.message.ChannelID,
+		message: discord.message,
 	}, a.telemetry, nil)
 }
 
