@@ -52,6 +52,7 @@ rather than a constant.
 
 `TestQueueDenialCarriesRetryAfter` asserts both halves: the header is present,
 and the value does not exceed the shed window.
+[Issue 181](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/181)
 
 ## See also
 
