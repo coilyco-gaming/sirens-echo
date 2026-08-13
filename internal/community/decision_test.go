@@ -321,8 +321,8 @@ func TestValidateNeutralStyleStillRejectsEmoji(t *testing.T) {
 	}
 }
 
-// Characterization, tracked in issue 241. Five of its seven strings are caught
-// now. Delete an entry here when the fix reaches it.
+// Characterization of ValidateGrounding alone, tracked in issue 241. One of the
+// two below is refused by a later check, so read the pipeline test beside it.
 func TestGroundingStillMissesTwoShapes(t *testing.T) {
 	t.Parallel()
 	missed := map[string]string{
@@ -350,5 +350,31 @@ func TestGroundingStillMissesTwoShapes(t *testing.T) {
 		if ValidateGrounding(reply, "The current channel is #bots.") == nil {
 			t.Errorf("grounding stopped catching %q", reply)
 		}
+	}
+}
+
+// The turn runs five checks, so a shape grounding misses is not a shape a
+// member sees. Measuring one and reporting an escape is the issue 210 error.
+func TestOnlyOneMissedShapeSurvivesTheWholeReplyPath(t *testing.T) {
+	t.Parallel()
+	identity := "Sirens Echo"
+	survives := map[string]bool{
+		// Simple past with no agent is how a member's own action reads, so this
+		// one is deliberately unread. See docs/sirens-echo-grounding.md.
+		"A tracking issue was created.": true,
+		// Caught by the check built for a named self-claim, not by grounding.
+		"Sirens Echo has filed a correction.": false,
+	}
+	for reply, expected := range survives {
+		reply, expected := reply, expected
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			refused := ValidateGrounding(reply, "The current channel is #bots.") != nil ||
+				ValidateSelfAttributedClaim(reply, identity) != nil
+			if refused == expected {
+				t.Fatalf("reply survives=%v against expected %v; the pipeline "+
+					"changed, so update issue 241 rather than this assertion", !refused, expected)
+			}
+		})
 	}
 }
