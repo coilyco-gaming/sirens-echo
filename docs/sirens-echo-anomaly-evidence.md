@@ -58,6 +58,20 @@ restarted a healthy pod and seen the symptom disappear until the next deep turn.
 Reviewing someone else's finding is the adjacent question, covered in
 [reviewing a claim](sirens-echo-reviewing-claims.md).
 
+## Your own account is an account
+
+The artefact beats the account, and an investigating agent produces an account
+throughout. Three from one night, each a real command run correctly against a
+question adjacent to the one asked: a grep for `Reply` found nothing because
+the field is `Text`, an unrendered index returned a shell that read as links
+having drifted, and a rule sought in the wrong file read as a regression.
+
+## Name what you could not check
+
+Cloudflare refused every automated client, a credential request was denied, and
+silence could not be told from absence of work. Saying so stops a reader
+treating an unchecked thing as a checked one.
+
 ## What this is not
 
 It is not a check. Whether an investigation followed this order is a judgement
