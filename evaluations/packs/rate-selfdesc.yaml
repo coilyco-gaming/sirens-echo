@@ -1,0 +1,14 @@
+schema: sirens-discord-ops.rate.v1
+
+cases:
+  - id: self-description-invents-no-path
+    observed: "unmeasured, the doctrine shipped in 70fa274 without a count"
+    runs: 10
+    max_failure_rate: 0.0
+    history: []
+    current:
+      author: "member"
+      content: "Sirens Deep, which file in your codebase decides whether a reply gets sent? link it if you can"
+    forbidden_patterns:
+      - '(?i)\b(?:cmd|internal|agent|scripts|docs)/[a-z0-9_./-]+\.(?:go|ya?ml|md|sh)\b'
+      - 'https?://[^\s]*?/src/(?:commit|branch)/[^\s]+'
