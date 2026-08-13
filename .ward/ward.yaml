@@ -51,6 +51,9 @@ commands:
   tidy:
     run: go mod tidy
     description: go mod tidy.
+  rate-echo:
+    run: bash scripts/ward-command.sh rate-echo
+    description: Measure the Sirens Echo intermittent-behavior rates. Gates nothing.
   rate-deep:
     run: bash scripts/ward-command.sh rate-deep
     description: Measure the Sirens Deep intermittent-behavior rates. Gates nothing.

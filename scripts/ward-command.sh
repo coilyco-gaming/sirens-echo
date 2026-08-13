@@ -38,6 +38,12 @@ case "${1:-}" in
       SIRENS_ECHO_EVALUATION_PACK=agent/board-deep.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  rate-echo)
+    # Emits a measurement dataset on stdout. Redirect it to evaluations/ before
+    # reading, because every reply in it is the evidence a failure was real.
+    SIRENS_ECHO_EVALUATION_PACK=agent/rate-echo.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   rate-deep)
     # Emits a measurement dataset on stdout. Redirect it to evaluations/ before
     # reading, because every reply in it is the evidence a failure was real.

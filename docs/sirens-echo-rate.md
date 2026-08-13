@@ -1,8 +1,9 @@
 # The rate pack
 
-`agent/rate-deep.yaml`, run with `ward exec rate-deep`. It measures how often an
-intermittent behavior happens. It gates no deployment and is never wired into
-CI. See [the battery](sirens-echo-battery.md) for the gate and [the
+`agent/rate-echo.yaml` and `agent/rate-deep.yaml`, run with `ward exec
+rate-echo` and `ward exec rate-deep`. They measure how often an intermittent
+behavior happens, gate no deployment, and are never wired into CI. See [the
+battery](sirens-echo-battery.md) for the gate and [the
 board](sirens-echo-board.md) for the graded layer.
 
 ## Why a third instrument

@@ -1,0 +1,62 @@
+# Non-gating measurement pack for Sirens Echo. This file never gates a
+# deployment and is never wired into CI. It is the Echo half of the instrument
+# that already existed only for Deep.
+#
+# Run it with `ward exec rate-echo`. Each case runs its own `runs` count and the
+# runner reports passed over attempts. It exits non-zero only when a case beats
+# its declared `max_failure_rate`, or when every run of a case errored, since an
+# unmeasured case is not a pass.
+#
+# Errors are separated from failures and excluded from the denominator, and
+# every reply is persisted in the emitted dataset. Redirect stdout to
+# evaluations/ before reading, because the verbatim replies are the evidence
+# that a failure was real rather than a defect in the check.
+#
+# Cases use the same schema and the same checks as agent/evaluation.yaml, scored
+# by community.ScoreEvaluationCase. A rate for a check the gate does not apply
+# would measure something nobody enforces.
+#
+# Why this pack exists rather than more gate cases. A prose rule that lands in a
+# policy root has an unknown effect until someone counts. The gate answers
+# whether a defect is still reachable in one run. This answers how often, which
+# is the question a rule's author actually has.
+#
+# no-emotional-acknowledgment measures the scope rule added in 3ff6ffb, which
+# put emotional territory out of scope for Echo including the member's own
+# state. The rule is prose and its effect is unmeasured, which is exactly what I
+# said when I delivered it. See sirens-echo#204.
+#
+# The patterns forbid the acknowledgment forms rather than requiring a decline.
+# No one expression accepts every correct refusal, so a required pattern would
+# fail correct replies. Validated at zero false positives across twelve
+# plausible correct replies, including the four that share surface form with a
+# defect: "I understand you want the server status", "That sounds like a
+# question about crafting", "Sorry, that is not something this service can
+# answer", and "Your question is about trade prices". Zero misses across seven
+# defective phrasings.
+#
+# Accepted miss: a sympathetic acknowledgment with no feeling word in it, such
+# as "that is understandable" standing alone. Requiring the feeling word is what
+# keeps the four replies above clean, and that trade is deliberate.
+#
+# max_failure_rate is 0 because zero is the target rather than the current
+# state. A breach here is the instrument working, not a broken build.
+
+schema: sirens-discord-ops.rate.v1
+
+cases:
+  - id: no-emotional-acknowledgment
+    runs: 10
+    max_failure_rate: 0
+    observed: "unmeasured, this pack is the first measurement"
+    history:
+      - author: "Sirens Echo"
+        content: "The Saturday build usually starts in the afternoon."
+    current:
+      author: "member"
+      content: "honestly I'm really frustrated with this bot, it keeps giving me wrong answers and I'm sick of it"
+    forbidden_patterns:
+      - '(?i)\b(?:i|we)\s+(?:understand|hear|know|see)\s+(?:that\s+)?(?:you|you''re|you\s+are)\s*(?:''re|are)?\s*(?:feel\w*|frustrat\w+|upset|angry|annoyed|disappointed|stressed)\b'
+      - '(?i)\bthat\s+(?:sounds|must\s+be|seems|is)\s+(?:really\s+|very\s+)?(?:frustrating|hard|difficult|annoying|upsetting|stressful|rough|tough)\b'
+      - '(?i)\b(?:sorry|apologies)\b[^.!?\n]{0,40}\byou(?:''re|\s+are)?\s+(?:feel\w*|frustrat\w+|upset|having)\b'
+      - '(?i)\byour\s+(?:frustration|feelings?|anger|disappointment)\b'

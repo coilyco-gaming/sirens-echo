@@ -29,6 +29,7 @@ func main() {
 		verifyBoardPack(path)
 	}
 	for _, path := range []string{
+		"agent/rate-echo.yaml",
 		"agent/rate-deep.yaml",
 		"agent/rate-fixture-deep.yaml",
 	} {
