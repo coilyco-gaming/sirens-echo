@@ -178,6 +178,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	return agent, nil
 }
 
+// mcpSessionSpanName keeps a held-open session out of the request-path
+// percentiles. Its lifetime is not a latency. See sirens-echo#560.
+func mcpSessionSpanName(_ string, request *http.Request) string {
+	return "mcp.session " + request.Method
+}
+
 // sessionHTTPClient serves the MCP transport, with no whole-request timeout
 // because a held-open session has no request to bound. See sirens-echo#160.
 func sessionHTTPClient(telemetry *Telemetry) *http.Client {
@@ -186,6 +192,7 @@ func sessionHTTPClient(telemetry *Telemetry) *http.Client {
 			http.DefaultTransport,
 			otelhttp.WithTracerProvider(telemetry.traceProvider),
 			otelhttp.WithPropagators(telemetry.propagator),
+			otelhttp.WithSpanNameFormatter(mcpSessionSpanName),
 		),
 	}
 }
