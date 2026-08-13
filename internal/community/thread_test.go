@@ -91,12 +91,12 @@ func TestATurnWithNoProgressLineGetsNoThread(t *testing.T) {
 	}
 }
 
-// The window is Kai's: the wait plus two beats, which the progress line's own
-// grid already measures. See sirens-echo#354.
+// The window is the wait plus two beats, and it moved with the wait on
+// sirens-echo#375. See docs/sirens-echo-progress-cadence.md.
 func TestTheThreadWindowIsTheOneThatWasAskedFor(t *testing.T) {
 	t.Parallel()
-	if turnLongReplyAfter != 15*time.Second {
-		t.Errorf("the thread window is %s, want the 3 + 6 + 6 that was asked for", turnLongReplyAfter)
+	if turnLongReplyAfter != 25*time.Second {
+		t.Errorf("the thread window is %s, want the wait plus two beats", turnLongReplyAfter)
 	}
 	if turnLongReplyAfter <= turnProgressAfter {
 		t.Error("a turn could cross the thread window before it posts a progress line")

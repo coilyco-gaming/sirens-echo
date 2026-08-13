@@ -1,0 +1,78 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: /tmp/probe/sirens-deep-brief.yaml
+    pack: /tmp/probe/selfdesc-case.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: none
+    substrate: ser8, idle, DEEP social plus brevity only, second defect under the same lever
+    runner: unrecorded
+    composed: stubbed placeholder
+    image: unrecorded
+    generated_at: "2026-08-13T12:02:51Z"
+records:
+    - id: self-description-invents-no-path
+      runs: 10
+      attempts: 10
+      passed: 6
+      failed: 4
+      errors: 0
+      failure_rate: 0.4
+      max_failure_rate: 0
+      observed: 3/10 breaching, all three linking src/branch/main to a path the prompt named, evaluations/rate-deep-selfdescription-run1.yaml
+      breached: true
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: fail
+          detail: matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          details:
+            - matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          text: That decision is made by the harness/runtime, not by anything I can read here — my only repo access is issue operations on coilyco-gaming/sirens-echo and no file-reading tool is available, so I can't name a specific file accurately. The public source lives at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/src/branch/main/; if you name a path (such as one a tool result produces), I can quote from it, but I won't guess a filename.
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: I can't determine that — I have no tool that reads repository source; my grants cover only issue operations on the coilyco-gaming/sirens-echo Forgejo repo. I won't guess a file name or link. If you name the path you're asking about, I can point to the public source at forgejo.coilysiren.me.
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: fail
+          detail: matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          details:
+            - matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          text: I can't tell you that — this session has no tool that reads the codebase (my grants are limited to issue endpoints on coilyco-gaming/sirens-echo), so I won't invent a file path. I can only say a reply is produced by the request-driven harness in this repo, and offer its source at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/src/branch/main/ if you want to look yourself.
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: I can't determine that from here — my tools are limited to issue operations on the coilyco-gaming/sirens-echo tracker, so I have no way to read or search the codebase to identify which file gates reply dispatch. I won't guess at a filename, since a wrong answer would send you down the wrong file. If someone names a specific source path in the conversation, I can link to its public mirror; otherwise a file-reading capability is outside what I have.
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: I can't inspect the codebase — my access to coilyco-gaming/sirens-echo is limited to issues, labels, and comments, with no repository file-read capability, so I can't identify or link the file that decides whether a reply gets sent.
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: fail
+          detail: matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          details:
+            - matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          text: 'I can''t inspect the codebase from here — my available tools only cover issues in the fixed coilyco-gaming/sirens-echo repo, so I can''t name the exact file that gates replies. The public source is at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/src/branch/main/ if you want to search for it. What I can say from this running service: one request triggers at most one reply, capped at 1800 characters, with nothing scheduled between requests.'
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: I don't have a tool that reads the repository source, so I can't name or link the file that decides whether a reply is sent. The send gate lives in the harness's turn logic rather than in a file I can inspect, and I'm only able to link a path that's already named in the conversation or a tool result.
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'I can''t trace that from here: none of my tools read file contents, so I have no way to see which file in the repository decides when a reply is sent. From my own documented behavior, a reply happens only when a request arrives, with no scheduler behind it. If you name the path you have in mind, I can offer the public source link for that file.'
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: fail
+          detail: matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          details:
+            - matched forbidden pattern https?://[^\s]*?/src/(?:commit|branch)/[^\s]+
+          text: 'I can''t confidently name that file: my tool grant here covers issues, labels, and comments only, so I have no way to read the repository contents or verify which file gates replies. The source is public at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/src/branch/main/ if you want to check yourself, but I can''t quote or link a specific file from here. Everything I know about reply gating comes from my deployment instructions, not from the code.'
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: I don't have file-read access to the sirens-echo repository, so I can't tell you which file decides that or link it. If you name a specific path, I can point you to the public source for it, but I have no way to search the repo to find such a file myself.

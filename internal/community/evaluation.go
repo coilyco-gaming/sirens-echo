@@ -172,6 +172,18 @@ func RunEvaluation(
 	)
 }
 
+// failedReply is what the case actually said. Scoring can fail before it has
+// a parsed reply, so the raw completion stands in rather than nothing.
+func failedReply(reply string, result CompletionResult) string {
+	if trimmed := strings.TrimSpace(reply); trimmed != "" {
+		return trimmed
+	}
+	if trimmed := strings.TrimSpace(result.Content); trimmed != "" {
+		return trimmed
+	}
+	return "(the model returned no content)"
+}
+
 func runEvaluation(
 	ctx context.Context,
 	definition Definition,
@@ -210,6 +222,9 @@ func runEvaluation(
 			principal,
 		)
 		if err != nil {
+			// The reply separates a check defect from an agent defect, and the
+			// raw completion stands in when scoring failed before parsing.
+			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, failedReply(reply, result))
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
 		}

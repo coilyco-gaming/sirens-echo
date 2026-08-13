@@ -840,6 +840,20 @@ type turnIO interface {
 	Reply(ctx context.Context, content string) error
 }
 
+// replyBudget is an optional turn capability, like the reactor: a transport
+// with a send ceiling declares it. See docs/sirens-echo-tool-disclosure.md.
+type replyBudget interface {
+	ReplyLimit() int
+}
+
+// replyLimitOf returns zero for a transport with no ceiling, as HTTP has none.
+func replyLimitOf(turn turnIO) int {
+	if bounded, ok := turn.(replyBudget); ok {
+		return bounded.ReplyLimit()
+	}
+	return 0
+}
+
 // spanTagger is an optional turn capability, asserted like the reactor is: a
 // transport with identifiers of its own contributes them to the turn span.
 type spanTagger interface {
@@ -856,6 +870,7 @@ func (a *Agent) progressFor(turn turnIO) *turnProgress {
 	return newReportingTurnProgress(discordTurnProgress{
 		session: discord.session,
 		channel: discord.message.ChannelID,
+		message: discord.message,
 	}, a.telemetry, nil)
 }
 
@@ -1002,6 +1017,7 @@ func (a *Agent) runTurn(
 	// Service-authored, so it runs after the checks rather than through them.
 	// See docs/sirens-echo-issues.md.
 	reply = AppendIssueReferences(reply, result.ToolCalls...)
+	reply = AppendToolDisclosureWithin(reply, replyLimitOf(turn), result.ToolCalls...)
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
@@ -1232,6 +1248,10 @@ func (t *discordMessageTurn) React(_ context.Context, emoji string) error {
 func (t *discordMessageTurn) Typing() error {
 	return t.session.ChannelTyping(t.message.ChannelID)
 }
+
+// ReplyLimit is the Discord send budget, declared so a service-authored suffix
+// can be kept inside it rather than truncated away.
+func (t *discordMessageTurn) ReplyLimit() int { return discordReplyLimit }
 
 func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	span := trace.SpanFromContext(ctx)

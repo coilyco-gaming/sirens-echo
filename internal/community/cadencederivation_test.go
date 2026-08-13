@@ -7,18 +7,18 @@ import (
 
 // Three independent numbers that had to agree became one. See sirens-echo#354.
 
-// The cadence Kai described as "3 + 6 + 6" is unchanged by the derivation. If
-// the base moves, these move with it and this test says by how much.
-func TestTheCadenceIsStillThreeSixSix(t *testing.T) {
+// The values, pinned so a change to the base reports what it moved rather than
+// moving three things quietly. Kai raised the wait to 5s on sirens-echo#375.
+func TestTheCadenceIsFiveTenTen(t *testing.T) {
 	t.Parallel()
 	for _, check := range []struct {
 		name string
 		got  time.Duration
 		want time.Duration
 	}{
-		{"startup wait", turnProgressAfter, 3 * time.Second},
-		{"artificial delay", turnProgressEvery, 6 * time.Second},
-		{"long reply window", turnLongReplyAfter, 15 * time.Second},
+		{"startup wait", turnProgressAfter, 5 * time.Second},
+		{"artificial delay", turnProgressEvery, 10 * time.Second},
+		{"long reply window", turnLongReplyAfter, 25 * time.Second},
 	} {
 		if check.got != check.want {
 			t.Errorf("%s = %s, want %s", check.name, check.got, check.want)

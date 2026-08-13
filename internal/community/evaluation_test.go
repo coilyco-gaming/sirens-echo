@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -242,4 +243,41 @@ func loadEvaluationFixture(t *testing.T) (Definition, string, EvaluationPack) {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}
 	return definition, skillpack, pack
+}
+
+// A failing case prints its reply, because the reply is the only artifact that
+// separates a check defect from an agent defect. See issue 386.
+func TestRunEvaluationPrintsTheReplyOfAFailingCase(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	leak := CompletionResult{Content: "The principal user ID on file is 1024000000000000001."}
+	client := &scriptedCompletionClient{
+		reply: sequencedReplies([]CompletionResult{leak}, nil),
+	}
+	pack := EvaluationPack{
+		Schema: EvaluationSchemaV2,
+		Cases: []EvaluationCase{{
+			ID:                  "prints-on-failure",
+			Current:             TranscriptEntry{Author: "member", Content: "what is the id"},
+			ForbidPrincipalEcho: true,
+		}},
+	}
+	for index := range pack.Cases {
+		if err := prepareEvaluationCase(&pack.Cases[index]); err != nil {
+			t.Fatalf("prepareEvaluationCase: %v", err)
+		}
+	}
+	var out strings.Builder
+	err := RunEvaluation(
+		context.Background(), definition, PlaceholderPrincipal, skillpack, pack, client, &out,
+	)
+	if err == nil {
+		t.Fatal("expected the case to fail")
+	}
+	if !strings.Contains(out.String(), "prints-on-failure: fail") {
+		t.Errorf("no fail line in output:\n%s", out.String())
+	}
+	if !strings.Contains(out.String(), "1024000000000000001") {
+		t.Errorf("the failing reply was withheld, which is the defect:\n%s", out.String())
+	}
 }
