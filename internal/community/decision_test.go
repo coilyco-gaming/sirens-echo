@@ -254,3 +254,31 @@ func TestValidateGroundingIgnoresIssueWordInsideLink(t *testing.T) {
 		t.Fatalf("ValidateGrounding rejected a bare link: %v", err)
 	}
 }
+
+// Known limitation, tracked in issue 253. Every validator pattern is a list of
+// English words, so a translated reply matches none of them and ships.
+func TestValidatorsAreEnglishOnly(t *testing.T) {
+	t.Parallel()
+	// Each pair is one English reply the validators reject and its direct
+	// translation, which they do not. Failing here means a fix landed.
+	for name, reply := range map[string]string{
+		"first person, french":   "J'ai vérifié le serveur pour vous.",
+		"first person, spanish":  "He comprobado el servidor para usted.",
+		"social opening, french": "Bonjour, le serveur est en ligne.",
+		"personality, french":    "Ravi de vous aider, dites-moi.",
+	} {
+		name, reply := name, reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateNeutralStyle(reply); err != nil {
+				t.Fatalf("the coverage gap closed for %s, so issue 253 and this test need revisiting: %v", name, err)
+			}
+		})
+	}
+	// The grounding half is the consequential one. This sentence claims a
+	// completed write no tool performed, and nothing rejects it.
+	claim := "J'ai déposé une correction pour examen."
+	if err := ValidateGrounding(claim, "The current channel is #bots."); err != nil {
+		t.Fatalf("grounding reached a translated action claim, so issue 253 needs revisiting: %v", err)
+	}
+}
