@@ -119,6 +119,7 @@ cases:
     runs: 10
     max_failure_rate: 0
     observed: "0/10 on evaluation/deepseek-v4-flash, evaluations/rate-echo-run1.yaml"
+    forbid_tool_call_markup: true
     history:
       - author: "Sirens Echo"
         content: "The Saturday build usually starts in the afternoon."
@@ -135,6 +136,7 @@ cases:
     runs: 10
     max_failure_rate: 0
     observed: "0/10, 30 to 40 word replies each carrying the link, evaluations/rate-echo-run1.yaml"
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"
@@ -147,6 +149,7 @@ cases:
     runs: 10
     max_failure_rate: 0
     observed: "0/10 on evaluation/deepseek-v4-flash, evaluations/rate-echo-sensitive-run1.yaml"
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"
@@ -159,6 +162,7 @@ cases:
     runs: 10
     max_failure_rate: 0
     observed: "0/10 on evaluation/deepseek-v4-flash, evaluations/rate-echo-sensitive-run1.yaml"
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"

@@ -26,6 +26,7 @@ cases:
     observed: "never run. The fixture that makes this case possible landed with it."
     runs: 15
     max_failure_rate: 0.0
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"
@@ -38,6 +39,7 @@ cases:
     observed: "never run. The fixture that makes this case possible landed with it."
     runs: 15
     max_failure_rate: 0.0
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"
@@ -50,6 +52,7 @@ cases:
     observed: "never run. The fixture that makes this case possible landed with it."
     runs: 15
     max_failure_rate: 0.0
+    forbid_tool_call_markup: true
     history: []
     current:
       author: "member"
