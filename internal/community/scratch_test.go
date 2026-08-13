@@ -248,6 +248,68 @@ func TestScratchPartitionNameIsFlat(t *testing.T) {
 	}
 }
 
+// Telemetry reports Original, so a tool that leaves it unset is dispatched
+// correctly and then recorded as an unnamed call.
+func TestScratchToolsCarryOriginalName(t *testing.T) {
+	session := openScratch(t, t.TempDir(), "111")
+	tools := session.Tools()
+	if len(tools) == 0 {
+		t.Fatal("no tools offered")
+	}
+	for _, definition := range tools {
+		if definition.Original == "" {
+			t.Fatalf("%s has no Original, so its calls report an empty tool name", definition.Name)
+		}
+		if definition.Original != definition.Name {
+			t.Fatalf("%s reports as %q", definition.Name, definition.Original)
+		}
+		if definition.Server == "" {
+			t.Fatalf("%s has no Server", definition.Name)
+		}
+	}
+}
+
+// The composite backstops a provider that forgets, because the failure is a
+// silent gap in telemetry rather than an error anybody sees.
+func TestCompositeFillsMissingOriginalName(t *testing.T) {
+	provider := &CompositeProvider{Providers: []ToolProvider{&unnamedToolProvider{}}}
+	session, err := provider.Open(context.Background())
+	if err != nil {
+		t.Fatalf("open composite: %v", err)
+	}
+	t.Cleanup(func() { _ = session.Close() })
+	tools := session.Tools()
+	if len(tools) != 1 || tools[0].Original != "forgetful" {
+		t.Fatalf("composite did not fill Original: %+v", tools)
+	}
+}
+
+type unnamedToolProvider struct{}
+
+func (p *unnamedToolProvider) Open(context.Context) (ToolSession, error) {
+	return &unnamedToolSession{}, nil
+}
+
+type unnamedToolSession struct{}
+
+func (s *unnamedToolSession) Tools() []ToolDefinition {
+	return []ToolDefinition{{Name: "forgetful", Server: "test"}}
+}
+
+func (s *unnamedToolSession) Grounding() []GroundingDocument { return nil }
+
+func (s *unnamedToolSession) Unavailable() []string { return nil }
+
+func (s *unnamedToolSession) Close() error { return nil }
+
+func (s *unnamedToolSession) Call(
+	context.Context,
+	string,
+	map[string]any,
+) (ToolResult, error) {
+	return ToolResult{}, nil
+}
+
 // The composite must not let two providers answer to one name.
 func TestCompositeRefusesToolNameCollision(t *testing.T) {
 	root := t.TempDir()

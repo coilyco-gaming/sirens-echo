@@ -120,8 +120,9 @@ func (s *scratchSession) Tools() []ToolDefinition {
 	}
 	return []ToolDefinition{
 		{
-			Name:   "scratch_list",
-			Server: "scratchpad",
+			Name:     "scratch_list",
+			Original: "scratch_list",
+			Server:   "scratchpad",
 			Description: "List files in your scratchpad. The scratchpad is private to " +
 				"you and is erased when the service restarts.",
 			InputSchema: scratchObjectSchema(map[string]any{
@@ -132,6 +133,7 @@ func (s *scratchSession) Tools() []ToolDefinition {
 		},
 		{
 			Name:        "scratch_read",
+			Original:    "scratch_read",
 			Server:      "scratchpad",
 			Description: "Read a UTF-8 text file from your scratchpad.",
 			InputSchema: scratchObjectSchema(map[string]any{
@@ -139,8 +141,9 @@ func (s *scratchSession) Tools() []ToolDefinition {
 			}, []string{"path"}),
 		},
 		{
-			Name:   "scratch_write",
-			Server: "scratchpad",
+			Name:     "scratch_write",
+			Original: "scratch_write",
+			Server:   "scratchpad",
 			Description: "Write a UTF-8 text file to your scratchpad, creating or " +
 				"replacing it. Text only.",
 			InputSchema: scratchObjectSchema(map[string]any{
@@ -150,6 +153,7 @@ func (s *scratchSession) Tools() []ToolDefinition {
 		},
 		{
 			Name:        "scratch_search",
+			Original:    "scratch_search",
 			Server:      "scratchpad",
 			Description: "Find lines matching a substring across your scratchpad.",
 			InputSchema: scratchObjectSchema(map[string]any{

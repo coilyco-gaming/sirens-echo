@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // One tool surface assembled from several providers. See docs/sirens-echo-tools.md.
@@ -56,6 +57,11 @@ func (s *compositeSession) index() error {
 		for _, definition := range session.Tools() {
 			if _, exists := s.owner[definition.Name]; exists {
 				return fmt.Errorf("tool name collision %q", definition.Name)
+			}
+			// Telemetry reports the original name, so a provider that leaves it
+			// unset goes unnamed in the tool breakdown rather than failing.
+			if strings.TrimSpace(definition.Original) == "" {
+				definition.Original = definition.Name
 			}
 			s.owner[definition.Name] = session
 			s.tools = append(s.tools, definition)
