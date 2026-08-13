@@ -28,6 +28,14 @@ const referenceHeading = "Referenced issues:"
 // AppendIssueReferences links the issues a turn observed or filed. Every URL it
 // appends came back from a tool call, so it states nothing unobserved.
 func AppendIssueReferences(reply string, executed ...ExecutedTool) string {
+	return appendIssueReferencesWithin(reply, discordReplyLimit, executed)
+}
+
+// appendIssueReferencesWithin renders the block inside a caller's ceiling, and
+// a limit of zero is unbounded. See docs/sirens-echo-issues.md.
+func appendIssueReferencesWithin(
+	reply string, limit int, executed []ExecutedTool,
+) string {
 	observed := observedIssueURLs(executed)
 	if len(observed) == 0 {
 		return reply
@@ -54,19 +62,19 @@ func AppendIssueReferences(reply string, executed ...ExecutedTool) string {
 	for _, url := range createdIssueURLs(executed) {
 		add(url)
 	}
-	return withReferenceBlock(reply, appended)
+	return withReferenceBlock(reply, appended, limit)
 }
 
 // withReferenceBlock renders the block within the send budget. A block that
 // cannot fit whole is dropped rather than truncated into a broken URL.
-func withReferenceBlock(reply string, urls []string) string {
+func withReferenceBlock(reply string, urls []string, limit int) string {
 	if len(urls) == 0 {
 		return reply
 	}
 	trimmed := strings.TrimRight(reply, " \t\n")
 	for len(urls) > 0 {
 		block := "\n\n" + referenceHeading + "\n" + strings.Join(urls, "\n")
-		if len([]rune(trimmed))+len([]rune(block)) <= discordReplyLimit {
+		if limit <= 0 || len([]rune(trimmed))+len([]rune(block)) <= limit {
 			return trimmed + block
 		}
 		urls = urls[:len(urls)-1]
