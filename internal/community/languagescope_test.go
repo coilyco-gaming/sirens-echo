@@ -5,9 +5,8 @@ import "testing"
 // The reply guards match English words. Issue 298 binds a channel to a
 // language, which makes the reach of those guards a shipping question.
 
-// languagePair is one violation written twice. Both halves break the same rule,
-// so a guard that catches one and misses the other is scoped to a language
-// rather than to the rule.
+// languagePair is one violation written twice. A guard catching one half and
+// missing the other is scoped to a language rather than to the rule.
 type languagePair struct {
 	violation string
 	english   string
@@ -26,8 +25,8 @@ type languagePair struct {
 var languagePairs = []languagePair{
 	{
 		violation:      "first-person voice",
-		english:        "I am checking the server now.",
-		other:          "Je vérifie le serveur maintenant.",
+		english:        "I am checking the server right away.",
+		other:          "Je vérifie le serveur tout de suite.",
 		otherCaughtNow: false, otherShouldBeCaught: true,
 		issue: "298",
 	},
