@@ -94,9 +94,14 @@ maps its repository-scoped token only into its pod. Echo receives only the URL.
 
 Every community event passes channel, summon, author, duplicate, response,
 grounding, and mention checks. Accepted `#bots` and private HTTP turns retain
-trace-correlated metadata and byte counts without member, prompt, model, tool,
-or reply bodies. Rejected events and DMs never enter the turn logger. Forgejo
-issues contain sanitized summaries and no labels.
+trace-correlated metadata and byte counts without prompt, model, tool, or reply
+bodies. A Discord turn span additionally carries the author's account id and
+the guild, channel, thread, and message ids, so a trace id a member was handed
+can be placed. Nothing member-visible goes with them, and no direct message
+contributes any of it. See [turn
+identifiers](docs/sirens-echo-turn-identifiers.md). Rejected events and DMs
+never enter the turn logger. Forgejo issues contain sanitized summaries and no
+labels.
 
 For live diagnosis, an authorized ops or director session can correlate
 bounded history from the deploy-owned read-only Discord MCP with Echo's

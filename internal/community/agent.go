@@ -832,6 +832,12 @@ type turnIO interface {
 	Reply(ctx context.Context, content string) error
 }
 
+// spanTagger is an optional turn capability, asserted like the reactor is: a
+// transport with identifiers of its own contributes them to the turn span.
+type spanTagger interface {
+	SpanAttributes() []attribute.KeyValue
+}
+
 // progressFor gives a Discord turn a progress line. Other transports answer
 // synchronously, so there is nothing to narrate to.
 func (a *Agent) progressFor(turn turnIO) *turnProgress {
@@ -861,8 +867,11 @@ func (a *Agent) runTurn(
 	if turn.Transport() == transportDiscord {
 		turnSpan.SetAttributes(attribute.String("discord.channel", a.cfg.Definition.Channel))
 	}
-	// Attribution reaches the tool layer here. The requester is deliberately
-	// not a span attribute, because an account id is not operational telemetry.
+	// So a trace id in a member's hands resolves to the message that produced
+	// it. See docs/sirens-echo-turn-identifiers.md.
+	if tagger, ok := turn.(spanTagger); ok {
+		turnSpan.SetAttributes(tagger.SpanAttributes()...)
+	}
 	turnCtx = WithRequester(turnCtx, turn.Requester())
 	// The tool loop narrates from behind the completion boundary, and the
 	// watcher narrates a stage that is waiting rather than changing.
@@ -1095,6 +1104,46 @@ func (t *discordMessageTurn) Requester() string {
 }
 
 func (t *discordMessageTurn) Transport() string { return transportDiscord }
+
+// SpanAttributes places a turn. The account id is here by an explicit
+// reversal, recorded in docs/sirens-echo-turn-identifiers.md.
+func (t *discordMessageTurn) SpanAttributes() []attribute.KeyValue {
+	// A DM contributes nothing, because a DM never enters the turn logger and
+	// this is not the change that should be its first exception.
+	if t.message == nil || t.message.GuildID == "" {
+		return nil
+	}
+	channelID, threadID := t.channelAndThread()
+	attributes := discordMessageSpanAttributes(
+		"receive",
+		t.message.GuildID,
+		channelID,
+		t.message.ID,
+	)
+	if threadID != "" {
+		attributes = append(attributes, attribute.String("discord.thread.id", threadID))
+	}
+	if requester := t.Requester(); requester != "" {
+		attributes = append(attributes, attribute.String("discord.user.id", requester))
+	}
+	return attributes
+}
+
+// channelAndThread separates the two, because reporting a thread as its own
+// channel hides the turn from a query for the channel it hangs under.
+func (t *discordMessageTurn) channelAndThread() (channelID, threadID string) {
+	channelID = t.message.ChannelID
+	if t.session == nil || t.session.State == nil {
+		return channelID, ""
+	}
+	// Cached state only. A turn is not worth a Discord API call, and a thread
+	// this service can answer in arrived over the gateway to begin with.
+	channel, err := t.session.State.Channel(channelID)
+	if err != nil || channel == nil || !channel.IsThread() {
+		return channelID, ""
+	}
+	return channel.ParentID, channelID
+}
 
 func (t *discordMessageTurn) Current() TranscriptEntry {
 	return TranscriptEntry{
