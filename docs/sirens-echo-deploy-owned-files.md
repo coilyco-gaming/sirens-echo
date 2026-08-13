@@ -31,14 +31,35 @@ wrong for a checker.
 
 ## What a checker owes
 
-**Accept both shapes**, or refuse the wrapper with a message that names it. A
-reader holding two YAML files cannot see which is which, so the error has to
-say.
+**Read the inner document, and let deploy extract it.** This is what the access
+gate shipped, and it is the seam:
+
+```sh
+yq '.data."access-policy.yaml"' access-policy.yml | sirens-echo-access-check -
+```
+
+Unwrapping `data:` inside the checker is the tempting alternative and it is
+wrong twice. It puts Kubernetes knowledge in the repository that does not own
+k3s, and it makes the checker accept a shape the runtime never sees, so the
+checker and the pod stop agreeing about what a valid file is. That drift is the
+whole reason a checker calls the runtime's own loader.
+
+**Refuse the wrapper with a message that names it.** A reader holding two YAML
+files cannot see which is which, so the error has to say.
 
 **Test against a real file.** A fixture written from the format's documentation
 describes the mounted shape, which is the one input the checker will never be
 handed. Reading one file from deploy before writing the first fixture is one
 command.
+
+## Do not iron out how the loaders differ
+
+`LoadAccessPolicy` narrows a schema this repository owns, so strict decoding is
+free. `LoadMCPRoster` cannot: the `mcpServers` shape is shared with mcporter,
+Claude Code and Codex, and strict decoding would break the first time one of
+them adds a key. It refuses an empty roster instead.
+
+Same wrong file, two refusals, both correct for their format.
 
 ## See also
 
