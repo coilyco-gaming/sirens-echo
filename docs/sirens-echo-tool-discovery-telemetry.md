@@ -38,6 +38,18 @@ is why the roster size is on the span. See sirens-echo#534.
 An empty roster reports `cached=false`. Nothing was served from cache because
 there is nothing to cache, and a profile with no tools should not read as a hit.
 
+## Which server, and which stage
+
+Discovery covers a connect and three listings per server, and the whole roster
+used to sit under one span. A rejection left an `HTTP POST` carrying a URL and
+nothing else, attributable to neither a server nor an operation.
+
+`mcp.server.discovery` wraps one server's round trips and carries
+`mcp.server.name`. `mcp.discovery.stage` moves through `connect`, `tools`,
+`resources` and `prompts`, so a failure's stage is the span's last value. A
+server served from cache does no round trip and gets no span. See
+sirens-echo#139.
+
 ## Why not the duration
 
 It works and it is not a contract. A cache hit was around a tenth of a
