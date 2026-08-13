@@ -26,6 +26,16 @@ every profile renders it and `validateSharedPolicy` fails a build that drops it.
 It is un-droppable in the same way the pronoun and trust policies are, and it
 shows up in the tracked snapshot diff.
 
+**What the snapshot does not cover.** Read that diff as covering shared policy
+only. The composed persona is deployment-owned, so the tracked snapshot renders
+`<composed-identity>` as literal placeholder text and the image bakes the real
+bundle at build time. A change to a profile's role or personality meld therefore
+produces no diff in this repository. That persona is reviewed through the
+deploy-owned bundle artifact, `services/sirens-echo/rendered/sirens-deep-bundle.txt`
+in coilyco-bridge/deploy, gated by its compose review. Deep is the variant that
+carries public and livestream risk, and it carries it through exactly this
+block, so a reviewer looking only here would be looking in the wrong place.
+
 **The validator.** `ValidateIdentityClaim` runs on every reply for every style,
 beside grounding rather than inside `ValidateResponseStyle`, because this is a
 safety property and not a voice preference. It rejects three things:
