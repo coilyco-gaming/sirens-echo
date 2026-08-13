@@ -63,6 +63,9 @@ case "${1:-}" in
   policy-check)
     go run ./cmd/sirens-echo-policy-check
     ;;
+  evidence-scan)
+    go run ./cmd/sirens-echo-evidence
+    ;;
   test-skips)
     # A skip and a pass share an exit code and the word ok, so a guard can stop
     # running for months. See docs/sirens-echo-test-skips.md.

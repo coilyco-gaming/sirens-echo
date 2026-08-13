@@ -51,6 +51,9 @@ commands:
   test:
     run: go test ./...
     description: Run the unit test suite.
+  evidence-scan:
+    run: bash scripts/ward-command.sh evidence-scan
+    description: Count tool-call markup across committed run records. Gates nothing.
   test-skips:
     run: bash scripts/ward-command.sh test-skips
     description: Verify every test that skips is on the reviewed skip allowlist.
