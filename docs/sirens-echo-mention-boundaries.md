@@ -40,10 +40,22 @@ unlisted prose kind silently stops reaching people, and nobody reports that.
 
 **A name inside a dotted identifier is not that person either.** A host written
 without a scheme is not a link by that shared definition, so the spans do not
-cover it and a second rule does. A name immediately preceded by a dot, or
-followed by a dot and then a letter or digit, is a label rather than a person.
-A trailing dot before a space or the end of the reply is the punctuation of a
-sentence, so a name that ends one still resolves. See sirens-echo#481.
+cover it and a second rule does. A name immediately preceded by a dot is a
+label. So is a name whose following run of label characters arrives at a dot
+that begins another label. A trailing dot before a space or the end of the
+reply is the punctuation of a sentence, so a name that ends one still resolves.
+See sirens-echo#481 and sirens-echo#515.
+
+The rule walks forward rather than reading the adjacent character, because the
+**first** label of a host has nothing before it but a space, which is what
+prose looks like. In `eco-app.coilysiren.me` the name `coilysiren` sits after a
+dot and `eco` does not, so reading adjacency alone made the same host safe for
+one member and not for another.
+
+A hyphen joins labels, so the walk crosses one. A hyphen that arrives at no dot
+is an ordinary word, and a member named `eco` is still reached in
+`eco-friendly builds`. That is the case that keeps this from becoming "a name
+before a hyphen never resolves".
 
 Resolution reads every occurrence in a span rather than the first, because the
 first can be a hostname label while the person is named later in the sentence.
