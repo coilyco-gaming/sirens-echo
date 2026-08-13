@@ -284,6 +284,15 @@ func (c ProxyClient) Complete(
 			})
 			toolDefinitions[definition.Name] = definition
 		}
+		// An upload lands before the first model call, so the turn can read it
+		// through a tool rather than paying for it in the prompt.
+		if stored := ingestAttachments(ctx, toolSession, nil); len(stored) > 0 {
+			telemetry.Info(
+				ctx,
+				"discord.attachment.stored",
+				slog.Int("attachment_count", len(stored)),
+			)
+		}
 		unavailable = toolSession.Unavailable()
 		groundingDocuments = toolSession.Grounding()
 		listSpan.SetAttributes(

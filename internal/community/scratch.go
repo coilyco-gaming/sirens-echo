@@ -221,7 +221,8 @@ func reservedScratchPath(relative string) bool {
 	cleaned := path.Clean("/" + strings.ReplaceAll(strings.TrimSpace(relative), "\\", "/"))
 	trimmed := strings.TrimPrefix(cleaned, "/")
 	first, _, _ := strings.Cut(trimmed, "/")
-	return strings.EqualFold(first, scratchReservedDir)
+	return strings.EqualFold(first, scratchReservedDir) ||
+		strings.EqualFold(first, scratchUploadDir)
 }
 
 // resolve confines a model-supplied path to the partition, deciding on where it
@@ -370,6 +371,10 @@ func (s *scratchSession) read(relative string) (ToolResult, error) {
 // scratchReservedDir holds what the runtime wrote. The model cannot write here,
 // so provenance is a property rather than a convention.
 const scratchReservedDir = "tool-output"
+
+// scratchUploadDir holds what a member uploaded. Reserved like tool output so
+// the model cannot forge one, and separate so it cannot be mistaken for one.
+const scratchUploadDir = "uploads"
 
 // WriteReserved writes on the runtime's behalf, into the directory the model is
 // refused. See docs/sirens-echo-scratchpad-partitions.md.

@@ -493,6 +493,25 @@ func counterpartOf(message *discordgo.Message) CounterpartKind {
 	return CounterpartHuman
 }
 
+// attachmentSources returns what the runtime may fetch. The URL is Gateway
+// supplied rather than message text, and the host is bounded anyway.
+func attachmentSources(message *discordgo.Message) []AttachmentSource {
+	if message == nil || len(message.Attachments) == 0 {
+		return nil
+	}
+	sources := make([]AttachmentSource, 0, len(message.Attachments))
+	for _, attachment := range message.Attachments {
+		if attachment == nil {
+			continue
+		}
+		sources = append(sources, AttachmentSource{
+			URL:      attachment.URL,
+			Declared: attachment.ContentType,
+		})
+	}
+	return sources
+}
+
 // attachmentTypes returns each attachment's media type. Bytes and filenames
 // stay out, so nothing member-authored enters the transcript by this route.
 func attachmentTypes(message *discordgo.Message) []string {
@@ -828,6 +847,9 @@ func (a *Agent) runTurn(
 		turnCtx = WithReactor(turnCtx, target)
 		a.react(turnCtx, target, reactionAccepted)
 	}
+	if uploader, ok := turn.(attachmentBearer); ok {
+		turnCtx = WithAttachments(turnCtx, uploader.Attachments())
+	}
 	outcome := "ok"
 	defer func() {
 		if turnErr != nil {
@@ -1003,6 +1025,12 @@ type discordMessageTurn struct {
 	session *discordgo.Session
 	message *discordgo.Message
 	limit   int
+}
+
+// Attachments lets the completion layer reach a turn's uploads without taking
+// a transport argument, the same route the reactions take.
+func (t *discordMessageTurn) Attachments() []AttachmentSource {
+	return attachmentSources(t.message)
 }
 
 func (t *discordMessageTurn) RequestID() string {
