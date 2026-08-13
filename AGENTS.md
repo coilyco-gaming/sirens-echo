@@ -147,6 +147,32 @@ both attach to a comment you are already writing:
 
 See [the consult gate](docs/sirens-echo-consult-gate.md).
 
+**A claim reserves an issue number, and the collision surface is files.** Two
+issues can point at one function, so claiming correctly does not stop two agents
+building the same change. Three habits, each attached to something you are
+already doing:
+
+- **Fetch `origin/main` immediately before the first edit**, not only when
+  branching. This repository merges several times an hour, and a claim is
+  minutes old by the time work starts.
+- **Look for the thing before building it.** Grep for the function, the file,
+  the flag. A capability that already exists is the cheapest duplicate to avoid.
+- **When you are beaten to it, compare before discarding.** The landed version
+  is often better, and where it is not, the delta is a small pull request rather
+  than an argument. Do not re-open a settled question to keep your version.
+
+See [duplicate work](docs/sirens-echo-duplicate-work.md).
+
+**Verify a write landed when you discard its output.** `aosguard ops forgejo
+issue-comment create` does not exist, and run with `>/dev/null` it lost an
+entire session of claims and findings without a symptom. One read after the
+write is the whole habit.
+
+The same operation fails in both directions: `issue comment` on a **closed**
+issue exits non-zero by design and the comment *is* still posted, so an exit
+status read without the note says a successful write failed. See
+[sirens-echo#693](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/693).
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
