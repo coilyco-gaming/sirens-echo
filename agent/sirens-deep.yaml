@@ -1,3 +1,6 @@
+# Deepseek is fast and cheap and Echo's ornith route is neither, so the two
+# profiles do not share a model-call ceiling. Echo names no model_budget and
+# keeps the packaged defaults. See docs/sirens-echo-tuning.md, sirens-echo#467.
 schema: coilyco-harness.agent.v1
 identity: Sirens Deep of Coilyco
 audit_role: general
@@ -7,3 +10,9 @@ channel: ""
 max_context_messages: 12
 local_skill_roots:
   - .agents/skills/coilyco-general
+model_budget:
+  tool_rounds: 12
+  base_completion_tokens: 3600
+  max_completion_tokens: 14400
+  budget_raises: 2
+  tool_result_bytes: 16384

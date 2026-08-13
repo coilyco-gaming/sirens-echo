@@ -97,6 +97,67 @@ type Definition struct {
 	// Composed requires a materialized agent-compose bundle, so a profile that
 	// asks for an identity fails startup rather than answering without one.
 	Composed bool `json:"composed,omitempty" yaml:"composed,omitempty"`
+	// ModelBudget is empty for a definition that takes the packaged ceilings.
+	ModelBudget ModelBudget `json:"model_budget,omitempty" yaml:"model_budget,omitempty"`
+}
+
+// ModelBudget is what one turn on this definition may spend on model calls. The
+// two profiles do not share a substrate, so they cannot share one ceiling.
+type ModelBudget struct {
+	ToolRounds           int `json:"tool_rounds,omitempty" yaml:"tool_rounds,omitempty"`
+	BaseCompletionTokens int `json:"base_completion_tokens,omitempty" yaml:"base_completion_tokens,omitempty"`
+	MaxCompletionTokens  int `json:"max_completion_tokens,omitempty" yaml:"max_completion_tokens,omitempty"`
+	BudgetRaises         int `json:"budget_raises,omitempty" yaml:"budget_raises,omitempty"`
+	ToolResultBytes      int `json:"tool_result_bytes,omitempty" yaml:"tool_result_bytes,omitempty"`
+}
+
+// resolved fills each unset field from the packaged default, so a definition
+// names only what it changes and an unset budget is today's behaviour exactly.
+func (b ModelBudget) resolved() ModelBudget {
+	if b.ToolRounds == 0 {
+		b.ToolRounds = maxToolRounds
+	}
+	if b.BaseCompletionTokens == 0 {
+		b.BaseCompletionTokens = baseCompletionTokens
+	}
+	if b.MaxCompletionTokens == 0 {
+		b.MaxCompletionTokens = maxCompletionTokens
+	}
+	if b.BudgetRaises == 0 {
+		b.BudgetRaises = budgetRaisesAllowed
+	}
+	if b.ToolResultBytes == 0 {
+		b.ToolResultBytes = maxToolResultBytes
+	}
+	return b
+}
+
+// validate refuses a budget that would spend without bound or contradict
+// itself. Every field is a ceiling, so none of them may be negative.
+func (b ModelBudget) validate() error {
+	for _, field := range []struct {
+		name  string
+		value int
+	}{
+		{"tool_rounds", b.ToolRounds},
+		{"base_completion_tokens", b.BaseCompletionTokens},
+		{"max_completion_tokens", b.MaxCompletionTokens},
+		{"budget_raises", b.BudgetRaises},
+		{"tool_result_bytes", b.ToolResultBytes},
+	} {
+		if field.value < 0 {
+			return fmt.Errorf("model_budget %s must not be negative, got %d",
+				field.name, field.value)
+		}
+	}
+	resolved := b.resolved()
+	if resolved.MaxCompletionTokens < resolved.BaseCompletionTokens {
+		return fmt.Errorf(
+			"model_budget max_completion_tokens %d is below base_completion_tokens %d",
+			resolved.MaxCompletionTokens, resolved.BaseCompletionTokens,
+		)
+	}
+	return nil
 }
 
 // Principal identifies the one speaker the prompt trusts. The values are
@@ -368,6 +429,9 @@ func LoadDefinition(path string) (Definition, error) {
 	if definition.IssueTracker != "" &&
 		!mcpServerNamePattern.MatchString(definition.IssueTracker) {
 		return Definition{}, fmt.Errorf("invalid issue_tracker %q", definition.IssueTracker)
+	}
+	if err := definition.ModelBudget.validate(); err != nil {
+		return Definition{}, err
 	}
 	return definition, nil
 }
