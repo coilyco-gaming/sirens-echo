@@ -45,6 +45,31 @@ func (r mentionRoster) names() []string {
 	return names
 }
 
+// mentionSpan is a run of the reply. A link is carried through byte-identical,
+// because a display name matching a path component is not that person.
+type mentionSpan struct {
+	text string
+	link bool
+}
+
+// mentionSpans splits a reply on the same urlSpan the prose validators mask
+// with, so where a link starts has one definition. See sirens-echo#465.
+func mentionSpans(reply string) []mentionSpan {
+	spans := make([]mentionSpan, 0, 3)
+	end := 0
+	for _, bounds := range urlSpan.FindAllStringIndex(reply, -1) {
+		if bounds[0] > end {
+			spans = append(spans, mentionSpan{text: reply[end:bounds[0]]})
+		}
+		spans = append(spans, mentionSpan{text: reply[bounds[0]:bounds[1]], link: true})
+		end = bounds[1]
+	}
+	if end < len(reply) {
+		spans = append(spans, mentionSpan{text: reply[end:]})
+	}
+	return spans
+}
+
 // resolveMentions rewrites each named person as a Discord mention and reports
 // the accounts it resolved. Nothing else in the reply is touched.
 func (r mentionRoster) resolveMentions(reply string) (string, []string) {
@@ -53,6 +78,7 @@ func (r mentionRoster) resolveMentions(reply string) (string, []string) {
 	}
 	resolved := make([]string, 0, len(r))
 	seen := make(map[string]bool, len(r))
+	spans := mentionSpans(reply)
 	for _, name := range r.names() {
 		userID := r[name]
 		if seen[userID] {
@@ -62,21 +88,37 @@ func (r mentionRoster) resolveMentions(reply string) (string, []string) {
 		if err != nil {
 			continue
 		}
-		if !pattern.MatchString(reply) {
+		// Once per person, and prose only. A reply naming someone four times
+		// should reach them once, not ping them four times.
+		if !resolveWithin(spans, pattern, userID) {
 			continue
 		}
-		// Once per person. A reply naming someone four times should reach them
-		// once, not ping them four times.
-		replaced := false
-		reply = pattern.ReplaceAllStringFunc(reply, func(match string) string {
-			if replaced {
-				return match
-			}
-			replaced = true
-			return strings.TrimSuffix(match, name) + "<@" + userID + ">"
-		})
 		seen[userID] = true
 		resolved = append(resolved, userID)
 	}
-	return reply, resolved
+	var rewritten strings.Builder
+	for _, span := range spans {
+		rewritten.WriteString(span.text)
+	}
+	return rewritten.String(), resolved
+}
+
+// resolveWithin replaces the first prose occurrence in place and reports
+// whether it found one. A match only inside a link reaches nobody.
+func resolveWithin(spans []mentionSpan, pattern *regexp.Regexp, userID string) bool {
+	for index := range spans {
+		if spans[index].link {
+			continue
+		}
+		text := spans[index].text
+		where := pattern.FindStringSubmatchIndex(text)
+		if where == nil {
+			continue
+		}
+		// Cut on the match rather than on the roster's spelling of the name,
+		// which the case-insensitive pattern is under no obligation to match.
+		spans[index].text = text[:where[3]] + "<@" + userID + ">" + text[where[1]:]
+		return true
+	}
+	return false
 }
