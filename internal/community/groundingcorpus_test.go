@@ -74,6 +74,12 @@ var falsePositives = []groundingRow{
 		rejectedNow: false, shouldReject: false,
 	},
 	{
+		// "before" here is genuinely past, and no turn reference sits beside it,
+		// so the turnReference guard must not reach this one.
+		reply:       "Those issues were opened long before you joined.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
 		// The June row above is held by "by" in notAClaim. Without it nothing
 		// protects a real past tense, which is what a was or were widening hits.
 		reply:       "The issue was created in June, before the wipe.",

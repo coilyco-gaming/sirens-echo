@@ -49,6 +49,13 @@ var pastReference = regexp.MustCompile(
 		`october|november|december|\d{4})\b`,
 )
 
+// turnReference anchors a sentence to this exchange, which outranks any past
+// word beside it: before your message is not before this turn.
+var turnReference = regexp.MustCompile(
+	`(?i)\b(?:your\s+message|you\s+asked|this\s+message|this\s+turn|` +
+		`this\s+conversation|just\s+now)\b`,
+)
+
 // subjectlessClaim is the clipped form, a sentence opening on the participle
 // with no subject at all. See docs/sirens-echo-grounding.md.
 var subjectlessClaim = regexp.MustCompile(
@@ -80,8 +87,9 @@ var sentenceBreak = regexp.MustCompile(`[.!?]+`)
 // write finished. See docs/sirens-echo-grounding.md for what each gate excludes.
 func claimsCompletedTrackerAction(reply string) bool {
 	for _, sentence := range sentenceBreak.Split(reply, -1) {
-		// A dated event is reportage. This turn is what the check is about.
-		if notAClaim.MatchString(sentence) || pastReference.MatchString(sentence) {
+		// A dated event is reportage, unless the date is this exchange.
+		dated := pastReference.MatchString(sentence) && !turnReference.MatchString(sentence)
+		if notAClaim.MatchString(sentence) || dated {
 			continue
 		}
 		if passiveActionClaim.MatchString(sentence) || subjectlessClaim.MatchString(sentence) {
