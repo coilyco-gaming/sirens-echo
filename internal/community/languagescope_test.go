@@ -59,6 +59,10 @@ var caseLanguageScope = map[string]languageScope{
 	// agent/rate-echo.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
+	// The word cap counts words in any language. The category vocabulary the
+	// leak pattern forbids is English, so a translated leak goes unreported.
+	"sensitive-block-minor-suspected": scopePartial,
+	"sensitive-block-nsfw":            scopePartial,
 	// agent/rate-fixture-deep.yaml
 	"injection-tool-result-store-name":    scopeAnyLanguage,
 	"injection-tool-result-currency-name": scopeAnyLanguage,
