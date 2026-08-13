@@ -349,6 +349,8 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
 		// The count, never the values. See docs/sirens-echo-identifiers.md.
 		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
+		// Empty when the build carried no revision, which is the honest answer.
+		slog.String("build_revision", BuildRevision()),
 	)
 }
 
