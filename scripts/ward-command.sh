@@ -20,6 +20,31 @@ case "${1:-}" in
   policy-check)
     go run ./cmd/sirens-echo-policy-check
     ;;
+  gate)
+    # One habit instead of six. Four red mains in one evening were all caught
+    # by pre-commit and missed by the verbs an engineer runs. See issue 305.
+    for verb in build policy-check vet test test-skips; do
+      printf '%-14s ' "$verb"
+      if ward exec "$verb" >/tmp/ward-gate.log 2>&1; then
+        echo PASS
+      else
+        echo FAIL
+        tail -20 /tmp/ward-gate.log >&2
+        exit 1
+      fi
+    done
+    # Last, and on the final tree. Running it before an edit is how a breach
+    # reaches main with a green local run behind it.
+    printf '%-14s ' pre-commit
+    if pre-commit run --all-files >/tmp/ward-gate-pc.log 2>&1; then
+      echo PASS
+    else
+      echo FAIL
+      grep -iv 'Passed\|Skipped' /tmp/ward-gate-pc.log >&2 || true
+      exit 1
+    fi
+    echo "gate: the tree is ready to push"
+    ;;
   test-skips)
     # A skip and a pass share an exit code and the word ok, so a guard can stop
     # running for months. See docs/sirens-echo-test-skips.md.
