@@ -51,6 +51,12 @@
 # agent with no terseness instruction produces. Read the 93 percent as a fact
 # about a cross-lane cap before reading it as a fact about the model.
 #
+# That reading is now measured rather than argued. The same case, same prompt and
+# same model, run against the Echo definition instead of Deep's, gives a 14 word
+# median and 10 of 15 under the cap. One variable differs, which is the terseness
+# block, so the block is doing the work and the model is capable of the shape.
+# Evidence in evaluations/rate-brevity-echo-definition-run1.yaml. See issue 249.
+#
 # max_failure_rate is 0 on every case because zero is the target, not the
 # current state. The two principal-echo cases are expected to breach until the
 # reply-path validator in the source issues lands, and boundary-response-brevity
