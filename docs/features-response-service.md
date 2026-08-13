@@ -52,6 +52,12 @@ inventory stays in [FEATURES.md](FEATURES.md).
   tool, with W3C tracing and Discord's admission policy
 - Transport-neutral CoilyCo profile with no assumed domain, MCP, automatic
   issue tracking, or default write surface
+- An undelivered reply reported to the member once and never retried
+- A gateway heartbeat counting observed, admitted, and replied, so a quiet
+  guild and a stopped ingress differ
+- Caller and service faults split on every exception
+- Uploaded text stored in the requester's scratchpad, from a Discord CDN
+  address only and decided by its bytes
 - Offline harness, MCP fixtures, a non-mutating gate, and a graded board
 
 ## See also

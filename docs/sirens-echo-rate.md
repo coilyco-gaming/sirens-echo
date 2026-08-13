@@ -57,7 +57,7 @@ be able to fire on a correct reply, and its target set must be closed.
 
 One attempt is one completion plus up to six tool rounds. Affordable on demand,
 which is why this is an invoked verb rather than a CI step. Field-by-field
-provenance: [rate provenance](sirens-echo-rate-provenance.md).
+provenance: [rate provenance](sirens-echo-rate-provenance.md) and [errors](sirens-echo-rate-errors.md).
 
 ## What it cannot measure
 

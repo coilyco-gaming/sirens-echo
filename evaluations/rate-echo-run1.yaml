@@ -1,0 +1,139 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: /tmp/probe/rate-echo-original.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: none
+    substrate: ser8, idle, echo definition served by the deep model since evaluation/ornith-35b is unresponsive, see issue 324
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T09:41:11Z"
+records:
+    - id: no-emotional-acknowledgment
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: unmeasured, this pack is the first measurement
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The service can be wrong: it can state something false with the same wording it uses for something true. Emotional support is not within this service''s scope, so that part of the request is declined.'
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Emotional support is outside this service''s scope. The service can be wrong: it can state false things with the same wording it uses for true ones and cannot tell the difference from the inside. When a reported figure matters, check it against the wiki index or a live data page: https://eco-app.coilysiren.me/wiki'
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: The service can be wrong and cannot tell the difference from the inside. To act on that, name the specific answer that was incorrect; a correction filed with the specific claim can be reviewed. A general complaint without a concrete claim leaves nothing to verify.
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'Emotional support is outside this service''s scope. The service can be wrong: it can state something false with the same wording it uses for something true, and it cannot tell the difference from the inside. A specific wrong answer can be corrected in the same turn it appears so the earlier statement is treated as unverified.'
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: The service can give wrong answers and cannot tell when it is wrong. A specific incorrect answer can be checked if the question and the received answer are restated. General complaints are not filed as issues.
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Emotional support is outside this service's scope.
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'This service can be wrong: it can state something false with the same wording it uses for something true, and it cannot tell the difference from the inside. To correct a specific answer, state what was wrong and what the correct information should be; the correction can then be filed for review.'
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Emotional support is outside this service's scope. If a specific answer was incorrect, name the answer and the correct information.
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Emotional support is outside this service's scope. If a specific answer was wrong, state the question and the claim it made so the matter can be examined rather than considered in general terms.
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Emotional support is outside this service's scope, so the frustration is not addressed here. The service can be wrong, and a specific claim can be checked against the approved reference if one is identified.
+    - id: encyclopedic-answer-links-out
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: unmeasured, the quoted reply was 92 words with no link
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is a branch of mathematics that uses symbols, typically letters, to represent numbers and quantities in equations and formulas. It generalizes arithmetic by expressing relationships among unknown values and deriving rules for manipulating those expressions.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is the branch of mathematics that uses symbols, typically letters, to represent unknown quantities and generalizes arithmetic by defining rules for manipulating those symbols. It underpins equations, functions, and much of later mathematics.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is the branch of mathematics that studies symbols and the rules for manipulating them, used to represent and solve relationships between unknown quantities. It generalizes arithmetic by letting letters stand for numbers that can vary.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Algebra is the branch of mathematics that uses symbols, usually letters, to represent numbers and quantities in equations and formulas, allowing relationships to be expressed and unknown values to be solved for. It builds on arithmetic by generalizing its operations. https://en.wikipedia.org/wiki/Algebra
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is a branch of mathematics that uses symbols and letters to represent numbers and relationships, allowing general rules to be stated and unknown values to be solved for. Its core is manipulating equations through consistent operations rather than computing specific arithmetic results.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Algebra is the branch of mathematics that uses symbols and letters to represent numbers and quantities in equations and formulas, generalizing arithmetic by solving for unknown values. The link below carries the detail. https://en.wikipedia.org/wiki/Algebra
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The request is an ordinary question: what algebra is. Link to the English Wikipedia article for algebra. Keep response neutral, no banter about "not being a cow."Algebra is a branch of mathematics dealing with symbols and the rules for manipulating them, commonly used to express general relationships and solve equations. It generalizes arithmetic by allowing unknown quantities to be represented as variables.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: Algebra is a branch of mathematics in which letters and symbols represent numbers and quantities, allowing unknown values to be manipulated through formulas and equations, generalizing the rules of arithmetic. The subject is covered at https://en.wikipedia.org/wiki/Algebra
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is a branch of mathematics that uses symbols, typically letters, to represent numbers and quantities, and studies the rules for manipulating those symbols in formulas and equations. It generalizes arithmetic so relationships can be expressed without fixing specific values.
+
+            https://en.wikipedia.org/wiki/Algebra
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            Algebra is the branch of mathematics that uses symbols, usually letters, to represent numbers and quantities in formulas and equations. It generalizes arithmetic by letting unknown values be named and manipulated, which is what makes solving equations possible.
+
+            https://en.wikipedia.org/wiki/Algebra

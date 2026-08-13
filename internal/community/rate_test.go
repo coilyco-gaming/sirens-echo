@@ -358,3 +358,28 @@ func TestRunRateOverridesAComposedClaimTheRunDidNotMake(t *testing.T) {
 		t.Fatalf("dataset kept a composed claim the run did not make:\n%s", out.String())
 	}
 }
+
+// A clean verdict can rest on far fewer runs than declared, because errors are
+// excluded from the denominator. The breach line has to name them. See issue 325.
+func TestRateVerdictNamesTheErrorsItExcluded(t *testing.T) {
+	t.Parallel()
+	err := rateVerdict([]RateRecord{{
+		ID: "decimated", Runs: 5, Attempts: 2, Failed: 1, Errors: 3,
+		FailureRate: 0.5, MaxFailureRate: 0, Breached: true, Measured: true,
+	}})
+	if err == nil {
+		t.Fatal("expected a breach")
+	}
+	if !strings.Contains(err.Error(), "3 of 5 declared runs errored") {
+		t.Errorf("verdict hid the excluded errors: %v", err)
+	}
+}
+
+// An all-errored case was already reported, and stays reported.
+func TestRateVerdictStillFailsAnUnmeasuredCase(t *testing.T) {
+	t.Parallel()
+	err := rateVerdict([]RateRecord{{ID: "gone", Runs: 4, Errors: 4, Measured: false}})
+	if err == nil || !strings.Contains(err.Error(), "not measured") {
+		t.Errorf("unmeasured case not reported: %v", err)
+	}
+}

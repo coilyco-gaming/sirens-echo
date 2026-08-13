@@ -18,13 +18,12 @@ I'll check the issue tracker in the repo for recent announcements.
 ```
 
 The model wanted a tool the roster did not carry, so it emitted the call as
-prose. A partial roster is a live condition, and nothing in the reply path strips
-this markup.
+prose. A partial roster is a live condition and nothing strips this markup.
 
 ## What it catches, and what it misses
 
 The target is the delimiter syntax, not the words. Prose about tool calls and a
-quoted JSON field are correct and common, so these stay clean:
+quoted JSON field are correct, so these stay clean:
 
 ```
 The harness emits tool_calls as a structured field rather than as content.
@@ -34,7 +33,7 @@ Here is what a tool call looks like in the proxy log: "tool_calls": [...]
 
 **The name set is closed around the wrong thing, and this is measured.** A probe
 of 5 live turns asking Deep to file an issue emitted markup in 4 of 5 replies and
-this check caught **none** of them:
+caught **none**:
 
 | Emitted | Caught |
 | --- | --- |
@@ -43,35 +42,39 @@ this check caught **none** of them:
 | `<create_issue> <title>...</title>` | **no** |
 | `<tool_round> { "name": ... }` | **no** |
 
-The pattern matches a closed set of names taken from published formats:
-`tool_call`, `tool_calls`, `function_calls`, `invoke`. The model does not use
-those. It builds the tag from the tool's own name, or from its own notion of a
-round. So this covers one observed family and misses at least two others from the
-same model on the same route.
+The pattern matches a closed set of names from published formats: `tool_call`,
+`tool_calls`, `function_calls`, `invoke`. The model does not use those. It builds
+the tag from the tool's own name, or from its own notion of a round, so this
+covers one family and misses two others from the same model on the same route.
 
-**Treat a green result as no evidence.** Echo's `ornith:35b` form is also
-unverified, because the tower was wedged
-([deploy#437](https://forgejo.coilysiren.me/coilyco-bridge/deploy/issues/437)).
+**Treat a green result as no evidence.** Echo's `ornith:35b` form is unverified,
+because that route answers nothing
+([sirens-echo#324](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/324)).
+
+**The reply path shares these patterns.** `ValidateNoToolCallMarkup` iterates the
+same set and inherits the blind spot: 2 of 7 live markup replies caught, 0 false
+positives across 5 clean ones. Widening it is coupled to a repair loop, since a
+match refuses the reply and the member gets nothing.
 
 ## What would work
 
 A tag whose name is a tool name, which is a value from configuration rather than
-a word from a vocabulary. That is why `checkPrincipalEcho` survives translation
-while English word lists do not, recorded on
-[sirens-echo#253](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/253).
-It needs a must-not-fire corpus from live replies before a pattern.
+a word from a vocabulary. That is why `checkPrincipalEcho` survives a translation
+and English word lists do not, recorded on [language reach](sirens-echo-language.md).
+It needs a must-not-fire corpus from live replies first.
 
 ## Why it is opt-in
 
-The rate depends on the request. A case that does not ask for an action produced
-1 of 5; asking for one produced 4 of 5. Action-shaped requests are the trigger.
+The rate depends on the request: 1 of 5 for a case that asks for no action, 4 of 5
+when it asks for one. Action-shaped requests are the trigger.
 
-An always-on check would turn the deployment gate flaky on a non-security
-behaviour, which [the battery](sirens-echo-battery.md) exists to prevent, and the
-recorded gating policy is that security cases gate and everything else reports.
-It runs last in `runScopedChecks`, leaving every existing precedence unchanged.
+An always-on check would turn the gate flaky on a non-security behaviour, which
+[the battery](sirens-echo-battery.md) exists to prevent, against a policy where
+security cases gate and everything else reports. It runs last in
+`runScopedChecks`, leaving every existing precedence unchanged. A reply quoting
+these delimiters while explaining them is a finding, bounded by the opt-in.
 
-## Accepted false positive
-
-A reply that quotes these delimiters while explaining them is a finding, bounded
-by the check being opt-in.
+**Every rate case sets it, and a test refuses one that does not.** The argument
+above is about the gate, and a rate pack gates nothing. Omitting it there buys a
+rate computed over replies that were never answers: the case that found this
+reported 10 of 10 while nine of the ten were markup.

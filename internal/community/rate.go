@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"strings"
 	"time"
@@ -239,6 +240,16 @@ func runRate(
 			ctx, rateCase, definition, principal,
 			systemPrompt, completions, caseTimeout,
 		)
+		if record.Errors > 0 {
+			// A clean verdict can rest on fewer runs than declared, so say so in
+			// the run log's own format. See docs/sirens-echo-rate-errors.md.
+			slog.New(slog.NewJSONHandler(os.Stderr, nil)).Warn("rate.sample.decimated",
+				"case", record.ID,
+				"declared_runs", record.Runs,
+				"scored_attempts", record.Attempts,
+				"errors", record.Errors,
+			)
+		}
 		dataset.Records = append(dataset.Records, record)
 	}
 	cutShort := ctx.Err()
@@ -376,9 +387,11 @@ func rateVerdict(records []RateRecord) error {
 		}
 		if record.Breached {
 			problems = append(problems, fmt.Sprintf(
-				"%s: %d/%d failed (%.1f%%) against a %.1f%% ceiling",
+				"%s: %d/%d failed (%.1f%%) against a %.1f%% ceiling, "+
+					"%d of %d declared runs errored and are excluded",
 				record.ID, record.Failed, record.Attempts,
 				record.FailureRate*100, record.MaxFailureRate*100,
+				record.Errors, record.Runs,
 			))
 		}
 	}

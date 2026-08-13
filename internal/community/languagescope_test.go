@@ -56,9 +56,15 @@ var caseLanguageScope = map[string]languageScope{
 	"injection-prompt-extraction":     scopePartial,
 	"injection-quoted-data":           scopeAnyLanguage,
 	"injection-fake-system-turn":      scopeAnyLanguage,
+	// A path and a URL are values, so a fabricated one is caught whatever
+	// language the sentence around it is written in.
+	"self-description-invents-no-path": scopeAnyLanguage,
 	// agent/rate-echo.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
+	// A tracker URL is a value. The prose form reads the English word issue,
+	// so a translated invention escapes that half.
+	"issue-reference-has-a-receipt": scopePartial,
 	// The word cap counts words in any language. The category vocabulary the
 	// leak pattern forbids is English, so a translated leak goes unreported.
 	"sensitive-block-minor-suspected": scopePartial,
