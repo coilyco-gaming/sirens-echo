@@ -44,7 +44,7 @@ const (
 const (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
-	turnProgressAfter = 3 * time.Second
+	turnProgressAfter = 5 * time.Second
 	// turnProgressEvery is the grid every later message releases on, so an edit,
 	// a reply, and a failure notice all land on the same beat.
 	turnProgressEvery = turnProgressAfter * 2

@@ -313,14 +313,15 @@ func TestAFailedProgressPostIsRecorded(t *testing.T) {
 	}
 }
 
-// Kai asked for a three second threshold and a six second grid after it.
+// Kai asked for a five second threshold on sirens-echo#375, and the grid is
+// twice it by derivation rather than by a second decision.
 func TestProgressThresholdsMatchTheRequestedCadence(t *testing.T) {
 	t.Parallel()
-	if turnProgressAfter != 3*time.Second {
-		t.Errorf("turnProgressAfter = %s, want 3s", turnProgressAfter)
+	if turnProgressAfter != 5*time.Second {
+		t.Errorf("turnProgressAfter = %s, want 5s", turnProgressAfter)
 	}
-	if turnProgressEvery != 6*time.Second {
-		t.Errorf("turnProgressEvery = %s, want 6s", turnProgressEvery)
+	if turnProgressEvery != 10*time.Second {
+		t.Errorf("turnProgressEvery = %s, want 10s", turnProgressEvery)
 	}
 }
 
