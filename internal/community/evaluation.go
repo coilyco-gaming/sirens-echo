@@ -336,6 +336,9 @@ func scopedCheckFailures(
 	// Last, so adding it left every existing precedence unchanged.
 	if evaluationCase.ForbidToolCallMarkup {
 		failures = append(failures, toolCallMarkupFailures(reply)...)
+		// Keyed on the case's own tool name, which is the form the model emits.
+		failures = append(failures,
+			toolNameMarkupFailures(reply, evaluationCase.RequiredTool)...)
 	}
 	return failures
 }

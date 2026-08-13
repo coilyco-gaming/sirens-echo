@@ -51,9 +51,9 @@ ask for. A live reply that was entirely `<mm_tool_calls>` had scored a pass.
 ([sirens-echo#324](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/324)).
 
 **The reply path shares these patterns.** `ValidateNoToolCallMarkup` iterates the
-same set and inherits the blind spot: 2 of 7 live markup replies caught, 0 false
-positives across 5 clean ones. Widening it is coupled to a repair loop, since a
-match refuses the reply and the member gets nothing.
+same set, so widening it is coupled to a repair loop: a match refuses the reply and
+the member gets nothing. [Tool-name markup](sirens-echo-tool-name-markup.md) avoids
+that coupling and takes live coverage to 6 of 7.
 
 ## Still missed, on purpose
 

@@ -560,3 +560,58 @@ func TestTheGateTranscriptNamesItsComposedState(t *testing.T) {
 		t.Error("the gate transcript does not name its composed state")
 	}
 }
+
+// The forms the model actually emits, from live probes. The delimiter set was
+// guessed from published formats and caught 2 of 7. See issue 301.
+func TestToolNameMarkupCatchesTagsBuiltFromTheToolName(t *testing.T) {
+	t.Parallel()
+	defective := []string{
+		`I'll create that issue for you.` + "\n\n" + `<create_issue> { "title": "Trade query returns zero" }`,
+		`<create_issue> <title>Recherche de commerce</title> <body>Signale</body>`,
+		`<forgejo__create_issue>{"title":"x"}</forgejo__create_issue>`,
+	}
+	for _, reply := range defective {
+		if len(toolNameMarkupFailures(reply, "forgejo__create_issue")) == 0 {
+			t.Errorf("toolNameMarkupFailures(%.50q) found nothing, want a finding", reply)
+		}
+	}
+}
+
+// The must-not-fire half, taken from live replies rather than invented. Naming a
+// tool in prose is correct and common when the roster does not carry it.
+func TestToolNameMarkupAcceptsProseThatNamesTheTool(t *testing.T) {
+	t.Parallel()
+	clean := []string{
+		`I cannot call create_issue, since that tool is not in my roster.`,
+		`That would need a forgejo__create_issue call, which is unavailable.`,
+		`I can create an issue in the fixed ` + "`coilyco-gaming/sirens-echo`" + ` repo. Creating it now.`,
+		`I can create a Forgejo issue, but I cannot edit it after creation, so I want the details right.`,
+		`Please give me the details and I will file it.`,
+	}
+	for _, reply := range clean {
+		if failures := toolNameMarkupFailures(reply, "forgejo__create_issue"); len(failures) > 0 {
+			t.Errorf("toolNameMarkupFailures(%.50q) = %v, want none", reply, failures)
+		}
+	}
+}
+
+// A case declaring no tool gets no finding, which is what keeps this check off
+// every reply that merely contains an angle bracket.
+func TestToolNameMarkupNeedsADeclaredTool(t *testing.T) {
+	t.Parallel()
+	reply := `<create_issue> { "title": "x" }`
+	if failures := toolNameMarkupFailures(reply, ""); len(failures) > 0 {
+		t.Errorf("no declared tool produced %v, want none", failures)
+	}
+}
+
+// The accepted miss, pinned so a fix surfaces. The model aliased the tool as tag
+// content rather than as the tag, so no name-keyed pattern reaches it.
+func TestToolNameMarkupMissesAnAliasedToolInTagContent(t *testing.T) {
+	t.Parallel()
+	// The French prose prefix is dropped; the markup form is the subject.
+	reply := `<tool_uri> <tool>issue-create</tool>`
+	if len(toolNameMarkupFailures(reply, "forgejo__create_issue")) != 0 {
+		t.Fatal("this form is now caught, so update docs/sirens-echo-tool-call-markup.md and this test")
+	}
+}
