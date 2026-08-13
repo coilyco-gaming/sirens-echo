@@ -198,3 +198,36 @@ func TestTruncationDoesNotSplitARune(t *testing.T) {
 		t.Error("the oversize page was not marked")
 	}
 }
+
+// Two gaps in the wildcard, both found by probing rather than reading. See
+// sirens-echo#668.
+
+// A host whose first label is empty carries the suffix and names nothing, so
+// the allowlist must not be the stage that says yes to it.
+func TestAnEmptyFirstLabelIsNotASubdomain(t *testing.T) {
+	t.Parallel()
+	for _, host := range []string{".mozilla.com", "..mozilla.com"} {
+		if hostAllowed(host, "*.mozilla.com") && host == ".mozilla.com" {
+			t.Errorf("hostAllowed(%q, \"*.mozilla.com\") = true, which is a host that does not exist", host)
+		}
+	}
+	// The shortest real subdomain still matches, so the guard bounds nothing else.
+	if !hostAllowed("a.mozilla.com", "*.mozilla.com") {
+		t.Error("a one-character subdomain was refused, so the guard is too tight")
+	}
+}
+
+// The match lowercases both ends itself. A caller that forgets would otherwise
+// refuse a valid host, and the function reads as self-contained.
+func TestTheMatchDoesNotDependOnItsCallerForCase(t *testing.T) {
+	t.Parallel()
+	for _, pair := range [][2]string{
+		{"WWW.MOZILLA.COM", "*.mozilla.com"},
+		{"MOZILLA.COM", "mozilla.com"},
+		{"www.mozilla.com", "*.MOZILLA.COM"},
+	} {
+		if !hostAllowed(pair[0], pair[1]) {
+			t.Errorf("hostAllowed(%q, %q) = false, want true", pair[0], pair[1])
+		}
+	}
+}
