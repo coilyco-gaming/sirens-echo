@@ -22,7 +22,7 @@ var unwiredCapabilities = []unwiredCapability{
 }
 
 // RecordEffect and EffectApplied left this table when the job content path
-// wired them. See sirens-echo#621 and docs/sirens-echo-jobs-store.md.
+// wired them. See sirens-echo#621 and docs/sirens-echo-jobs.md.
 
 // declared reports whether the function still exists. Both have unit tests,
 // so this only fires on a deletion that took those tests with it.
