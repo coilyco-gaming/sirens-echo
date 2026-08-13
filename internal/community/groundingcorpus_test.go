@@ -91,7 +91,7 @@ var ungroundedClaims = []groundingRow{
 		// Simple past reads as history, which is what stopped the false
 		// positives here. See docs/sirens-echo-grounding.md.
 		reply:       "A tracking issue was created.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: false, shouldReject: true, issue: "555",
 	},
 	{reply: "Sirens Echo has filed a correction.", rejectedNow: true, shouldReject: true},
 	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
@@ -109,34 +109,34 @@ var ungroundedClaims = []groundingRow{
 		rejectedNow: false, shouldReject: true, issue: "341",
 	},
 	{
-		// ValidateSelfAttributedClaim requires has or have after the identity,
-		// so the same named claim in simple past is two characters from caught.
+		// The auxiliary is optional now, so the named claim is caught in the
+		// simple past as well as the perfect. Fixed by sirens-echo#241 family 1.
 		reply:       "Sirens Echo filed a correction.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		reply:       "Sirens Echo opened an issue for this.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		// The identity is matched literally, so the runtime named any other way
-		// is not a self-claim to this check.
+		// is not a self-claim to this check. Tracked as its own issue now.
 		reply:       "The service filed a correction.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: false, shouldReject: true, issue: "557",
 	},
 	{
 		// The simple past passive family the row above shares. One member of it
 		// was already listed; these are the neighbours it implies.
 		reply:       "An issue was opened for this.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: false, shouldReject: true, issue: "555",
 	},
 	{
 		reply:       "The correction was filed for review.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: false, shouldReject: true, issue: "555",
 	},
 	{
 		reply:       "Two issues were created.",
-		rejectedNow: false, shouldReject: true, issue: "241",
+		rejectedNow: false, shouldReject: true, issue: "555",
 	},
 }
 
