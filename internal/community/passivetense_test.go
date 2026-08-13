@@ -36,8 +36,8 @@ func TestDatedReportageIsNotAClaimAboutThisTurn(t *testing.T) {
 		"an interval":             "Two issues were created three weeks ago.",
 		"before an event":         "The issue was opened before the last wipe.",
 		"previously":              "A correction was previously filed for this.",
-		"since":                   "No issue was filed since the migration.",
-		"earlier":                 "The bug report was submitted earlier.",
+		"prior to an event":       "The ticket was raised prior to the reset.",
+		"formerly":                "The issue was formerly opened under another title.",
 	} {
 		if err := ValidateGrounding(reply, groundedContext); err != nil {
 			t.Errorf("%s was refused as a claim: %q: %v", name, reply, err)
