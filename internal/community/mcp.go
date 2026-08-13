@@ -723,6 +723,11 @@ func (s *mcpToolSession) Close() error {
 }
 
 func proxyToolName(server, tool string) (string, error) {
+	// Checked before composing. Trimming the separator leaves the other half
+	// standing, so an empty half passes the test below. See sirens-echo#587.
+	if strings.TrimSpace(server) == "" || strings.TrimSpace(tool) == "" {
+		return "", fmt.Errorf("MCP tool %q/%q is missing a server or tool name", server, tool)
+	}
 	name := invalidProxyToolName.ReplaceAllString(server+"__"+tool, "_")
 	name = strings.Trim(name, "_")
 	if name == "" {
