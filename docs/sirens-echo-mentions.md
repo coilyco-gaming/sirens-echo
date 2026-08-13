@@ -46,9 +46,15 @@ ordinary prose to be safe.
 repeatedly should notify them, not ping them per sentence. The remaining
 occurrences stay as the name and still read correctly.
 
-**A name inside a link is not that person.** Resolution runs on prose only, on
-the same link spans the reply validators mask, so a member called `eco`, `wiki`
-or `main` cannot corrupt a URL by being in the room.
+**Resolution runs on prose only.** A link, a code span and Discord markup are
+carried through byte-identical, because their contents are an address, a
+command or an id rather than a person. A member called `eco`, `wiki` or `main`
+cannot corrupt a URL or a tool name by being in the room. Bold, italic and
+quoted text is prose, so a name inside one is still that person.
+
+The non-prose runs are named rather than prose being named, because the miss
+costs differ. An unlisted markup kind gets rewritten and someone reports it. An
+unlisted prose kind silently stops reaching people, and nobody reports that.
 
 **A name inside a dotted identifier is not that person either.** A host written
 without a scheme is not a link by that shared definition, so the spans do not
