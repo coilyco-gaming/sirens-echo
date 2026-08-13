@@ -1178,7 +1178,13 @@ func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) e
 		failureNoticeTimeout,
 	)
 	defer cancel()
-	return a.sendReply(noticeCtx, turn, noticeWithTrace(ctx, notice))
+	return a.sendReply(withoutThreading(noticeCtx), turn, noticeWithTrace(ctx, notice))
+}
+
+// withoutThreading drops the turn's progress so a notice cannot take the
+// threading path. A notice is known bytes and needs no title. See #619.
+func withoutThreading(ctx context.Context) context.Context {
+	return context.WithValue(ctx, turnProgressKey{}, (*turnProgress)(nil))
 }
 
 func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) error {
