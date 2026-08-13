@@ -2,6 +2,7 @@ package community
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -124,6 +125,9 @@ type Config struct {
 	Definition     Definition
 	DefinitionPath string
 	InstanceName   string
+	// LogWriter receives structured logs. Empty means stdout, which is what the
+	// service wants. A runner emitting a dataset on stdout selects stderr.
+	LogWriter io.Writer
 	// Principal is empty until deployment names the trusted account.
 	Principal Principal
 	// BundlePath is the materialized bundle for the deployment's role, empty

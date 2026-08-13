@@ -19,25 +19,22 @@ a rate from 13 percent to 4 percent rather than to zero.
 
 ## How a run is scored
 
-A case declares its own `runs` and `max_failure_rate`. Each attempt is scored by
-`community.ScoreEvaluationCase`, the same function the gate uses, so the two
-instruments cannot drift. A rate for a check the gate does not apply would
-measure something nobody enforces.
+A case declares its own `runs` and `max_failure_rate`. Each attempt is scored
+by `community.ScoreEvaluationCase`, the same function the gate uses, so a rate
+never measures a check nobody enforces.
 
-An attempt is one of three outcomes. A pass, a fail, or an error. An error is a
-failure of the substrate rather than of the agent, such as a 502 from Agent
-Proxy, and it is reported and excluded from the denominator. Counting one as a
-behavioral failure corrupts the rate.
+An attempt passes, fails, or errors. An error is a failure of the substrate
+rather than the agent, such as a 502 from Agent Proxy, and is reported and
+excluded from the denominator. Counting one as behavioral corrupts the rate.
 
-The run exits non-zero only when a case beats its declared ceiling, or when
-every attempt of a case errored. An unmeasured case is not a passing case, and
-reporting it as one would be certifying rather than measuring.
+The run exits non-zero only when a case beats its ceiling, or when every
+attempt errored. An unmeasured case is not a passing one.
 
 ## The dataset is the evidence
 
-Every reply is persisted verbatim. Three first-pass findings in the QA that
-motivated this pack were defects in the check rather than the agent, and only
-reading the text separated them. Provenance travels with it: a rate without its
+Every reply is persisted verbatim. Three first-pass findings in the QA behind
+this pack were defects in the check rather than the agent, and only reading the
+text separated them. Provenance travels with it: a rate without its
 definition, pack, model, and roster is not comparable to the next run.
 
 Every failing check is recorded rather than the first. A run recorded a user ID
@@ -56,43 +53,12 @@ more. A behavior at 13 percent passes 5 of 5 about half the time.
 Promotion is also where the battery's rules reattach. A promoted case must not
 be able to fire on a correct reply, and its target set must be closed.
 
-## Cost
+## Cost and provenance
 
 One attempt is one completion plus up to six tool rounds. Affordable on demand,
-which is why this is an invoked verb rather than a CI step.
-
-## Provenance, and what each field can be trusted to say
-
-A rate is only comparable to another rate if the dataset can say what produced
-it. The fields that decide that are covered by test rather than by whoever last
-edited the struct.
-
-| Field | What it says |
-| --- | --- |
-| `runner` | The checkout that produced the prompt, definition, skillpack and checks. This is what actually produced the numbers. |
-| `roster` | The MCP roster, or `empty`. |
-| `fixture` | The tool fixture, or `none`. Exclusive with the roster. |
-| `substrate` | Host state at run time, free text, set through `SIRENS_ECHO_SUBSTRATE`. |
-| `image` | A deployed image, only when one participates. |
-
-**`image` stays `unrecorded` for every run of this instrument**, and that is
-correct rather than a gap. `cmd/sirens-echo-eval` assembles the prompt locally
-and posts to the proxy, so no pod takes part in a run. Read `runner` instead. A
-number attributed to an image that had no part in producing it is worse than a
-number with no image at all.
-
-**`roster: empty` on its own does not mean no tools.** A fixture run reports an
-empty roster and still serves tools, which is the whole point of the fixture. The
-pair to read is `roster` and `fixture` together. Getting this wrong turns a
-meaningful result into a vacuous one: the data-borne injection cases only mean
-something if the payload actually arrived in a tool result.
-
-`runner` is filled automatically by `scripts/ward-command.sh` from the current
-checkout, so it is present without anyone remembering it. `SIRENS_ECHO_RUNNER`
-overrides it, and a build carrying a `-X` revision stamp takes precedence over
-both. Provenance that depends on a human remembering is provenance that goes
-missing, which is how the first datasets were filed with the SHA hand-written
-into `substrate`.
+which is why this is an invoked verb rather than a CI step. What each
+provenance field can be trusted to say, and which describe something that never
+participated: [rate provenance](sirens-echo-rate-provenance.md).
 
 ## What it cannot measure
 

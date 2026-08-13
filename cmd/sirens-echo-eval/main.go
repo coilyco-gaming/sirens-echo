@@ -42,9 +42,11 @@ func main() {
 		log.Fatal("AGENT_PROXY_MODEL is required from the selected AOSH route")
 	}
 	timeout := 5 * time.Minute
+	// The dataset goes to stdout, so logs must not. See sirens-echo#313.
 	telemetry, err := community.NewTelemetry(context.Background(), community.Config{
 		Definition:   definition,
 		OTLPEndpoint: evaluationOTLPEndpoint(),
+		LogWriter:    os.Stderr,
 	})
 	if err != nil {
 		log.Fatalf("telemetry: %v", err)
@@ -243,9 +245,8 @@ func valueOrDefault(value, fallback string) string {
 	return fallback
 }
 
-// rateProvenance records what produced a dataset. Extracted so the fields that
-// decide whether a reader can interpret the numbers are covered by test rather
-// than by whoever last edited the struct literal. See sirens-echo#311.
+// rateProvenance records what produced a dataset, extracted so the fields a
+// reader needs are covered by test. See sirens-echo#311.
 func rateProvenance(
 	packPath string,
 	proxyURL string,

@@ -50,7 +50,17 @@ type Telemetry struct {
 	propagator           propagation.TextMapPropagator
 }
 
-// NewTelemetry initializes OTLP/HTTP export and a JSON stdout logger.
+// logSink chooses where structured logs go. Nil means stdout; a runner writing
+// a dataset to stdout passes stderr instead. See sirens-echo#313.
+func logSink(configured io.Writer) io.Writer {
+	if configured == nil {
+		return os.Stdout
+	}
+	return configured
+}
+
+// NewTelemetry initializes OTLP/HTTP export and a JSON logger, whose
+// destination is chosen by logSink.
 func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 	traceEndpoint, err := otlpSignalURL(cfg.OTLPEndpoint, "traces")
 	if err != nil {
@@ -103,7 +113,7 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+	logger := slog.New(slog.NewJSONHandler(logSink(cfg.LogWriter), &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
 	telemetry, err := newTelemetry(logger, traceSDK, metricSDK)
