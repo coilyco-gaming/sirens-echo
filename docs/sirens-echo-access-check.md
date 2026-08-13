@@ -74,5 +74,7 @@ because conflating them makes an unbounded guild look bounded.
 
 ## See also
 
+- [checking a deploy-owned file](sirens-echo-deploy-owned-files.md) - the rule.
+
 - [the access policy](sirens-echo-access.md) - what the file means.
 - [admission control](sirens-echo-admission.md) - what the limits do.
