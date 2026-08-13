@@ -163,3 +163,54 @@ func TestARestErrorIsStillClassifiedByItsStatus(t *testing.T) {
 		t.Errorf("failure = %v, want rest_error", failure)
 	}
 }
+
+// The sentence above was true of the comment and not of the code: only a bare
+// rejection was passed, and a joined one reported abandoned. See #292.
+func TestARejectionKeepsItsVerdictBesideAContextError(t *testing.T) {
+	t.Parallel()
+	rejection := func() *discordgo.RESTError {
+		return &discordgo.RESTError{
+			Response: &http.Response{StatusCode: http.StatusForbidden},
+			Message:  &discordgo.APIErrorMessage{Code: 50013},
+		}
+	}
+	// The turn returns errors.Join(send, notice), and the notice runs on a
+	// context the send has often just exhausted. Both orders, deliberately.
+	for name, err := range map[string]error{
+		"send first":   errors.Join(rejection(), context.DeadlineExceeded),
+		"notice first": errors.Join(context.DeadlineExceeded, rejection()),
+		"cancelled":    errors.Join(rejection(), context.Canceled),
+		"wrapped":      errors.Join(errors.New("reply: "), rejection(), context.Canceled),
+	} {
+		attrs := discordFailureAttrs(err)
+		failure, ok := attrValue(attrs, "discord_failure")
+		if !ok || failure.String() != "rest_error" {
+			t.Errorf("%s: failure = %v, want rest_error", name, failure)
+			continue
+		}
+		// Naming the class without the status leaves an operator where they
+		// started, which is the whole complaint on 292.
+		status, hasStatus := attrValue(attrs, "discord_status")
+		if !hasStatus || status.String() != "403" {
+			t.Errorf("%s: discord_status = %v, want 403", name, status)
+		}
+		code, hasCode := attrValue(attrs, "discord_code")
+		if !hasCode || code.String() != "50013" {
+			t.Errorf("%s: discord_code = %v, want 50013", name, code)
+		}
+	}
+}
+
+// A rejection carrying no response still names its class, so the reordering
+// trades a wrong label for a correct one rather than for a missing one.
+func TestABareRejectionStillClassifiesWithoutInventingAStatus(t *testing.T) {
+	t.Parallel()
+	attrs := discordFailureAttrs(errors.Join(&discordgo.RESTError{}, context.DeadlineExceeded))
+	failure, ok := attrValue(attrs, "discord_failure")
+	if !ok || failure.String() != "rest_error" {
+		t.Errorf("failure = %v, want rest_error", failure)
+	}
+	if status, present := attrValue(attrs, "discord_status"); present {
+		t.Errorf("a bare rejection invented a status: %v", status)
+	}
+}
