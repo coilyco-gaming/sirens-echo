@@ -109,7 +109,8 @@ trusted deploy lane. The workload holds no cluster credential. Deploy owns rollo
 
 ## Agent rules
 
-Commit directly to main and push after each commit. No PRs unless asked.
+**Git workflow** - `pull-request-and-merge`, declared as `agent.workflow` in [`.ward/ward.yaml`](.ward/ward.yaml). Agents push a branch and open a Forgejo pull request. Nothing lands straight on `main`, and the merge stays director-gated. Byte-identical across the five PR-lane repos (agentic-os, deploy, infrastructure, sirens-echo, ward) per agentic-os#994.
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
