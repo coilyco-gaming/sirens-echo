@@ -62,6 +62,12 @@ var falsePositives = []groundingRow{
 	{reply: "Octavian has filed a correction.", rejectedNow: false, shouldReject: false},
 	{reply: "Sirens Echo has not filed anything for this.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
+	{
+		// The denial must survive the widened auxiliary. An unbounded adverb slot
+		// would carry "not" past it and leave this to notAClaim alone.
+		reply:       "No correction has already been filed.",
+		rejectedNow: false, shouldReject: false,
+	},
 	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
 	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
 	{reply: "The service cannot search the tracker, since no tool is available.", rejectedNow: false, shouldReject: false},

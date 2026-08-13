@@ -34,7 +34,10 @@ const trackerArtifact = `(?:issues?|corrections?|tickets?|bug report|feature req
 // passiveActionClaim is the neutral profile's voice for the claim the
 // first-person matcher catches. See docs/sirens-echo-grounding.md.
 var passiveActionClaim = regexp.MustCompile(
-	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:(?:has|have)\s+been|was|were)\s+` +
+	// The adverb slot is bounded rather than \w+: an open gap would carry "not"
+	// past the auxiliary and leave the denial to notAClaim. See sirens-echo#602.
+	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b` +
+		`(?:(?:has|have)\s+(?:already\s+|just\s+|now\s+|recently\s+|since\s+)?been|was|were)\s+` +
 		`(?:sent|posted|opened|filed|created|escalated|closed|` +
 		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
 )
