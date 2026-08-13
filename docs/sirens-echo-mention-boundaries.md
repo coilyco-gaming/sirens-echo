@@ -16,6 +16,16 @@ happens to start with another person's name resolves as itself.
 
 ## Prose only
 
+**A person is named in prose, and that is what bounds this.** A name resolves
+only where prose puts one: after whitespace, an opening bracket, an emphasis
+mark, or the start of the reply.
+
+That one rule is what keeps a name from matching inside a link, a code span,
+Discord markup, or a dotted identifier. Each of those arrived as its own defect
+and its own patch within one afternoon, and enumerating them was losing. The
+sections below remain as defence in depth, and their corpora are this rule's
+regression suite. See sirens-echo#494.
+
 A link, a code span and Discord markup are carried through byte-identical,
 because their contents are an address, a command or an id rather than a person.
 A member called `eco`, `wiki` or `main` cannot corrupt a URL or a tool name by
