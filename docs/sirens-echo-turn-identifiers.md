@@ -15,8 +15,10 @@ On a Discord turn inside a guild:
 - `discord.thread.id` - only when the turn happened inside a thread
 - `messaging.message.id` - the member's message, not the reply
 
-The keys match the ones the send span already used, so one query returns both
-halves of an exchange rather than two shapes that have to be joined by hand.
+The keys match the ones `discord.receive` and the send span use, and so do the
+values, because all three read one resolved location. Matching keys carrying
+disagreeing values would make an operator's query partial without looking
+partial. See sirens-echo#348.
 
 ## Thread and channel are not the same field
 
