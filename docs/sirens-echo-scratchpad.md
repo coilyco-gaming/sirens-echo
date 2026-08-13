@@ -18,11 +18,11 @@ because every tool schema is resident on every turn.
 
 ## One rollout, not one turn and not forever
 
-The backing volume is an `emptyDir`, so the scratchpad lives exactly as long as
-the pod and a rollout erases it. There is no claim to restore and no eviction
-policy: the ceiling below bounds a pod's lifetime, and a rollout is the reset.
-That is useful across a conversation without becoming durable state anybody has
-to reason about, back up, or delete.
+The backing volume is an `emptyDir`, so the scratchpad lives as long as the pod
+and a rollout erases it: no claim to restore, no eviction policy, and useful
+across a conversation without becoming durable state. **It assumes one
+replica** — a second pod carries a second volume with nothing binding a
+requester to either, so the rule becomes a coin flip. See sirens-echo#489.
 
 ## Partitioned per requester
 
