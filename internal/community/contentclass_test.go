@@ -57,6 +57,24 @@ func TestSensitiveWinsTies(t *testing.T) {
 	}
 }
 
+// Recorded as an ordinary category, so the reason may be named. The quoted
+// prompt also brushes the minors trigger, where the sensitive branch wins.
+func TestPhysicalWorldIsOrdinaryAndLosesToSensitive(t *testing.T) {
+	t.Parallel()
+	taxonomy := trackedTaxonomy(t)
+	class, blocked, err := taxonomy.Verdict([]string{"irl-physical"})
+	if err != nil || !blocked {
+		t.Fatalf("Verdict = %v, blocked %v, err %v", class.ID, blocked, err)
+	}
+	if class.Sensitive {
+		t.Fatal("irl-physical is sensitive, so a decline could not name its reason")
+	}
+	paired, blocked, err := taxonomy.Verdict([]string{"irl-physical", "minor-suspected"})
+	if err != nil || !blocked || paired.ID != "minor-suspected" {
+		t.Fatalf("paired with a sensitive class resolved to %v", paired.ID)
+	}
+}
+
 func TestVerdictAllowsAndRejectsUnknown(t *testing.T) {
 	t.Parallel()
 	taxonomy := trackedTaxonomy(t)

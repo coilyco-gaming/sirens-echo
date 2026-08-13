@@ -52,6 +52,19 @@ distinction matters because a member asking whether their message read as
 hostile is asking a question about text, which is ordinary community logistics
 and must not be blocked. A filter that catches both is worse than no filter.
 
+## Where allow-by-default stops
+
+`irl-physical` is the sharpest scope line in the set. Allow-by-default covers
+informational requests and does not extend past the screen, so "where is the
+bus" is refused while "what is algebra" is answered.
+
+It is an ordinary category, so a decline names its reason and offers no source
+list. The service is not a transit desk with a disclaimer.
+
+Note that a request can reach it while also tripping minor suspicion, since
+asking to be got to school is both. The sensitive branch wins and no category
+is named.
+
 ## What does not exist yet
 
 Where the classifier runs, the second model call, the opt-in that applies this
