@@ -124,7 +124,13 @@ type ProxyClient struct {
 	HTTPClient *http.Client
 	Tools      ToolProvider
 	Telemetry  *Telemetry
+	// Budget is the definition's ceilings. Zero means the packaged defaults.
+	Budget ModelBudget
 }
+
+// budget resolves the ceilings once per use, so a ProxyClient built without one
+// behaves exactly as the constants did. See docs/sirens-echo-tuning.md.
+func (c ProxyClient) budget() ModelBudget { return c.Budget.resolved() }
 
 // chatRequest names no response_format. The reply contract is plain text, so a
 // JSON completion would reach the member as a serialized object.
@@ -203,10 +209,10 @@ func (c chatChoice) truncated() bool {
 
 // nextCompletionBudget raises the budget and reports whether the raise is real.
 // A raise that cannot raise is exhaustion. See docs/sirens-echo-budget.md.
-func nextCompletionBudget(current int) (int, bool) {
+func nextCompletionBudget(current, ceiling int) (int, bool) {
 	raised := current * completionBudgetStep
-	if raised > maxCompletionTokens {
-		raised = maxCompletionTokens
+	if raised > ceiling {
+		raised = ceiling
 	}
 	if raised <= current {
 		return current, false
@@ -389,8 +395,9 @@ func (c ProxyClient) Complete(
 	// toolsSpent forces one final answer from the results already gathered,
 	// rather than discarding them. See docs/sirens-echo-tool-results.md.
 	toolsSpent := false
-	completionTokens := baseCompletionTokens
-	maxModelCalls := maxToolRounds + maxResponseRepairs + budgetRaisesAllowed + 1
+	budget := c.budget()
+	completionTokens := budget.BaseCompletionTokens
+	maxModelCalls := budget.ToolRounds + maxResponseRepairs + budget.BudgetRaises + 1
 	for round := 0; round < maxModelCalls; round++ {
 		requestTools := tools
 		if repairAttempts > 0 || toolsSpent {
@@ -419,8 +426,8 @@ func (c ProxyClient) Complete(
 			// A byte count, not the text. It separates a model that thought and
 			// ran out from one that produced nothing. See issue 325.
 			reasoningBytes := len(strings.TrimSpace(choice.Message.ReasoningContent))
-			raised, canRaise := nextCompletionBudget(completionTokens)
-			if budgetRaises >= budgetRaisesAllowed || !canRaise {
+			raised, canRaise := nextCompletionBudget(completionTokens, budget.MaxCompletionTokens)
+			if budgetRaises >= budget.BudgetRaises || !canRaise {
 				return CompletionResult{}, formatBudgetExhausted(
 					completionTokens, budgetRaises, reasoningBytes,
 				)
@@ -485,7 +492,7 @@ func (c ProxyClient) Complete(
 		if toolsSpent {
 			return CompletionResult{}, fmt.Errorf(
 				"Agent Proxy exceeded %d MCP tool rounds: %w",
-				maxToolRounds, ErrToolRoundsExhausted,
+				budget.ToolRounds, ErrToolRoundsExhausted,
 			)
 		}
 		toolRounds++
@@ -575,7 +582,7 @@ func (c ProxyClient) Complete(
 				Result:    result.Text,
 				Outcome:   outcomeOf(result),
 			})
-			reinjected, trimmed := boundToolResult(result.Text)
+			reinjected, trimmed := boundToolResult(result.Text, budget.ToolResultBytes)
 			if trimmed {
 				// The remainder is preserved rather than discarded wherever the
 				// deployment mounts a scratchpad. See docs/sirens-echo-scratchpad.md.
@@ -605,7 +612,7 @@ func (c ProxyClient) Complete(
 		}
 		// The budget is spent and the results are in. Ask for an answer from
 		// them rather than discarding the work. See docs/sirens-echo-tool-results.md.
-		if toolRounds == maxToolRounds {
+		if toolRounds == budget.ToolRounds {
 			toolsSpent = true
 			telemetry.Info(ctx, "mcp.tool.rounds.spent", slog.Int("rounds", toolRounds))
 			messages = append(messages, chatMessage{Role: "system", Content: toolBudgetSpentNotice})
@@ -678,13 +685,13 @@ func spillPath(tool string, index int) string {
 
 // boundToolResult caps one tool result before it re-enters the prompt, so a
 // round of parallel calls cannot inflate the context past the model's budget.
-func boundToolResult(result string) (string, bool) {
-	if len(result) <= maxToolResultBytes {
+func boundToolResult(result string, limit int) (string, bool) {
+	if len(result) <= limit {
 		return result, false
 	}
 	// Walk back to a rune boundary at or below the byte budget. Slicing runes
 	// against a byte cap let a multibyte result land several times over it.
-	cut := maxToolResultBytes
+	cut := limit
 	for cut > 0 && !utf8.RuneStart(result[cut]) {
 		cut--
 	}

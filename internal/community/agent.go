@@ -142,6 +142,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			HTTPClient:    httpClient,
 			Tools:         modelTools,
 			Telemetry:     telemetry,
+			Budget:        cfg.Definition.ModelBudget,
 		},
 		systemPrompt:      systemPrompt,
 		telemetry:         telemetry,

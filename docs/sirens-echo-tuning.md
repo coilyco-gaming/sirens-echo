@@ -38,6 +38,25 @@ The progress cadence is the worked example: the beat is twice the wait and the
 long-reply window is the wait plus two beats, so one edit moves all three and
 a test pins both the values and the derivation.
 
+## A number a definition may override
+
+Most of these are one value for the process. The model-call ceilings are not,
+because the two profiles do not share a substrate: Echo's route resolves to a
+35B model on the daily driver and Deep's resolves upstream. One ceiling that is
+cheap on Deep is minutes of tower time on Echo.
+
+So a definition may name a `model_budget`. Each field it leaves out takes the
+value in `tuning.go`, so a definition names only what it changes and a
+definition naming none behaves exactly as the constants did. Echo names none.
+See sirens-echo#467.
+
+The constants stay the defaults rather than becoming dead, which keeps this
+file the answer to "what does this service do if nobody says otherwise".
+
+A budget is validated at load. Every field is a ceiling, so none may be
+negative, and a ceiling below the floor is refused because it is a ladder that
+cannot climb.
+
 ## Fewer numbers is a separate job
 
 Collapsing numbers that are close but not equal changes behaviour, sometimes

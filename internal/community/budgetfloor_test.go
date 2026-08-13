@@ -26,19 +26,19 @@ func TestTheBaseBudgetClearsTheObservedReasoningFloor(t *testing.T) {
 // wall the first call hit. Raising the base is what made this reachable.
 func TestARaiseThatCannotRaiseIsExhaustion(t *testing.T) {
 	t.Parallel()
-	if raised, ok := nextCompletionBudget(maxCompletionTokens); ok {
+	if raised, ok := nextCompletionBudget(maxCompletionTokens, maxCompletionTokens); ok {
 		t.Errorf("a budget already at the ceiling raised to %d", raised)
 	}
 	// Above the ceiling is the same answer. Nothing sets this today, and a
 	// future clamp change should not turn it into an identical retry.
-	if _, ok := nextCompletionBudget(maxCompletionTokens + 1); ok {
+	if _, ok := nextCompletionBudget(maxCompletionTokens+1, maxCompletionTokens); ok {
 		t.Error("a budget above the ceiling reported a real raise")
 	}
 }
 
 func TestTheLadderStillClimbsFromTheBase(t *testing.T) {
 	t.Parallel()
-	raised, ok := nextCompletionBudget(baseCompletionTokens)
+	raised, ok := nextCompletionBudget(baseCompletionTokens, maxCompletionTokens)
 	if !ok {
 		t.Fatal("the base cannot raise at all, so the safety net is gone")
 	}
@@ -57,7 +57,7 @@ func TestTheLadderTerminatesAndNeverRepeatsABudget(t *testing.T) {
 	seen := map[int]bool{baseCompletionTokens: true}
 	budget := baseCompletionTokens
 	for step := 0; step < budgetRaisesAllowed; step++ {
-		raised, ok := nextCompletionBudget(budget)
+		raised, ok := nextCompletionBudget(budget, maxCompletionTokens)
 		if !ok {
 			break
 		}
@@ -67,7 +67,7 @@ func TestTheLadderTerminatesAndNeverRepeatsABudget(t *testing.T) {
 		seen[raised] = true
 		budget = raised
 	}
-	if _, ok := nextCompletionBudget(maxCompletionTokens); ok {
+	if _, ok := nextCompletionBudget(maxCompletionTokens, maxCompletionTokens); ok {
 		t.Error("the ladder does not terminate at the ceiling")
 	}
 }
