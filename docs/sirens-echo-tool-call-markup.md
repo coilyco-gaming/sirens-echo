@@ -53,6 +53,12 @@ same model on the same route.
 unverified, because the tower was wedged
 ([deploy#437](https://forgejo.coilysiren.me/coilyco-bridge/deploy/issues/437)).
 
+**The reply path shares these patterns.** `ValidateNoToolCallMarkup` iterates the
+same set, so the production guard inherits the same blind spot: measured at 2 of 7
+live markup replies caught, 0 false positives across 5 clean ones. Widening it is
+coupled to a repair loop, because a match refuses the reply and the member gets
+nothing.
+
 ## What would work
 
 A tag whose name is a tool name, which is a value from configuration rather than
@@ -63,15 +69,11 @@ It needs a must-not-fire corpus from live replies before a pattern.
 
 ## Why it is opt-in
 
-The rate depends on the request. A case that does not ask for an action produced
-1 of 5; asking for one produced 4 of 5. Action-shaped requests are the trigger.
+The rate depends on the request: 1 of 5 for a case that asks for no action, 4 of 5
+when it asks for one. Action-shaped requests are the trigger.
 
-An always-on check would turn the deployment gate flaky on a non-security
-behaviour, which [the battery](sirens-echo-battery.md) exists to prevent, and the
-recorded gating policy is that security cases gate and everything else reports.
-It runs last in `runScopedChecks`, leaving every existing precedence unchanged.
-
-## Accepted false positive
-
-A reply that quotes these delimiters while explaining them is a finding, bounded
-by the check being opt-in.
+An always-on check would turn the gate flaky on a non-security behaviour, which
+[the battery](sirens-echo-battery.md) exists to prevent, against a policy where
+security cases gate and everything else reports. It runs last in
+`runScopedChecks`, leaving every existing precedence unchanged. A reply quoting
+these delimiters while explaining them is a finding, bounded by the opt-in.
