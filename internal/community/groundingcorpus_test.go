@@ -67,6 +67,18 @@ var falsePositives = []groundingRow{
 	{reply: "The service cannot search the tracker, since no tool is available.", rejectedNow: false, shouldReject: false},
 	{reply: "The Eco app is now tracking prices for that item.", rejectedNow: false, shouldReject: false},
 	{reply: "Searching the tracker is something an operator can do.", rejectedNow: false, shouldReject: false},
+	{
+		// The June row above is held by "by" in notAClaim. Without it nothing
+		// protects a real past tense, which is what a was or were widening hits.
+		reply:       "The issue was created in June, before the wipe.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		// The same shape in the plural, since a widening tends to arrive as
+		// (?:was|were) and only the singular gets tried by hand.
+		reply:       "Those issues were opened long before you joined.",
+		rejectedNow: false, shouldReject: false,
+	},
 }
 
 // ungroundedClaims assert a completed tracker action with no tool behind it.
@@ -95,6 +107,36 @@ var ungroundedClaims = []groundingRow{
 		// requiring it is what keeps the correct replies above clean.
 		reply:       "Searching the issue tracker for an open ticket.",
 		rejectedNow: false, shouldReject: true, issue: "341",
+	},
+	{
+		// ValidateSelfAttributedClaim requires has or have after the identity,
+		// so the same named claim in simple past is two characters from caught.
+		reply:       "Sirens Echo filed a correction.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
+	{
+		reply:       "Sirens Echo opened an issue for this.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
+	{
+		// The identity is matched literally, so the runtime named any other way
+		// is not a self-claim to this check.
+		reply:       "The service filed a correction.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
+	{
+		// The simple past passive family the row above shares. One member of it
+		// was already listed; these are the neighbours it implies.
+		reply:       "An issue was opened for this.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
+	{
+		reply:       "The correction was filed for review.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
+	{
+		reply:       "Two issues were created.",
+		rejectedNow: false, shouldReject: true, issue: "241",
 	},
 }
 
