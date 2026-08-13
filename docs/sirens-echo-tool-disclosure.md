@@ -49,6 +49,13 @@ into the data-borne injection vector.
 passed through them, alongside issue references, because the harness wrote it
 and the checks exist to police what the model wrote.
 
+**Inside the send budget.** A transport with a ceiling declares it, and the
+answer is shortened to leave room rather than the footer being truncated away.
+A receipt that vanishes on a long reply reads as no tools ran, which is the one
+belief this exists to prevent, and it would vanish exactly when the reply is
+long and tool-heavy. A transport with no ceiling, like the HTTP turn, declares
+none and nothing is shortened.
+
 **Both lanes.** The reply path is shared, so Echo and Deep both disclose. The
 verification problem is identical on both.
 

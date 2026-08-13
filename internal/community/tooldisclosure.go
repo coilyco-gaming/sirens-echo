@@ -25,14 +25,34 @@ func toolOutcomeGlyph(outcome ToolOutcome) string {
 	}
 }
 
-// AppendToolDisclosure adds the footer naming what ran. Service-authored, so it
-// is appended after the reply checks rather than passed through them.
+// AppendToolDisclosure adds the footer naming what ran, unbounded. Service
+// authored, so it is appended after the reply checks rather than through them.
 func AppendToolDisclosure(reply string, executed ...ExecutedTool) string {
+	return AppendToolDisclosureWithin(reply, 0, executed...)
+}
+
+// AppendToolDisclosureWithin keeps the footer inside a transport's send budget
+// by shortening the answer. A limit of zero is unbounded.
+func AppendToolDisclosureWithin(
+	reply string, limit int, executed ...ExecutedTool,
+) string {
 	footer := toolDisclosure(executed)
 	if footer == "" {
 		return reply
 	}
 	trimmed := strings.TrimRight(reply, "\n")
+	if trimmed == "" {
+		return footer
+	}
+	// The receipt is short and bounded and the answer is neither, so the answer
+	// yields. A receipt that vanishes under load reads as no tools ran.
+	if limit > 0 {
+		room := limit - len([]rune(footer)) - 2
+		if room < 0 {
+			room = 0
+		}
+		trimmed = strings.TrimRight(truncateRunes(trimmed, room), "\n")
+	}
 	if trimmed == "" {
 		return footer
 	}
