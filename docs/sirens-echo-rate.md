@@ -35,13 +35,13 @@ reporting it as one would be certifying rather than measuring.
 
 ## The dataset is the evidence
 
-Every reply is persisted verbatim. In the QA that motivated this pack, three
-first-pass findings turned out to be defects in the check rather than in the
-agent, and only reading the text separated them. A verdict alone would have
-recorded three findings that were not there.
+Every reply is persisted verbatim. Three first-pass findings in the QA that
+motivated this pack were defects in the check rather than the agent, and only
+reading the text separated them. Provenance travels with it: a rate without its
+definition, pack, model, and roster is not comparable to the next run.
 
-Provenance travels with it. A rate without its definition, pack, model,
-transport, and roster is not reproducible and not comparable to the next run.
+Every failing check is recorded rather than the first. A run recorded a user ID
+disclosure as a handle echo and read zero ID leaks.
 
 ## The promotion path
 

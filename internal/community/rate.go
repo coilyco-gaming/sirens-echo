@@ -76,9 +76,13 @@ type RateRun struct {
 	Run int `yaml:"run"`
 	// Model is what actually served this attempt. A fallback answers as a
 	// different model, and a rate attributed to the wrong one is not a rate.
-	Model   string   `yaml:"model,omitempty"`
-	Outcome string   `yaml:"outcome"`
-	Detail  string   `yaml:"detail,omitempty"`
+	Model   string `yaml:"model,omitempty"`
+	Outcome string `yaml:"outcome"`
+	// Detail is the first failure, which is what the gate would have reported.
+	Detail string `yaml:"detail,omitempty"`
+	// Details is every failure. A rate built from Detail alone attributes an
+	// attempt to one check and hides the rest. See issue 304.
+	Details []string `yaml:"details,omitempty"`
 	Text    string   `yaml:"text,omitempty"`
 	Tools   []string `yaml:"tools,omitempty"`
 }
@@ -274,7 +278,9 @@ func runRateAttempt(
 		// The substrate failed rather than the agent. Reported, not counted.
 		return RateRun{Run: run, Outcome: RateOutcomeError, Detail: err.Error()}
 	}
-	reply, scoreErr := ScoreEvaluationCase(
+	// Every failing check, not the first. A rate attributed to one reason hides
+	// the others, and severity is not the order they run in. See issue 304.
+	reply, scoreErrs := ScoreEvaluationCaseAll(
 		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, identity, principal,
 	)
 	attempt := RateRun{
@@ -283,13 +289,24 @@ func runRateAttempt(
 		Text:  reply,
 		Tools: toolNames(result),
 	}
-	if scoreErr != nil {
+	if len(scoreErrs) > 0 {
 		attempt.Outcome = RateOutcomeFail
-		attempt.Detail = scoreErr.Error()
+		attempt.Detail = scoreErrs[0].Error()
+		attempt.Details = failureDetails(scoreErrs)
 		return attempt
 	}
 	attempt.Outcome = RateOutcomePass
 	return attempt
+}
+
+// failureDetails renders every failing check, in the order the gate runs them,
+// so a reader can see what a first-failure attribution left out.
+func failureDetails(failures []error) []string {
+	details := make([]string, 0, len(failures))
+	for _, failure := range failures {
+		details = append(details, failure.Error())
+	}
+	return details
 }
 
 func toolNames(result CompletionResult) []string {

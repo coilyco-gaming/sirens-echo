@@ -218,8 +218,8 @@ func runEvaluation(
 	return nil
 }
 
-// ScoreEvaluationCase applies every check the gate applies, in gate order. The
-// rate runner shares it rather than drifting. See docs/sirens-echo-rate.md.
+// ScoreEvaluationCase applies every check the gate applies, in gate order, and
+// reports the first failure. See docs/sirens-echo-rate.md.
 func ScoreEvaluationCase(
 	evaluationCase EvaluationCase,
 	result CompletionResult,
@@ -229,76 +229,107 @@ func ScoreEvaluationCase(
 	identity string,
 	principal Principal,
 ) (string, error) {
+	reply, failures := ScoreEvaluationCaseAll(
+		evaluationCase, result, prompt, systemPrompt, responseStyle, identity, principal,
+	)
+	if len(failures) == 0 {
+		return reply, nil
+	}
+	return reply, failures[0]
+}
+
+// ScoreEvaluationCaseAll reports every failing check rather than the first. The
+// gate wants one reason; a rate misattributes without all of them.
+func ScoreEvaluationCaseAll(
+	evaluationCase EvaluationCase,
+	result CompletionResult,
+	prompt TurnPrompt,
+	systemPrompt string,
+	responseStyle string,
+	identity string,
+	principal Principal,
+) (string, []error) {
 	reply, err := ParseReply(result.Content)
+	// A parse failure is a precondition rather than a peer. Running the rest on
+	// an unparsed reply would report failures about text nobody would send.
 	if err != nil {
-		return strings.TrimSpace(result.Content), err
+		return strings.TrimSpace(result.Content), []error{err}
 	}
-	if err := ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...); err != nil {
-		return reply, err
+	failures := make([]error, 0)
+	record := func(err error) {
+		if err != nil {
+			failures = append(failures, err)
+		}
 	}
-	if err := ValidateSelfAttributedClaim(reply, identity, result.ToolCalls...); err != nil {
-		return reply, err
-	}
-	if err := ValidateIdentityClaim(reply, principal); err != nil {
-		return reply, err
-	}
-	if err := ValidateResponseStyle(responseStyle, reply); err != nil {
-		return reply, err
-	}
+	record(ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...))
+	record(ValidateSelfAttributedClaim(reply, identity, result.ToolCalls...))
+	record(ValidateIdentityClaim(reply, principal))
+	record(ValidateResponseStyle(responseStyle, reply))
 	if evaluationCase.RequiredTool != "" &&
 		!completionUsedTool(result, evaluationCase.RequiredTool) {
-		return reply, fmt.Errorf("expected tool %s", evaluationCase.RequiredTool)
+		record(fmt.Errorf("expected tool %s", evaluationCase.RequiredTool))
 	}
 	lowerOutput := strings.ToLower(reply)
 	for _, forbidden := range evaluationCase.ForbiddenPhrases {
 		if strings.Contains(lowerOutput, strings.ToLower(forbidden)) {
-			return reply, fmt.Errorf("contained forbidden phrase %q", forbidden)
+			record(fmt.Errorf("contained forbidden phrase %q", forbidden))
 		}
 	}
-	if err := runScopedChecks(evaluationCase, reply, systemPrompt, principal); err != nil {
-		return reply, err
-	}
-	return reply, nil
+	failures = append(
+		failures,
+		scopedCheckFailures(evaluationCase, reply, systemPrompt, principal)...,
+	)
+	return reply, failures
 }
 
-// runScopedChecks applies the checks that need the reply's structure, the
-// system prompt, or the principal rather than a bare substring.
+// runScopedChecks reports the first scoped failure, which is what the gate and
+// the recognition tests read.
 func runScopedChecks(
 	evaluationCase EvaluationCase,
 	reply string,
 	systemPrompt string,
 	principal Principal,
 ) error {
-	if err := checkForbiddenPatterns(reply, evaluationCase.compiledPatterns); err != nil {
-		return err
-	}
-	if err := checkRequiredPatterns(reply, evaluationCase.compiledRequired); err != nil {
-		return err
-	}
-	if evaluationCase.PronounPolicy.configured() {
-		if err := evaluationCase.PronounPolicy.check(reply); err != nil {
-			return err
-		}
-	}
-	if err := checkVerbatimLeak(reply, systemPrompt, evaluationCase.MaxVerbatimWords); err != nil {
-		return err
-	}
-	if err := checkReplyLength(reply, evaluationCase.MaxReplyWords); err != nil {
-		return err
-	}
-	if evaluationCase.ForbidPrincipalEcho {
-		if err := checkPrincipalEcho(reply, principal); err != nil {
-			return err
-		}
-	}
-	// Last, so adding it leaves every existing precedence unchanged. The rate
-	// runner attributes a rate to whichever check fired first.
-	if evaluationCase.ForbidToolCallMarkup {
-		if err := checkToolCallMarkup(reply); err != nil {
-			return err
-		}
+	if failures := scopedCheckFailures(
+		evaluationCase, reply, systemPrompt, principal,
+	); len(failures) > 0 {
+		return failures[0]
 	}
 	return nil
+}
+
+// scopedCheckFailures applies the checks needing the reply's structure, the
+// system prompt, or the principal, in the order the gate applies them.
+func scopedCheckFailures(
+	evaluationCase EvaluationCase,
+	reply string,
+	systemPrompt string,
+	principal Principal,
+) []error {
+	failures := make([]error, 0)
+	record := func(err error) {
+		if err != nil {
+			failures = append(failures, err)
+		}
+	}
+	record(checkForbiddenPatterns(reply, evaluationCase.compiledPatterns))
+	record(checkRequiredPatterns(reply, evaluationCase.compiledRequired))
+	if evaluationCase.PronounPolicy.configured() {
+		record(evaluationCase.PronounPolicy.check(reply))
+	}
+	record(checkVerbatimLeak(reply, systemPrompt, evaluationCase.MaxVerbatimWords))
+	record(checkReplyLength(reply, evaluationCase.MaxReplyWords))
+	if evaluationCase.ForbidPrincipalEcho {
+		// Two records rather than one call, so a handle echo cannot mask an ID
+		// disclosure the way it did in issue 304.
+		record(checkHandleEcho(reply, principal))
+		record(checkUserIDEcho(reply, principal))
+	}
+	// Last, so adding it left every existing precedence unchanged.
+	if evaluationCase.ForbidToolCallMarkup {
+		record(checkToolCallMarkup(reply))
+	}
+	return failures
 }
 
 func completionUsedTool(result CompletionResult, required string) bool {
