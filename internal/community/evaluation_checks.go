@@ -118,6 +118,41 @@ func checkForbiddenPatterns(reply string, patterns []*regexp.Regexp) error {
 	return nil
 }
 
+// forbiddenPatternFailures reports every match, since one reply can trip
+// several patterns and a rate keyed on the first names one. See issue 304.
+func forbiddenPatternFailures(reply string, patterns []*regexp.Regexp) []error {
+	failures := make([]error, 0)
+	for _, pattern := range patterns {
+		if pattern.MatchString(reply) {
+			failures = append(failures, fmt.Errorf("matched forbidden pattern %s", pattern.String()))
+		}
+	}
+	return failures
+}
+
+// requiredPatternFailures reports every unmet requirement, for the same reason.
+func requiredPatternFailures(reply string, patterns []*regexp.Regexp) []error {
+	failures := make([]error, 0)
+	for _, pattern := range patterns {
+		if !pattern.MatchString(reply) {
+			failures = append(failures, fmt.Errorf("reply does not satisfy %s", pattern.String()))
+		}
+	}
+	return failures
+}
+
+// toolCallMarkupFailures reports every delimiter form present, since a reply
+// carrying two is a different observation from one carrying one.
+func toolCallMarkupFailures(reply string) []error {
+	failures := make([]error, 0)
+	for _, pattern := range toolCallMarkupPatterns {
+		if match := pattern.FindString(reply); match != "" {
+			failures = append(failures, fmt.Errorf("emitted unparsed tool-call markup %q", match))
+		}
+	}
+	return failures
+}
+
 // checkVerbatimLeak reports any run of width consecutive words the reply shares
 // with the system prompt, which is disclosure no paraphrase produces.
 func checkVerbatimLeak(reply, systemPrompt string, width int) error {

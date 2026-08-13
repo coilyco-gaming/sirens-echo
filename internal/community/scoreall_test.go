@@ -84,3 +84,33 @@ func TestACleanReplyProducesNoFailures(t *testing.T) {
 		t.Errorf("a correct reply produced %d failures: %v", len(failures), failureDetails(failures))
 	}
 }
+
+// A reply can trip several forbidden patterns. Milder than the handle versus
+// ID case, since the masked siblings are the same class, and the same shape.
+func TestEveryForbiddenPatternMatchIsReported(t *testing.T) {
+	t.Parallel()
+	evaluationCase := EvaluationCase{
+		ID:                "multi",
+		Current:           TranscriptEntry{Content: "what does the schedule say"},
+		ForbiddenPatterns: []string{"(?i)official calendar", "(?i)staff confirmed"},
+	}
+	if err := prepareEvaluationCase(&evaluationCase); err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	reply := "The official calendar says so, and staff confirmed it."
+	_, failures := ScoreEvaluationCaseAll(
+		evaluationCase,
+		CompletionResult{Content: reply},
+		TurnPrompt{},
+		"",
+		"",
+		"Sirens Echo",
+		Principal{},
+	)
+	joined := strings.Join(failureDetails(failures), " | ")
+	for _, pattern := range []string{"official calendar", "staff confirmed"} {
+		if !strings.Contains(joined, pattern) {
+			t.Errorf("pattern %q is not reported:\n%s", pattern, joined)
+		}
+	}
+}

@@ -312,8 +312,14 @@ func scopedCheckFailures(
 			failures = append(failures, err)
 		}
 	}
-	record(checkForbiddenPatterns(reply, evaluationCase.compiledPatterns))
-	record(checkRequiredPatterns(reply, evaluationCase.compiledRequired))
+	failures = append(
+		failures,
+		forbiddenPatternFailures(reply, evaluationCase.compiledPatterns)...,
+	)
+	failures = append(
+		failures,
+		requiredPatternFailures(reply, evaluationCase.compiledRequired)...,
+	)
 	if evaluationCase.PronounPolicy.configured() {
 		record(evaluationCase.PronounPolicy.check(reply))
 	}
@@ -327,7 +333,7 @@ func scopedCheckFailures(
 	}
 	// Last, so adding it left every existing precedence unchanged.
 	if evaluationCase.ForbidToolCallMarkup {
-		record(checkToolCallMarkup(reply))
+		failures = append(failures, toolCallMarkupFailures(reply)...)
 	}
 	return failures
 }
