@@ -30,6 +30,14 @@ inventory stays in [FEATURES.md](FEATURES.md).
   with links masked out
 - Appended canonical links for every issue a turn observed or filed, built only
   from returned tool results and bounded by the send budget
+- Reply refusal for any identifier the process holds, derived from configuration
+  at boot, admitted by shape, and matched by value rather than spelling
+- Caller-supplied history marked as asserted rather than observed, on both the
+  HTTP route and the MCP turn tool
+- Harness reactions for acceptance, a tool round, a failure, and a refusal,
+  applied before the model call and unable to fail a turn
+- Oversized tool results saved to the requester's scratchpad instead of being
+  truncated away, with every failure falling back to truncation
 - Soft-reference replies with every Discord mention disabled
 - Repo-local Sirens knowledge with no automatic memory or autonomous edits
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
