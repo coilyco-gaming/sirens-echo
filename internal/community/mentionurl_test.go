@@ -1,6 +1,7 @@
 package community
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -155,6 +156,24 @@ func TestACodeSpanIsCarriedThroughByteIdentical(t *testing.T) {
 // The receipt case lives in mentioncodespan_test.go, where the fixture is
 // built by AppendToolDisclosure rather than copied out. See sirens-echo#510.
 
+// The lead stops the class, not the exception list. Each was a separate patch
+// and none reaches the span exceptions now. See sirens-echo#494.
+func TestTheLeadAloneStopsEveryKnownShape(t *testing.T) {
+	t.Parallel()
+	lead := regexp.MustCompile(mentionLead + "coilysiren" + `\b`)
+	for name, text := range map[string]string{
+		"link":            "https://eco-app.coilysiren.me/jobs",
+		"schemeless host": "see eco-app.coilysiren.me for jobs",
+		"markup":          "<:coilysiren:123>",
+		"dotted":          "a.coilysiren.b",
+		"path":            "/repos/coilysiren/sirens-echo",
+	} {
+		if lead.MatchString(text) {
+			t.Errorf("%s still matches without any span exception: %q", name, text)
+		}
+	}
+}
+
 // The half that must survive. A name in prose beside a code span is still that
 // person, and the span is still left alone.
 func TestANameBesideACodeSpanStillResolves(t *testing.T) {
@@ -167,5 +186,22 @@ func TestANameBesideACodeSpanStillResolves(t *testing.T) {
 	}
 	if !strings.HasPrefix(out, "<@999> asked") || !strings.Contains(out, "`eco status`") {
 		t.Errorf("the wrong occurrence was rewritten: %q", out)
+	}
+}
+
+// And the cases a member would expect to reach them still do.
+func TestTheLeadKeepsEveryWayAPersonIsNamed(t *testing.T) {
+	t.Parallel()
+	lead := regexp.MustCompile(mentionLead + "coilysiren" + `\b`)
+	for name, text := range map[string]string{
+		"start of reply":  "coilysiren asked about it",
+		"mid sentence":    "ask coilysiren about it",
+		"parenthesised":   "(coilysiren) filed it",
+		"quoted":          `"coilysiren" filed it`,
+		"after a newline": "the answer is\ncoilysiren knows",
+	} {
+		if !lead.MatchString(text) {
+			t.Errorf("%s no longer names a person: %q", name, text)
+		}
 	}
 }
