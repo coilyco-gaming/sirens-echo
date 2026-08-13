@@ -131,6 +131,20 @@ If a pull request does not fully close the issue that motivated it, file the
 slice as its own issue and close that one. Do not weaken the reference to
 satisfy the verb.
 
+**The `consult` label is a dispatch gate, not decoration.** `cli-guard` reads it
+to route work and an unlabelled issue fails closed to `consult`, so it is also
+the queue a human reads to find what needs them. Two habits keep it true, and
+both attach to a comment you are already writing:
+
+- Recording a decision on an issue **removes** `consult` in the same call.
+  An answered question that still advertises itself costs hours, because the
+  board says blocked and the thread says done.
+- Asking a human a question **adds** it in the same call. Unlabelled is
+  correctly fail-closed for dispatch and invisible to the human, which is the
+  worst pair.
+
+See [the consult gate](docs/sirens-echo-consult-gate.md).
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
