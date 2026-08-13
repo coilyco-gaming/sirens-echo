@@ -134,6 +134,25 @@ func TestValidateNeutralStyleAcceptsDirectResults(t *testing.T) {
 	}
 }
 
+// One address per host family in the approved registry. Masking is covered
+// below, so this asserts the shapes Echo may actually publish.
+func TestValidateNeutralStyleAcceptsRegistryHosts(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"Room tier follows the room's materials. https://wiki.play.eco/en/index.php?stable=1&title=Housing",
+		"Open trades are listed at https://eco-app.coilysiren.me/trade",
+		"Buy and sell prices are at https://eco-gnome.coilysiren.me/",
+		"Operator writing is published at https://www.coilysiren.me/",
+		"The simulation runs at https://galaxy-gen.coilysiren.me/",
+		"The dependency graph is at https://atlas.coilysiren.me/",
+		"Algebra is a branch of mathematics. https://en.wikipedia.org/wiki/Algebra",
+	} {
+		if err := ValidateNeutralStyle(reply); err != nil {
+			t.Errorf("ValidateNeutralStyle(%q): %v", reply, err)
+		}
+	}
+}
+
 func TestValidateResponseStyleAllowsSocialVoice(t *testing.T) {
 	t.Parallel()
 	reply := "Hey! I found the Eco server status for you."

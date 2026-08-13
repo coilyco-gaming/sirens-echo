@@ -42,6 +42,13 @@ func TestRunEvaluationAcceptsGroundedRepliesAndToolCalls(t *testing.T) {
 		"neutral-capability-boundary": {
 			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
 		},
+		"approved-wiki-link": {
+			Content: "Room tier is set by the materials and furniture the room contains. " +
+				"https://wiki.play.eco/en/index.php?stable=1&title=Housing",
+		},
+		"approved-live-surface-link": {
+			Content: "Open trades are listed at https://eco-app.coilysiren.me/trade",
+		},
 	}}
 	if err := RunEvaluation(
 		context.Background(),
@@ -74,6 +81,13 @@ func TestRunEvaluationRejectsInventedChannel(t *testing.T) {
 		},
 		"neutral-capability-boundary": {
 			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
+		},
+		"approved-wiki-link": {
+			Content: "Room tier is set by the materials and furniture the room contains. " +
+				"https://wiki.play.eco/en/index.php?stable=1&title=Housing",
+		},
+		"approved-live-surface-link": {
+			Content: "Open trades are listed at https://eco-app.coilysiren.me/trade",
 		},
 	}}
 	if err := RunEvaluation(
@@ -160,6 +174,13 @@ func validEvaluationResponses() map[string]CompletionResult {
 		},
 		"neutral-capability-boundary": {
 			Content: "Available functions cover current Eco information and repository-scoped issue operations.",
+		},
+		"approved-wiki-link": {
+			Content: "Room tier is set by the materials and furniture the room contains. " +
+				"https://wiki.play.eco/en/index.php?stable=1&title=Housing",
+		},
+		"approved-live-surface-link": {
+			Content: "Open trades are listed at https://eco-app.coilysiren.me/trade",
 		},
 	}
 }

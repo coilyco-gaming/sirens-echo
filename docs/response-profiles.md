@@ -46,6 +46,9 @@ one same-conversation, style-aware repair with tools disabled. JSON structure,
 reply bounds, privacy, action grounding, and invented-channel checks remain
 shared.
 
+Outbound links are a separate axis, covered by [the link
+policy](sirens-echo-links.md).
+
 ## Deployment controls
 
 `SIRENS_ECHO_DEFINITION` selects a tracked definition. Discord ingress
