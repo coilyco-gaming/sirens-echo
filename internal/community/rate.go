@@ -62,6 +62,9 @@ type RateProvenance struct {
 	// Runner is the commit behind the prompt, definition, skillpack and checks.
 	// A pair whose halves cannot be attributed to commits is not a comparison.
 	Runner string `yaml:"runner"`
+	// Composed says whether the agent-compose bundle was real or a stub, which
+	// bounds the rate. See docs/sirens-echo-rate-provenance.md.
+	Composed string `yaml:"composed"`
 	// Image records a deployed image only when one participates in the run. This
 	// runner never calls a pod, so it stays unrecorded. Read Runner instead.
 	Image       string `yaml:"image"`
@@ -83,6 +86,13 @@ const FixtureNone = "none"
 // RunnerUnrecorded marks a dataset built without a revision stamp. A rate that
 // cannot name the checkout that produced it cannot be compared to another.
 const RunnerUnrecorded = "unrecorded"
+
+// Composed states for a dataset. A stubbed run measures this configuration and
+// not the deployed service, which is a bound on the rate rather than a defect.
+const (
+	ComposedStubbed      = "stubbed placeholder"
+	ComposedNotRequested = "not composed"
+)
 
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.
@@ -197,8 +207,11 @@ func runRate(
 	caseTimeout time.Duration,
 ) error {
 	composed := ""
+	provenance.Composed = ComposedNotRequested
 	if definition.Composed {
 		composed = PlaceholderComposed
+		// Derived here so a caller cannot claim a bundle the run did not use.
+		provenance.Composed = ComposedStubbed
 	}
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	if strings.TrimSpace(provenance.Substrate) == "" {

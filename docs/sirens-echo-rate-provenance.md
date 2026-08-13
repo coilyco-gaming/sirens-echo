@@ -14,6 +14,7 @@ edited the struct.
 | `roster` | The MCP roster, or `empty`. |
 | `fixture` | The tool fixture, or `none`. Exclusive with the roster. |
 | `substrate` | Host state at run time, free text, set through `SIRENS_ECHO_SUBSTRATE`. |
+| `composed` | Whether the agent-compose bundle was real or a stub. |
 | `image` | A deployed image, only when one participates. |
 
 **`image` stays `unrecorded` for every run of this instrument**, and that is
@@ -38,3 +39,36 @@ into `substrate`.
 ## See also
 
 - [the rate pack](sirens-echo-rate.md) - how a run is scored and promoted.
+
+## The composed bundle is stubbed, and that bounds every Deep rate
+
+`agent/sirens-deep.yaml` sets `composed: true`. The runner substitutes
+`PlaceholderComposed`, which is **249 bytes**, where the deployed pod injects the
+role skill, the personality skills and the rest of the composed context. When
+that prompt was last measured in production it was 53,133 bytes against the
+11,392 the snapshot renders, so the bundle was most of it.
+
+So a Deep rate describes **this configuration**, not the deployed service, and in
+a stronger sense than "a different image": the instructions themselves differ. A
+model given 11 KB of instructions is not obviously the same subject as the same
+model given 53 KB, and the cases most likely to move are the ones the pack
+measures, since personality skills shape voice and tempo and the injection cases
+turn on how much instruction there is to contradict.
+
+The stub is correct and should stay. It keeps the tracked snapshot and
+`policy-check` hermetic, and a snapshot that varied with whatever bundle a caller
+happened to have would not be a snapshot. **What was missing was any statement in
+the dataset that the stub was used**, which is the difference between a bound a
+reader can see and one they cannot.
+
+`composed` is derived where the substitution happens rather than passed in by the
+caller, so a dataset cannot claim a real bundle when the run used the stub. A
+caller-supplied value is overwritten, and a test pins that.
+
+Echo is unaffected. `sirens-echo.yaml` is not composed, so its 20,397 byte
+snapshot is what a turn actually ships.
+
+Whether an eval run should be able to load a real bundle is
+[sirens-echo#316](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/316)
+part 2, and it is a runner decision with a hermeticity cost rather than a
+provenance one.
