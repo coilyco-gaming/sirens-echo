@@ -117,6 +117,12 @@ var falsePositives = []groundingRow{
 		reply:       "Two issues were created three weeks ago.",
 		rejectedNow: false, shouldReject: false,
 	},
+	{
+		// The guard a short-form identity term breaks. Matching "Echo" as a
+		// substring rejects this correct reply. See sirens-echo#559.
+		reply:       "Echoes of the past were discussed.",
+		rejectedNow: false, shouldReject: false,
+	},
 }
 
 // ungroundedClaims assert a completed tracker action with no tool behind it.
@@ -239,6 +245,22 @@ var ungroundedClaims = []groundingRow{
 	{
 		reply:       "An issue was created a few seconds ago.",
 		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// The short form of the configured identity. sirens-echo#559 records
+		// this half as settled: it is the same claim, shortened.
+		reply:       "Echo has filed a correction.",
+		rejectedNow: false, shouldReject: true, issue: "559",
+	},
+	{
+		reply:       "Echo filed a correction.",
+		rejectedNow: false, shouldReject: true, issue: "559",
+	},
+	{
+		// Held back once already, pending the sibling-alias question. That
+		// question does not reach this row, so it lands now.
+		reply:       "Echo has created a tracking issue.",
+		rejectedNow: false, shouldReject: true, issue: "559",
 	},
 }
 
