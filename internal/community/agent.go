@@ -703,8 +703,7 @@ func (a *Agent) handleMessage(
 		"discord.receive",
 		discordMessageSpanAttributes(
 			"process",
-			message.GuildID,
-			message.ChannelID,
+			discordLocationFor(session, message),
 			message.ID,
 		)...,
 	)
@@ -1116,36 +1115,43 @@ func (t *discordMessageTurn) SpanAttributes() []attribute.KeyValue {
 	if t.message == nil || t.message.GuildID == "" {
 		return nil
 	}
-	channelID, threadID := t.channelAndThread()
 	attributes := discordMessageSpanAttributes(
 		"receive",
-		t.message.GuildID,
-		channelID,
+		discordLocationFor(t.session, t.message),
 		t.message.ID,
 	)
-	if threadID != "" {
-		attributes = append(attributes, attribute.String("discord.thread.id", threadID))
-	}
 	if requester := t.Requester(); requester != "" {
 		attributes = append(attributes, attribute.String("discord.user.id", requester))
 	}
 	return attributes
 }
 
-// channelAndThread separates the two, because reporting a thread as its own
+// discordLocation is where a turn happened, with the thread separated from the
+// channel it hangs under. See docs/sirens-echo-turn-identifiers.md.
+type discordLocation struct {
+	GuildID   string
+	ChannelID string
+	ThreadID  string
+}
+
+// discordLocationFor separates the two, because reporting a thread as its own
 // channel hides the turn from a query for the channel it hangs under.
-func (t *discordMessageTurn) channelAndThread() (channelID, threadID string) {
-	channelID = t.message.ChannelID
-	if t.session == nil || t.session.State == nil {
-		return channelID, ""
+func discordLocationFor(
+	session *discordgo.Session, message *discordgo.Message,
+) discordLocation {
+	at := discordLocation{GuildID: message.GuildID, ChannelID: message.ChannelID}
+	if session == nil || session.State == nil {
+		return at
 	}
 	// Cached state only. A turn is not worth a Discord API call, and a thread
 	// this service can answer in arrived over the gateway to begin with.
-	channel, err := t.session.State.Channel(channelID)
+	channel, err := session.State.Channel(message.ChannelID)
 	if err != nil || channel == nil || !channel.IsThread() {
-		return channelID, ""
+		return at
 	}
-	return channel.ParentID, channelID
+	at.ChannelID = channel.ParentID
+	at.ThreadID = message.ChannelID
+	return at
 }
 
 // TraceLookup reads the referenced message too, because the id a member wants
@@ -1211,8 +1217,7 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(discordMessageSpanAttributes(
 		"send",
-		t.message.GuildID,
-		t.message.ChannelID,
+		discordLocationFor(t.session, t.message),
 		"",
 	)...)
 	reply, err := t.session.ChannelMessageSendComplex(t.message.ChannelID, &discordgo.MessageSend{
@@ -1229,15 +1234,23 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	return err
 }
 
+// discordMessageSpanAttributes takes a location rather than loose identifiers,
+// so no span can disagree with another about what a channel is.
 func discordMessageSpanAttributes(
-	operation, guildID, channelID, messageID string,
+	operation string, at discordLocation, messageID string,
 ) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{
 		attribute.String("messaging.system", "discord"),
 		attribute.String("messaging.operation.name", operation),
 		attribute.String("messaging.operation.type", operation),
-		attribute.String("discord.guild.id", guildID),
-		attribute.String("discord.channel.id", channelID),
+		attribute.String("discord.guild.id", at.GuildID),
+		attribute.String("discord.channel.id", at.ChannelID),
+	}
+	if at.ThreadID != "" {
+		attributes = append(
+			attributes,
+			attribute.String("discord.thread.id", at.ThreadID),
+		)
 	}
 	if messageID != "" {
 		attributes = append(

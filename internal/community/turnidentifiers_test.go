@@ -93,6 +93,42 @@ func TestAThreadTurnReportsBothTheThreadAndItsParent(t *testing.T) {
 	}
 }
 
+// The boundary spans sit in the same trace as the turn span, so a channel that
+// means the parent on one and the thread on another makes both queries partial.
+func TestEveryBoundarySpanReportsTheParentForAThreadTurn(t *testing.T) {
+	t.Parallel()
+	session := statefulSession(t)
+	thread := &discordgo.Channel{
+		ID:       "1390000000000000009",
+		ParentID: "1390000000000000003",
+		Type:     discordgo.ChannelTypeGuildPublicThread,
+		GuildID:  "1390000000000000002",
+	}
+	if err := session.State.ChannelAdd(thread); err != nil {
+		t.Fatalf("seed channel state: %v", err)
+	}
+	message := guildTurn(session, thread.ID).message
+	for _, operation := range []string{"process", "send"} {
+		rendered := map[string]string{}
+		for _, pair := range discordMessageSpanAttributes(
+			operation,
+			discordLocationFor(session, message),
+			"",
+		) {
+			rendered[string(pair.Key)] = pair.Value.AsString()
+		}
+		if rendered["discord.channel.id"] != thread.ParentID {
+			t.Errorf(
+				"%s channel id = %q, want the parent %q",
+				operation, rendered["discord.channel.id"], thread.ParentID,
+			)
+		}
+		if rendered["discord.thread.id"] != thread.ID {
+			t.Errorf("%s thread id = %q, want %q", operation, rendered["discord.thread.id"], thread.ID)
+		}
+	}
+}
+
 // An unresolved channel reports itself as a channel, which is what it is. The
 // alternative is a Discord API call per turn to learn something optional.
 func TestAnUnresolvedChannelCostsNoAPICall(t *testing.T) {

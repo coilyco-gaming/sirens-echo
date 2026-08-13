@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -229,13 +230,9 @@ func TestDirectMessagesSummonWithoutAMention(t *testing.T) {
 
 func TestDiscordMessageSpanAttributesUseStringIdentifiers(t *testing.T) {
 	t.Parallel()
+	at := discordLocation{GuildID: "guild", ChannelID: "channel"}
 	got := make(map[string]string)
-	for _, item := range discordMessageSpanAttributes(
-		"process",
-		"guild",
-		"channel",
-		"message",
-	) {
+	for _, item := range discordMessageSpanAttributes("process", at, "message") {
 		got[string(item.Key)] = item.Value.AsString()
 	}
 	want := map[string]string{
@@ -246,13 +243,13 @@ func TestDiscordMessageSpanAttributesUseStringIdentifiers(t *testing.T) {
 		"discord.guild.id":         "guild",
 		"discord.channel.id":       "channel",
 	}
-	for key, value := range want {
-		if got[key] != value {
-			t.Errorf("%s = %q, want %q", key, got[key], value)
-		}
+	// Compared whole, because a subset check cannot see an identifier that
+	// nobody meant to export. See AGENTS.md on what a turn retains.
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("attributes = %v, want %v", got, want)
 	}
 
-	withoutMessage := discordMessageSpanAttributes("send", "guild", "channel", "")
+	withoutMessage := discordMessageSpanAttributes("send", at, "")
 	for _, item := range withoutMessage {
 		if item.Key == "messaging.message.id" {
 			t.Fatal("empty message ID was exported")
