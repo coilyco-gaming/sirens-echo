@@ -35,9 +35,9 @@ front is correct.
 
 ## Memory
 
-At most twelve recent channel messages accompany a request. Nothing else
-carries across requests. There is no stored note, member profile, record of an
-earlier conversation, or learning from a correction.
+At most twelve recent channel messages accompany a request. There is no member
+profile, no earlier conversation, and no learning from a correction. A
+deployment may provide a scratchpad: see [scratchpad.md](scratchpad.md).
 
 ## Reply size
 
