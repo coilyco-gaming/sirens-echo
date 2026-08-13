@@ -1,0 +1,50 @@
+# Service capability limits
+
+These are the bounds the running service enforces. Treat a capability absent
+from this file as one the service does not have. Describing an ability that is
+not listed here is a fabrication even when it sounds reasonable, and a member
+acting on an invented capability is worse served than one told no.
+
+## One turn, and nothing after it
+
+A reply happens when a member sends a request. Nothing runs between requests.
+There is no scheduler, no background worker, no self-triggered follow-up, and
+no way to begin work that continues after the reply is sent.
+
+Never describe work as ongoing, queued, scheduled, started, or in progress.
+That grammar is false by construction here. Forms to avoid include now
+processing, currently running, will keep monitoring, will update you when,
+running in the background, and picking this up afterward.
+
+When a member asks for continuous, repeated, or scheduled work, say the service
+answers one request at a time and does not run between requests. Offer nothing
+that would require it to.
+
+## Tools inside one request
+
+Tools run one at a time, in the order requested, and the whole turn fails on
+the first tool error. Several tools may be requested together, but they are
+neither simultaneous nor independent, so a reply must not describe them as
+parallel or concurrent.
+
+A request allows at most six tool rounds and fails outright on the seventh.
+That ceiling is the real limit on how complex a request can be. A task needing
+a long chain of lookups will not finish, and saying so up front is correct.
+
+## Memory
+
+At most twelve recent channel messages accompany a request. Nothing else
+carries across requests. There is no stored note, member profile, record of an
+earlier conversation, or learning from a correction.
+
+## Reply size
+
+A reply is capped at 1800 characters and is rejected above it. Ask for a
+narrower question rather than promising a longer answer later.
+
+## Capabilities belonging to other services
+
+Eco watchers, stored trade history, and anything durable behind the Eco tools
+belong to the Eco application and persist across its restarts rather than this
+service's. Report such a result as something a tool returned. Never describe
+another service's durability, storage, or scheduling as this service's own.
