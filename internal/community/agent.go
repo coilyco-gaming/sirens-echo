@@ -322,12 +322,14 @@ func (a *Agent) buildJobRunner() error {
 	}
 	reporter := newDiscordJobReporter(a.session)
 	a.jobs = &JobRunner{
-		Store:     store,
-		Telemetry: a.telemetry,
-		Executors: executors,
-		Notifier:  reporter,
-		Progress:  reporter,
-		Grants:    jobGrants(a.access),
+		Store:           store,
+		Telemetry:       a.telemetry,
+		Executors:       executors,
+		Notifier:        reporter,
+		Progress:        reporter,
+		Content:         reporter,
+		ValidateContent: a.validateJobContent,
+		Grants:          jobGrants(a.access),
 	}
 	return nil
 }

@@ -46,6 +46,11 @@ type JobRunner struct {
 	Grants *GrantTable
 	// Progress delivers intermediate updates. Optional.
 	Progress JobProgressReporter
+	// Content delivers ordered answer messages. Optional, and inert without
+	// ValidateContent, which fails closed rather than sending unchecked.
+	Content JobContentReporter
+	// ValidateContent runs the reply-path checks over one content message.
+	ValidateContent func(string) error
 	// Timeout bounds one execution. Zero uses defaultJobTimeout.
 	Timeout time.Duration
 	// Workers is the concurrent execution count. Zero means one.
@@ -60,6 +65,7 @@ type JobRunner struct {
 	// for it to poll.
 	cancels  map[string]context.CancelFunc
 	progress *progressLimiter
+	content  *contentCounter
 }
 
 func (r *JobRunner) timeout() time.Duration {
@@ -83,6 +89,7 @@ func (r *JobRunner) Start(ctx context.Context) error {
 	r.queue = make(chan string, defaultJobQueueDepth)
 	r.cancels = make(map[string]context.CancelFunc)
 	r.progress = newProgressLimiter(nil)
+	r.content = newContentCounter()
 	runCtx, stop := context.WithCancel(context.WithoutCancel(ctx))
 	r.stop = stop
 	workers := r.Workers
@@ -279,9 +286,13 @@ func (r *JobRunner) run(parent context.Context, id string) {
 		r.mu.Lock()
 		delete(r.cancels, id)
 		limiter := r.progress
+		counter := r.content
 		r.mu.Unlock()
 		if limiter != nil {
 			limiter.forget(id)
+		}
+		if counter != nil {
+			counter.forget(id)
 		}
 	}()
 
