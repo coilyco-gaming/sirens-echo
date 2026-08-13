@@ -134,6 +134,9 @@ func (s *fetchSession) allowedURL(raw string) (string, error) {
 // hostAllowed matches an entry against a hostname. A leading *. covers
 // subdomains and nothing else. See docs/sirens-echo-fetch.md.
 func hostAllowed(host, allowed string) bool {
+	// Both ends, rather than trusting the caller. This decides whether a request
+	// leaves the process, so it must not depend on where it is called from.
+	host = strings.ToLower(strings.TrimSpace(host))
 	allowed = strings.ToLower(strings.TrimSpace(allowed))
 	if allowed == "" {
 		return false
@@ -149,7 +152,10 @@ func hostAllowed(host, allowed string) bool {
 	}
 	// The dot is part of the comparison, so notmozilla.com cannot match
 	// *.mozilla.com and the apex is a separate entry.
-	return strings.HasSuffix(host, "."+suffix)
+
+	// The length guard is the empty first label. ".mozilla.com" carries the
+	// suffix and names no host. See sirens-echo#668.
+	return len(host) > len(suffix)+1 && strings.HasSuffix(host, "."+suffix)
 }
 
 // newFetchClient refuses a private destination at dial time. Checking the
