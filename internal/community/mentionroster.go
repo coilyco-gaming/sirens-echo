@@ -11,6 +11,10 @@ import (
 // Naming someone should reach them. Only people already in the conversation
 // can be reached. See docs/sirens-echo-mentions.md.
 
+// mentionLead is what may precede a name. A person is named in prose, so
+// whitespace or an opening bracket. See docs/sirens-echo-mentions.md.
+var mentionLead = `(?i)(^|[\s(\["'*_~])`
+
 // mentionNameRunes is the shortest name worth resolving. A one or two
 // character display name matches too much ordinary prose to be safe.
 const mentionNameRunes = 3
@@ -96,7 +100,7 @@ func (r mentionRoster) resolveMentions(reply string) (string, []string) {
 		if seen[userID] {
 			continue
 		}
-		pattern, err := regexp.Compile(`(?i)(^|[^\w<@])` + regexp.QuoteMeta(name) + `\b`)
+		pattern, err := regexp.Compile(mentionLead + regexp.QuoteMeta(name) + `\b`)
 		if err != nil {
 			continue
 		}
