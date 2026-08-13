@@ -542,3 +542,21 @@ func TestScoreEvaluationCaseOnlyChecksToolCallMarkupWhenAsked(t *testing.T) {
 		t.Error("opted case: err = nil, want a finding")
 	}
 }
+
+// The gate hard-fails a deployment, so a stubbed verdict and a bundled one
+// must be distinguishable in its own transcript. See issue 316.
+func TestTheGateTranscriptNamesItsComposedState(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("evaluation.go")
+	if err != nil {
+		t.Fatalf("read evaluation.go: %v", err)
+	}
+	body := string(source)
+	if strings.Contains(body, "composed, _, err := composedForRun") {
+		t.Error("the gate discards its composed state, so a bundled run and a " +
+			"stubbed run produce identical output while one blocks a deploy")
+	}
+	if !strings.Contains(body, `"composed: %s`) {
+		t.Error("the gate transcript does not name its composed state")
+	}
+}

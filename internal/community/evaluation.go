@@ -182,10 +182,13 @@ func runEvaluation(
 	output io.Writer,
 	caseTimeout time.Duration,
 ) error {
-	composed, _, err := composedForRun(definition)
+	composed, composedState, err := composedForRun(definition)
 	if err != nil {
 		return err
 	}
+	// This run gates a deployment, so a reader has to be able to tell a stubbed
+	// verdict from a bundled one. See docs/sirens-echo-battery.md.
+	fmt.Fprintf(output, "composed: %s\n\n", composedState)
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {
