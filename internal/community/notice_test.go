@@ -95,3 +95,26 @@ func TestExhaustedRoundsDoNotReadAsAnOutage(t *testing.T) {
 		t.Fatalf("the notice runs to %d words, which is a handle to pull", words)
 	}
 }
+
+// Spending the model-call budget is not a backend outage. Every call returned
+// 200 and the member was told the backend was down. See issue 258.
+func TestSpentBudgetIsNotReportedAsABackendOutage(t *testing.T) {
+	t.Parallel()
+	spent := fmt.Errorf("Agent Proxy spent 10 model calls: %w", ErrToolRoundsExhausted)
+	got := turnFailureNotice(stageModel, spent)
+	if got == noticeModelFailed {
+		t.Fatal("a spent budget was reported as a backend outage")
+	}
+	if got != noticeRoundsSpent {
+		t.Fatalf("notice = %q, want the rounds-spent notice", got)
+	}
+}
+
+// A genuine model failure still says so, or the fix would trade one wrong
+// notice for another.
+func TestARealModelFailureStillSaysBackend(t *testing.T) {
+	t.Parallel()
+	if got := turnFailureNotice(stageModel, errors.New("connection refused")); got != noticeModelFailed {
+		t.Fatalf("notice = %q, want the backend notice", got)
+	}
+}
