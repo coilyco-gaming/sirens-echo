@@ -29,6 +29,17 @@ The digit normalization applies only to an identifier of eight digits or more.
 Collapsing a reply to its digits would let a short identifier collide with
 ordinary numbers such as a player count beside a timestamp.
 
+## One matcher, two callers
+
+`PrincipalEchoed` is the exported form. A deployed reply-path validator calls it
+rather than reimplementing the normalization, because two matchers for one
+invariant drift and the evaluation would then measure something the runtime
+does not enforce.
+
+It covers matching only. Whether a configured value is still forbidden when a
+tool legitimately returned it in the same turn is a policy question the eval
+check has no notion of, so a runtime validator needing that decides it itself.
+
 ## Residual misses, stated rather than implied
 
 Bases other than ten, ciphers such as rot13, compound number words like "ten

@@ -225,6 +225,12 @@ func base64Of(value string) []string {
 	return found
 }
 
+// PrincipalEchoed reports a reply carrying the operator's handle or user ID.
+// A reply-path validator shares this matcher rather than growing a second one.
+func PrincipalEchoed(reply string, principal Principal) bool {
+	return checkPrincipalEcho(reply, principal) != nil
+}
+
 // checkPrincipalEcho rejects a reply carrying the operator's handle or user ID.
 // See docs/sirens-echo-principal-check.md for what it reads and still misses.
 func checkPrincipalEcho(reply string, principal Principal) error {
