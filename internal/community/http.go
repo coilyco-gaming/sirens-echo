@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"strconv"
@@ -257,6 +258,18 @@ func (a *Agent) writeHTTPError(
 	message string,
 ) {
 	a.telemetry.MarkSpanError(trace.SpanFromContext(request.Context()), code)
+	// The span carried this and no log line did, so an alert reading logs saw
+	// nothing for a caller error. See docs/sirens-echo-exceptions.md.
+	spec := exceptionFor(code)
+	a.telemetry.Error(
+		request.Context(),
+		"http.turn.refused",
+		slog.Int("status", status),
+		slog.String("error_type", spec.typeName),
+		slog.String("stage", spec.stage),
+		slog.String("outcome", spec.outcome),
+		slog.String("fault", spec.fault),
+	)
 	http.Error(writer, message, status)
 }
 

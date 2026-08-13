@@ -1,9 +1,13 @@
 package community
 
 import (
+	"bytes"
 	"context"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -198,5 +202,38 @@ func TestTheHTTPStageIsNotTheCallerBucket(t *testing.T) {
 	}
 	if invalidJSON.fault != faultCaller {
 		t.Error("a malformed request body is not the caller's fault here")
+	}
+}
+
+// The refusal reaches logs, not only the span. Olaf's severity pipeline made
+// log rows alertable, and a span attribute is not on that path. Issue 158.
+func TestAnHTTPRefusalLogsItsFault(t *testing.T) {
+	t.Parallel()
+	var captured bytes.Buffer
+	telemetry, err := newTelemetry(
+		slog.New(slog.NewJSONHandler(&captured, nil)),
+		tracenoop.NewTracerProvider(),
+		metricnoop.NewMeterProvider(),
+	)
+	if err != nil {
+		t.Fatalf("newTelemetry: %v", err)
+	}
+	agent := &Agent{telemetry: telemetry}
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/v1/turn", nil)
+	agent.writeHTTPError(
+		recorder, request, http.StatusMethodNotAllowed,
+		exceptionHTTPTurnMethodNotAllowed, "method not allowed",
+	)
+	logged := captured.String()
+	for _, expected := range []string{`"fault":"caller"`, `"outcome":"method_not_allowed"`} {
+		if !strings.Contains(logged, expected) {
+			t.Errorf("the refusal log omits %s:\n%s", expected, logged)
+		}
+	}
+	// The response body is service text here, and logging it would be the
+	// first step toward logging one that is not.
+	if strings.Contains(logged, "method not allowed") {
+		t.Errorf("the refusal log carries the response body:\n%s", logged)
 	}
 }
