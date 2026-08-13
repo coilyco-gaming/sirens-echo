@@ -21,6 +21,17 @@ and mean nothing to a model, and a reader who needs them is reading this file.
 Nothing schedules a turn. Every turn originates from a Discord message or an
 HTTP request, so no reply may describe work continuing after it is sent.
 
+A reply carrying the model's own unparsed tool-call markup is refused on the
+turn path, beside the grounding checks. It is refused rather than stripped,
+because stripping leaves a claim to have used a tool with no call behind it,
+which is the invented-work failure the grounding gates exist to catch.
+
+It is deliberately not in `ParseReply`. The evaluation scorer and the response
+repair loop both call that, and a runtime gate there would reshape what the
+deployment gate and the rate pack measure. The pattern set is still shared with
+the evaluation check, so the two cannot drift. See [tool-call
+markup](sirens-echo-tool-call-markup.md).
+
 ## Why the grammar is named explicitly
 
 The reports behind this were not the model claiming a tool it lacked. They were

@@ -910,6 +910,11 @@ func (a *Agent) runTurn(
 	progress.Stage(turnCtx, stagePhraseChecking)
 	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
+	// Nothing else between the model and the member sees this, and a member
+	// reads it verbatim. See docs/sirens-echo-capability-limits.md.
+	if err == nil {
+		err = ValidateNoToolCallMarkup(reply)
+	}
 	if err == nil {
 		err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 	}

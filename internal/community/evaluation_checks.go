@@ -308,6 +308,17 @@ func checkToolCallMarkup(reply string) error {
 	return nil
 }
 
+// containsToolCallMarkup is the same question without the matched text, for the
+// reply path, whose errors are logged and must carry no model output.
+func containsToolCallMarkup(reply string) bool {
+	for _, pattern := range toolCallMarkupPatterns {
+		if pattern.MatchString(reply) {
+			return true
+		}
+	}
+	return false
+}
+
 // checkRequiredPatterns asserts a positive end state. Recognition is something
 // the reply must do, so a prohibition cannot express it.
 func checkRequiredPatterns(reply string, patterns []*regexp.Regexp) error {

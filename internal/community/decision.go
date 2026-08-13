@@ -91,6 +91,17 @@ func ParseReply(raw string) (string, error) {
 	return reply, nil
 }
 
+// ValidateNoToolCallMarkup refuses a reply carrying the model's own tool-call
+// syntax. See docs/sirens-echo-capability-limits.md for refuse over strip.
+func ValidateNoToolCallMarkup(reply string) error {
+	// Deliberately not in ParseReply: the evaluation scorer and the repair loop
+	// both call that, and this must not reshape what those two measure.
+	if containsToolCallMarkup(reply) {
+		return fmt.Errorf("model reply carries unparsed tool-call markup")
+	}
+	return nil
+}
+
 // ValidateGrounding rejects invented channel references and first-person
 // action claims that are not supported by a completed tool call.
 func ValidateGrounding(reply string, suppliedContext string, executed ...ExecutedTool) error {
