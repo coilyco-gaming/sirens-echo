@@ -42,8 +42,13 @@ node on the tailnet. The process carries no credential of its own. A deployment
 that exposes the listener any other way owns that boundary itself.
 
 `X-Sirens-Caller` selects the per-caller admission budget. Anonymous clients
-share one budget. A limited caller receives `429` with `Retry-After`. See
+share one budget. A limited caller receives `429`. See
 [admission control](sirens-echo-admission.md).
+
+`Retry-After` accompanies a `429` only when an exhausted token bucket denied it,
+and the header splits the per-user tier alone. Both limits, and every rejection
+this path can return, are recorded in
+[the rejection contract](sirens-echo-http-contract.md).
 
 ## Usage
 
