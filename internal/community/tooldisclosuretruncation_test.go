@@ -64,3 +64,23 @@ func TestAFooterLargerThanTheBudgetStillReturnsTheFooter(t *testing.T) {
 		t.Errorf("reply = %q, want the footer", sent)
 	}
 }
+
+// A reference is a link a member can act on. The footer is a receipt. When only
+// one fits, the link wins. See sirens-echo#413.
+func TestAReferenceIsNeverShortenedForTheFooter(t *testing.T) {
+	t.Parallel()
+	answer := strings.Repeat("a", 100)
+	withReference := answer + "\n\nhttps://forgejo.example/owner/repo/issues/7"
+
+	if got := footerBudget(discordReplyLimit, answer, withReference); got != 0 {
+		t.Errorf("budget with a reference added = %d, want 0 so the link is kept", got)
+	}
+	// No reference means nothing to protect, so the receipt gets its budget.
+	if got := footerBudget(discordReplyLimit, answer, answer); got != discordReplyLimit {
+		t.Errorf("budget with no reference = %d, want %d", got, discordReplyLimit)
+	}
+	// An unbounded transport stays unbounded either way.
+	if got := footerBudget(0, answer, withReference); got != 0 {
+		t.Errorf("unbounded transport = %d, want 0", got)
+	}
+}

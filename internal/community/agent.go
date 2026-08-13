@@ -840,6 +840,15 @@ type turnIO interface {
 	Reply(ctx context.Context, content string) error
 }
 
+// footerBudget withholds the budget when a reference was added, so the receipt
+// never shortens a link a member can act on. See sirens-echo#413.
+func footerBudget(limit int, before, after string) int {
+	if after != before {
+		return 0
+	}
+	return limit
+}
+
 // replyBudget is an optional turn capability, like the reactor: a transport
 // with a send ceiling declares it. See docs/sirens-echo-tool-disclosure.md.
 type replyBudget interface {
@@ -1016,8 +1025,12 @@ func (a *Agent) runTurn(
 
 	// Service-authored, so it runs after the checks rather than through them.
 	// See docs/sirens-echo-issues.md.
-	reply = AppendIssueReferences(reply, result.ToolCalls...)
-	reply = AppendToolDisclosureWithin(reply, replyLimitOf(turn), result.ToolCalls...)
+	withReferences := AppendIssueReferences(reply, result.ToolCalls...)
+	reply = AppendToolDisclosureWithin(
+		withReferences,
+		footerBudget(replyLimitOf(turn), reply, withReferences),
+		result.ToolCalls...,
+	)
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
