@@ -18,8 +18,8 @@ import (
 // ErrJobNotFound is returned for an id the store does not hold.
 var ErrJobNotFound = errors.New("job not found")
 
-// JobStore holds job records. An implementation must be safe for concurrent
-// use and must survive whatever restart its durability promises.
+// JobStore holds job records and survives whatever restart its durability
+// promises. Concurrent use means goroutines in one process, never two.
 type JobStore interface {
 	// Submit records a job, or returns the existing one when the idempotency
 	// key has been seen. The second return reports whether it already existed.
