@@ -61,5 +61,4 @@ See [the tracker surface](sirens-echo-tracker-surface.md) for what the Forgejo
 server publishes and what selecting it as `issue_tracker` changes.
 
 See [the service](sirens-echo.md), [large results](sirens-echo-tool-results.md),
-[issue ownership](sirens-echo-issue-ownership.md), and
-[observability](sirens-echo-observability.md).
+and [observability](sirens-echo-observability.md).
