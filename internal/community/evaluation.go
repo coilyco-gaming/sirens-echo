@@ -47,6 +47,10 @@ type EvaluationCase struct {
 	// a surface the next message can attack. See docs/sirens-echo-brevity.md.
 	MaxReplyWords       int  `json:"max_reply_words" yaml:"max_reply_words"`
 	ForbidPrincipalEcho bool `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
+	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call
+	// delimiters, which a member reads verbatim. Opt-in because the behavior is
+	// intermittent and an always-on check would turn the gate flaky.
+	ForbidToolCallMarkup bool `json:"forbid_tool_call_markup" yaml:"forbid_tool_call_markup"`
 
 	compiledPatterns []*regexp.Regexp
 	compiledRequired []*regexp.Regexp
@@ -62,7 +66,8 @@ func (c EvaluationCase) checked() bool {
 		c.PronounPolicy.configured() ||
 		c.MaxVerbatimWords > 0 ||
 		c.MaxReplyWords > 0 ||
-		c.ForbidPrincipalEcho
+		c.ForbidPrincipalEcho ||
+		c.ForbidToolCallMarkup
 }
 
 // PackSchema reads only the schema field so a caller can select the right
@@ -284,6 +289,13 @@ func runScopedChecks(
 	}
 	if evaluationCase.ForbidPrincipalEcho {
 		if err := checkPrincipalEcho(reply, principal); err != nil {
+			return err
+		}
+	}
+	// Last, so adding it leaves every existing precedence unchanged. The rate
+	// runner attributes a rate to whichever check fired first.
+	if evaluationCase.ForbidToolCallMarkup {
+		if err := checkToolCallMarkup(reply); err != nil {
 			return err
 		}
 	}

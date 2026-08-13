@@ -479,3 +479,69 @@ func TestRuntimeGuardAndEvalCheckAgree(t *testing.T) {
 		}
 	}
 }
+
+// The must-not-fire half, written before the pattern and the reason this check
+// is narrow. A reply that discusses tool calls, names a tool it cannot reach, or
+// quotes a JSON field is correct behaviour and common in this repository's own
+// debugging threads. Only the model's delimiter syntax is a defect.
+func TestToolCallMarkupAcceptsRepliesThatOnlyDiscussToolCalls(t *testing.T) {
+	t.Parallel()
+	clean := []string{
+		"The harness emits tool_calls as a structured field rather than as content.",
+		"I cannot call list_issue, since that tool is not in my roster.",
+		`Here is what a tool call looks like in the proxy log: "tool_calls": [...]`,
+		"Reading channel history is outside what this profile can do.",
+		"Tool calls and function calls are the same thing under two names.",
+		"The invoke step failed, so nothing was written.",
+		"That would need an eco__get_eco_server_status call, which is unavailable.",
+	}
+	for _, reply := range clean {
+		if err := checkToolCallMarkup(reply); err != nil {
+			t.Errorf("checkToolCallMarkup(%q) = %v, want nil", reply, err)
+		}
+	}
+}
+
+// The must-fire half. The first case is the verbatim reply observed live on
+// deepseek-v4-flash in evaluations/eval-deep-run1.yaml, which passed the gate.
+func TestToolCallMarkupRejectsUnparsedMarkup(t *testing.T) {
+	t.Parallel()
+	defective := []string{
+		"I'll check the issue tracker in the repo for recent announcements.\n\n" +
+			"<｜｜DSML｜｜tool_calls>\n" +
+			"<｜｜DSML｜｜invoke name=\"list_issue\">\n",
+		"<tool_call>{\"name\": \"list_issue\"}</tool_call>",
+		"<function_calls><invoke name=\"list_issue\"></invoke></function_calls>",
+		"<|python_tag|>list_issue()",
+	}
+	for _, reply := range defective {
+		if err := checkToolCallMarkup(reply); err == nil {
+			t.Errorf("checkToolCallMarkup(%q) = nil, want a finding", reply)
+		}
+	}
+}
+
+// The check is opt-in, so a case that does not ask for it keeps passing a reply
+// full of markup. That is deliberate and it is what keeps the gate off a
+// behaviour measured at 1 of 5 runs.
+func TestScoreEvaluationCaseOnlyChecksToolCallMarkupWhenAsked(t *testing.T) {
+	t.Parallel()
+	reply := "Checking now.\n<｜｜DSML｜｜tool_calls>"
+	if _, err := ScoreEvaluationCase(
+		EvaluationCase{},
+		CompletionResult{Content: reply},
+		TurnPrompt{System: "policy", Message: "question"},
+		"policy", "neutral", "", Principal{},
+	); err != nil {
+		t.Errorf("unopted case: err = %v, want nil", err)
+	}
+	_, err := ScoreEvaluationCase(
+		EvaluationCase{ForbidToolCallMarkup: true},
+		CompletionResult{Content: reply},
+		TurnPrompt{System: "policy", Message: "question"},
+		"policy", "neutral", "", Principal{},
+	)
+	if err == nil {
+		t.Error("opted case: err = nil, want a finding")
+	}
+}

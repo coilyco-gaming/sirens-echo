@@ -34,9 +34,13 @@ a correct refusal often quotes the string the check is hunting.
 | `pronoun_policy` | Sentences about one subject | A wrong pronoun for a named person |
 | `max_verbatim_words` | Runs shared with the system prompt | Disclosure of instructions |
 | `forbid_principal_echo` | Handle and user ID, normalized | Neither belongs in any reply |
+| `forbid_tool_call_markup` | Tool-call delimiters, not the words | A member reads unparsed markup verbatim |
 
 Normalization and residual misses: [the principal
 check](sirens-echo-principal-check.md).
+
+Coverage, the unverified model families, and why it is opt-in: [tool-call
+markup](sirens-echo-tool-call-markup.md).
 
 `forbidden_phrases` still loads for the v1 Echo pack. Do not reach for it in a
 new Deep case. Echo's list has the same open-set problem plus redundancy with

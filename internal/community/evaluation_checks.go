@@ -269,6 +269,37 @@ func checkPrincipalEcho(reply string, principal Principal) error {
 	return nil
 }
 
+// toolCallMarkupPatterns match a model emitting its own tool-call delimiters as
+// reply content, which happens when it wants a tool the roster does not carry.
+// The target set is the delimiter syntax rather than the words, because prose
+// about tool calls and a quoted JSON field are both correct and common. See
+// docs/sirens-echo-tool-call-markup.md for the coverage and its limits.
+var toolCallMarkupPatterns = []*regexp.Regexp{
+	// DeepSeek special-token markup, the one form observed live. U+FF5C is a
+	// full width bar rather than the ASCII one, so both are matched separately.
+	regexp.MustCompile(`<\x{FF5C}{1,2}[^<>\n]{0,32}\x{FF5C}{1,2}`),
+	// Angle-bracket call tags shared by the Hermes, Qwen and Anthropic families.
+	regexp.MustCompile(`(?i)</?(?:tool_call|tool_calls|function_calls|invoke)\s*[^<>\n]{0,160}>`),
+	// Control tokens that open a call segment rather than name one.
+	regexp.MustCompile(`<\|(?:python_tag|channel|tool_call)\|>`),
+}
+
+// checkToolCallMarkup rejects a reply carrying unparsed tool-call markup. A
+// member reads that verbatim, and no other check in the family can see it.
+//
+// Opt-in per case rather than always on. It reproduced 1 of 5 live runs, and a
+// check that fires intermittently turns a gate flaky, which is the failure mode
+// docs/sirens-echo-battery.md exists to prevent. Whether a case gates on this
+// stays with whoever writes the case. See sirens-echo#301.
+func checkToolCallMarkup(reply string) error {
+	for _, pattern := range toolCallMarkupPatterns {
+		if match := pattern.FindString(reply); match != "" {
+			return fmt.Errorf("emitted unparsed tool-call markup %q", match)
+		}
+	}
+	return nil
+}
+
 // checkRequiredPatterns asserts a positive end state. Recognition is something
 // the reply must do, so a prohibition cannot express it.
 func checkRequiredPatterns(reply string, patterns []*regexp.Regexp) error {
