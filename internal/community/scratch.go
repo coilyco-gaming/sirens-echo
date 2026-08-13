@@ -2,6 +2,8 @@ package community
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -84,21 +86,17 @@ func (p *ScratchProvider) Open(ctx context.Context) (ToolSession, error) {
 	return &scratchSession{root: partition, enabled: true}, nil
 }
 
-// scratchPartitionName keeps a Discord snowflake from reaching the filesystem
-// as anything but a flat, predictable directory name.
+// scratchPartitionName derives a flat directory name from the requester, by
+// hashing rather than stripping. See docs/sirens-echo-scratchpad-partitions.md.
 func scratchPartitionName(requesterID string) string {
-	cleaned := strings.Map(func(r rune) rune {
-		switch {
-		case r >= '0' && r <= '9', r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z':
-			return r
-		default:
-			return -1
-		}
-	}, requesterID)
-	if cleaned == "" {
+	trimmed := strings.TrimSpace(requesterID)
+	if trimmed == "" {
 		return "unattributed"
 	}
-	return cleaned
+	// A caller-asserted identifier reaches this, so two requesters differing
+	// only in punctuation must not land in one partition.
+	sum := sha256.Sum256([]byte(trimmed))
+	return hex.EncodeToString(sum[:16])
 }
 
 type scratchSession struct {

@@ -19,12 +19,12 @@ type partitionPair struct {
 // The HTTP requester is "http:" plus a caller-asserted header, so a collision
 // is reachable on purpose rather than only by accident.
 var partitionPairs = []partitionPair{
-	{left: "http:fleet-client", right: "http:fleetclient", collidesNow: true, issue: "270"},
-	{left: "http:fleet-client", right: "http:fleet_client", collidesNow: true, issue: "270"},
-	{left: "http:fleet-client", right: "http:fleet.client", collidesNow: true, issue: "270"},
-	{left: "http:ops", right: "http:o-p-s", collidesNow: true, issue: "270"},
-	{left: "http:anonymous", right: "http:anon-ymous", collidesNow: true, issue: "270"},
-	{left: "a/b", right: "ab", collidesNow: true, issue: "270"},
+	{left: "http:fleet-client", right: "http:fleetclient", collidesNow: false},
+	{left: "http:fleet-client", right: "http:fleet_client", collidesNow: false},
+	{left: "http:fleet-client", right: "http:fleet.client", collidesNow: false},
+	{left: "http:ops", right: "http:o-p-s", collidesNow: false},
+	{left: "http:anonymous", right: "http:anon-ymous", collidesNow: false},
+	{left: "a/b", right: "ab", collidesNow: false},
 
 	// Discord author IDs are pure digits, so no two distinct users collide.
 	{left: "318190481467244544", right: "318190481467244545", collidesNow: false},

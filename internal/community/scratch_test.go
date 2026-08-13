@@ -226,7 +226,7 @@ func TestScratchWritesNonExecutableFiles(t *testing.T) {
 	callScratch(t, session, "scratch_write", map[string]any{
 		"path": "script.sh", "content": "#!/bin/sh\necho hi\n",
 	})
-	info, err := os.Stat(filepath.Join(root, "111", "script.sh"))
+	info, err := os.Stat(filepath.Join(root, scratchPartitionName("111"), "script.sh"))
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
@@ -243,8 +243,13 @@ func TestScratchPartitionNameIsFlat(t *testing.T) {
 			t.Fatalf("partition name %q from %q is not flat", name, requester)
 		}
 	}
-	if scratchPartitionName("!!!") != "unattributed" {
-		t.Fatal("an unusable id did not fall back")
+	// Only an absent requester falls back. A punctuation-only id is a distinct
+	// requester and must get its own partition rather than the shared one.
+	if scratchPartitionName("!!!") == "unattributed" {
+		t.Fatal("a punctuation-only id fell back into the shared partition")
+	}
+	if scratchPartitionName("") != "unattributed" {
+		t.Fatal("an absent requester did not fall back")
 	}
 }
 
@@ -340,5 +345,40 @@ func TestCompositeMergesToolsAndRoutesCalls(t *testing.T) {
 	})
 	if result.IsError {
 		t.Fatalf("composite refused a routed call: %s", result.Text)
+	}
+}
+
+// The same requester must reach the same partition across turns, or a caller
+// loses its own files.
+func TestScratchPartitionIsStable(t *testing.T) {
+	t.Parallel()
+	first := scratchPartitionName("318190481467244544")
+	if second := scratchPartitionName("318190481467244544"); first != second {
+		t.Fatalf("partition drifted: %q then %q", first, second)
+	}
+}
+
+// The identifier must not be recoverable from a directory listing, which is
+// what the original function set out to do and did only partly.
+func TestScratchPartitionHidesTheIdentifier(t *testing.T) {
+	t.Parallel()
+	const snowflake = "318190481467244544"
+	name := scratchPartitionName(snowflake)
+	if strings.Contains(name, snowflake) {
+		t.Fatalf("partition %q carries the requester", name)
+	}
+	if strings.ContainsAny(name, "/.:\\ ") {
+		t.Fatalf("partition %q is not a flat name", name)
+	}
+}
+
+// An unattributed turn is refused before this is reached, but the empty case
+// must still produce one safe name rather than an empty path.
+func TestScratchPartitionHandlesAnEmptyRequester(t *testing.T) {
+	t.Parallel()
+	for _, requester := range []string{"", "   "} {
+		if got := scratchPartitionName(requester); got != "unattributed" {
+			t.Fatalf("empty requester produced %q", got)
+		}
 	}
 }

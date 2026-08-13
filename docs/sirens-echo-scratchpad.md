@@ -76,5 +76,5 @@ would be a different decision needing its own.
 
 ## See also
 
-* [Tools](sirens-echo-tools.md) - how a tool surface reaches the model.
+* [Partitions](sirens-echo-scratchpad-partitions.md) - keeping requesters apart.
 * [Executing jobs](sirens-echo-execution.md) - the other, unrelated workspace.
