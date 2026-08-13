@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-// Two capacity-bounded caches evict differently. exchangeLimiter evicts by last
-// use; rateLimiter evicts by insertion, which reaches the global bucket.
+// Both capacity-bounded caches now evict by last use, and the global bucket is
+// not tracked for eviction at all. See docs/sirens-echo-admission-buckets.md.
 
-// Characterization. The global budget is restored by key rotation, because the
-// bucket it lives in is evicted on insertion order and recreated full.
-func TestGlobalBucketIsEvictedByKeyRotation(t *testing.T) {
+// The global budget survives key rotation. It was restored by rotation while
+// eviction ran on insertion order and recreated the bucket full.
+func TestGlobalBucketSurvivesKeyRotation(t *testing.T) {
 	t.Parallel()
 	limiter := newRateLimiter(RateLimitPolicy{
 		PerUser: RateLimit{Burst: 100, Every: time.Hour},
@@ -26,10 +26,8 @@ func TestGlobalBucketIsEvictedByKeyRotation(t *testing.T) {
 	}
 
 	// No time passes, so a correct limiter admits exactly the burst.
-	if admitted <= 2 {
-		t.Errorf("admitted %d of 9 against a burst of 2. If the global bucket is "+
-			"now exempt from eviction or eviction became LRU, this issue is fixed "+
-			"and the test should assert admitted == 2", admitted)
+	if admitted != 2 {
+		t.Errorf("admitted %d of 9 against a global burst of 2", admitted)
 	}
 }
 
