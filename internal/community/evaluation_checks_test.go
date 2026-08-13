@@ -615,3 +615,32 @@ func TestToolNameMarkupMissesAnAliasedToolInTagContent(t *testing.T) {
 		t.Fatal("this form is now caught, so update docs/sirens-echo-tool-call-markup.md and this test")
 	}
 }
+
+// The word boundary keeps the zero-false-positive measurement true for a tool
+// whose name merely starts with the declared one. No roster tool does this yet.
+func TestToolNameMarkupDoesNotFireOnALongerToolName(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		`<create_issue_comment>{"body":"noted"}</create_issue_comment>`,
+		`<create_issues_bulk> [ { "title": "x" } ]`,
+		`<forgejo__create_issue_template lang="fr">`,
+	} {
+		if failures := toolNameMarkupFailures(reply, "forgejo__create_issue"); len(failures) > 0 {
+			t.Errorf("a tag for a different tool was reported: %.60q gave %v", reply, failures)
+		}
+	}
+}
+
+// A reply carrying only the closing half is still markup, and the optional slash
+// is the whole reason it is caught. Dropping it leaves every other test green.
+func TestToolNameMarkupCatchesAClosingTagOnItsOwn(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		`{"title":"Trade query returns zero"}</create_issue>`,
+		`I filed it.</forgejo__create_issue>`,
+	} {
+		if len(toolNameMarkupFailures(reply, "forgejo__create_issue")) == 0 {
+			t.Errorf("a closing tag went unreported: %.60q", reply)
+		}
+	}
+}
