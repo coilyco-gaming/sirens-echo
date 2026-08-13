@@ -748,7 +748,7 @@ func (a *Agent) onDenied(
 	if !decision.Notify {
 		return
 	}
-	if err := turn.Reply(ctx, cooldownNotice(decision.RetryAfter)); err != nil {
+	if err := turn.Reply(ctx, noticeWithTrace(ctx, cooldownNotice(decision.RetryAfter))); err != nil {
 		a.telemetry.RecordFailure(ctx, "reply")
 	}
 }
@@ -789,7 +789,7 @@ func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO, contextKey s
 		!a.limiter.notifyQueueTimeout(contextKey) {
 		return
 	}
-	if err := turn.Reply(ctx, noticeQueueTimeout); err != nil {
+	if err := turn.Reply(ctx, noticeWithTrace(ctx, noticeQueueTimeout)); err != nil {
 		a.telemetry.RecordFailure(ctx, "reply")
 	}
 }
@@ -1035,7 +1035,7 @@ func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) e
 		failureNoticeTimeout,
 	)
 	defer cancel()
-	return a.sendReply(noticeCtx, turn, notice)
+	return a.sendReply(noticeCtx, turn, noticeWithTrace(ctx, notice))
 }
 
 func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) error {

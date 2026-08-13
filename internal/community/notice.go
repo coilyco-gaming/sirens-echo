@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 // A notice is a string this service wrote, never a model reply. The rendered
@@ -57,6 +59,17 @@ var (
 	// tell that from being ignored. See docs/sirens-echo-delivery-failures.md.
 	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
 )
+
+// noticeWithTrace appends the turn's trace so a member's screenshot becomes a
+// query. See docs/sirens-echo-notices.md for why it is not a colon.
+func noticeWithTrace(ctx context.Context, notice string) string {
+	span := trace.SpanContextFromContext(ctx)
+	// Outside a span there is nothing to cite, and a blank id reads as a bug.
+	if !span.IsValid() {
+		return notice
+	}
+	return notice + "\n" + harnessNotice("trace id "+span.TraceID().String())
+}
 
 // The failure causes, a closed set. error_type is the stage, so two conditions
 // at one stage collapse into it and neither can be alerted on. See issue 292.
