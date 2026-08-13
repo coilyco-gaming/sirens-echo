@@ -117,7 +117,7 @@ func TestEveryReplyCheckAdmitsCorrectReplies(t *testing.T) {
 				if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
 					t.Errorf("grounding refused %q: %v", reply, err)
 				}
-				if err := ValidateSelfAttributedClaim(reply, "Sirens Echo"); err != nil {
+				if err := ValidateSelfAttributedClaim(reply, "Sirens Echo", nil); err != nil {
 					t.Errorf("self-claim check refused %q: %v", reply, err)
 				}
 				if err := guard.Validate(reply); err != nil {

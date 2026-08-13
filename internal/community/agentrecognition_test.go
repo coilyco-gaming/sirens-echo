@@ -20,7 +20,7 @@ func scoreAgentRecognition(t *testing.T, reply string) error {
 				evaluationCase,
 				CompletionResult{Content: reply},
 				TurnPrompt{System: "policy", Message: "what is your response style?"},
-				"policy", "social", "", PlaceholderPrincipal,
+				"policy", "social", "", nil, PlaceholderPrincipal,
 			)
 			return err
 		}

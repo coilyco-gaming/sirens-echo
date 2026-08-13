@@ -233,6 +233,7 @@ func runEvaluation(
 			systemPrompt,
 			definition.ResponseStyle,
 			definition.Identity,
+			definition.SelfAliases,
 			principal,
 		)
 		if err != nil {
@@ -259,10 +260,12 @@ func ScoreEvaluationCase(
 	systemPrompt string,
 	responseStyle string,
 	identity string,
+	aliases []string,
 	principal Principal,
 ) (string, error) {
 	reply, failures := ScoreEvaluationCaseAll(
-		evaluationCase, result, prompt, systemPrompt, responseStyle, identity, principal,
+		evaluationCase, result, prompt, systemPrompt, responseStyle, identity, aliases,
+		principal,
 	)
 	if len(failures) == 0 {
 		return reply, nil
@@ -279,6 +282,7 @@ func ScoreEvaluationCaseAll(
 	systemPrompt string,
 	responseStyle string,
 	identity string,
+	aliases []string,
 	principal Principal,
 ) (string, []error) {
 	reply, err := ParseReply(result.Content)
@@ -294,7 +298,7 @@ func ScoreEvaluationCaseAll(
 		}
 	}
 	record(ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...))
-	record(ValidateSelfAttributedClaim(reply, identity, result.ToolCalls...))
+	record(ValidateSelfAttributedClaim(reply, identity, aliases, result.ToolCalls...))
 	record(ValidateIdentityClaim(reply, principal))
 	record(ValidateResponseStyle(responseStyle, reply))
 	if evaluationCase.RequiredTool != "" &&

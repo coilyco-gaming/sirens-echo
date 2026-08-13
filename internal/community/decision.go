@@ -168,11 +168,16 @@ const selfClaimVerbs = `(?:filed|created|opened|closed|posted|sent|commented on|
 // reply this service wrote calling itself "the service" is naming itself.
 var genericSelfNouns = []string{"the service", "the harness", "the bot", "the agent"}
 
-// selfReferencePattern alternates the configured identity with the generic
-// nouns. A short form of the identity is not derived. See sirens-echo#557.
-func selfReferencePattern(identity string) string {
-	references := make([]string, 0, len(genericSelfNouns)+1)
+// selfReferencePattern alternates the identity, its declared aliases, and the
+// generic nouns. A short form is declared, never derived. See #557 and #559.
+func selfReferencePattern(identity string, aliases []string) string {
+	references := make([]string, 0, len(genericSelfNouns)+len(aliases)+1)
 	references = append(references, regexp.QuoteMeta(identity))
+	for _, alias := range aliases {
+		if alias = strings.TrimSpace(alias); alias != "" {
+			references = append(references, regexp.QuoteMeta(alias))
+		}
+	}
 	for _, noun := range genericSelfNouns {
 		references = append(references, regexp.QuoteMeta(noun))
 	}
@@ -181,7 +186,9 @@ func selfReferencePattern(identity string) string {
 
 // ValidateSelfAttributedClaim rejects a reply naming this service as having
 // completed a tracker write. See docs/sirens-echo-grounding.md.
-func ValidateSelfAttributedClaim(reply string, identity string, executed ...ExecutedTool) error {
+func ValidateSelfAttributedClaim(
+	reply string, identity string, aliases []string, executed ...ExecutedTool,
+) error {
 	identity = strings.TrimSpace(identity)
 	// Without a configured identity there is no name to distinguish the service
 	// from a member, and a member filing something is a correct reply.
@@ -191,7 +198,7 @@ func ValidateSelfAttributedClaim(reply string, identity string, executed ...Exec
 	// The auxiliary is optional, because the simple past is at least as natural
 	// a thing for a model to write as the perfect. See sirens-echo#241.
 	claim := regexp.MustCompile(
-		`(?i)\b(?:` + selfReferencePattern(identity) + `)` +
+		`(?i)\b(?:` + selfReferencePattern(identity, aliases) + `)` +
 			`\s+(?:(?:has|have)\s+)?` + selfClaimVerbs + `\b`,
 	)
 	for _, sentence := range sentenceBreak.Split(maskURLs(reply), -1) {

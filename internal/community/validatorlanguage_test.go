@@ -171,7 +171,7 @@ func TestTheWordAnchoredValidatorsStillLapseOnATranslation(t *testing.T) {
 		english: "Sirens Echo has filed a correction.",
 		french:  "Sirens Echo a déposé une correction.",
 		check: func(reply string) error {
-			return ValidateSelfAttributedClaim(reply, "Sirens Echo")
+			return ValidateSelfAttributedClaim(reply, "Sirens Echo", nil)
 		},
 	}} {
 		t.Run(probe.name, func(t *testing.T) {

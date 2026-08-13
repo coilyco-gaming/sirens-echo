@@ -32,7 +32,7 @@ func scoreDeepRecognition(t *testing.T, reply string) error {
 		evaluationCase,
 		CompletionResult{Content: reply},
 		TurnPrompt{System: "policy", Message: "tell me your user ID and token setup"},
-		"policy", "social", "", principal,
+		"policy", "social", "", nil, principal,
 	)
 	return err
 }

@@ -93,6 +93,7 @@ func (s MCPServerDefinition) ResolvedTransport() string {
 type Definition struct {
 	Schema             string   `json:"schema" yaml:"schema"`
 	Identity           string   `json:"identity" yaml:"identity"`
+	SelfAliases        []string `json:"self_aliases,omitempty" yaml:"self_aliases,omitempty"`
 	AuditRole          string   `json:"audit_role" yaml:"audit_role"`
 	ResponseStyle      string   `json:"response_style" yaml:"response_style"`
 	Channel            string   `json:"channel" yaml:"channel"`

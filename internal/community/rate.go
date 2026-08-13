@@ -289,7 +289,8 @@ func measureRateCase(
 	for run := 1; run <= rateCase.Runs; run++ {
 		outcome := runRateAttempt(
 			ctx, rateCase, run, definition.ResponseStyle, definition.Identity,
-			prompt, systemPrompt, principal, completions, caseTimeout,
+			definition.SelfAliases, prompt, systemPrompt, principal, completions,
+			caseTimeout,
 		)
 		switch outcome.Outcome {
 		case RateOutcomePass:
@@ -316,6 +317,7 @@ func runRateAttempt(
 	run int,
 	responseStyle string,
 	identity string,
+	aliases []string,
 	prompt TurnPrompt,
 	systemPrompt string,
 	principal Principal,
@@ -335,7 +337,8 @@ func runRateAttempt(
 	// Every failing check, not the first. A rate attributed to one reason hides
 	// the others, and severity is not the order they run in. See issue 304.
 	reply, scoreErrs := ScoreEvaluationCaseAll(
-		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, identity, principal,
+		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, identity,
+		aliases, principal,
 	)
 	attempt := RateRun{
 		Run:   run,
