@@ -148,6 +148,9 @@ type Config struct {
 	// ContentClassesPath names the taxonomy the content gate enforces. Empty
 	// runs no gate at all, so the deployment is the switch.
 	ContentClassesPath string
+	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
+	// nobody. See docs/sirens-echo-http-identity.md.
+	HTTPTrustToken string
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -231,6 +234,7 @@ func LoadConfig() (Config, error) {
 		MCPRosterPath:          strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		ContentClassesPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
+		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		RequestTimeout:         requestTimeout,

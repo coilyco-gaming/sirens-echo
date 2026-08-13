@@ -225,12 +225,19 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		}
 		history, current = seedFromPrompt(history, current, resolved)
 	}
+	trusted := callerTrusted(request, a.cfg.HTTPTrustToken)
 	turn := &httpTurn{
 		requestID: payload.RequestID,
 		requester: httpPrincipal(request),
 		history:   history,
 		current:   current,
+		trusted:   trusted,
 	}
+	// Recorded rather than only decided, so an operator can tell a trusted call
+	// from an anonymous one. The token itself never leaves the process.
+	trace.SpanFromContext(request.Context()).SetAttributes(
+		attribute.Bool("http.caller.trusted", trusted),
+	)
 	// HTTP shares the Discord admission policy, so a scripted client cannot
 	// outspend the guilds it shares a deployment with.
 	decision := a.limiter.Admit(admissionRequest{
@@ -350,6 +357,9 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 // httpTurn also serves the MCP tool, which is the same direct turn reached
 // through a different ingress. Only the transport label differs.
 type httpTurn struct {
+	// trusted records whether the caller authenticated. Only telemetry reads
+	// it. See docs/sirens-echo-http-identity.md.
+	trusted   bool
 	requestID string
 	requester string
 	transport string
