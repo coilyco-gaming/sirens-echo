@@ -18,11 +18,25 @@ in that window never left the process.
 
 | Attribute | Meaning |
 | --- | --- |
-| `mcp.tools.listed` | how many rostered servers actually listed |
-| `mcp.tools.cached` | true when none did |
+| `mcp.tools.configured` | how many servers are on the roster |
+| `mcp.tools.reached` | how many went to the network, including a failed connect |
+| `mcp.tools.listed` | how many completed a listing |
+| `mcp.tools.cached` | true when the roster is non-empty and none went out |
 
-Count round trips with the attribute. Do not count spans, and do not read the
+Count round trips with `reached`. Do not count spans, and do not read the
 duration.
+
+Reaching the network and completing a listing are different, and the difference
+is the outage. A connect that fails is a round trip that listed nothing, so it
+raises `reached` and not `listed`. Reporting it as cached would assert the
+comfortable answer on the one turn that matters. See sirens-echo#540.
+
+`cached` is all-or-nothing over the roster, so a turn where one of three servers
+listed reports `cached=false`. The cached count is `configured - reached`, which
+is why the roster size is on the span. See sirens-echo#534.
+
+An empty roster reports `cached=false`. Nothing was served from cache because
+there is nothing to cache, and a profile with no tools should not read as a hit.
 
 ## Why not the duration
 
