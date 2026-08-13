@@ -38,14 +38,20 @@ changes, so the issue that fixes it has a test to flip rather than delete.
 * Decoding is not strict, so an unknown field is accepted in silence rather than
   refused.
   [Issue 173](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/173)
-* A pending-cap shed reports `Retry-After` like every other denial. Fixed: the
-  shed bucket is charged, so its window is real rather than zero.
-  [Issue 181](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/181)
 * `X-Sirens-Caller` splits the per-user tier alone, so one HTTP caller can shed
   another's turn through the shared pending counter. Documented rather than
   changed: the header is caller-asserted, so isolating a second tier on it would
   mint budgets rather than bound them.
   [Issue 182](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/182)
+
+## Retry-After
+
+Every `429` carries `Retry-After`, including a pending-cap shed. The shed path
+charges its own one-second bucket, so the advertised wait is a real window
+rather than a constant.
+
+`TestQueueDenialCarriesRetryAfter` asserts both halves: the header is present,
+and the value does not exceed the shed window.
 
 ## See also
 
