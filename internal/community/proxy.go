@@ -51,6 +51,10 @@ func (e ToolFailure) Unwrap() error { return e.Err }
 // backend answered every call, so it must never read as an outage.
 var ErrToolRoundsExhausted = errors.New("tool rounds exhausted")
 
+// ErrResponseRepairExhausted marks a turn the harness rejected, not one the
+// backend failed. Every model call returned 200. See sirens-echo#651.
+var ErrResponseRepairExhausted = errors.New("response repair exhausted")
+
 // isToolFailure reports a cause that reached the turn from an MCP surface.
 func isToolFailure(cause error) bool {
 	var failure ToolFailure
@@ -489,8 +493,9 @@ func (c ProxyClient) Complete(
 						slog.String("refused", contractErr.Error()),
 					)
 					return CompletionResult{}, fmt.Errorf(
-						"Agent Proxy returned invalid response after %d repair attempt: %w",
+						"Agent Proxy returned invalid response after %d repair attempt: %w: %w",
 						repairAttempts,
+						ErrResponseRepairExhausted,
 						contractErr,
 					)
 				}

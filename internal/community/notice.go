@@ -96,7 +96,10 @@ const (
 	causeTimeout     = "timeout"
 	causeToolFailed  = "tool_failed"
 	causeRoundsSpent = "rounds_spent"
-	causeStage       = "stage_failed"
+	// Named for what happened rather than where, because the stage is model
+	// and the model is not what failed. See sirens-echo#651.
+	causeReplyRefused = "reply_refused"
+	causeStage        = "stage_failed"
 	// causeShutdown is the service ending the turn, not the turn failing. It
 	// reads as a deploy in the failure series rather than as a defect.
 	causeShutdown = "shutdown"
@@ -116,6 +119,10 @@ func failureCause(cause error) string {
 		return causeToolFailed
 	case errors.Is(cause, ErrToolRoundsExhausted):
 		return causeRoundsSpent
+	// The harness rejected the reply. Distinguishing that from a model failure
+	// is acceptance criterion 3 of sirens-echo#651.
+	case errors.Is(cause, ErrResponseRepairExhausted):
+		return causeReplyRefused
 	}
 	return causeStage
 }
@@ -135,6 +142,10 @@ func turnFailureNotice(stage string, cause error) string {
 	// the backend answered every call. See issue 258.
 	case errors.Is(cause, ErrToolRoundsExhausted):
 		return noticeRoundsSpent
+	// Every model call returned 200 and the reply was refused here, so the
+	// member is told what to do about it rather than that we are down. See #651.
+	case errors.Is(cause, ErrResponseRepairExhausted):
+		return noticeReplyBlocked
 	}
 	switch stage {
 	case stageHistory:
