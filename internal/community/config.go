@@ -270,6 +270,9 @@ type Config struct {
 // LoadConfig loads the Sirens Echo deployment from environment and its
 // source-controlled definition. Secrets never have source defaults.
 func LoadConfig() (Config, error) {
+	// Applied before anything reads a tuning number, so a derived value is
+	// never computed from a default the deployment replaced.
+	applyTuningOverrides(os.Getenv)
 	definitionPath := valueOrDefault(os.Getenv("SIRENS_ECHO_DEFINITION"), defaultDefinitionPath)
 	definition, err := LoadDefinition(definitionPath)
 	if err != nil {
