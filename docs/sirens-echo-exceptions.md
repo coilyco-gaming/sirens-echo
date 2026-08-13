@@ -24,11 +24,15 @@ alert filters remain stable.
 
 ## Cardinality
 
-Twenty-five types represent operational paths across the `turn`, `history`,
+Twenty-six types represent operational paths across the `turn`, `history`,
 `validation`, `forgejo`, `reply`, `mcp`, `model`, and `http` stages. The
-twenty-sixth is the `telemetry` fallback. This is the catalog's hard
+twenty-seventh is the `telemetry` fallback. This is the catalog's hard
 grouping bound. Adding a failure path requires an explicit catalog entry and a
 reviewed increase to that bound.
+
+The most recent increase is `turn_body_too_large`, split from `input_too_long`
+because a body cap and a field cap are different limits and a caller can only
+act on the one they broke. See sirens-echo#351.
 
 ## Redaction boundary
 
