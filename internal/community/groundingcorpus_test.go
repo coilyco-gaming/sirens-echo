@@ -64,6 +64,9 @@ var falsePositives = []groundingRow{
 	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
 	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
 	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
+	{reply: "The service cannot search the tracker, since no tool is available.", rejectedNow: false, shouldReject: false},
+	{reply: "The Eco app is now tracking prices for that item.", rejectedNow: false, shouldReject: false},
+	{reply: "Searching the tracker is something an operator can do.", rejectedNow: false, shouldReject: false},
 }
 
 // ungroundedClaims assert a completed tracker action with no tool behind it.
@@ -81,6 +84,18 @@ var ungroundedClaims = []groundingRow{
 	{reply: "Sirens Echo has filed a correction.", rejectedNow: true, shouldReject: true},
 	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
 	{reply: "Created a tracking issue.", rejectedNow: true, shouldReject: true},
+	{
+		// A lookup announced with the subject present, which the verb list
+		// missed until sirens-echo#341.
+		reply:       "Sirens Echo is now searching the tracker.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// Observed live with no issue tool served. The subject is absent, and
+		// requiring it is what keeps the correct replies above clean.
+		reply:       "Searching the issue tracker for an open ticket.",
+		rejectedNow: false, shouldReject: true, issue: "341",
+	},
 }
 
 func runGroundingRows(t *testing.T, rows []groundingRow) {

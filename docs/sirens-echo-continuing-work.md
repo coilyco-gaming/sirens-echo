@@ -29,6 +29,17 @@ such as `Sirens Echo will not keep watching the server` does not match, and
 neither does prose about the game world. A grounding error fails the turn with
 no repair loop, so under-firing is the correct direction.
 
+**The verb list is the second bound and it was too narrow.** It was built from
+the promise-to-keep-watching defect, so a lookup escaped: `Sirens Echo is now
+searching the tracker` carried the right subject and tense and no matching verb.
+`search`, `look up`, `query`, `retrieve` and `fetch` were added for
+[sirens-echo#341](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/341),
+measured at zero false positives across twelve correct replies.
+
+**The subjectless form still escapes.** `Searching the issue tracker for an open
+ticket` is what a live run actually produced, and requiring the subject is what
+keeps `The Eco app is now tracking prices` clean. A corpus row holds it open.
+
 It is English-only, inherited from the gate's pattern rather than chosen here.
 Tracked with the rest of the language coverage in issue 253.
 
