@@ -47,6 +47,27 @@ never reach the filesystem as a path. The scratchpad's own confinement refuses a
 traversal independently, which means the flattening is the first of two gates
 rather than the only one.
 
+## A spent tool budget answers rather than discards
+
+A turn that reaches the tool-round ceiling used to fail outright, throwing away
+every result the rounds had returned and telling the member the backend was
+unavailable. Both halves were wrong: the results were real, and the backend was
+fine.
+
+Once the last round's results are in, the tools are withdrawn and one further
+call asks for an answer from what was gathered, with an instruction to say
+plainly what could not be determined and to claim no result no tool returned.
+That reply passes every ordinary reply check, so a degraded answer is held to
+the same standard as any other.
+
+Withdrawing after the results land rather than on the next request matters: it
+costs no extra model call, and the documented ceiling of six tool rounds stays
+exactly true.
+
+If the outer model-call budget is also spent, the turn still ends with the
+rounds-spent notice. Answering is an improvement on discarding, not a promise
+that every turn finishes.
+
 ## See also
 
 * [Scratchpad](sirens-echo-scratchpad.md) - the filesystem the remainder lands in.

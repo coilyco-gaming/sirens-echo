@@ -335,11 +335,14 @@ func (c ProxyClient) Complete(
 	toolRounds := 0
 	repairAttempts := 0
 	budgetRaises := 0
+	// toolsSpent forces one final answer from the results already gathered,
+	// rather than discarding them. See docs/sirens-echo-tool-results.md.
+	toolsSpent := false
 	completionTokens := baseCompletionTokens
 	maxModelCalls := maxToolRounds + maxResponseRepairs + budgetRaisesAllowed + 1
 	for round := 0; round < maxModelCalls; round++ {
 		requestTools := tools
-		if repairAttempts > 0 {
+		if repairAttempts > 0 || toolsSpent {
 			requestTools = nil
 		}
 		payload := chatRequest{
@@ -427,7 +430,8 @@ func (c ProxyClient) Complete(
 				},
 				nil
 		}
-		if toolRounds == maxToolRounds {
+		// Tools are already withdrawn, so a request for one cannot be honoured.
+		if toolsSpent {
 			return CompletionResult{}, fmt.Errorf(
 				"Agent Proxy exceeded %d MCP tool rounds: %w",
 				maxToolRounds, ErrToolRoundsExhausted,
@@ -547,6 +551,13 @@ func (c ProxyClient) Complete(
 				Name:       call.Function.Name,
 			})
 		}
+		// The budget is spent and the results are in. Ask for an answer from
+		// them rather than discarding the work. See docs/sirens-echo-tool-results.md.
+		if toolRounds == maxToolRounds {
+			toolsSpent = true
+			telemetry.Info(ctx, "mcp.tool.rounds.spent", slog.Int("rounds", toolRounds))
+			messages = append(messages, chatMessage{Role: "system", Content: toolBudgetSpentNotice})
+		}
 	}
 	// The outer budget spans tool rounds, repairs, and raises together, so
 	// spending it is running out of steps rather than a backend failure.
@@ -647,6 +658,12 @@ func groundingMessage(documents []GroundingDocument) string {
 	}
 	return strings.Join(sections, "\n\n")
 }
+
+// toolBudgetSpentNotice asks for an answer from the results already gathered.
+// Framed as data, so it bounds the turn rather than redirecting it.
+const toolBudgetSpentNotice = "The tool budget for this turn is spent. " +
+	"Answer from the tool results already gathered, and say plainly what could " +
+	"not be determined. Do not claim a result no tool returned."
 
 func unavailableToolNotice(unavailable []string) string {
 	return "These tool surfaces are unavailable this turn and were not consulted: " +
