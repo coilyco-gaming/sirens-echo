@@ -47,7 +47,7 @@ var subjectlessClaim = regexp.MustCompile(
 
 // continuingWorkClaimPattern is shared verbatim with the
 // no-continuing-work-claim case. See docs/sirens-echo-continuing-work.md.
-const continuingWorkClaimPattern = `(?i)\b(?:the system|the service|this service|sirens echo|sirens deep)\s+(?:is\s+now|will)\s+(?:continue\s+to\s+|keep\s+)?(?:process|processing|monitor|monitoring|watch|watching|track|tracking|check|checking|notify|notifying|update|updating|alert|search|searching|look\\s+up|looking\\s+up|query|querying|retrieve|retrieving|fetch|fetching)\b`
+const continuingWorkClaimPattern = `(?i)\b(?:the system|the service|this service|sirens echo|sirens deep)\s+(?:is\s+now|will)\s+(?:continue\s+to\s+|keep\s+)?(?:process|processing|monitor|monitoring|watch|watching|track|tracking|check|checking|notify|notifying|update|updating|alert|search|searching|look\s+up|looking\s+up|query|querying|retrieve|retrieving|fetch|fetching)\b`
 
 // continuingWorkClaim is a promise of work between turns. This runtime holds
 // no scheduler, so the reply describes something no code will ever do.
