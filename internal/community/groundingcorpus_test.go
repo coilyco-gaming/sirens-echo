@@ -86,9 +86,13 @@ var falsePositives = []groundingRow{
 		rejectedNow: false, shouldReject: false,
 	},
 	{
-		// The same shape in the plural, since a widening tends to arrive as
-		// (?:was|were) and only the singular gets tried by hand.
-		reply:       "Those issues were opened long before you joined.",
+		// A denial that a one-word gap between the auxiliary and the participle
+		// would admit into the match before notAClaim rejects it. See #602.
+		reply:       "An issue has never been filed.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		reply:       "An issue has not yet been filed for this.",
 		rejectedNow: false, shouldReject: false,
 	},
 }
@@ -149,6 +153,46 @@ var ungroundedClaims = []groundingRow{
 	{
 		reply:       "Two issues were created.",
 		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// Both were caught, then regressed by the first pastReference, then
+		// restored by turnReference. Pinned so the third pass scores them.
+		reply:       "A correction has been filed since you asked.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "Filed a correction earlier.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// A past word beside a turn reference is this turn, which is the
+		// distinction turnReference exists to make. See sirens-echo#575.
+		reply:       "An issue was opened for this after your message.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "Two issues were created during this conversation.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// A past word and a turn reference in one sentence, which is the only
+		// shape turnReference decides. Nothing else in this table reaches it.
+		reply:       "An issue was opened before your message.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "An issue was opened previously in this conversation.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "A tracking issue was created recently.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// One adverb between the auxiliary and the participle, and the pattern
+		// no longer matches. The only shape 575 did not reach.
+		reply:       "An issue has already been filed for this.",
+		rejectedNow: false, shouldReject: true, issue: "602",
 	},
 }
 
