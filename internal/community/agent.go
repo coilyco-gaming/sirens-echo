@@ -800,6 +800,11 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 // replyQueueTimeout tells the caller its turn gave up waiting. Returning
 // silently left a queued member with no reply at all.
 func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO, contextKey string) {
+	// Marked before the throttle, the way a denial is, so a member who gets no
+	// notice still gets something. See docs/sirens-echo-reactions.md.
+	if target, ok := turn.(reactor); ok {
+		a.react(ctx, target, reactionFailed)
+	}
 	// A Discord reply lands in a shared channel, so it shares the throttle the
 	// pending-cap denial uses. A synchronous caller always learns why it ended.
 	if turn.Transport() == transportDiscord &&
