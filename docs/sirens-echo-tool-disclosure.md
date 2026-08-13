@@ -56,6 +56,11 @@ belief this exists to prevent, and it would vanish exactly when the reply is
 long and tool-heavy. A transport with no ceiling, like the HTTP turn, declares
 none and nothing is shortened.
 
+**A reference outranks the receipt.** When the turn also appended an issue
+reference, the budget is withheld and the footer yields instead. A reference is
+a link a member can act on and the footer is a record of what ran, so when only
+one survives it is the link. Both surviving is the open work.
+
 **Both lanes.** The reply path is shared, so Echo and Deep both disclose. The
 verification problem is identical on both.
 
