@@ -29,6 +29,7 @@ const (
 	exceptionModelResponseMissingChoice
 	exceptionHTTPTurnMethodNotAllowed
 	exceptionHTTPTurnInvalidJSON
+	exceptionHTTPTurnBodyTooLarge
 	exceptionHTTPTurnUnknownField
 	exceptionHTTPTurnContentRequired
 	exceptionHTTPTurnInputTooLong
@@ -194,6 +195,15 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The HTTP turn body is not valid JSON.",
 		stage:    "http",
 		outcome:  "invalid_json",
+		fault:    faultCaller,
+	},
+	// Separate from input_too_long, which is the post-decode field caps. One
+	// bucket for two limits leaves sirens-echo#159 unable to tell them apart.
+	exceptionHTTPTurnBodyTooLarge: {
+		typeName: "sirens_echo.http.turn_body_too_large",
+		message:  "The HTTP turn body exceeded the request size limit.",
+		stage:    "http",
+		outcome:  "body_too_large",
 		fault:    faultCaller,
 	},
 	exceptionHTTPTurnUnknownField: {

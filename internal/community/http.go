@@ -23,6 +23,10 @@ const (
 	maxHTTPBody  = 64 << 10
 )
 
+// Shared so both write endpoints refuse in the same words, and derived from the
+// cap so the number in the message cannot drift away from the one enforced.
+var oversizeBodyMessage = fmt.Sprintf("request body exceeds the %d byte limit", maxHTTPBody)
+
 type httpTurnRequest struct {
 	RequestID string            `json:"request_id"`
 	Author    string            `json:"author"`
@@ -130,6 +134,16 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 	// caller it did. See docs/sirens-echo-http-contract.md.
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
+		if oversizeBody(err) {
+			a.writeHTTPError(
+				writer,
+				request,
+				http.StatusBadRequest,
+				exceptionHTTPTurnBodyTooLarge,
+				oversizeBodyMessage,
+			)
+			return
+		}
 		if field, unknown := unknownJSONField(err); unknown {
 			a.writeHTTPError(
 				writer,
@@ -261,6 +275,13 @@ func httpPrincipal(request *http.Request) string {
 		return "http:" + cleanTranscriptText(caller, 64)
 	}
 	return "http:anonymous"
+}
+
+// oversizeBody separates a tripped body cap from a caller whose JSON is wrong.
+// Both reach the decoder, and only one is the caller's mistake to fix.
+func oversizeBody(err error) bool {
+	var tooLarge *http.MaxBytesError
+	return errors.As(err, &tooLarge)
 }
 
 // unknownJSONField reads the field name out of the decoder's own error, so the

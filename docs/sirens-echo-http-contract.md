@@ -14,7 +14,7 @@ request is never counted against the service's own error rate.
 | absent, empty, or blank `content`, with no `prompt` | `400` `content is required` |
 | `author` over 256 runes, or `content` over 16000 runes | `400` `author or content is too long` |
 | `history` longer than `max_context_messages` | `400` `history exceeds the configured context limit` |
-| body over 64 KiB | `400`, reported as malformed JSON |
+| body over 64 KiB | `400` `request body exceeds the 65536 byte limit` |
 | `prompt` with an empty server or name | `400` `prompt requires a server and a name` |
 | `prompt` naming an unrostered server | `400` naming the server the caller supplied |
 | unknown path | `404` |
@@ -28,14 +28,17 @@ An unrostered `prompt` server is named back to the caller because the caller
 supplied it. A transport failure stays generic instead, so a resolution error
 cannot carry an endpoint, host, or port.
 
+The body cap and the rune caps are separate limits and say so separately, since
+a caller can only act on the one they broke. An oversize body is refused rather
+than routed to the virtual-file upload path, which is Kai's decision on
+[issue 157](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/157)
+and waits on that path existing.
+
 ## Tolerated behavior
 
 Each of these is pinned by a characterization test that fails when the behavior
 changes, so the issue that fixes it has a test to flip rather than delete.
 
-* A body over the 64 KiB cap is refused, but `MaxBytesReader` surfaces through
-  the decoder, so the caller is told its well-formed body was malformed.
-  [Issue 157](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/157)
 * Decoding is not strict, so an unknown field is accepted in silence rather than
   refused.
   [Issue 173](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/173)
