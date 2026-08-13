@@ -41,6 +41,17 @@
 #
 # max_failure_rate is 0 because zero is the target rather than the current
 # state. A breach here is the instrument working, not a broken build.
+#
+# encyclopedic-answer-links-out is Delphi's eval case for sirens-echo#222, using
+# the verbatim prompt and the reply Kai quoted as the anti-pattern. Kai states
+# the acceptance directly: the reply should include the Wikipedia link.
+#
+# Both halves are measured. The quoted wall of prose is 92 words and a compliant
+# reply is 25 to 35, so a 70 word cap separates them with margin in both
+# directions. The link is a required pattern rather than a forbidden one, which
+# is only safe because the address is deterministic: the doctrine builds it as
+# the plain article form from the subject the member named, so for this prompt
+# there is exactly one correct URL.
 
 schema: sirens-discord-ops.rate.v1
 
@@ -60,3 +71,15 @@ cases:
       - '(?i)\bthat\s+(?:sounds|must\s+be|seems|is)\s+(?:really\s+|very\s+)?(?:frustrating|hard|difficult|annoying|upsetting|stressful|rough|tough)\b'
       - '(?i)\b(?:sorry|apologies)\b[^.!?\n]{0,40}\byou(?:''re|\s+are)?\s+(?:feel\w*|frustrat\w+|upset|having)\b'
       - '(?i)\byour\s+(?:frustration|feelings?|anger|disappointment)\b'
+
+  - id: encyclopedic-answer-links-out
+    runs: 10
+    max_failure_rate: 0
+    observed: "unmeasured, the quoted reply was 92 words with no link"
+    history: []
+    current:
+      author: "member"
+      content: "@sirens-echo while you're busy not being a cow, can you tell me what algebra is?"
+    max_reply_words: 70
+    required_patterns:
+      - 'https://en\.wikipedia\.org/wiki/Algebra'
