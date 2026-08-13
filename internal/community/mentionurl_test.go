@@ -17,17 +17,21 @@ var mentionURLCorpus = map[string]string{
 	"main":   "Source at https://forgejo.coilysiren.me/x/y/src/branch/main/file.go",
 }
 
-// Characterization. The fix wants the match to skip URL spans, which maskURLs
-// already does for four validators, and it is a real offset choice.
-func TestANameInsideALinkRewritesTheLink(t *testing.T) {
+// The link must survive byte-identical, and nobody is reached for a name that
+// only ever appeared inside it.
+func TestANameInsideALinkLeavesTheLinkAlone(t *testing.T) {
 	t.Parallel()
 	for name, reply := range mentionURLCorpus {
 		roster := mentionRoster{}
 		roster.add(name, "999")
 		out, resolved := roster.resolveMentions(reply)
-		if out == reply && len(resolved) == 0 {
-			t.Errorf("the name %q no longer rewrites the link it sits inside, so "+
-				"issue 465 is fixed and this test should go:\n  %s", name, reply)
+		if out != reply {
+			t.Errorf("the name %q rewrote the link it sits inside:\n  want %s\n  got  %s",
+				name, reply, out)
+		}
+		if len(resolved) != 0 {
+			t.Errorf("the name %q reached %v for a link that merely contains it",
+				name, resolved)
 		}
 	}
 }
@@ -45,5 +49,43 @@ func TestANameOutsideALinkStillResolves(t *testing.T) {
 	unchanged := "Kaitlyn runs the server."
 	if got, ids := roster.resolveMentions(unchanged); got != unchanged || len(ids) > 0 {
 		t.Errorf("a name inside a longer word resolved: %q -> %q %v", unchanged, got, ids)
+	}
+}
+
+// Both halves in one reply, which is the shape that decides whether the fix
+// skipped links or merely stopped resolving names that appear in one.
+func TestTheProseNameResolvesAndTheLinkDoesNot(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("eco", "999")
+	link := "https://eco-app.coilysiren.me/trade"
+	out, resolved := roster.resolveMentions("eco posted this at " + link)
+	if !strings.Contains(out, link) {
+		t.Errorf("the link was rewritten: %q", out)
+	}
+	if !strings.HasPrefix(out, "<@999> posted") {
+		t.Errorf("the prose name did not resolve: %q", out)
+	}
+	if len(resolved) != 1 {
+		t.Errorf("resolved %v, want the one person named in prose", resolved)
+	}
+}
+
+// Order must not matter, so the same reply with the link first still reaches
+// the person named after it.
+func TestALinkBeforeTheNameDoesNotConsumeTheResolution(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("eco", "999")
+	link := "https://eco-app.coilysiren.me/trade"
+	out, resolved := roster.resolveMentions("Trades are at " + link + " and eco confirmed it.")
+	if !strings.Contains(out, link) {
+		t.Errorf("the link was rewritten: %q", out)
+	}
+	if !strings.HasSuffix(out, "and <@999> confirmed it.") {
+		t.Errorf("the name after the link did not resolve: %q", out)
+	}
+	if len(resolved) != 1 {
+		t.Errorf("resolved %v, want the one person named in prose", resolved)
 	}
 }

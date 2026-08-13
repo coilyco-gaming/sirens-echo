@@ -108,6 +108,21 @@ func TestTheLongerNameWins(t *testing.T) {
 	}
 }
 
+// Matching ignores case, so replacing must too. A name written in another case
+// used to be kept alongside the mention, reading as the name twice.
+func TestANameInAnotherCaseIsReplacedNotDuplicated(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("Kai", "111")
+	out, resolved := roster.resolveMentions("kai runs the server.")
+	if out != "<@111> runs the server." {
+		t.Errorf("the name survived its own replacement: %q", out)
+	}
+	if len(resolved) != 1 {
+		t.Errorf("resolved %v, want the one person named", resolved)
+	}
+}
+
 // An empty roster is the ordinary case and must leave a reply byte-identical.
 func TestAnEmptyRosterChangesNothing(t *testing.T) {
 	t.Parallel()

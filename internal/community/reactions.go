@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"log/slog"
+	"sync"
 )
 
 // A reaction is harness state on the member's own message, not model output. It
@@ -26,6 +27,27 @@ type reactor interface {
 	React(ctx context.Context, emoji string) error
 }
 
+// onceReactor applies each emoji once for the turn it belongs to. A turn that
+// calls ten tools marks the message once. See sirens-echo#460.
+type onceReactor struct {
+	inner   reactor
+	mu      sync.Mutex
+	applied map[string]bool
+}
+
+// React drops a repeat before it reaches the transport, marking before the
+// attempt so a refused reaction is not retried. See docs/sirens-echo-reactions.md.
+func (o *onceReactor) React(ctx context.Context, emoji string) error {
+	o.mu.Lock()
+	repeat := o.applied[emoji]
+	o.applied[emoji] = true
+	o.mu.Unlock()
+	if repeat {
+		return nil
+	}
+	return o.inner.React(ctx, emoji)
+}
+
 // reactionKey carries the turn's reactor to layers that hold no reference to
 // the transport, the same route the progress line takes.
 type reactionKey struct{}
@@ -35,7 +57,19 @@ func WithReactor(ctx context.Context, target reactor) context.Context {
 	if target == nil {
 		return ctx
 	}
-	return context.WithValue(ctx, reactionKey{}, target)
+	return context.WithValue(ctx, reactionKey{}, &onceReactor{
+		inner:   target,
+		applied: make(map[string]bool, 2),
+	})
+}
+
+// turnReactor prefers the context's reactor, so every mark on a turn shares one
+// applied set rather than each call site keeping its own.
+func turnReactor(ctx context.Context, target reactor) reactor {
+	if carried, ok := ctx.Value(reactionKey{}).(reactor); ok {
+		return carried
+	}
+	return target
 }
 
 // react applies a reaction and swallows every failure. A reaction is a side
@@ -44,6 +78,7 @@ func (a *Agent) react(ctx context.Context, target reactor, emoji string) {
 	if target == nil {
 		return
 	}
+	target = turnReactor(ctx, target)
 	if err := target.React(ctx, emoji); err != nil {
 		// Most likely a missing ADD_REACTIONS permission, which is an operator
 		// question rather than a turn failure.

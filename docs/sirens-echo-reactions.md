@@ -32,6 +32,17 @@ was refused would be worse than having no reactions at all. The agent logs the
 failure once as `discord.reaction.failed` so the permission gap is visible
 without becoming an error.
 
+## Each mark is applied once
+
+A turn holds one applied set, so a repeat is dropped before it reaches the
+transport. The tool mark is what makes this matter: it is applied in the tool
+round, and a turn spending fourteen tool calls asked for the same hammer
+fourteen times. Discord dedupes the visible reaction, so the member never saw
+the difference and the service paid a request for each one.
+
+The set is marked before the attempt rather than after it, so a reaction the bot
+has no permission for is refused once instead of once per round.
+
 ## How the tool round reaches it
 
 The tool loop sits behind the completion boundary and takes no transport

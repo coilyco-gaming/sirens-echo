@@ -8,10 +8,14 @@ import (
 
 type recordingReactor struct {
 	applied []string
-	err     error
+	// attempts counts what reached the transport, including what failed, which
+	// is the cost the member never sees. See sirens-echo#460.
+	attempts int
+	err      error
 }
 
 func (r *recordingReactor) React(_ context.Context, emoji string) error {
+	r.attempts++
 	if r.err != nil {
 		return r.err
 	}
@@ -39,6 +43,65 @@ func TestReactFromContextMarksTheTurn(t *testing.T) {
 	reactFromContext(ctx, reactionTool)
 	if len(target.applied) != 1 || target.applied[0] != reactionTool {
 		t.Fatalf("applied = %v, want one tool reaction", target.applied)
+	}
+}
+
+// Discord dedupes the visible reaction, so a repeat costs a request for a mark
+// that is already there. A turn calling ten tools pays for one.
+func TestATurnMarksTheMessageOncePerReaction(t *testing.T) {
+	t.Parallel()
+	target := &recordingReactor{}
+	ctx := WithReactor(context.Background(), target)
+	for range 10 {
+		reactFromContext(ctx, reactionTool)
+	}
+	if target.attempts != 1 {
+		t.Errorf("reached the transport %d times, want 1", target.attempts)
+	}
+	if len(target.applied) != 1 {
+		t.Errorf("applied = %v, want one tool reaction", target.applied)
+	}
+}
+
+// A reaction the bot has no permission for fails every time it is tried, so
+// the repeat guard has to hold before the attempt rather than after it.
+func TestAFailingReactionIsAttemptedOnce(t *testing.T) {
+	t.Parallel()
+	target := &recordingReactor{err: errors.New("missing ADD_REACTIONS")}
+	ctx := WithReactor(context.Background(), target)
+	for range 10 {
+		reactFromContext(ctx, reactionTool)
+	}
+	if target.attempts != 1 {
+		t.Errorf("retried a failing reaction %d times, want 1", target.attempts)
+	}
+}
+
+// Once per reaction, not once per turn. A turn that calls a tool and then fails
+// still carries both marks.
+func TestADifferentReactionStillReachesTheMessage(t *testing.T) {
+	t.Parallel()
+	target := &recordingReactor{}
+	ctx := WithReactor(context.Background(), target)
+	reactFromContext(ctx, reactionTool)
+	reactFromContext(ctx, reactionFailed)
+	if len(target.applied) != 2 {
+		t.Errorf("applied = %v, want both marks", target.applied)
+	}
+}
+
+// The agent marks the turn directly and the tool loop marks it through the
+// context. One applied set covers both, or the guard only half holds.
+func TestTheAgentAndTheToolLoopShareOneAppliedSet(t *testing.T) {
+	t.Parallel()
+	agent := &Agent{telemetry: telemetryOrNoop(nil)}
+	target := &recordingReactor{}
+	ctx := WithReactor(context.Background(), target)
+	agent.react(ctx, target, reactionFailed)
+	reactFromContext(ctx, reactionFailed)
+	agent.react(ctx, target, reactionFailed)
+	if target.attempts != 1 {
+		t.Errorf("reached the transport %d times, want 1", target.attempts)
 	}
 }
 
