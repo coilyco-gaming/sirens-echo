@@ -56,7 +56,8 @@ in the doc, so it now matches against reflowed text.
 
 ## What is deliberately not here
 
-The SigNoz half of the original request. Deep's roster grants forgejo, steam,
-and demo-discord, so there is no telemetry surface to answer from. Encouraging
-the model toward a tool it is not offered is the over-claiming defect this file
-exists to prevent, so the doctrine states the absence instead.
+The SigNoz half of the original request. No telemetry surface is granted, so
+there is nothing to answer from. Encouraging the model toward a tool it is not
+offered is the over-claiming defect this file exists to prevent, so the
+doctrine states the absence instead. The grant is tracked as issue 278, and
+naming the rest of the roster here would age with the deployment that owns it.
