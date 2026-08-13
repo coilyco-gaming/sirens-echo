@@ -62,6 +62,9 @@ var caseLanguageScope = map[string]languageScope{
 	// agent/rate-echo.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
+	// A tracker URL is a value. The prose form reads the English word issue,
+	// so a translated invention escapes that half.
+	"issue-reference-has-a-receipt": scopePartial,
 	// The word cap counts words in any language. The category vocabulary the
 	// leak pattern forbids is English, so a translated leak goes unreported.
 	"sensitive-block-minor-suspected": scopePartial,
