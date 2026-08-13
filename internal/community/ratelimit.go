@@ -147,7 +147,7 @@ func (l *rateLimiter) Admit(request admissionRequest) admissionDecision {
 	if request.ContextKey != "" {
 		candidates = append(candidates, candidate{"context:" + request.ContextKey, perContext, admissionContext})
 	}
-	candidates = append(candidates, candidate{"global", l.policy.Global, admissionGlobal})
+	candidates = append(candidates, candidate{globalBucketKey, l.policy.Global, admissionGlobal})
 
 	charge := make([]*bucket, 0, len(candidates))
 	for _, current := range candidates {
@@ -223,21 +223,49 @@ func (l *rateLimiter) denyLocked(
 	return decision
 }
 
-// bucketFor returns one key's refilled bucket, evicting the oldest key at
-// capacity. The caller must hold l.mu.
+// globalBucketKey is one fixed key rather than a member of the rotating
+// population the capacity bound exists to contain, so it never ages out.
+const globalBucketKey = "global"
+
+// track moves a key to the most-recently-used end, which is what makes the
+// bound an LRU rather than a queue.
+func (l *rateLimiter) track(key string) {
+	if key == globalBucketKey {
+		return
+	}
+	for index, existing := range l.order {
+		if existing == key {
+			l.order = append(l.order[:index], l.order[index+1:]...)
+			break
+		}
+	}
+	l.order = append(l.order, key)
+}
+
+// evictOldest drops the least recently used key. The global bucket is never
+// tracked, so it cannot be chosen.
+func (l *rateLimiter) evictOldest() {
+	for len(l.order) > l.capacity {
+		oldest := l.order[0]
+		l.order = l.order[1:]
+		delete(l.buckets, oldest)
+	}
+}
+
+// bucketFor returns one key's refilled bucket, evicting the least recently
+// used key at capacity. The caller must hold l.mu.
 func (l *rateLimiter) bucketFor(key string, limit RateLimit, now time.Time) *bucket {
 	state, exists := l.buckets[key]
 	if !exists {
 		state = &bucket{tokens: float64(limit.Burst), lastRefill: now}
 		l.buckets[key] = state
-		l.order = append(l.order, key)
-		if len(l.order) > l.capacity {
-			oldest := l.order[0]
-			l.order = l.order[1:]
-			delete(l.buckets, oldest)
-		}
+		l.track(key)
+		l.evictOldest()
 		return state
 	}
+	// Recency, not insertion. An evicted bucket returns at full burst, so the
+	// busiest key must not age out. See docs/sirens-echo-admission.md.
+	l.track(key)
 	if limit.enabled() && now.After(state.lastRefill) {
 		refilled := now.Sub(state.lastRefill).Seconds() / limit.Every.Seconds()
 		state.tokens += refilled

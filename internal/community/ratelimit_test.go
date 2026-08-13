@@ -1,6 +1,7 @@
 package community
 
 import (
+	"fmt"
 	"testing"
 	"time"
 )
@@ -207,5 +208,72 @@ func TestQueueShedCarriesRetryAfter(t *testing.T) {
 	}
 	if shed.RetryAfter > time.Second {
 		t.Fatalf("Retry-After = %v, over the one second shed window", shed.RetryAfter)
+	}
+}
+
+// The reported bypass. A caller-asserted header can mint unlimited user keys,
+// and insertion-order eviction dropped the busiest, earliest bucket of all.
+func TestRotatingKeysCannotResetTheGlobalBudget(t *testing.T) {
+	t.Parallel()
+	limiter := newRateLimiter(RateLimitPolicy{
+		PerUser: RateLimit{Burst: 100, Every: time.Hour},
+		Global:  RateLimit{Burst: 2, Every: time.Hour},
+	}, 4)
+
+	accepted := 0
+	for attempt := 0; attempt < 40; attempt++ {
+		decision := limiter.Admit(admissionRequest{
+			UserKey:    fmt.Sprintf("http:rotating-%d", attempt),
+			ContextKey: transportHTTP,
+		})
+		if decision.Outcome == admissionAccepted {
+			accepted++
+		}
+	}
+	if accepted > 2 {
+		t.Fatalf("%d admissions against a global burst of 2; the global bucket was reset", accepted)
+	}
+}
+
+// The capacity bound still holds, so key churn cannot grow the table.
+func TestKeyChurnStaysBounded(t *testing.T) {
+	t.Parallel()
+	limiter := newRateLimiter(RateLimitPolicy{
+		PerUser: RateLimit{Burst: 100, Every: time.Hour},
+		Global:  RateLimit{Burst: 1000, Every: time.Hour},
+	}, 4)
+	for attempt := 0; attempt < 40; attempt++ {
+		limiter.Admit(admissionRequest{UserKey: fmt.Sprintf("u%d", attempt), ContextKey: "c"})
+	}
+	// The global and context buckets sit outside or inside the bound; what must
+	// not happen is unbounded growth.
+	if len(limiter.buckets) > limiter.capacity+2 {
+		t.Fatalf("bucket table grew to %d against a capacity of %d", len(limiter.buckets), limiter.capacity)
+	}
+}
+
+// Eviction is by recency, so a bucket in active use survives churn around it.
+func TestAnActiveBucketSurvivesChurn(t *testing.T) {
+	t.Parallel()
+	limiter := newRateLimiter(RateLimitPolicy{
+		PerUser: RateLimit{Burst: 2, Every: time.Hour},
+		Global:  RateLimit{Burst: 1000, Every: time.Hour},
+	}, 4)
+
+	steady := admissionRequest{UserKey: "http:steady", ContextKey: transportHTTP}
+	if got := limiter.Admit(steady).Outcome; got != admissionAccepted {
+		t.Fatalf("first steady admission = %v", got)
+	}
+	// Churn past the capacity while the steady key keeps being used.
+	for attempt := 0; attempt < 20; attempt++ {
+		limiter.Admit(admissionRequest{
+			UserKey:    fmt.Sprintf("http:churn-%d", attempt),
+			ContextKey: transportHTTP,
+		})
+		limiter.Admit(steady)
+	}
+	// Its burst of 2 is long spent, so a surviving bucket denies.
+	if got := limiter.Admit(steady).Outcome; got == admissionAccepted {
+		t.Fatal("the steady bucket was evicted and came back at full burst")
 	}
 }
