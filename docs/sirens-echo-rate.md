@@ -57,11 +57,20 @@ be able to fire on a correct reply, and its target set must be closed.
 
 ## Cost
 
-One attempt is one completion plus up to six tool rounds. The tracked pack is
-30 attempts. That is affordable on demand and is the reason this is an invoked
-verb rather than a CI step.
+One attempt is one completion plus up to six tool rounds. Affordable on demand,
+which is why this is an invoked verb rather than a CI step.
 
 ## What it cannot measure
+
+**Whether a tool told the truth.** Checks score the reply, and
+`ValidateGrounding` scores it against the tools that ran. Nothing scores a tool
+result against the world, so a tool returning zero for a valid question yields
+a faithful, grounded, confidently false answer that every instrument here
+passes. Observed: an item filter matching an internal key rather than the name
+a member types reported zero offers for a market holding 913 of them.
+
+A fixture cannot close it. A fixture declares its own result, so it tests how
+the model handles a payload, never whether the payload was right.
 
 A behavior with no deterministic check. Paraphrase disclosure is the standing
 example: the reply discloses while quoting nothing, so no expression separates
