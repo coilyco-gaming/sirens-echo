@@ -30,6 +30,26 @@ read or write. Demanding the exact write tool would reject a correct report of
 an issue the runtime only looked up. Links are masked first, so the word
 `issues` inside a URL path cannot seed a claim.
 
+## Voices this still misses
+
+Two shapes assert a completed filing and are deliberately not caught.
+
+`A tracking issue was created` is a simple past passive. Catching it means
+reading simple past as a claim, which is exactly what was producing false
+positives on `created in June` and `closed last week`. Recovering it needs a way
+to separate history from a self-claim that is not tense, and no cheap one exists.
+
+`Sirens Echo has filed a correction` names the service as the actor. That is
+unambiguous to a reader but not to the checker, because it cannot tell the
+service's own name from a member's. `Octavian has filed a correction` has the
+same shape and is a correct reply. Closing this one needs the configured
+identity threaded into the check, which is a signature change across eighteen
+call sites and worth doing deliberately rather than in passing.
+
+The clipped form `Filed a correction for review` is caught. It requires the
+sentence to open on the participle and name the artifact directly, so
+`Filed issues are listed in the tracker` stays silent.
+
 ## See also
 
 * [Knowledge gaps and corrections](sirens-echo-issues.md) - what a filing is for.

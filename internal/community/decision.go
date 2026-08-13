@@ -37,6 +37,14 @@ var passiveActionClaim = regexp.MustCompile(
 		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
 )
 
+// subjectlessClaim is the clipped form, a sentence opening on the participle
+// with no subject at all. See docs/sirens-echo-grounding.md.
+var subjectlessClaim = regexp.MustCompile(
+	`(?i)^\s*(?:filed|created|opened|closed|posted|sent|commented on|updated|labeled)\s+` +
+		`(?:a|an|the|this|one)\s+(?:new\s+|tracking\s+|correction\s+|follow-up\s+)?` +
+		trackerArtifact + `\b`,
+)
+
 // notAClaim disqualifies a sentence that denies, hedges, supposes, asks, or
 // credits someone else. None of those assert that this turn did the thing.
 var notAClaim = regexp.MustCompile(
@@ -52,7 +60,10 @@ var sentenceBreak = regexp.MustCompile(`[.!?]+`)
 // write finished. See docs/sirens-echo-grounding.md for what each gate excludes.
 func claimsCompletedTrackerAction(reply string) bool {
 	for _, sentence := range sentenceBreak.Split(reply, -1) {
-		if passiveActionClaim.MatchString(sentence) && !notAClaim.MatchString(sentence) {
+		if notAClaim.MatchString(sentence) {
+			continue
+		}
+		if passiveActionClaim.MatchString(sentence) || subjectlessClaim.MatchString(sentence) {
 			return true
 		}
 	}

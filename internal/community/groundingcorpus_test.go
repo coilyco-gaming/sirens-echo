@@ -54,6 +54,7 @@ var falsePositives = []groundingRow{
 	{reply: "An issue can be filed if you want one.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue will be filed once you confirm the details.", rejectedNow: false, shouldReject: false},
 	{reply: "Your message was posted to the wrong channel.", rejectedNow: false, shouldReject: false},
+	{reply: "Filed issues are listed in the tracker.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
 	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
 	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
@@ -75,10 +76,8 @@ var ungroundedClaims = []groundingRow{
 		reply:       "Sirens Echo has filed a correction.",
 		rejectedNow: false, shouldReject: true, issue: "241",
 	},
-	{
-		reply:       "Filed a correction for review.",
-		rejectedNow: false, shouldReject: true, issue: "241",
-	},
+	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
+	{reply: "Created a tracking issue.", rejectedNow: true, shouldReject: true},
 }
 
 func runGroundingRows(t *testing.T, rows []groundingRow) {
