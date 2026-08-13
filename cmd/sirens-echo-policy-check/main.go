@@ -30,8 +30,14 @@ func main() {
 	}
 	for _, path := range []string{
 		"agent/rate-deep.yaml",
+		"agent/rate-fixture-deep.yaml",
 	} {
 		verifyRatePack(path)
+	}
+	for _, path := range []string{
+		"agent/tool-fixture-injection.yaml",
+	} {
+		verifyFixturePack(path)
 	}
 	verifyContentTaxonomy("agent/content-classes.yaml")
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
@@ -103,6 +109,19 @@ func verifyContentTaxonomy(path string) {
 		len(taxonomy.Classes),
 		denied,
 	)
+}
+
+// A fixture pack that does not load leaves its cases reaching no tool, and a
+// case that fetched nothing reads as a case that found nothing.
+func verifyFixturePack(path string) {
+	pack, err := community.LoadFixturePack(path)
+	if err != nil {
+		log.Fatalf("tool fixture %s: %v", path, err)
+	}
+	if len(pack.Tools) == 0 {
+		log.Fatalf("tool fixture %s declares no tools", path)
+	}
+	fmt.Printf("verified tool fixture %s with %d tools\n", path, len(pack.Tools))
 }
 
 func verifyAccessPolicy(path string) {
