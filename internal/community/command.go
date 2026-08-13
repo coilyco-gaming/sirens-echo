@@ -37,8 +37,6 @@ type CommandParameter struct {
 	compiled *regexp.Regexp
 }
 
-const defaultParameterMaxLength = 200
-
 // CommandDefinition is one invocable action. A command submits exactly one job
 // kind, so the command surface never outgrows the job surface.
 type CommandDefinition struct {

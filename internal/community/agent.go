@@ -1206,10 +1206,6 @@ func (a *Agent) failTurn(
 	return failure
 }
 
-// failureNoticeTimeout bounds the notice's own send. It is short because the
-// member has already waited out whatever failed.
-const failureNoticeTimeout = 10 * time.Second
-
 // notifyFailure sends a notice on a context detached from the turn deadline. A
 // turn that failed by expiring has no budget left to say so otherwise.
 func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) error {
@@ -1546,10 +1542,6 @@ func displayName(message *discordgo.Message) string {
 	}
 	return "member"
 }
-
-// discordReplyLimit is the send budget for one message. It sits under
-// Discord's own 2000 so a reply the harness extended still arrives whole.
-const discordReplyLimit = 1990
 
 func truncateRunes(value string, limit int) string {
 	runes := []rune(value)

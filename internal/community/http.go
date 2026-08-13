@@ -20,7 +20,6 @@ import (
 const (
 	httpTurnPath = "/v1/turn"
 	healthzPath  = "/healthz"
-	maxHTTPBody  = 64 << 10
 )
 
 // Shared so both write endpoints refuse in the same words, and derived from the

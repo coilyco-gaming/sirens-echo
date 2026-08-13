@@ -17,10 +17,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	maxAgentProxyResponseBytes = 2 * 1024 * 1024
-)
-
 // finishReasonLength is the upstream signal that the completion was truncated
 // rather than finished.
 const finishReasonLength = "length"

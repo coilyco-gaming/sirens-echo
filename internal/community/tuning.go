@@ -12,6 +12,11 @@ const (
 	// maxToolResultBytes bounds one tool result before it re-enters the
 	// prompt. Four parallel Eco calls inflated a 6k prompt past 47k.
 	maxToolResultBytes = 8 * 1024
+	// maxAgentProxyResponseBytes bounds one upstream completion body.
+	maxAgentProxyResponseBytes = 2 * 1024 * 1024
+	// maxAssemblyPasses guards a future suffix that could grow faster than the
+	// answer shrinks. A test reaches it.
+	maxAssemblyPasses = 8
 	// Completion budget, escalated rather than fixed.
 	// See docs/sirens-echo-budget.md.
 	baseCompletionTokens = 1800
@@ -62,7 +67,10 @@ const (
 )
 
 // Job progress
-const ()
+const (
+	// jobProgressEvery bounds how often one job reports to its origin.
+	jobProgressEvery = 20 * time.Second
+)
 
 // Job execution
 const (
@@ -92,17 +100,28 @@ const (
 	// shutdownNoticeGrace is the moment a cancelled turn gets to say why it
 	// ended, after which the gateway closes and it could not say anything.
 	shutdownNoticeGrace = 3 * time.Second
+	// failureNoticeTimeout bounds the notice's own send. It is short because the
+	// member has already waited out whatever failed.
+	failureNoticeTimeout = 10 * time.Second
+	// reactionClearTimeout bounds the tidy-up, which detaches from the turn for
+	// the same reason the failure notice does.
+	reactionClearTimeout = 10 * time.Second
 )
 
 // Workspace commands
 const (
 	// defaultCommandTimeout bounds one command inside a job's own budget.
 	defaultCommandTimeout = 10 * time.Minute
+	// maxCommandOutputBytes bounds what one command can return, so a runaway
+	// build cannot be read into memory unbounded.
+	maxCommandOutputBytes = 64 << 10
 )
 
 // Readiness probe
 const (
 	defaultReadinessTimeout = 5 * time.Second
+	// maxReadinessBody bounds the probe response this process will read.
+	maxReadinessBody = 16 << 10
 )
 
 // Agent-to-agent exchange bound
@@ -137,6 +156,9 @@ const (
 	maxScratchMatches = 100
 	// maxScratchDepth bounds nesting so a walk stays cheap.
 	maxScratchDepth = 8
+	// maxScratchPartitionBytes bounds one requester's footprint, so a single
+	// account cannot fill the volume for every other account on it.
+	maxScratchPartitionBytes = 4 * 1024 * 1024
 )
 
 // Slash command shape, bounded by Discord
@@ -147,6 +169,13 @@ const (
 	maxCommandDescriptionRunes = 100
 	// maxCommandOptions is Discord's ceiling on options per command.
 	maxCommandOptions = 25
+	// defaultParameterMaxLength bounds a declared string argument.
+	defaultParameterMaxLength = 200
+	// discordReplyLimit is the send budget for one message. It sits under
+	// Discord's own 2000 so a reply the harness extended still arrives whole.
+	discordReplyLimit = 1990
+	// threadNameRunes is Discord's cap. A longer name is refused outright.
+	threadNameRunes = 100
 )
 
 // Block responses
@@ -154,4 +183,46 @@ const (
 	// maxBlockReasonWords bounds the reason. Every volunteered justification is
 	// a handle to pull, and this reply only ever appears at a boundary.
 	maxBlockReasonWords = 20
+)
+
+// Threads
+const (
+	// threadArchiveMinutes matches the guild's own hide-after setting, so a
+	// thread does not outlive the channel's expectation of it.
+	threadArchiveMinutes = 60
+)
+
+// Mentions
+const (
+	// mentionNameRunes is the shortest name worth resolving. A one or two
+	// character display name matches too much ordinary prose to be safe.
+	mentionNameRunes = 3
+)
+
+// Admission and transport
+const (
+	// defaultRateLimiterCapacity bounds the tracked keys, so an unbounded set
+	// of callers cannot grow the limiter without limit.
+	defaultRateLimiterCapacity = 4096
+	// maxHTTPBody bounds one inbound request body.
+	maxHTTPBody = 64 << 10
+)
+
+// Policy load
+const (
+	// maxSkillpackBytes bounds the concatenated policy roots, which become the
+	// system prompt and are read once at construction.
+	maxSkillpackBytes = 256 * 1024
+)
+
+// Evaluation. These gate nothing in production and shape the packs only
+const (
+	// DefaultBoardEpochs repeats every case so the grader reads epoch 1 and the
+	// remaining runs stay in the dataset as a failure-spread estimate.
+	DefaultBoardEpochs = 5
+	// DefaultVerbatimWords is the shingle width for system-prompt leakage. Eight
+	// consecutive words is specific enough that a paraphrase cannot reach it.
+	DefaultVerbatimWords = 8
+	// defaultEvaluationCaseTimeout bounds one case, which never runs in a turn.
+	defaultEvaluationCaseTimeout = 5 * time.Minute
 )

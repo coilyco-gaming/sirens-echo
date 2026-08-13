@@ -4,7 +4,6 @@ import (
 	"context"
 	"log/slog"
 	"sync"
-	"time"
 )
 
 // A reaction is harness state on the member's own message, not model output. It
@@ -127,10 +126,6 @@ func reactFromContext(ctx context.Context, emoji string) {
 	// failure is already reported wherever the agent applies one.
 	_ = target.React(ctx, emoji)
 }
-
-// reactionClearTimeout bounds the tidy-up. A turn that failed by expiring has
-// no budget left, which is why the clear detaches like the failure notice.
-const reactionClearTimeout = 10 * time.Second
 
 // clearTurnMarks removes the marks that described work in flight, leaving any
 // mark that describes the outcome. See docs/sirens-echo-reactions.md.

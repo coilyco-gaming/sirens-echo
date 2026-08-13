@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-const maxSkillpackBytes = 256 * 1024
-
 // skillEntrypoints are the body filenames a policy root may use. Ordinary
 // skills ship SKILL.md and agent-compose composed sources ship COMPOSED.md.
 var skillEntrypoints = []string{"SKILL.md", "COMPOSED.md"}

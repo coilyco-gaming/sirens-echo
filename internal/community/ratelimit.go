@@ -71,8 +71,6 @@ type rateLimiter struct {
 	now      func() time.Time
 }
 
-const defaultRateLimiterCapacity = 4096
-
 func newRateLimiter(policy RateLimitPolicy, capacity int) *rateLimiter {
 	if capacity <= 0 {
 		capacity = defaultRateLimiterCapacity

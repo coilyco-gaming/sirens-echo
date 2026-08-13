@@ -19,9 +19,6 @@ import (
 // job Workspace in workspace.go. See docs/sirens-echo-scratchpad.md.
 
 const (
-	// maxScratchPartitionBytes bounds one requester's footprint, so a single
-	// account cannot fill the volume for every other account on it.
-	maxScratchPartitionBytes = 4 * 1024 * 1024
 	// scratchPermissions keep a partition readable only by this process, and
 	// deny the execute bit that text-only is enforced by rather than described.
 	scratchPermissions     = 0o700
