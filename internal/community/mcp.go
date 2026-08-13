@@ -161,12 +161,15 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		sandbox:     p.Sandbox,
 	}
 	now := time.Now()
-	listed := 0
+	reached, listed := 0, 0
 	for _, entry := range p.entries {
 		// A server that cannot answer contributes no tools and the turn goes on
 		// with the rest. One transient outage must not cost every turn.
-		reached, err := p.readyLocked(ctx, entry, now)
-		if reached {
+		touched, discovered, err := p.readyLocked(ctx, entry, now)
+		if touched {
+			reached++
+		}
+		if discovered {
 			listed++
 		}
 		if err != nil {
@@ -183,8 +186,10 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 	// Stated rather than inferred from the span's duration. See
 	// docs/sirens-echo-tool-discovery-telemetry.md.
 	trace.SpanFromContext(ctx).SetAttributes(
+		attribute.Int("mcp.tools.configured", len(p.entries)),
+		attribute.Int("mcp.tools.reached", reached),
 		attribute.Int("mcp.tools.listed", listed),
-		attribute.Bool("mcp.tools.cached", listed == 0),
+		attribute.Bool("mcp.tools.cached", len(p.entries) > 0 && reached == 0),
 	)
 	if len(p.entries) > 0 && len(opened.unavailable) == len(p.entries) {
 		return nil, fmt.Errorf("no configured MCP server is reachable")
@@ -256,51 +261,53 @@ func (p *MCPProvider) startLocked() {
 	}
 }
 
-// readyLocked connects and lists only what this turn actually needs, and
-// reports whether it listed. See docs/sirens-echo-mcp-roster.md.
+// readyLocked connects and lists only what this turn needs. Reaching the
+// network and completing a listing are different: a failed connect is neither.
 func (p *MCPProvider) readyLocked(
 	turnCtx context.Context,
 	entry *supervisedServer,
 	now time.Time,
-) (bool, error) {
+) (reached, listed bool, err error) {
 	base := p.turnTraced(turnCtx)
 	if entry.session == nil {
 		if now.Before(entry.retryAfter) {
-			return false, fmt.Errorf("MCP server %s is backing off", entry.definition.Name)
+			// Backing off spends no round trip, so it is neither.
+			return false, false, fmt.Errorf(
+				"MCP server %s is backing off", entry.definition.Name)
 		}
 		if err := p.connectLocked(base, entry); err != nil {
 			entry.penalise(now)
-			return false, err
+			return true, false, err
 		}
 		entry.backoff = 0
 	}
 	if !entry.needsTools(p.refreshInterval(), now) {
-		return false, nil
+		return false, false, nil
 	}
 	listCtx, cancel := context.WithTimeout(base, mcpListTimeout)
 	defer cancel()
 	discovered, err := discoverTools(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
-		return true, err
+		return true, false, err
 	}
 	// A server may publish tools without resources, so an unsupported listing
 	// is an empty one rather than a failure.
 	resources, err := discoverResources(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
-		return true, err
+		return true, false, err
 	}
 	prompts, err := discoverPrompts(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
-		return true, err
+		return true, false, err
 	}
 	entry.tools = discovered
 	entry.resources = resources
 	entry.prompts = prompts
 	entry.refreshed = now
-	return true, nil
+	return true, true, nil
 }
 
 func (s *supervisedServer) dropSession(now time.Time) {
@@ -782,7 +789,7 @@ func (p *MCPProvider) Prompt(
 	if entry == nil {
 		return nil, PromptRequestError{fmt.Sprintf("MCP server %q is not in the roster", server)}
 	}
-	if _, err := p.readyLocked(ctx, entry, time.Now()); err != nil {
+	if _, _, err := p.readyLocked(ctx, entry, time.Now()); err != nil {
 		return nil, fmt.Errorf("MCP server %s is unavailable: %w", server, err)
 	}
 	declared := findPrompt(entry.prompts, name)
