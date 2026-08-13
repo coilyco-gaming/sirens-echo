@@ -20,8 +20,11 @@ const (
 	// The fallback is a live service, so it is only safe for the definition that
 	// service actually runs. See resolveInstanceName and sirens-echo#542.
 	defaultInstanceName = "sirens-echo"
-	defaultBundleDir    = "/app/agent/bundles"
-	defaultComposedRole = "creator"
+	// The identity that fallback belongs to, so the guard compares the thing
+	// itself rather than a filename that can be spelled anything. See #706.
+	defaultInstanceIdentity = "Sirens Echo"
+	defaultBundleDir        = "/app/agent/bundles"
+	defaultComposedRole     = "creator"
 
 	ResponseStyleNeutral = "neutral"
 	ResponseStyleSocial  = "social"
@@ -276,17 +279,17 @@ type Config struct {
 
 // resolveInstanceName refuses to hand a non-Echo definition Echo's service name.
 // Defaulting there merges another profile's spans into Echo's. See #542.
-func resolveInstanceName(definitionPath, configured string) (string, error) {
+func resolveInstanceName(identity, configured string) (string, error) {
 	if name := strings.TrimSpace(configured); name != "" {
 		return name, nil
 	}
-	// The file, not the path to it. Deploy names it absolutely and the tests
-	// relatively, and both are the same definition.
-	if filepath.Base(definitionPath) != filepath.Base(defaultDefinitionPath) {
+	// The definition's own identity, never its path or filename: both are
+	// spellings a foreign definition can also be given. See #706.
+	if identity != defaultInstanceIdentity {
 		return "", fmt.Errorf(
-			"SIRENS_ECHO_INSTANCE is required when SIRENS_ECHO_DEFINITION is %q: "+
-				"defaulting to %q would report this profile as Echo",
-			definitionPath, defaultInstanceName,
+			"SIRENS_ECHO_INSTANCE is required when the definition is %q rather "+
+				"than %q: defaulting to %q would report this profile as Echo",
+			identity, defaultInstanceIdentity, defaultInstanceName,
 		)
 	}
 	return defaultInstanceName, nil
@@ -303,7 +306,7 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	instanceName, err := resolveInstanceName(definitionPath, os.Getenv("SIRENS_ECHO_INSTANCE"))
+	instanceName, err := resolveInstanceName(definition.Identity, os.Getenv("SIRENS_ECHO_INSTANCE"))
 	if err != nil {
 		return Config{}, err
 	}
