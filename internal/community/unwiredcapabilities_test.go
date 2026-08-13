@@ -24,8 +24,8 @@ var unwiredCapabilities = []unwiredCapability{
 // RecordEffect and EffectApplied left this table when the job content path
 // wired them. See sirens-echo#621 and docs/sirens-echo-jobs-store.md.
 
-// declared reports whether the function still exists. All four have unit
-// tests, so this only fires on a deletion that took those tests with it.
+// declared reports whether the function still exists. Both have unit tests,
+// so this only fires on a deletion that took those tests with it.
 func declared(t *testing.T, name string) bool {
 	t.Helper()
 	declaration := regexp.MustCompile(`^func (?:\([^)]*\) )?` + name + `\(`)
