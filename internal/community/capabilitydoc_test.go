@@ -200,6 +200,65 @@ func agentReachesCapabilityDoc(t *testing.T, body string) bool {
 	return false
 }
 
+// The doc hands members a source link, so the address has to be the repository
+// this module actually is. A move breaks the module path and this with it.
+func TestCapabilityDocLinksThisRepository(t *testing.T) {
+	t.Parallel()
+	raw, err := os.ReadFile(filepath.Join("..", "..", "go.mod"))
+	if err != nil {
+		t.Fatalf("read go.mod: %v", err)
+	}
+	module := ""
+	for _, line := range strings.Split(string(raw), "\n") {
+		if after, found := strings.CutPrefix(line, "module "); found {
+			module = strings.TrimSpace(after)
+			break
+		}
+	}
+	if module == "" {
+		t.Fatal("go.mod declares no module path")
+	}
+	link := "https://" + module + "/src/branch/main/"
+	for name, doc := range capabilityDocs(t) {
+		if !strings.Contains(doc, link) {
+			t.Errorf("%s does not give the link form %q; the module is %s",
+				name, link, module)
+		}
+	}
+}
+
+// The doc tells the model it cannot know which revision produced a reply. That
+// is only true while the build stamps nothing, so the build is the assertion.
+func TestCapabilityDocIsRightThatTheBuildCarriesNoRevision(t *testing.T) {
+	t.Parallel()
+	claim := "built without its commit"
+	claiming := make([]string, 0, 2)
+	// Matched against reflowed text, because the claim wraps across lines in the
+	// doc and a raw Contains would skip this whole test without saying so.
+	for name, doc := range capabilityDocs(t) {
+		if strings.Contains(strings.Join(strings.Fields(doc), " "), claim) {
+			claiming = append(claiming, name)
+		}
+	}
+	if len(claiming) == 0 {
+		t.Skip("no capability.md claims the build carries no revision")
+	}
+
+	raw, err := os.ReadFile(filepath.Join("..", "..", "Dockerfile"))
+	if err != nil {
+		t.Fatalf("read Dockerfile: %v", err)
+	}
+	body := string(raw)
+	// A .git directory lets the toolchain stamp vcs.revision on its own, and an
+	// -X assignment sets a variable outright. Either one makes the claim false.
+	for _, stamp := range []string{"COPY .git", "-ldflags", "-X "} {
+		if strings.Contains(body, stamp) {
+			t.Errorf("the build stage carries %q, so the revision is knowable; %v "+
+				"still tell the model the build carries no commit", stamp, claiming)
+		}
+	}
+}
+
 // yamlScalar reads one top-level scalar without a YAML dependency, which the
 // test does not otherwise need.
 func yamlScalar(body, key string) string {

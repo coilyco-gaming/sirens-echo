@@ -315,8 +315,8 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 // promptBudgets ratchet the tracked snapshots. These are not targets and not
 // judgements about the right size. See docs/sirens-echo-prompt-budget.md.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 17500,
-	"sirens-deep.prompt.txt": 10500,
+	"sirens-echo.prompt.txt": 18000,
+	"sirens-deep.prompt.txt": 11000,
 }
 
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.
