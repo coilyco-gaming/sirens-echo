@@ -71,6 +71,30 @@ func TestValidateGroundingAllowsRefusalsAndOrdinaryReplies(t *testing.T) {
 	}
 }
 
+// The false positives that produced the pattern's current shape, from the
+// corpus on issue 211. They cost a build there and cost a member an answer here.
+func TestContinuingWorkClaimKeepsTheDenialsThatShapedIt(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		// The one that matters. Neutral style bans first person, so this is the
+		// construction the rest of the policy pushes a correct denial into.
+		"Sirens Echo is checking nothing right now, because nothing runs between requests.",
+		"The service status is online.",
+		"A watcher in the Eco application will monitor prices, not this service.",
+		"The service will continue to exist.",
+		"The system is available.",
+		"Sirens Echo will answer when you ask again.",
+		"This service will not process anything after this reply.",
+		// Accepted miss, recorded so widening the pattern to catch it has to
+		// argue against the denial above rather than arrive by accident.
+		"The service is watching the channel.",
+	} {
+		if err := ValidateGrounding(reply, ""); err != nil {
+			t.Errorf("blocked a reply that must ship: %q (%v)", reply, err)
+		}
+	}
+}
+
 // The runtime pattern is English-only by inheritance, and that is deliberate.
 // Recorded so widening it surfaces here rather than as a surprise.
 func TestContinuingWorkClaimIsEnglishOnly(t *testing.T) {
