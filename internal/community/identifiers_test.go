@@ -20,9 +20,9 @@ func guardFixture(t *testing.T) *IdentifierGuard {
 	}
 	return NewIdentifierGuard(
 		Config{
-			Principal:      Principal{Handle: "coilysiren", UserID: testPrincipalID},
-			AgentProxyURL:  "http://proxy-host:8080",
-			DiscordToken:   "a-discord-bot-token-long-enough-to-guard",
+			Principal:     Principal{Handle: "coilysiren", UserID: testPrincipalID},
+			AgentProxyURL: "http://proxy-host:8080",
+			DiscordToken:  "a-discord-bot-token-long-enough-to-guard",
 		},
 		policy,
 		[]MCPServerDefinition{{Name: "forgejo", URL: "http://sirens-deep-forgejo-mcp:8080/mcp"}},
