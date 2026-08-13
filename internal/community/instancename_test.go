@@ -1,6 +1,8 @@
 package community
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -12,7 +14,7 @@ import (
 // SIRENS_ECHO_DEFINITION nor SIRENS_ECHO_INSTANCE. Breaking it renames Echo.
 func TestEchoStillGetsItsNameFromNeitherVariable(t *testing.T) {
 	t.Parallel()
-	name, err := resolveInstanceName(defaultDefinitionPath, "")
+	name, err := resolveInstanceName(defaultInstanceIdentity, "")
 	if err != nil {
 		t.Fatalf("Echo's own shipped configuration was rejected: %v", err)
 	}
@@ -21,23 +23,19 @@ func TestEchoStillGetsItsNameFromNeitherVariable(t *testing.T) {
 	}
 }
 
-// Echo's definition reached by another path is still Echo's definition. A path
-// comparison called the repo's own tests a foreign profile.
+// Echo's definition by another path is still Echo's. Keying on identity makes
+// that structural, so it is asserted where paths enter: LoadConfig.
 func TestEchosDefinitionIsRecognisedByAnyPath(t *testing.T) {
-	t.Parallel()
-	for _, path := range []string{
-		"../../agent/sirens-echo.yaml",
-		"/app/agent/sirens-echo.yaml",
-		"sirens-echo.yaml",
-	} {
-		name, err := resolveInstanceName(path, "")
-		if err != nil {
-			t.Errorf("%s was refused: %v", path, err)
-			continue
-		}
-		if name != defaultInstanceName {
-			t.Errorf("%s resolved to %q, want %q", path, name, defaultInstanceName)
-		}
+	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+	cfg, err := LoadConfig()
+	if err != nil {
+		t.Fatalf("Echo's definition by a relative path was refused: %v", err)
+	}
+	if cfg.InstanceName != defaultInstanceName {
+		t.Errorf("InstanceName = %q, want %q", cfg.InstanceName, defaultInstanceName)
 	}
 }
 
@@ -46,8 +44,8 @@ func TestEchosDefinitionIsRecognisedByAnyPath(t *testing.T) {
 func TestANonEchoDefinitionCannotDefaultToEchosName(t *testing.T) {
 	t.Parallel()
 	for _, path := range []string{
-		"/app/agent/sirens-deep.yaml",
-		"agent/coilyco-general.yaml",
+		"Sirens Deep of Coilyco",
+		"Coilyco General",
 	} {
 		name, err := resolveInstanceName(path, "")
 		if err == nil {
@@ -69,8 +67,8 @@ func TestANonEchoDefinitionCannotDefaultToEchosName(t *testing.T) {
 func TestAConfiguredNameIsUsedForAnyDefinition(t *testing.T) {
 	t.Parallel()
 	for definition, configured := range map[string]string{
-		"/app/agent/sirens-deep.yaml": "sirens-deep",
-		defaultDefinitionPath:         "sirens-echo-canary",
+		"Sirens Deep of Coilyco": "sirens-deep",
+		defaultInstanceIdentity:  "sirens-echo-canary",
 	} {
 		name, err := resolveInstanceName(definition, configured)
 		if err != nil {
@@ -87,14 +85,14 @@ func TestAConfiguredNameIsUsedForAnyDefinition(t *testing.T) {
 // called "   " rather than fail, which is the same class of silence.
 func TestAWhitespaceNameIsNotAName(t *testing.T) {
 	t.Parallel()
-	name, err := resolveInstanceName(defaultDefinitionPath, "   ")
+	name, err := resolveInstanceName(defaultInstanceIdentity, "   ")
 	if err != nil {
 		t.Fatalf("Echo with a blank override was rejected: %v", err)
 	}
 	if name != defaultInstanceName {
 		t.Errorf("a blank override produced %q", name)
 	}
-	if _, err := resolveInstanceName("agent/sirens-deep.yaml", "  \t "); err == nil {
+	if _, err := resolveInstanceName("Sirens Deep of Coilyco", "  \t "); err == nil {
 		t.Error("a blank override satisfied the requirement for a non-Echo definition")
 	}
 }
@@ -103,11 +101,33 @@ func TestAWhitespaceNameIsNotAName(t *testing.T) {
 // literally in every query that reads it.
 func TestAConfiguredNameIsTrimmed(t *testing.T) {
 	t.Parallel()
-	name, err := resolveInstanceName("agent/sirens-deep.yaml", "  sirens-deep\n")
+	name, err := resolveInstanceName("Sirens Deep of Coilyco", "  sirens-deep\n")
 	if err != nil {
 		t.Fatalf("resolveInstanceName: %v", err)
 	}
 	if name != "sirens-deep" {
 		t.Errorf("name = %q, want %q", name, "sirens-deep")
+	}
+}
+
+// A filename is not an identity: Deep's content in a file called
+// sirens-echo.yaml used to take Echo's service name. See sirens-echo#706.
+func TestAForeignDefinitionInAnEchoNamedFileIsRefused(t *testing.T) {
+	deep, err := os.ReadFile(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	if err != nil {
+		t.Fatalf("read Deep's definition: %v", err)
+	}
+	decoy := filepath.Join(t.TempDir(), filepath.Base(defaultDefinitionPath))
+	if err := os.WriteFile(decoy, deep, 0o600); err != nil {
+		t.Fatalf("write decoy: %v", err)
+	}
+
+	t.Setenv("SIRENS_ECHO_DEFINITION", decoy)
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+
+	if _, err := LoadConfig(); err == nil {
+		t.Fatal("Deep's definition took Echo's service name because the file was named sirens-echo.yaml")
 	}
 }
