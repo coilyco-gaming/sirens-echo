@@ -45,8 +45,12 @@ func (r mentionRoster) names() []string {
 	return names
 }
 
-// mentionSpan is a run of the reply. A link is carried through byte-identical,
-// because a display name matching a path component is not that person.
+// opaqueSpan is a run no name is read inside: a link, or Discord markup whose
+// inner text is an id or an emoji name. See docs/sirens-echo-mentions.md.
+var opaqueSpan = regexp.MustCompile(urlSpan.String() + `|<[@#:][^>]{0,64}>|<a?:[^>]{0,64}>`)
+
+// mentionSpan is a run of the reply. An opaque run is carried through
+// byte-identical, because its components are not people.
 type mentionSpan struct {
 	text string
 	link bool
@@ -57,7 +61,7 @@ type mentionSpan struct {
 func mentionSpans(reply string) []mentionSpan {
 	spans := make([]mentionSpan, 0, 3)
 	end := 0
-	for _, bounds := range urlSpan.FindAllStringIndex(reply, -1) {
+	for _, bounds := range opaqueSpan.FindAllStringIndex(reply, -1) {
 		if bounds[0] > end {
 			spans = append(spans, mentionSpan{text: reply[end:bounds[0]]})
 		}
