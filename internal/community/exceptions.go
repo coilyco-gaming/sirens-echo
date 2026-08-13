@@ -36,6 +36,11 @@ const (
 	exceptionHTTPTurnHistoryTooLong
 	exceptionHTTPTurnPromptFailed
 	exceptionHTTPTurnRateLimited
+	exceptionJobRequestInvalid
+	exceptionJobBodyTooLarge
+	exceptionJobRejected
+	exceptionJobNotFound
+	exceptionJobQueueFull
 	exceptionCodeCount
 )
 
@@ -246,6 +251,45 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The HTTP turn exceeded the admission policy.",
 		stage:    "http",
 		outcome:  "rate_limited",
+		fault:    faultService,
+	},
+	// The jobs stage. Its own stage rather than http, because a job outlives
+	// the request that submitted it. See docs/sirens-echo-jobs-lifecycle.md.
+	exceptionJobRequestInvalid: {
+		typeName: "sirens_echo.jobs.request_invalid",
+		message:  "The job request body is not valid JSON.",
+		stage:    "jobs",
+		outcome:  "request_invalid",
+		fault:    faultCaller,
+	},
+	exceptionJobBodyTooLarge: {
+		typeName: "sirens_echo.jobs.body_too_large",
+		message:  "The job request body exceeded the request size limit.",
+		stage:    "jobs",
+		outcome:  "body_too_large",
+		fault:    faultCaller,
+	},
+	exceptionJobRejected: {
+		typeName: "sirens_echo.jobs.rejected",
+		message:  "The job submission was refused.",
+		stage:    "jobs",
+		outcome:  "rejected",
+		fault:    faultCaller,
+	},
+	exceptionJobNotFound: {
+		typeName: "sirens_echo.jobs.not_found",
+		message:  "The job does not exist, or belongs to another principal.",
+		stage:    "jobs",
+		outcome:  "not_found",
+		fault:    faultCaller,
+	},
+	// The only one of the five that is not the caller's fault. A full queue is
+	// this service declining work it could not schedule.
+	exceptionJobQueueFull: {
+		typeName: "sirens_echo.jobs.queue_full",
+		message:  "The job queue is full.",
+		stage:    "jobs",
+		outcome:  "queue_full",
 		fault:    faultService,
 	},
 }
