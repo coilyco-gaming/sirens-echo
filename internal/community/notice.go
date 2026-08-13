@@ -74,6 +74,9 @@ var (
 	// The answer existed and the send failed. A member reading silence cannot
 	// tell that from being ignored. See docs/sirens-echo-delivery-failures.md.
 	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
+	// The turn was cut by a restart rather than by anything it did, so retrying
+	// is the right move and nothing about it was wrong. See sirens-echo#597.
+	noticeShuttingDown = harnessNotice("service restarting, retry shortly")
 )
 
 // noticeWithTrace appends the turn's trace so a member's screenshot becomes a
@@ -94,12 +97,19 @@ const (
 	causeToolFailed  = "tool_failed"
 	causeRoundsSpent = "rounds_spent"
 	causeStage       = "stage_failed"
+	// causeShutdown is the service ending the turn, not the turn failing. It
+	// reads as a deploy in the failure series rather than as a defect.
+	causeShutdown = "shutdown"
 )
 
 // failureCause classifies what went wrong, in the same order the notice does,
 // so the label and the phrase a member reads can never disagree.
 func failureCause(cause error) string {
 	switch {
+	// Ahead of the timeout, because a drain cancels a turn that still had
+	// budget and the reason it ended is the restart.
+	case errors.Is(cause, errShuttingDown):
+		return causeShutdown
 	case errors.Is(cause, context.DeadlineExceeded):
 		return causeTimeout
 	case isToolFailure(cause):
@@ -114,6 +124,9 @@ func failureCause(cause error) string {
 // differs per class, which is the whole reason these are not one string.
 func turnFailureNotice(stage string, cause error) string {
 	switch {
+	// Same order as failureCause, so the label and the phrase agree.
+	case errors.Is(cause, errShuttingDown):
+		return noticeShuttingDown
 	case errors.Is(cause, context.DeadlineExceeded):
 		return noticeTimedOut
 	case isToolFailure(cause):

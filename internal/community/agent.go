@@ -54,6 +54,9 @@ type Agent struct {
 	// phrases is empty when the deployment names no registry, which renders
 	// nothing and is today's behaviour.
 	phrases PhraseRegistry
+	// drain holds the Discord turns in flight, so a restart can wait for them
+	// and then tell the rest why they stopped.
+	drain drainState
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -229,6 +232,9 @@ func (a *Agent) ensureRuntimeDefaults() {
 	if a.cfg.QueueTimeout <= 0 {
 		a.cfg.QueueTimeout = defaultQueueTimeout
 	}
+	if a.cfg.ShutdownGrace <= 0 {
+		a.cfg.ShutdownGrace = defaultShutdownGrace
+	}
 	if a.limiter == nil {
 		a.limiter = newRateLimiter(a.cfg.RateLimit, defaultRateLimiterCapacity)
 	}
@@ -385,12 +391,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}()
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("HTTP shutdown: %w", err)
-		}
-		return nil
+		return a.drainTurns(ctx, httpServer)
 	case err := <-httpErr:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
@@ -540,8 +541,31 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 	if !a.seen.Add(message.ID) {
 		return
 	}
+	// Last, because a summon refused for a restart was otherwise admissible and
+	// the count should say so. See docs/sirens-echo-shutdown.md.
+	if !a.drain.enter() {
+		a.telemetry.RecordAccess(context.Background(), string(accessDeniedDraining))
+		a.onDraining(session, message)
+		return
+	}
 	a.telemetry.RecordAccess(context.Background(), string(accessAllowed))
-	go a.handleMessage(session, message, origin, decision.Guild.Overrides())
+	go func() {
+		defer a.drain.leave()
+		a.handleMessage(session, message, origin, decision.Guild.Overrides())
+	}()
+}
+
+// onDraining turns away a summon that arrived during a restart. It marks and
+// says nothing, because the gateway it would reply through is closing.
+func (a *Agent) onDraining(session *discordgo.Session, message *discordgo.Message) {
+	ctx := context.Background()
+	a.telemetry.Info(
+		ctx,
+		"turn.input.draining",
+		slog.String("transport", transportDiscord),
+		slog.String("outcome", string(accessDeniedDraining)),
+	)
+	a.react(ctx, &discordMessageTurn{session: session, message: message}, reactionRefused)
 }
 
 // eligibleMessage rejects payloads that can never be a summon. A bot author
@@ -754,7 +778,8 @@ func (a *Agent) handleMessage(
 	a.telemetry.RecordAdmission(context.Background(), string(admissionAccepted), transportDiscord)
 
 	receiveCtx, receiveSpan := a.telemetry.StartSpan(
-		context.Background(),
+		// The drain root rather than Background, so a restart can reach the turn.
+		a.drain.root(),
 		"discord.receive",
 		discordMessageSpanAttributes(
 			"process",
@@ -1116,6 +1141,11 @@ func (a *Agent) failTurn(
 	stage string,
 	cause error,
 ) error {
+	// A drained turn's stage error is context.Canceled, which is what every
+	// other cancellation also looks like. Only the cause separates them.
+	if errors.Is(context.Cause(ctx), errShuttingDown) {
+		cause = errShuttingDown
+	}
 	notice := turnFailureNotice(stage, cause)
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
