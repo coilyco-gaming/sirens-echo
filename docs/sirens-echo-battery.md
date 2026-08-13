@@ -4,9 +4,12 @@
 deployment and needs no human. See [the board](sirens-echo-board.md) for the
 graded layer that handles what this cannot decide.
 
-The deployed structural validators run on every case as well, so `ParseReply`,
-`ValidateGrounding`, and `ValidateResponseStyle` are assumed here. These checks
-are the rest.
+Five deployed validators run on every case, so `ParseReply`,
+`ValidateGrounding`, `ValidateSelfAttributedClaim`, `ValidateIdentityClaim`,
+and `ValidateResponseStyle` are assumed here. Two are not:
+`ValidateNoToolCallMarkup` runs only under `forbid_tool_call_markup`, and the
+reply path's identifier guard is replaced by the narrower `checkUserIDEcho`
+under `forbid_principal_echo`. These checks are the rest.
 
 ## Two rules every check has to pass
 
