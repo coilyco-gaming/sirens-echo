@@ -4,6 +4,30 @@
 same-repo closing reference. The reference is what makes a merge name the work
 it finished.
 
+## Opening the pull request
+
+There is no Ward verb for it and the Forgejo MCP exposes pull request reads
+only. A seat opens one with the push credential it already holds, through
+Forgejo's AGit flow, by pushing to the magic ref `refs/for/<base>`:
+
+```
+git push origin HEAD:refs/for/main \
+  -o topic=<short-topic> \
+  -o title="<pr title>" \
+  -o description="closes #N - <one line>"
+```
+
+The named branch push is then unnecessary, because the pull request head is
+`refs/pull/<N>/head` rather than a branch. Pushing both leaves a branch beside
+the pull request carrying the same commit.
+
+**A push option cannot contain a newline.** Git refuses the push outright with
+`fatal: push options must not have new line characters`, so the description is
+one line and the detail belongs on the issue, which is where a reader looks.
+
+That one line is the pull request body, so it is where the closing reference
+below has to appear. The newline limit is what makes it easy to drop.
+
 ## The accepted spellings
 
 ```
