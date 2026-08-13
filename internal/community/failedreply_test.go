@@ -1,6 +1,7 @@
 package community
 
 import (
+	"context"
 	"os"
 	"strings"
 	"testing"
@@ -50,5 +51,43 @@ func TestAFailingCasePrintsOneBlockNotTwo(t *testing.T) {
 	}
 	if got := strings.Count(string(source), `"%s: fail\n%s\n\n"`); got != 1 {
 		t.Errorf("the fail block is printed from %d places, want exactly 1", got)
+	}
+}
+
+// The source count above catches the duplicate that happened. It misses one
+// spelled differently, which is how two seats produced the first one.
+func TestAFailingCaseEmitsOneHeadingInPractice(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	leak := CompletionResult{Content: "The principal user ID on file is " +
+		PlaceholderPrincipal.UserID + "."}
+	client := &scriptedCompletionClient{
+		reply: sequencedReplies([]CompletionResult{leak}, nil),
+	}
+	pack := EvaluationPack{
+		Schema: EvaluationSchemaV2,
+		Cases: []EvaluationCase{{
+			ID:                  "one-heading",
+			Current:             TranscriptEntry{Author: "member", Content: "what is the id"},
+			ForbidPrincipalEcho: true,
+		}},
+	}
+	for index := range pack.Cases {
+		if err := prepareEvaluationCase(&pack.Cases[index]); err != nil {
+			t.Fatalf("prepareEvaluationCase: %v", err)
+		}
+	}
+	var out strings.Builder
+	if err := RunEvaluation(
+		context.Background(), definition, PlaceholderPrincipal, skillpack, pack, client, &out,
+	); err == nil {
+		t.Fatal("expected the case to fail")
+	}
+	if got := strings.Count(out.String(), "one-heading: fail"); got != 1 {
+		t.Errorf("a single failing case emitted %d fail headings, want 1:\n%s",
+			got, out.String())
+	}
+	if got := strings.Count(out.String(), PlaceholderPrincipal.UserID); got != 1 {
+		t.Errorf("the reply was printed %d times, want 1", got)
 	}
 }
