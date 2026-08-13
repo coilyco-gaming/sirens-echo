@@ -3,6 +3,8 @@ package community
 import (
 	"context"
 	"errors"
+	"github.com/bwmarrin/discordgo"
+	"net/http"
 	"strings"
 	"testing"
 )
@@ -71,4 +73,54 @@ func (t *alwaysRefusingTurn) History(context.Context) ([]TranscriptEntry, error)
 func (t *alwaysRefusingTurn) Reply(context.Context, string) error {
 	t.attempts++
 	return errors.New("still refused")
+}
+
+// The reply failing and its notice failing are different member outcomes: one
+// got nothing, the other got the answer and no apology. See #675.
+
+// The notice keeps reporting its own failure, which TestAnUndeliverableNotice
+// above relies on, and the turn no longer inherits that verdict.
+func TestTheNoticeVerdictIsRecordedNotJoined(t *testing.T) {
+	t.Parallel()
+	rest := &discordgo.RESTError{
+		Response: &http.Response{StatusCode: http.StatusForbidden},
+		Message:  &discordgo.APIErrorMessage{Code: 50013},
+	}
+	attrs := discordFailureAttrs(rest)
+	failure, ok := attrValue(attrs, "discord_failure")
+	if !ok || failure.String() != "rest_error" {
+		t.Fatalf("the notice failure classifies as %v, want rest_error", failure)
+	}
+	status, ok := attrValue(attrs, "discord_status")
+	if !ok || status.String() != "403" {
+		t.Errorf("the notice verdict lost its status: %v", status)
+	}
+	// A delivered notice classifies as nothing, so the event does not report a
+	// failure that did not happen.
+	if got := discordFailureAttrs(nil); len(got) != 0 {
+		t.Errorf("a delivered notice was classified: %v", got)
+	}
+}
+
+// The turn's verdict is the send alone, driven through the seam rather than
+// asserted about the classifier. Rejoining the two must fail this.
+func TestTheTurnVerdictDescribesTheSend(t *testing.T) {
+	t.Parallel()
+	agent := &Agent{telemetry: telemetryOrNoop(nil)}
+	turn := &alwaysRefusingTurn{}
+	err := agent.deliverOrReport(context.Background(), turn, "the answer")
+	if err == nil {
+		t.Fatal("a failed send reported success")
+	}
+	// The notice was attempted, so this is the both-failed case that used to
+	// produce one verdict for two outcomes.
+	if turn.attempts < 2 {
+		t.Fatalf("the notice was not attempted: %d send(s)", turn.attempts)
+	}
+	// One error, not a join. errors.Join of two would unwrap to a slice.
+	var joined interface{ Unwrap() []error }
+	if errors.As(err, &joined) {
+		t.Errorf("the turn verdict is a join of %d errors, want the send alone",
+			len(joined.Unwrap()))
+	}
 }

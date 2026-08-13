@@ -1141,13 +1141,26 @@ func (a *Agent) runTurn(
 	// See docs/sirens-echo-progress.md.
 	a.settleWithSpan(turnCtx, progress.settleDelay(), progress.Settle)
 
-	if err := a.sendReply(turnCtx, turn, reply); err != nil {
-		return errors.Join(err, a.reportUndelivered(turnCtx, turn))
+	if err := a.deliverOrReport(turnCtx, turn, reply); err != nil {
+		return err
 	}
 	// The answer is the outcome, so nothing is left to describe work in flight.
 	a.clearTurnMarks(turnCtx)
 	a.beats.reply()
 	return nil
+}
+
+// deliverOrReport sends the reply and, when that fails, records the notice
+// outcome separately. The turn's verdict is the send. See sirens-echo#675.
+func (a *Agent) deliverOrReport(ctx context.Context, turn turnIO, reply string) error {
+	err := a.sendReply(ctx, turn, reply)
+	if err == nil {
+		return nil
+	}
+	// Recorded, not joined. One verdict cannot say whether the member got
+	// nothing or got the answer and no apology.
+	_ = a.reportUndelivered(ctx, turn)
+	return err
 }
 
 // reportUndelivered tells a member the answer existed and did not arrive. One
@@ -1156,15 +1169,21 @@ func (a *Agent) reportUndelivered(ctx context.Context, turn turnIO) error {
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
 	}
+	// A short notice survives the length refusal that is the likeliest cause,
+	// and costs one call when it does not.
+	noticeErr := a.notifyFailure(ctx, turn, noticeUndelivered)
 	a.telemetry.Error(
 		ctx,
 		"turn.reply.undelivered",
-		slog.String("error_type", "reply_undelivered"),
-		slog.String("transport", turn.Transport()),
+		append(
+			[]slog.Attr{
+				slog.String("error_type", "reply_undelivered"),
+				slog.String("transport", turn.Transport()),
+			},
+			discordFailureAttrs(noticeErr)...,
+		)...,
 	)
-	// A short notice survives the length refusal that is the likeliest cause,
-	// and costs one call when it does not.
-	return a.notifyFailure(ctx, turn, noticeUndelivered)
+	return noticeErr
 }
 
 func (a *Agent) failTurn(
