@@ -14,6 +14,26 @@ governs the words the model writes, and a reaction contains none.
 | the turn produced no reply | warning | on the failure path |
 | refused at a boundary | no entry | on the admission denial |
 
+## In flight, or an outcome
+
+The eyes and the hammer describe work happening. When the turn ends they
+describe nothing, and a channel fills with marks that no longer mean anything.
+Both are removed on the way out. The warning and the no entry describe how the
+turn ended, so they stay. See sirens-echo#475.
+
+Only a mark that was actually applied is removed, so an ordinary turn that
+called no tool costs one removal rather than two.
+
+## Where the clear happens, and why not in a deferred cleanup
+
+The clear runs where a turn produced an outcome the member can see: the answer,
+the failure notice, or the boundary response. It is not deferred.
+
+That is what keeps the accepted mark's whole purpose intact. A turn that dies
+without reaching one of those paths never clears, so the message keeps its eyes
+and never gets an answer, which is exactly the signal below. A deferred cleanup
+would fire on that death too and delete the evidence.
+
 ## Why the accepted mark earns its place
 
 It lands before the first model call, so a turn that then dies silently is still

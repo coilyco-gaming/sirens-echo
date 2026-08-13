@@ -982,7 +982,9 @@ func (a *Agent) runTurn(
 		a.telemetry.Info(turnCtx, "content.blocked", slog.String("class", verdict.Class.ID))
 		// The boundary mark exists for exactly this and fired on nothing.
 		reactFromContext(turnCtx, reactionRefused)
-		return turn.Reply(turnCtx, BlockResponse(verdict.Class, "", a.cfg.Principal))
+		blocked := turn.Reply(turnCtx, BlockResponse(verdict.Class, "", a.cfg.Principal))
+		a.clearTurnMarks(turnCtx)
+		return blocked
 	}
 
 	progress.Stage(turnCtx, stagePhraseThinking)
@@ -1036,6 +1038,8 @@ func (a *Agent) runTurn(
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return errors.Join(err, a.reportUndelivered(turnCtx, turn))
 	}
+	// The answer is the outcome, so nothing is left to describe work in flight.
+	a.clearTurnMarks(turnCtx)
 	a.beats.reply()
 	return nil
 }
@@ -1077,7 +1081,10 @@ func (a *Agent) failTurn(
 		slog.String("notice", notice),
 	)
 	settleFromContext(ctx)
-	return errors.Join(cause, a.notifyFailure(ctx, turn, notice))
+	failure := errors.Join(cause, a.notifyFailure(ctx, turn, notice))
+	// The outcome mark stays. The in-flight ones have stopped being true.
+	a.clearTurnMarks(ctx)
+	return failure
 }
 
 // failureNoticeTimeout bounds the notice's own send. It is short because the
@@ -1287,6 +1294,13 @@ func (t *discordMessageTurn) Typing() error {
 // ReplyLimit is the Discord send budget, declared so a service-authored suffix
 // can be kept inside it rather than truncated away.
 func (t *discordMessageTurn) ReplyLimit() int { return discordReplyLimit }
+
+// Unreact removes a mark the harness applied. Scoped to this identity, so a
+// member's own reaction on the same message is never touched.
+func (t *discordMessageTurn) Unreact(_ context.Context, emoji string) error {
+	return t.session.MessageReactionRemove(
+		t.message.ChannelID, t.message.ID, emoji, "@me")
+}
 
 func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	span := trace.SpanFromContext(ctx)
