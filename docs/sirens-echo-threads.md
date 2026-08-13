@@ -28,16 +28,26 @@ This also makes the guild's hide-after setting cheap. A thread that auto-hides
 takes nothing with it that was not already duplicated in the channel, because
 the channel-side artifact was never the answer.
 
-## The name comes from the member
+## The name says what the thread is for
 
-Discord requires a thread to have a name, and a name is member-facing. It is
-derived from the member's own message rather than authored: letters, digits
-and spaces are kept, everything else is dropped, and the result is truncated
-to Discord's hundred-rune cap. A message that is all mention and punctuation
-falls back to a fixed phrase, because a thread cannot be created without a
-name at all.
+The title summarises the member's intent: *how much does it cost to build a log
+house* becomes something like *log house pricing*.
 
-Dropped, not summarised. Summarising would be writing a member a title.
+An earlier version refused to summarise, on the grounds that summarising is
+writing a member a title. That was overruled deliberately in issue 461, and the
+reversal is recorded rather than quietly applied.
+
+A summary needs the model, so this is one short extra completion, proportionate
+because a thread only happens on a turn that already ran past the long-reply
+window: the expensive minority by construction rather than every turn.
+
+**It degrades rather than fails.** If the title call errors, times out, or
+returns nothing usable, the thread is still created with the mechanically
+derived name. A feature that could cost a member their thread over a title
+would be a bad trade.
+
+The summary takes the same cleaning as a derived name, so it cannot introduce
+markup a member's own message could not.
 
 ## What it must never cost
 

@@ -730,6 +730,7 @@ func (a *Agent) handleMessage(
 		session: session,
 		message: message,
 		limit:   a.cfg.Definition.MaxContextMessages,
+		titler:  a.completions,
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -1149,6 +1150,8 @@ type discordMessageTurn struct {
 	// mentions is built from this turn's transcript, so only people already in
 	// the conversation can be reached. See docs/sirens-echo-mentions.md.
 	mentions mentionRoster
+	// titler names a thread. Nil keeps the derived name.
+	titler CompletionClient
 }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
@@ -1317,7 +1320,8 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	// A thread hangs off the member's message, so a reference inside it would
 	// point at its own parent. See docs/sirens-echo-threads.md.
 	if turnLongReply(ctx) {
-		if threadID, threaded := threadForReply(t.session, t.message); threaded {
+		title := threadTitle(ctx, t.titler, t.message, t.RequestID())
+		if threadID, threaded := threadForReply(t.session, t.message, title); threaded {
 			target, reference = threadID, nil
 			span.SetAttributes(attribute.String("discord.thread.id", threadID))
 		}

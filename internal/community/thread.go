@@ -1,6 +1,7 @@
 package community
 
 import (
+	"context"
 	"strings"
 	"unicode"
 
@@ -21,21 +22,59 @@ const threadNameRunes = 100
 // punctuation, so a thread is never created without a readable name.
 const threadNameFallback = "a longer answer"
 
+// threadTitlePrompt asks for the intent rather than a restatement. Kai's
+// example: how much does it cost to build a log house, to log house pricing.
+const threadTitlePrompt = "Name this request in at most six words, as a topic " +
+	"rather than a sentence. No punctuation at the end, no quotes, no preamble. " +
+	"Reply with the name and nothing else."
+
+// threadTitle summarises what the member asked for. A failure returns empty and
+// the caller keeps the derived name. See docs/sirens-echo-threads.md.
+func threadTitle(
+	ctx context.Context,
+	completions CompletionClient,
+	message *discordgo.Message,
+	requestID string,
+) string {
+	if completions == nil || message == nil {
+		return ""
+	}
+	result, err := completions.Complete(ctx, TurnPrompt{
+		System:  threadTitlePrompt,
+		Message: message.ContentWithMentionsReplaced(),
+	}, requestID)
+	if err != nil {
+		return ""
+	}
+	// The same cleaning the derived name takes, so a summary cannot smuggle in
+	// markup a member's message could not.
+	return threadNameFrom(result.Content)
+}
+
 // threadNameFor derives a name from the member's own message rather than
 // authoring one. Mentions and markup are dropped, not summarised.
 func threadNameFor(message *discordgo.Message) string {
 	if message == nil {
 		return threadNameFallback
 	}
+	if name := threadNameFrom(message.ContentWithMentionsReplaced()); name != "" {
+		return name
+	}
+	return threadNameFallback
+}
+
+// threadNameFrom keeps letters, digits and spaces and bounds the result. Empty
+// means nothing usable survived.
+func threadNameFrom(raw string) string {
 	cleaned := strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || unicode.IsSpace(r) {
 			return r
 		}
 		return ' '
-	}, message.ContentWithMentionsReplaced())
+	}, raw)
 	name := strings.Join(strings.Fields(cleaned), " ")
 	if name == "" {
-		return threadNameFallback
+		return ""
 	}
 	return truncateRunes(name, threadNameRunes)
 }
@@ -45,6 +84,7 @@ func threadNameFor(message *discordgo.Message) string {
 func threadForReply(
 	session *discordgo.Session,
 	message *discordgo.Message,
+	title string,
 ) (channelID string, threaded bool) {
 	if session == nil || message == nil {
 		return "", false
@@ -61,7 +101,7 @@ func threadForReply(
 		message.ChannelID,
 		message.ID,
 		&discordgo.ThreadStart{
-			Name:                threadNameFor(message),
+			Name:                valueOrDefault(title, threadNameFor(message)),
 			AutoArchiveDuration: threadArchiveMinutes,
 			Invitable:           false,
 		},

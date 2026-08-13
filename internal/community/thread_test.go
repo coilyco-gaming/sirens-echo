@@ -1,6 +1,8 @@
 package community
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -54,11 +56,11 @@ func TestAThreadNameStaysInsideDiscordsCap(t *testing.T) {
 // error, so the caller replies in the channel exactly as it does today.
 func TestAThreadThatCannotBeMadeCostsNothing(t *testing.T) {
 	t.Parallel()
-	if _, threaded := threadForReply(nil, &discordgo.Message{ID: "1"}); threaded {
+	if _, threaded := threadForReply(nil, &discordgo.Message{ID: "1"}, ""); threaded {
 		t.Error("a nil session reported a thread")
 	}
 	session := statefulSession(t)
-	if _, threaded := threadForReply(session, nil); threaded {
+	if _, threaded := threadForReply(session, nil, ""); threaded {
 		t.Error("a nil message reported a thread")
 	}
 	// A turn already in a thread does not nest. Resolved from cached state, so
@@ -73,7 +75,7 @@ func TestAThreadThatCannotBeMadeCostsNothing(t *testing.T) {
 		t.Fatalf("seed channel state: %v", err)
 	}
 	inThread := &discordgo.Message{ID: "1401", ChannelID: thread.ID, Content: "again"}
-	if _, threaded := threadForReply(session, inThread); threaded {
+	if _, threaded := threadForReply(session, inThread, ""); threaded {
 		t.Error("a turn inside a thread started a nested one")
 	}
 }
@@ -100,5 +102,61 @@ func TestTheThreadWindowIsTheOneThatWasAskedFor(t *testing.T) {
 	}
 	if turnLongReplyAfter <= turnProgressAfter {
 		t.Error("a turn could cross the thread window before it posts a progress line")
+	}
+}
+
+// titlingClient answers with a fixed summary, or fails, so the fallback is
+// testable without a model. See sirens-echo#461.
+type titlingClient struct {
+	reply string
+	fail  bool
+}
+
+func (c titlingClient) Complete(
+	context.Context, TurnPrompt, string,
+) (CompletionResult, error) {
+	if c.fail {
+		return CompletionResult{}, errTitleUnavailable
+	}
+	return CompletionResult{Content: c.reply}, nil
+}
+
+var errTitleUnavailable = errors.New("no title")
+
+func TestAThreadTitleSummarisesTheIntent(t *testing.T) {
+	t.Parallel()
+	message := &discordgo.Message{Content: "how much does it cost to build a log house"}
+	got := threadTitle(t.Context(), titlingClient{reply: "log house pricing"}, message, "req-1")
+	if got != "log house pricing" {
+		t.Errorf("title = %q, want the summary", got)
+	}
+}
+
+// A title that fails must not cost a member their thread.
+func TestAFailedTitleKeepsTheDerivedName(t *testing.T) {
+	t.Parallel()
+	message := &discordgo.Message{Content: "how much does it cost to build a log house"}
+	if got := threadTitle(t.Context(), titlingClient{fail: true}, message, "req-1"); got != "" {
+		t.Errorf("a failed title returned %q, want empty so the caller falls back", got)
+	}
+	if got := threadTitle(t.Context(), nil, message, "req-1"); got != "" {
+		t.Errorf("a nil client returned %q", got)
+	}
+	// The fallback is still the derived name, unchanged.
+	if got := threadNameFor(message); got != "how much does it cost to build a log house" {
+		t.Errorf("the derived name changed: %q", got)
+	}
+}
+
+// A summary takes the same cleaning as a derived name, so it cannot smuggle in
+// markup a member's own message could not.
+func TestASummaryIsCleanedLikeAName(t *testing.T) {
+	t.Parallel()
+	message := &discordgo.Message{Content: "anything"}
+	got := threadTitle(t.Context(), titlingClient{reply: "**log house** <@123> pricing!"}, message, "req-1")
+	for _, banned := range []string{"*", "<", "@", "!"} {
+		if strings.Contains(got, banned) {
+			t.Errorf("%q survived into the title %q", banned, got)
+		}
 	}
 }
