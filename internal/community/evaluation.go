@@ -199,6 +199,7 @@ func runEvaluation(
 			prompt,
 			systemPrompt,
 			definition.ResponseStyle,
+			definition.Identity,
 			principal,
 		)
 		if err != nil {
@@ -221,6 +222,7 @@ func ScoreEvaluationCase(
 	prompt TurnPrompt,
 	systemPrompt string,
 	responseStyle string,
+	identity string,
 	principal Principal,
 ) (string, error) {
 	reply, err := ParseReply(result.Content)
@@ -228,6 +230,9 @@ func ScoreEvaluationCase(
 		return strings.TrimSpace(result.Content), err
 	}
 	if err := ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...); err != nil {
+		return reply, err
+	}
+	if err := ValidateSelfAttributedClaim(reply, identity, result.ToolCalls...); err != nil {
 		return reply, err
 	}
 	if err := ValidateIdentityClaim(reply, principal); err != nil {

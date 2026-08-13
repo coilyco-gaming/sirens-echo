@@ -852,6 +852,9 @@ func (a *Agent) runTurn(
 	if err == nil {
 		err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
 	}
+	if err == nil {
+		err = ValidateSelfAttributedClaim(reply, a.cfg.Definition.Identity, result.ToolCalls...)
+	}
 	// Bound for every style. Not being mistaken for a human is a safety
 	// property, not a voice preference. See docs/sirens-echo-prompt.md.
 	if err == nil {

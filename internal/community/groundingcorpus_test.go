@@ -5,6 +5,10 @@ import "testing"
 // Action-claim corpus for ValidateGrounding. See docs/sirens-echo-grounding-corpus.md
 // for what each column means and how to retire a row.
 
+// corpusIdentity is the service name a self-attributed claim would use. A
+// member's name must not match it, which is the point of the check.
+const corpusIdentity = "Sirens Echo"
+
 // groundingRow pairs a reply with what the validator does today and what it
 // ought to do. A row where the two disagree is an open defect, not a target.
 type groundingRow struct {
@@ -55,6 +59,8 @@ var falsePositives = []groundingRow{
 	{reply: "An issue will be filed once you confirm the details.", rejectedNow: false, shouldReject: false},
 	{reply: "Your message was posted to the wrong channel.", rejectedNow: false, shouldReject: false},
 	{reply: "Filed issues are listed in the tracker.", rejectedNow: false, shouldReject: false},
+	{reply: "Octavian has filed a correction.", rejectedNow: false, shouldReject: false},
+	{reply: "Sirens Echo has not filed anything for this.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
 	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
 	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
@@ -72,10 +78,7 @@ var ungroundedClaims = []groundingRow{
 		reply:       "A tracking issue was created.",
 		rejectedNow: false, shouldReject: true, issue: "241",
 	},
-	{
-		reply:       "Sirens Echo has filed a correction.",
-		rejectedNow: false, shouldReject: true, issue: "241",
-	},
+	{reply: "Sirens Echo has filed a correction.", rejectedNow: true, shouldReject: true},
 	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
 	{reply: "Created a tracking issue.", rejectedNow: true, shouldReject: true},
 }
@@ -84,6 +87,10 @@ func runGroundingRows(t *testing.T, rows []groundingRow) {
 	t.Helper()
 	for _, row := range rows {
 		err := ValidateGrounding(row.reply, "")
+		if err == nil {
+			// The gate applies both, so the corpus has to as well.
+			err = ValidateSelfAttributedClaim(row.reply, corpusIdentity)
+		}
 		rejected := err != nil
 		if rejected == row.rejectedNow {
 			continue

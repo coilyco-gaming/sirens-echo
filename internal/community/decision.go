@@ -109,6 +109,33 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	return nil
 }
 
+// selfClaimVerbs are the writes this runtime can perform, in the active voice a
+// reply uses when it names itself as the actor.
+const selfClaimVerbs = `(?:filed|created|opened|closed|posted|sent|commented on|updated|labeled|escalated)`
+
+// ValidateSelfAttributedClaim rejects a reply naming this service as having
+// completed a tracker write. See docs/sirens-echo-grounding.md.
+func ValidateSelfAttributedClaim(reply string, identity string, executed ...ExecutedTool) error {
+	identity = strings.TrimSpace(identity)
+	// Without a configured identity there is no name to distinguish the service
+	// from a member, and a member filing something is a correct reply.
+	if identity == "" || trackerWasTouched(executed) {
+		return nil
+	}
+	claim := regexp.MustCompile(
+		`(?i)\b` + regexp.QuoteMeta(identity) + `\s+(?:has|have)\s+` + selfClaimVerbs + `\b`,
+	)
+	for _, sentence := range sentenceBreak.Split(maskURLs(reply), -1) {
+		if notAClaim.MatchString(sentence) {
+			continue
+		}
+		if claim.MatchString(sentence) {
+			return fmt.Errorf("model claimed a tracker action the runtime has not performed")
+		}
+	}
+	return nil
+}
+
 // trackerWasTouched asks only whether the turn reached the issue tracker at
 // all. See docs/sirens-echo-grounding.md for why the exact write tool is wrong.
 func trackerWasTouched(executed []ExecutedTool) bool {

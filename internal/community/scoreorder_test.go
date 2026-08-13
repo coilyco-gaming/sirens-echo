@@ -18,6 +18,7 @@ func scoreProbe(t *testing.T, reply string) (string, error) {
 		TurnPrompt{System: "policy", Message: "question"},
 		"policy",
 		"neutral",
+		"",
 		Principal{},
 	)
 }

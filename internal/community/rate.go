@@ -220,7 +220,7 @@ func measureRateCase(
 	}
 	for run := 1; run <= rateCase.Runs; run++ {
 		outcome := runRateAttempt(
-			ctx, rateCase, run, definition.ResponseStyle,
+			ctx, rateCase, run, definition.ResponseStyle, definition.Identity,
 			prompt, systemPrompt, principal, completions, caseTimeout,
 		)
 		switch outcome.Outcome {
@@ -247,6 +247,7 @@ func runRateAttempt(
 	rateCase RateCase,
 	run int,
 	responseStyle string,
+	identity string,
 	prompt TurnPrompt,
 	systemPrompt string,
 	principal Principal,
@@ -264,7 +265,7 @@ func runRateAttempt(
 		return RateRun{Run: run, Outcome: RateOutcomeError, Detail: err.Error()}
 	}
 	reply, scoreErr := ScoreEvaluationCase(
-		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, principal,
+		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, identity, principal,
 	)
 	attempt := RateRun{
 		Run:   run,
