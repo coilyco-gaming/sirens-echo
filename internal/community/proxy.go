@@ -65,6 +65,31 @@ type ExecutedTool struct {
 	Name      string
 	Arguments string
 	Result    string
+	// Outcome is what the call did. Recorded here rather than derived later,
+	// because a failure is not visible from the result text.
+	Outcome ToolOutcome
+}
+
+// ToolOutcome is the three-state vocabulary the disclosure footer renders. An
+// empty result and a full one must not read alike. See sirens-echo#195.
+type ToolOutcome string
+
+const (
+	ToolOutcomeOK     ToolOutcome = "ok"
+	ToolOutcomeEmpty  ToolOutcome = "empty"
+	ToolOutcomeFailed ToolOutcome = "failed"
+)
+
+// outcomeOf classifies one completed call. A transport error never reaches
+// here, because it ends the turn instead.
+func outcomeOf(result ToolResult) ToolOutcome {
+	if result.IsError {
+		return ToolOutcomeFailed
+	}
+	if strings.TrimSpace(result.Text) == "" {
+		return ToolOutcomeEmpty
+	}
+	return ToolOutcomeOK
 }
 
 // CompletionResult is the final model content plus its executed tool path.
@@ -548,6 +573,7 @@ func (c ProxyClient) Complete(
 				Name:      call.Function.Name,
 				Arguments: call.Function.Arguments,
 				Result:    result.Text,
+				Outcome:   outcomeOf(result),
 			})
 			reinjected, trimmed := boundToolResult(result.Text)
 			if trimmed {

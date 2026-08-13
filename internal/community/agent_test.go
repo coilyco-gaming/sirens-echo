@@ -664,8 +664,11 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 	if err := agent.runTurn(context.Background(), turn, nil); err != nil {
 		t.Fatalf("runTurn: %v", err)
 	}
-	if turn.reply != "Eco is online now." {
-		t.Fatalf("reply = %q", turn.reply)
+	// The turn called a tool, so the reply carries its disclosure footer. This
+	// is the end-to-end proof it reaches a member. See sirens-echo#385.
+	wantReply := "Eco is online now.\n\n> 🔨 ✅ `eco__get_eco_server_status`"
+	if turn.reply != wantReply {
+		t.Fatalf("reply = %q, want %q", turn.reply, wantReply)
 	}
 	if rounds := modelRound.Load(); rounds != 2 {
 		t.Fatalf("model rounds = %d", rounds)
@@ -724,7 +727,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 		`"msg":"model.response"`,
 		`"response_bytes":`,
 		`"msg":"turn.reply.ready"`,
-		`"reply_bytes":18`,
+		`"reply_bytes":59`,
 		`"trace_id":"`,
 		`"span_id":"`,
 	} {

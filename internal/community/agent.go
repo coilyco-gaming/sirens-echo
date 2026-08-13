@@ -1002,6 +1002,7 @@ func (a *Agent) runTurn(
 	// Service-authored, so it runs after the checks rather than through them.
 	// See docs/sirens-echo-issues.md.
 	reply = AppendIssueReferences(reply, result.ToolCalls...)
+	reply = AppendToolDisclosure(reply, result.ToolCalls...)
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
