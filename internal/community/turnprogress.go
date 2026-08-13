@@ -2,6 +2,7 @@ package community
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -49,6 +50,28 @@ type turnProgress struct {
 	finished  bool
 	// carried marks a line repurposed as the turn's answer, so Finish leaves it.
 	carried bool
+	// waits is the elapsed seconds of each line appended while one stage runs.
+	// Reset on a stage change, because the new line restarts the narration.
+	waits []int
+}
+
+// progressWaitIcon leads a line that says only that time passed. One clock,
+// not a rotation: Kai wrote "if we wanna" for that, which is not a spec.
+const progressWaitIcon = "\U0001F550"
+
+// maxProgressWaitLines bounds the column a stuck turn can grow. The turn
+// ceiling over the beat is the natural count. See sirens-echo#370.
+const maxProgressWaitLines = 12
+
+// progressBody renders the stage line plus one line per beat waited, which is
+// the shape Kai drew on sirens-echo#370.
+func progressBody(phrase string, waits []int) string {
+	body := stageNotice(stageIcons[phrase], phrase)
+	for _, seconds := range waits {
+		body += "\n" + stageNotice(
+			progressWaitIcon, fmt.Sprintf("still %s %d seconds", phrase, seconds))
+	}
+	return body
 }
 
 func newTurnProgress(sink TurnProgressSink, now func() time.Time) *turnProgress {
@@ -110,9 +133,11 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 	existing := p.messageID
 	p.lastStage = phrase
 	p.lastEdit = moment
+	// A new stage restarts the narration, so the previous stage's waits go.
+	p.waits = nil
 	p.mu.Unlock()
 
-	notice := stageNotice(stageIcons[phrase], phrase)
+	notice := progressBody(phrase, nil)
 	if existing == "" {
 		posted, err := p.sink.Post(ctx, notice)
 		p.record(ctx, "post", err)
@@ -162,8 +187,14 @@ func (p *turnProgress) Watch(ctx context.Context) func() {
 // already up says the right thing until Stage edits it.
 func (p *turnProgress) refresh(ctx context.Context) {
 	p.mu.Lock()
-	if p.finished || p.lastStage == "" || p.messageID != "" {
+	if p.finished || p.lastStage == "" {
 		p.mu.Unlock()
+		return
+	}
+	// A line is already up, so the turn is waiting rather than starting. Say
+	// how long instead of returning, which left it static. See #370.
+	if p.messageID != "" {
+		p.narrateWait(ctx)
 		return
 	}
 	moment := p.now()
@@ -336,4 +367,26 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	if messageID != "" {
 		p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
 	}
+}
+
+// narrateWait appends one elapsed line to the posted stage line. Called with
+// the lock held, and it releases before touching the sink.
+func (p *turnProgress) narrateWait(ctx context.Context) {
+	if p.carried || len(p.waits) >= maxProgressWaitLines {
+		p.mu.Unlock()
+		return
+	}
+	moment := p.now()
+	elapsed := moment.Sub(p.postedAt)
+	if elapsed < turnProgressEvery {
+		p.mu.Unlock()
+		return
+	}
+	p.waits = append(p.waits, int(elapsed.Round(time.Second).Seconds()))
+	p.lastEdit = moment
+	existing, phrase := p.messageID, p.lastStage
+	waits := append([]int{}, p.waits...)
+	p.mu.Unlock()
+
+	p.record(ctx, "edit", p.sink.Edit(ctx, existing, progressBody(phrase, waits)))
 }
