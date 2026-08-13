@@ -53,13 +53,13 @@ and the checks exist to police what the model wrote.
 answer is shortened to leave room rather than the footer being truncated away.
 A receipt that vanishes on a long reply reads as no tools ran, which is the one
 belief this exists to prevent, and it would vanish exactly when the reply is
-long and tool-heavy. A transport with no ceiling, like the HTTP turn, declares
-none and nothing is shortened.
+long and tool-heavy.
 
-**A reference outranks the receipt.** When the turn also appended an issue
-reference, the budget is withheld and the footer yields instead. A reference is
-a link a member can act on and the footer is a record of what ran, so when only
-one survives it is the link. Both surviving is the open work.
+**A reference outranks the receipt.** The footer is not budgeted alone. It is
+appended with every other service suffix by one step that owns the whole
+budget, and it is appended last, so at the ceiling the footer yields and the
+link a member can act on survives. Both now survive. See [reply
+assembly](sirens-echo-reply-assembly.md).
 
 **Both lanes.** The reply path is shared, so Echo and Deep both disclose. The
 verification problem is identical on both.

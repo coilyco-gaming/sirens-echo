@@ -31,9 +31,11 @@ can state no reference the runtime did not observe. A number the turn never
 observed stays unlinked rather than guessed at.
 
 The block is service-authored text and is added after validation, so it carries
-no first person, no exclamation, and no emoji of its own. A block that cannot
-fit the send budget is dropped rather than truncated into a broken URL by the
-transport.
+no first person, no exclamation, and no emoji of its own. A long answer is
+shortened to make room for it rather than the block being dropped, and it
+resolves against the answer that will actually be sent. A block that still
+cannot fit whole is dropped rather than truncated into a broken URL. See [reply
+assembly](sirens-echo-reply-assembly.md).
 
 One number can name an issue in two repositories, and a tool result quotes a
 sibling repository's issue often enough that this is reachable rather than

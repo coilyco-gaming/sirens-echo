@@ -65,22 +65,25 @@ func TestAFooterLargerThanTheBudgetStillReturnsTheFooter(t *testing.T) {
 	}
 }
 
-// A reference is a link a member can act on. The footer is a receipt. When only
-// one fits, the link wins. See sirens-echo#413.
+// A reference is a link a member can act on and the footer is a receipt. This
+// asserted on footerBudget, which was correct while the send was not.
 func TestAReferenceIsNeverShortenedForTheFooter(t *testing.T) {
 	t.Parallel()
-	answer := strings.Repeat("a", 100)
-	withReference := answer + "\n\nhttps://forgejo.example/owner/repo/issues/7"
+	answer := strings.Repeat("a", discordReplyLimit)
+	sent := AssembleReply(answer, discordReplyLimit, createIssueCall())
 
-	if got := footerBudget(discordReplyLimit, answer, withReference); got != 0 {
-		t.Errorf("budget with a reference added = %d, want 0 so the link is kept", got)
+	if got := len([]rune(sent)); got > discordReplyLimit {
+		t.Errorf("reply is %d runes, over the %d budget", got, discordReplyLimit)
 	}
-	// No reference means nothing to protect, so the receipt gets its budget.
-	if got := footerBudget(discordReplyLimit, answer, answer); got != discordReplyLimit {
-		t.Errorf("budget with no reference = %d, want %d", got, discordReplyLimit)
+	if !strings.Contains(sent, wantIssue233) {
+		t.Errorf("the link a member can act on was lost:\n%q", sent)
 	}
-	// An unbounded transport stays unbounded either way.
-	if got := footerBudget(0, answer, withReference); got != 0 {
-		t.Errorf("unbounded transport = %d, want 0", got)
+	// No reference to protect means the receipt is the only suffix, and the
+	// answer still yields to it rather than the other way round.
+	noReference := AssembleReply(
+		answer, discordReplyLimit, ran("eco.get_market", ToolOutcomeOK),
+	)
+	if !strings.Contains(noReference, "`eco.get_market`") {
+		t.Errorf("the receipt was truncated away:\n%q", noReference)
 	}
 }
