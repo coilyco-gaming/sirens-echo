@@ -41,6 +41,23 @@ gate itself means running `bash scripts/ward-command.sh gate` directly to check
 the change. Ordinary work is unaffected, since a dirty Go file is not a dirty
 verb definition.
 
+## A file git has never seen
+
+Several hooks enumerate git's own file list rather than the paths pre-commit
+hands them, so `--all-files` means every *tracked* file. A file that has never
+been added is invisible to them, which made the gate green on a tree the commit
+then rejected. The new file is the most likely thing in a change to carry a
+fresh violation, so this was the case the gate most needed to cover and the one
+it silently did not.
+
+The gate therefore marks every untracked, non-ignored file with
+`git add --intent-to-add` before the hooks run. Intent only: no content is
+staged. The marks are removed however the run exits, including the failure exit,
+so a red gate leaves the index exactly as it was found.
+
+Measured at no cost: the hook pass takes the same time either way, because the
+work is per-file and the file count barely moves.
+
 ## See also
 
 - [features and release tooling](features-release-tooling.md) - what CI runs.
