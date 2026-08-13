@@ -42,11 +42,24 @@ other way, and it is how the list rots into decoration.
 A count is a number someone bumps. A name is a line someone has to write a
 reason next to, and the reason is the part a reviewer can disagree with.
 
-## Not measured
+## The same shape elsewhere, now measured
 
-Only Go tests. Whether the evaluation packs, `policy-check`, or the shell
-scripts have an equivalent quiet-success path is an open question rather than a
-cleared one.
+The sweep that found the skips was Go tests only, so the neighbouring surfaces
+were checked afterwards for the same shape, a success that means nothing ran.
+
+- **Pack loaders** refuse an empty pack. The evaluation, board, and rate
+  loaders each fail on zero cases, and the fixture pack fails on zero tools, so
+  none can report a green load having checked nothing.
+- **Shell scripts** all set `-euo pipefail` except `ci-docker-probe.sh`, which
+  documents that it never fails because the caller wants the report.
+- **`policy-check` named its inputs by hand.** Every tracked pack was listed at
+  the time of checking, so nothing was unverified, but a pack added later would
+  have been verified by nothing while the output stayed green. That one is now
+  guarded: a file in `agent/` that no verify call names fails the suite.
+
+The last one is the same defect as a silent skip, arriving from the other
+direction. A skip stops running a check that exists. An unlisted pack never
+gets a check at all, and both print success.
 
 ## See also
 
