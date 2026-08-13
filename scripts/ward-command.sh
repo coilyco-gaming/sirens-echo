@@ -54,8 +54,26 @@ case "${1:-}" in
     for verb in build policy-check vet test test-skips; do
       gate_step "$verb" bash "$0" "$verb"
     done
+    # Several hooks enumerate git's own file list rather than the one they are
+    # handed, so a file that has never been added is invisible. See issue 343.
+    gate_marked=()
+    while IFS= read -r gate_file; do
+      gate_marked+=("$gate_file")
+    done < <(git ls-files -o --exclude-standard)
+    gate_unmark() {
+      [ ${#gate_marked[@]} -gt 0 ] || return 0
+      git rm --cached --quiet -- "${gate_marked[@]}" >/dev/null 2>&1 || true
+    }
+    if [ ${#gate_marked[@]} -gt 0 ]; then
+      # Intent only: no content is staged, and the index is restored however
+      # this run exits. See docs/sirens-echo-gate.md.
+      git add --intent-to-add -- "${gate_marked[@]}"
+      trap gate_unmark EXIT
+    fi
     # Last, and on the final tree, because these hooks rewrite files.
     gate_step pre-commit pre-commit run --all-files
+    gate_unmark
+    trap - EXIT
     echo "gate: the tree is ready to push"
     ;;
   build)
