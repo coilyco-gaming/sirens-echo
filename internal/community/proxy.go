@@ -99,6 +99,32 @@ type CompletionResult struct {
 	// ServedModel is what actually answered, which a fallback makes different
 	// from the route requested. See docs/sirens-echo-sweep.md.
 	ServedModel string
+	// OfferedTools names what the model could have called. A tool absent here
+	// was never offered, which is not a tool it declined. See sirens-echo#357.
+	OfferedTools []string
+}
+
+// offeredToolNames lists what was sent with the request, which is the only
+// record of what the model could have called once the turn is over.
+func offeredToolNames(tools []chatTool) []string {
+	if len(tools) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(tools))
+	for _, tool := range tools {
+		names = append(names, tool.Function.Name)
+	}
+	return names
+}
+
+// wasOffered reports whether the turn could have called this tool at all.
+func (r CompletionResult) wasOffered(name string) bool {
+	for _, offered := range r.OfferedTools {
+		if offered == name {
+			return true
+		}
+	}
+	return false
 }
 
 // CompletionClient is the inference boundary used by the Discord runtime.
@@ -482,9 +508,10 @@ func (c ProxyClient) Complete(
 				continue
 			}
 			return CompletionResult{
-					Content:     content,
-					ToolCalls:   executed,
-					ServedModel: choice.ServedModel,
+					Content:      content,
+					ToolCalls:    executed,
+					ServedModel:  choice.ServedModel,
+					OfferedTools: offeredToolNames(tools),
 				},
 				nil
 		}

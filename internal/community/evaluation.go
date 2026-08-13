@@ -301,7 +301,7 @@ func ScoreEvaluationCaseAll(
 	record(ValidateResponseStyle(responseStyle, reply))
 	if evaluationCase.RequiredTool != "" &&
 		!completionUsedTool(result, evaluationCase.RequiredTool) {
-		record(fmt.Errorf("expected tool %s", evaluationCase.RequiredTool))
+		record(missingToolFailure(result, evaluationCase.RequiredTool))
 	}
 	lowerOutput := strings.ToLower(reply)
 	for _, forbidden := range evaluationCase.ForbiddenPhrases {
@@ -381,4 +381,19 @@ func completionUsedTool(result CompletionResult, required string) bool {
 		}
 	}
 	return false
+}
+
+// missingToolFailure separates a tool the model declined from one it never
+// had. Only the first says anything about the agent. See sirens-echo#357.
+func missingToolFailure(result CompletionResult, required string) error {
+	if result.wasOffered(required) {
+		return fmt.Errorf("expected tool %s", required)
+	}
+	// Named rather than counted, because "no roster" and "a roster without
+	// this tool" fail here identically and are fixed differently.
+	return fmt.Errorf(
+		"required tool %s was never offered, so this failure describes the "+
+			"run rather than the agent (%d tools offered)",
+		required, len(result.OfferedTools),
+	)
 }
