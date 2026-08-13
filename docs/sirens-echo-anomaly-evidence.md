@@ -55,6 +55,9 @@ Note what the recollection got right and wrong. "Down" was the correct alarm
 and the wrong diagnosis, and a process that took it literally would have
 restarted a healthy pod and seen the symptom disappear until the next deep turn.
 
+Reviewing someone else's finding is the adjacent question, covered in
+[reviewing a claim](sirens-echo-reviewing-claims.md).
+
 ## What this is not
 
 It is not a check. Whether an investigation followed this order is a judgement
