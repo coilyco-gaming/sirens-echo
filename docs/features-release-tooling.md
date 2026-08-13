@@ -10,6 +10,11 @@ The release and validation surfaces stay separate:
 - `.forgejo/workflows/ci.yml` runs the repository build, tests, and validation.
 - Main pushes publish the full-source-SHA Sirens Echo image to Forgejo
   OCI only after the test job passes.
+- A main push that publishes no image fails the run. The publish job is
+  skipped when tests fail, cancelled when a later push supersedes it, and
+  failed when the publish itself breaks. All three leave the commit without
+  an image, so a terminal job reports the consequence rather than letting a
+  stopped pipeline read as a flaky suite.
 - `coilyco-bridge/deploy` owns the read-only pull credential, k3s rollout, and
   rollback.
 

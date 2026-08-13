@@ -84,3 +84,28 @@ jobs:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
         run: python3 scripts/alert-telegram.py
+
+  publish-observed:
+    if: >-
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main'
+    needs: [publish-echo-image]
+    runs-on: docker
+    container: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Fail unless this push published an image
+        env:
+          PUBLISH_RESULT: ${{ needs.publish-echo-image.result }}
+        run: bash scripts/ci-publish-observed.sh
+
+      - name: Alert Telegram on main failure
+        if: ${{ failure() }}
+        continue-on-error: true
+        env:
+          ALERT_KIND: Image publish
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
+        run: python3 scripts/alert-telegram.py
