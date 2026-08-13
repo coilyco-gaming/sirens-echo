@@ -153,8 +153,8 @@ func TestHTTPTurnEnforcesTheHistoryLimitOnBothSides(t *testing.T) {
 	}
 }
 
-// Characterization. The body cap is enforced, but MaxBytesReader surfaces
-// through the decoder, so a well-formed body is reported as malformed JSON.
+// Flipped from a characterization test. It used to assert that an oversize body
+// was reported as malformed JSON, and said to follow the fix. See sirens-echo#351.
 func TestHTTPTurnRejectsABodyOverTheByteCap(t *testing.T) {
 	t.Parallel()
 	agent := httpTurnAgent(t)
@@ -164,9 +164,33 @@ func TestHTTPTurnRejectsABodyOverTheByteCap(t *testing.T) {
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400, body = %s", recorder.Code, recorder.Body.String())
 	}
-	if got := recorder.Body.String(); !strings.Contains(got, "request body must be a JSON object") {
-		t.Errorf("oversized message = %q; a message naming the size cap means the "+
-			"reporting defect was fixed and this assertion should follow it", got)
+	got := recorder.Body.String()
+	if !strings.Contains(got, oversizeBodyMessage) {
+		t.Errorf("oversized message = %q, want it to name the byte limit", got)
+	}
+	// The whole point is that the two stopped sharing one message, so asserting
+	// the new wording without this would pass on a body that said both.
+	if strings.Contains(got, "must be a JSON object") {
+		t.Errorf("oversized message = %q, and a size refusal is not a parse error", got)
+	}
+}
+
+// The other half of the same claim: fixing the size case must not make a
+// genuinely broken body start reporting a size it did not exceed.
+func TestHTTPTurnStillReportsAMalformedBodyAsMalformed(t *testing.T) {
+	t.Parallel()
+	agent := httpTurnAgent(t)
+
+	recorder := postTurn(t, agent, "caller-malformed", `{"content":`)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400, body = %s", recorder.Code, recorder.Body.String())
+	}
+	got := recorder.Body.String()
+	if !strings.Contains(got, "must be a JSON object") {
+		t.Errorf("malformed message = %q, want it to say malformed", got)
+	}
+	if strings.Contains(got, oversizeBodyMessage) {
+		t.Errorf("malformed message = %q, and a parse error is not a size refusal", got)
 	}
 }
 

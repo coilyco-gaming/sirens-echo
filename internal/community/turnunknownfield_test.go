@@ -86,9 +86,9 @@ func TestTurnAcceptsEveryFieldItDefines(t *testing.T) {
 	}
 }
 
-// Acceptance criterion three. A caller cannot currently tell malformed JSON
-// from an oversized body, so a third case would collapse into the same reply.
-func TestTurnRejectionsAreNotDistinguishableToACaller(t *testing.T) {
+// Acceptance criterion three, flipped. A caller can now tell malformed JSON
+// from an oversized body, which is what sirens-echo#351 delivered.
+func TestTurnRejectionsAreDistinguishableToACaller(t *testing.T) {
 	t.Parallel()
 	agent := httpTurnAgent(t)
 	malformed := postTurn(t, agent, "shape-1", `{"author":`)
@@ -100,12 +100,11 @@ func TestTurnRejectionsAreNotDistinguishableToACaller(t *testing.T) {
 			t.Fatalf("status = %d, want 400 for both shapes", recorder)
 		}
 	}
-	// Characterization. The exception code reaches the telemetry span only, so
-	// both bodies read identically and issue 173's third criterion needs more.
-	if malformed.Body.String() != oversized.Body.String() {
-		t.Errorf("malformed and oversized are now distinguishable: %q vs %q. If "+
-			"issue 157 was delivered, this test should assert they differ",
-			strings.TrimSpace(malformed.Body.String()),
-			strings.TrimSpace(oversized.Body.String()))
+	// The bodies have to differ, not just the exception code, because a caller
+	// reads the body and never the span. That was issue 173's third criterion.
+	if malformed.Body.String() == oversized.Body.String() {
+		t.Errorf("malformed and oversized still read identically as %q, so a "+
+			"caller cannot tell which limit they broke",
+			strings.TrimSpace(malformed.Body.String()))
 	}
 }

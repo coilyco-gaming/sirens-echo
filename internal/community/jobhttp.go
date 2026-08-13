@@ -56,6 +56,12 @@ func (a *Agent) handleJobs(writer http.ResponseWriter, request *http.Request) {
 	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
 	var payload jobSubmitRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		// This endpoint has no exception catalog, so it gets an honest message
+		// and not an honest telemetry bucket. See sirens-echo#351.
+		if oversizeBody(err) {
+			http.Error(writer, oversizeBodyMessage, http.StatusBadRequest)
+			return
+		}
 		http.Error(writer, "request body must be a JSON object", http.StatusBadRequest)
 		return
 	}

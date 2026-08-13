@@ -142,6 +142,30 @@ func TestHTTPRejectsAnUndeclaredKind(t *testing.T) {
 	}
 }
 
+// Job submission shares the body cap with the turn endpoint and had the same
+// collapse of every decode error into one message. See sirens-echo#351.
+func TestHTTPSubmitSeparatesAnOversizeBodyFromABrokenOne(t *testing.T) {
+	t.Parallel()
+	agent := jobAgent(t, EchoJobExecutor{})
+
+	oversized, _ := postJob(t, agent, `{"kind":"echo","idempotency_key":"`+
+		strings.Repeat("k", maxHTTPBody+1)+`"}`)
+	if oversized.Code != http.StatusBadRequest {
+		t.Fatalf("oversize status = %d, body = %s", oversized.Code, oversized.Body.String())
+	}
+	if got := oversized.Body.String(); !strings.Contains(got, oversizeBodyMessage) {
+		t.Errorf("oversize message = %q, want it to name the byte limit", got)
+	}
+
+	malformed, _ := postJob(t, agent, `{"kind":`)
+	if malformed.Code != http.StatusBadRequest {
+		t.Fatalf("malformed status = %d, body = %s", malformed.Code, malformed.Body.String())
+	}
+	if got := malformed.Body.String(); !strings.Contains(got, "must be a JSON object") {
+		t.Errorf("malformed message = %q, want it to say malformed", got)
+	}
+}
+
 // Two identical submissions are one job, which is the HTTP half of dedup.
 func TestHTTPSubmitIsIdempotentOnItsKey(t *testing.T) {
 	t.Parallel()
