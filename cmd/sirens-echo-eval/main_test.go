@@ -84,3 +84,24 @@ func TestRateProvenanceNamesTheAbsenceOfAFixture(t *testing.T) {
 		t.Errorf("Roster = %q, want empty", got.Roster)
 	}
 }
+
+// An evaluation run must not report as the deployment. Left unset the instance
+// name fell back to sirens-echo. See sirens-echo#533.
+func TestEvaluationDoesNotReportAsTheDeployment(t *testing.T) {
+	t.Parallel()
+	for _, deployment := range []string{"sirens-echo", "sirens-deep"} {
+		if evaluationInstanceName == deployment {
+			t.Fatalf("evaluation reports as the %s deployment", deployment)
+		}
+	}
+	// Lowercase and hyphenated, because the config validator rejects anything
+	// else and a rejected name would fall back to the default it replaced.
+	for _, r := range evaluationInstanceName {
+		if (r < 'a' || r > 'z') && (r < '0' || r > '9') && r != '-' {
+			t.Fatalf("instance name %q is not a service name", evaluationInstanceName)
+		}
+	}
+	if evaluationInstanceName == "" {
+		t.Fatal("an empty instance name falls back to the deployment's")
+	}
+}
