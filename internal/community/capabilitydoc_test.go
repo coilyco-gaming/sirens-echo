@@ -123,6 +123,63 @@ func TestCapabilityDocDoesNotDenyWorkTheHarnessCanRun(t *testing.T) {
 	}
 }
 
+// The limits capability.md states are properties of the harness, not of one
+// agent's persona, so every lane needs them and only one lane has them.
+func TestCapabilityDocReachesEveryAgent(t *testing.T) {
+	t.Parallel()
+
+	// Characterization. sirens-deep loads coilyco-general alone, which carries
+	// no capability reference. See the encoded-limits issue for sirens-deep.
+	without := map[string]string{"sirens-deep.yaml": "247"}
+
+	definitions, err := filepath.Glob("../../agent/*.yaml")
+	if err != nil || len(definitions) == 0 {
+		t.Fatalf("glob agent definitions: %v, found %d", err, len(definitions))
+	}
+	checked := 0
+	for _, path := range definitions {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
+		}
+		definition := string(body)
+		if !strings.Contains(definition, "local_skill_roots:") {
+			continue
+		}
+		checked++
+		name := filepath.Base(path)
+		reaches := agentReachesCapabilityDoc(t, definition)
+		issue, expected := without[name]
+		switch {
+		case reaches && expected:
+			t.Errorf("%s now reaches capability.md; issue %s is fixed, so drop it "+
+				"from the without map and let this assert the invariant", name, issue)
+		case !reaches && !expected:
+			t.Errorf("%s declares skill roots but none carries references/capability.md, "+
+				"so its model is told none of the harness limits", name)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("no agent definition declared local_skill_roots")
+	}
+}
+
+// agentReachesCapabilityDoc reports whether any declared root holds the
+// capability reference on disk.
+func agentReachesCapabilityDoc(t *testing.T, body string) bool {
+	t.Helper()
+	for _, line := range strings.Split(body, "\n") {
+		root := strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "- "))
+		if !strings.HasPrefix(root, ".agents/skills/") {
+			continue
+		}
+		if _, err := os.Stat(filepath.Join("../..", root, "references", "capability.md")); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
 // yamlScalar reads one top-level scalar without a YAML dependency, which the
 // test does not otherwise need.
 func yamlScalar(body, key string) string {
