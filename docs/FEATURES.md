@@ -21,7 +21,8 @@ See [deploy.md](deploy.md).
 ## Development gates
 
 - Ward verbs for build, policy verification, prompt snapshots, format, vet,
-  test, tidy, run, per-profile evaluation, and full pre-commit
+  test, tidy, run, per-profile evaluation, failure-rate measurement, and full
+  pre-commit
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit
 - Structure, skills, links, modules, comments, secrets, and prompt validated
 

@@ -52,6 +52,16 @@ each case 5 times inside one run, so it is invoked once and its stdout is the
 evidence. Never wire it into CI and never derive a pass or fail from its
 `structural` field. See [the Deep board](docs/sirens-echo-board.md).
 
+`ward exec rate-deep` measures an intermittent behavior and gates nothing. It
+runs each case its own declared number of times, reports passed over attempts,
+and excludes substrate errors from the denominator. Never wire it into CI, and
+never promote a case into the battery on a small clean sample. Record host
+state in `SIRENS_ECHO_SUBSTRATE` before running. See [the rate
+pack](docs/sirens-echo-rate.md).
+
+Three instruments, sorted by what a case protects rather than by how reliably
+it passes. Security cases gate. Everything else reports.
+
 The split is load on `kai-tower-3026`, not confidence. Echo's route
 `sirens-echo/default` resolves to `ornith:35b` on ollama and the AOSH router
 puts `default_server` on that tower, so every Echo case pins a 35B model on the
