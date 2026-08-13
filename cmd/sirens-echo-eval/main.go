@@ -87,6 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("evaluation pack: %v", err)
 	}
+	warnUnservedRequiredTools(pack.Cases, rosterPath)
 	if err := community.RunEvaluation(
 		context.Background(),
 		definition,
@@ -186,6 +187,29 @@ func boardEpochs() int {
 		log.Fatalf("SIRENS_ECHO_BOARD_EPOCHS must be a positive integer, got %q", raw)
 	}
 	return epochs
+}
+
+// warnUnservedRequiredTools names the cases that cannot pass before the run
+// spends a completion on them. See sirens-echo#357.
+func warnUnservedRequiredTools(cases []community.EvaluationCase, rosterPath string) {
+	if rosterPath != "" || strings.TrimSpace(os.Getenv("SIRENS_ECHO_TOOL_FIXTURE")) != "" {
+		return
+	}
+	unservable := make([]string, 0, len(cases))
+	for _, evaluationCase := range cases {
+		if evaluationCase.RequiredTool != "" {
+			unservable = append(unservable, evaluationCase.ID+" needs "+evaluationCase.RequiredTool)
+		}
+	}
+	if len(unservable) == 0 {
+		return
+	}
+	// The failure reads as the model ignoring a tool it had. It had none.
+	log.Printf(
+		"no roster and no fixture, so these cases cannot pass and their failures "+
+			"describe the run rather than the agent: %s",
+		strings.Join(unservable, ", "),
+	)
 }
 
 // evaluationTools serves declared results when a fixture is named, so a case
