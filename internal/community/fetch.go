@@ -133,6 +133,13 @@ func newFetchClient() *http.Client {
 	}
 }
 
+// tailnetRange is carrier-grade NAT, which Tailscale assigns from and which
+// IsPrivate does not cover. See docs/sirens-echo-fetch.md.
+var tailnetRange = func() *net.IPNet {
+	_, network, _ := net.ParseCIDR("100.64.0.0/10")
+	return network
+}()
+
 // refusePrivateAddress rejects loopback, link-local, and private ranges, which
 // is where a cluster keeps everything worth reaching.
 func refusePrivateAddress(address string) error {
@@ -145,7 +152,8 @@ func refusePrivateAddress(address string) error {
 		return fmt.Errorf("unresolved address %q", host)
 	}
 	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+		ip.IsLinkLocalMulticast() || ip.IsUnspecified() ||
+		tailnetRange.Contains(ip) {
 		return fmt.Errorf("refusing an internal address")
 	}
 	return nil

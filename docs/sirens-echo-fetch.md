@@ -30,8 +30,12 @@ here.
 **Private addresses refused at dial time**, not by reading the URL. This is the
 one that is easy to get wrong: an allowlisted hostname can resolve to an
 internal address, deliberately or by accident, and a check that only reads the
-hostname never sees it. Loopback, private ranges, link-local, and unspecified
-are all refused when the connection is made.
+hostname never sees it. Loopback, private ranges, link-local, unspecified, and
+carrier-grade NAT are all refused when the connection is made.
+
+Carrier-grade NAT is named separately because Go's `IsPrivate` is RFC1918 only,
+so `100.64.0.0/10` reads as public to every other predicate. That range is the
+tailnet, which is the network this bound exists to keep out.
 
 **Redirects refused.** A redirect is a second destination the allowlist never
 saw, and following one turns an approved host into an open relay.
