@@ -127,6 +127,12 @@ var falsePositives = []groundingRow{
 		reply:       "Echoes of the past were discussed.",
 		rejectedNow: false, shouldReject: false,
 	},
+	{
+		// The alias and a claim verb in one sentence, attached to neither. Only
+		// the adjacency of name to verb keeps this out. See sirens-echo#559.
+		reply:       "The echo chamber filed nothing.",
+		rejectedNow: false, shouldReject: false,
+	},
 }
 
 // ungroundedClaims assert a completed tracker action with no tool behind it.
