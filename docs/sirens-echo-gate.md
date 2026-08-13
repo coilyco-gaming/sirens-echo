@@ -18,10 +18,16 @@ tree that no longer exists by the time they finish.
 
 ## What it does not do
 
-It does not run on its own. `git commit` does not invoke `pre-commit` unless
-someone has run `pre-commit install`, and this repository is worked from
-task-scoped temporary clones that have no hooks installed. Whether a `pre-push`
-hook should close that gap is open on issue 305.
+It does not stand in for the commit hook. `git commit` does not invoke
+`pre-commit` unless someone has run `pre-commit install`, and this repository is
+worked from task-scoped temporary clones that start without hooks.
+
+`ward exec setup` installs them, and `scripts/ward-command.sh` installs a
+missing hook before running any verb it carries, so the daily loop of `vet`,
+`test`, and `tidy` each leave the commit gate armed behind them on a fresh
+clone. Verbs that name their tool directly in `.ward/ward.yaml`, the snapshot
+and regeneration checks among them, never reach that code. Whether a `pre-push`
+hook should close the remainder is open on issue 305.
 
 It also does not run the live evaluation cadence, which needs Agent Proxy and a
 model. Those are `eval-echo`, `eval-deep`, `board-deep` and the rate pack, and

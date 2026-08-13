@@ -16,6 +16,15 @@ if [ -n "$hook_path" ] && [ ! -e "$hook_path" ] && command -v pre-commit >/dev/n
 fi
 
 case "${1:-}" in
+  setup)
+    # What the block above does silently, done loudly and to a verdict.
+    # Reinstalls over an existing hook, so an edited config lands. See the gate.
+    if ! command -v pre-commit >/dev/null 2>&1; then
+      echo "setup: pre-commit is not on PATH, so the commit gate cannot be installed" >&2
+      exit 1
+    fi
+    pre-commit install --install-hooks
+    ;;
   gate)
     # One habit instead of six. Four red mains in one evening were all caught by
     # pre-commit and missed by the verbs an engineer runs. See issue 305.
@@ -59,6 +68,9 @@ case "${1:-}" in
     ;;
   test)
     go test ./...
+    ;;
+  tidy)
+    go mod tidy
     ;;
   policy-check)
     go run ./cmd/sirens-echo-policy-check
