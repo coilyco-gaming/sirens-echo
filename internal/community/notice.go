@@ -53,6 +53,9 @@ var (
 	noticeRoundsSpent   = harnessNotice("ran out of steps, ask for something narrower")
 	noticeReplyBlocked  = harnessNotice("reply blocked by response check, rephrase")
 	noticeTurnCrashed   = harnessNotice("turn crashed")
+	// The answer existed and the send failed. A member reading silence cannot
+	// tell that from being ignored. See docs/sirens-echo-delivery-failures.md.
+	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
 )
 
 // The failure causes, a closed set. error_type is the stage, so two conditions

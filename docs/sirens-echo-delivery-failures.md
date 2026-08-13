@@ -42,6 +42,18 @@ they could be counted after the fact and never alerted on.
 `stage_failed`. It is derived in the same order the notice is chosen, so the
 label and the phrase a member reads cannot disagree.
 
+## The member is told, once
+
+A composed reply that fails to send used to end the turn silently, which is
+indistinguishable from being ignored. The turn now marks itself failed and
+attempts one short notice, `reply could not be delivered, retry shortly`.
+
+One attempt, never a retry. A loop would turn one dropped reply into a flood
+against the transport that just refused. The second send is worth trying rather
+than assumed futile because the failure classes differ in size: a reply refused
+for length succeeds as a short notice, and a permissions failure costs one call
+and fails again. Losing that call beats a member concluding they were ignored.
+
 ## What this does not do
 
 It does not reduce the failure rate. It records what a failure was, so the rate
