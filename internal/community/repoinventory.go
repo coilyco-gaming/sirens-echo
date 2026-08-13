@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -59,7 +61,7 @@ func (s *repoInventorySession) Tools() []ToolDefinition {
 	if s.org == "" {
 		return nil
 	}
-	return []ToolDefinition{{
+	return []ToolDefinition{s.readFileTool(), {
 		Name:     repoInventoryToolName,
 		Original: repoInventoryToolName,
 		Server:   repoInventoryServer,
@@ -89,9 +91,15 @@ type repoRecord struct {
 func (s *repoInventorySession) Call(
 	ctx context.Context,
 	name string,
-	_ map[string]any,
+	arguments map[string]any,
 ) (ToolResult, error) {
-	if s.org == "" || name != repoInventoryToolName {
+	if s.org == "" {
+		return ToolResult{}, fmt.Errorf("model requested unavailable inventory tool %q", name)
+	}
+	if name == readFileToolName {
+		return s.readPublicFile(ctx, arguments)
+	}
+	if name != repoInventoryToolName {
 		return ToolResult{}, fmt.Errorf("model requested unavailable inventory tool %q", name)
 	}
 	records, err := s.list(ctx)
@@ -162,4 +170,104 @@ func renderRepoInventory(org string, records []repoRecord) string {
 		out.WriteString("\n")
 	}
 	return out.String()
+}
+
+// readFileToolName reads one file from a public repository. Sibling to the
+// inventory: same forge, same absence of a credential. See sirens-echo#679.
+const readFileToolName = "read_public_file"
+
+func (s *repoInventorySession) readFileTool() ToolDefinition {
+	return ToolDefinition{
+		Name:     readFileToolName,
+		Original: readFileToolName,
+		Server:   repoInventoryServer,
+		Description: "Read one file from a public repository on this forge. " +
+			"Public only: this reads without a credential, so a private " +
+			"repository is not visible to it.",
+		InputSchema: scratchObjectSchema(map[string]any{
+			"owner": scratchStringProperty("Organization or user, such as " + repoInventoryOwnerHint + "."),
+			"repo":  scratchStringProperty("Repository name."),
+			"path":  scratchStringProperty("Path within the repository."),
+			"ref":   scratchStringProperty("Branch, tag, or commit. Defaults to the default branch."),
+		}, []string{"owner", "repo", "path"}),
+	}
+}
+
+// repoInventoryOwnerHint keeps the schema's example from naming a real org this
+// deployment may not serve.
+const repoInventoryOwnerHint = "an organization"
+
+// readPublicFile fetches one file. The path is refused rather than cleaned,
+// because a caller that meant to escape should be told, not corrected.
+func (s *repoInventorySession) readPublicFile(
+	ctx context.Context,
+	arguments map[string]any,
+) (ToolResult, error) {
+	owner := strings.TrimSpace(scratchStringArg(arguments, "owner"))
+	repo := strings.TrimSpace(scratchStringArg(arguments, "repo"))
+	path := strings.TrimSpace(scratchStringArg(arguments, "path"))
+	if owner == "" || repo == "" || path == "" {
+		return scratchRefusal("owner, repo and path are all required")
+	}
+	if escapesRepository(path) {
+		return scratchRefusal("%s leaves the repository", path)
+	}
+	endpoint := s.baseURL + "/api/v1/repos/" + url.PathEscape(owner) + "/" +
+		url.PathEscape(repo) + "/raw/" + escapeRepoPath(path)
+	if ref := strings.TrimSpace(scratchStringArg(arguments, "ref")); ref != "" {
+		endpoint += "?ref=" + url.QueryEscape(ref)
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return scratchRefusal("that file cannot be requested")
+	}
+	response, err := s.client.Do(request)
+	if err != nil {
+		return scratchRefusal("the repository host did not answer")
+	}
+	defer func() { _ = response.Body.Close() }()
+	if response.StatusCode != http.StatusOK {
+		return scratchRefusal("the repository host answered %d for %s/%s/%s",
+			response.StatusCode, owner, repo, path)
+	}
+	// One byte past the cap, so a file that fits is distinguishable from one
+	// that does not. The same shape the fetch tool uses.
+	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxRepoFileBytes)+1))
+	if err != nil {
+		return scratchRefusal("that file could not be read")
+	}
+	return ToolResult{Text: repoFileText(path, body)}, nil
+}
+
+// escapesRepository refuses a path that climbs out or is absolute. Checked
+// before the request, so a refusal costs no round trip.
+func escapesRepository(path string) bool {
+	if strings.HasPrefix(path, "/") {
+		return true
+	}
+	for _, segment := range strings.Split(filepath.ToSlash(path), "/") {
+		if segment == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+// escapeRepoPath escapes each segment, so a path keeps its separators while a
+// segment carrying a slash or a space cannot forge one.
+func escapeRepoPath(path string) string {
+	segments := strings.Split(path, "/")
+	for index, segment := range segments {
+		segments[index] = url.PathEscape(segment)
+	}
+	return strings.Join(segments, "/")
+}
+
+func repoFileText(path string, body []byte) string {
+	if len(body) <= maxRepoFileBytes {
+		return fmt.Sprintf("%s\n%s", path, string(body))
+	}
+	kept := strings.ToValidUTF8(string(body[:maxRepoFileBytes]), "")
+	return fmt.Sprintf("%s\n%s\n\n[truncated at %d bytes, this file is longer than that]",
+		path, kept, maxRepoFileBytes)
 }
