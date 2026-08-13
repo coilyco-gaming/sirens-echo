@@ -143,7 +143,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
 	}
-	agent.identifiers = NewIdentifierGuard(cfg, accessPolicy, roster)
+	agent.identifiers = NewIdentifierGuard(cfg, roster)
 	agent.ensureRuntimeDefaults()
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err

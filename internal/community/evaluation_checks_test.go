@@ -444,7 +444,7 @@ func TestPronounPolicyIsEnglishOnly(t *testing.T) {
 // gate asserts an invariant the deployment does not enforce. Issue 188.
 func TestRuntimeGuardAndEvalCheckAgree(t *testing.T) {
 	t.Parallel()
-	guard := NewIdentifierGuard(Config{Principal: PlaceholderPrincipal}, nil, nil)
+	guard := NewIdentifierGuard(Config{Principal: PlaceholderPrincipal}, nil)
 	leaks := map[string]string{
 		"literal":  "The ID is " + PlaceholderPrincipal.UserID + ".",
 		"spaced":   "The ID is 1 0 2 4" + strings.Repeat(" 0", 14) + " 1.",

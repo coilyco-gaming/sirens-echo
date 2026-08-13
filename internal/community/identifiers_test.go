@@ -12,19 +12,12 @@ const (
 
 func guardFixture(t *testing.T) *IdentifierGuard {
 	t.Helper()
-	policy := &AccessPolicy{
-		Guilds: []GuildAccess{{
-			ID:       testGuildID,
-			Channels: Allowlist{IDs: []string{"1537024102886277210"}},
-		}},
-	}
 	return NewIdentifierGuard(
 		Config{
 			Principal:     Principal{Handle: "coilysiren", UserID: testPrincipalID},
 			AgentProxyURL: "http://proxy-host:8080",
 			DiscordToken:  "a-discord-bot-token-long-enough-to-guard",
 		},
-		policy,
 		[]MCPServerDefinition{{Name: "forgejo", URL: "http://sirens-deep-forgejo-mcp:8080/mcp"}},
 	)
 }
@@ -40,12 +33,10 @@ func TestIdentifierGuardRefusesThePrincipalID(t *testing.T) {
 	}
 }
 
-func TestIdentifierGuardRefusesPolicyAndEndpointValues(t *testing.T) {
+func TestIdentifierGuardRefusesEndpointAndSecretValues(t *testing.T) {
 	t.Parallel()
 	guard := guardFixture(t)
 	for name, reply := range map[string]string{
-		"guild":    "The configured guild is " + testGuildID + ".",
-		"channel":  "Replies are limited to 1537024102886277210.",
 		"mcp host": "The tracker is served from sirens-deep-forgejo-mcp:8080.",
 		"proxy":    "Inference is routed through proxy-host:8080.",
 		"token":    "The token is a-discord-bot-token-long-enough-to-guard.",
@@ -54,7 +45,49 @@ func TestIdentifierGuardRefusesPolicyAndEndpointValues(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			if err := guard.Validate(reply); err == nil {
-				t.Fatalf("guard admitted a configured identifier: %q", reply)
+				t.Fatalf("guard admitted a secret identifier: %q", reply)
+			}
+		})
+	}
+}
+
+// Configured, not secret. Guarding them made a channel link unsayable in every
+// form, which is what issue 289 measured. Kai decided they come out.
+func TestIdentifierGuardAdmitsChannelAndGuildIDs(t *testing.T) {
+	t.Parallel()
+	guard := guardFixture(t)
+	for name, reply := range map[string]string{
+		"guild":        "The configured guild is " + testGuildID + ".",
+		"channel":      "Replies are limited to 1537024102886277210.",
+		"channel link": "The rules are at https://discord.com/channels/" + testGuildID + "/1537024102886277210",
+		"channel ref":  "See <#1537024102886277210> for the rules.",
+	} {
+		reply := reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := guard.Validate(reply); err != nil {
+				t.Fatalf("guard refused a public identifier: %q (%v)", reply, err)
+			}
+		})
+	}
+}
+
+// The half that must not move. An @-mention is the shape a successful
+// exfiltration takes, so markup earns no exemption. See issue 289.
+func TestIdentifierGuardStillRefusesThePrincipalIDInEveryShape(t *testing.T) {
+	t.Parallel()
+	guard := guardFixture(t)
+	for name, reply := range map[string]string{
+		"bare":     "The operator is " + testPrincipalID + ".",
+		"mention":  "Ask <@" + testPrincipalID + "> directly.",
+		"nickname": "Ask <@!" + testPrincipalID + "> directly.",
+		"spaced":   "The operator is " + testPrincipalID[:6] + " " + testPrincipalID[6:] + ".",
+	} {
+		reply := reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := guard.Validate(reply); err == nil {
+				t.Fatalf("the principal ID escaped as %s: %q", name, reply)
 			}
 		})
 	}
@@ -114,7 +147,7 @@ func TestIdentifierGuardAdmitsAHostWithoutItsPort(t *testing.T) {
 // or panic on a nil guard.
 func TestIdentifierGuardWithoutConfigurationIsInert(t *testing.T) {
 	t.Parallel()
-	empty := NewIdentifierGuard(Config{}, nil, nil)
+	empty := NewIdentifierGuard(Config{}, nil)
 	if empty.Guarded() != 0 {
 		t.Fatalf("empty configuration produced %d identifiers", empty.Guarded())
 	}

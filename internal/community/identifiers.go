@@ -30,26 +30,13 @@ type IdentifierGuard struct {
 
 // NewIdentifierGuard derives the set from configuration at boot, so it cannot
 // drift from what the pod actually holds. See docs/sirens-echo-identifiers.md.
-func NewIdentifierGuard(
-	cfg Config,
-	policy *AccessPolicy,
-	roster []MCPServerDefinition,
-) *IdentifierGuard {
+func NewIdentifierGuard(cfg Config, roster []MCPServerDefinition) *IdentifierGuard {
 	guard := &IdentifierGuard{}
 	// The principal ID reaches no tool that returns it, so it is forbidden
 	// unconditionally rather than only when no tool ran.
 	guard.addSnowflake(cfg.Principal.UserID)
-	for _, channel := range cfg.DiscordChannelIDs {
-		guard.addSnowflake(channel)
-	}
-	if policy != nil {
-		for _, guild := range policy.Guilds {
-			guard.addSnowflake(guild.ID)
-			for _, channel := range guild.Channels.IDs {
-				guard.addSnowflake(channel)
-			}
-		}
-	}
+	// Channel and guild IDs are deliberately absent. They are configured, not
+	// secret, and guarding them made a channel link unsayable. See issue 289.
 	for _, server := range roster {
 		guard.addEndpoint(server.URL)
 	}

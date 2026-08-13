@@ -94,7 +94,6 @@ func corpusIdentifierGuard(t *testing.T) *IdentifierGuard {
 	t.Helper()
 	return NewIdentifierGuard(
 		Config{Principal: corpusPrincipal(), AgentProxyURL: "http://proxy-host:8080"},
-		&AccessPolicy{Guilds: []GuildAccess{{ID: "1300204416229441587"}}},
 		nil,
 	)
 }

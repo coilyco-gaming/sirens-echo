@@ -8,11 +8,11 @@ has invented yet, without anticipating any of them.
 
 ## Built from configuration, not from a list
 
-The set is derived at boot from the values the pod actually holds: the principal
-user ID, the configured channel IDs, the guild and channel IDs in the access
-policy, the endpoints of the MCP roster and the Agent Proxy, and the Discord
-token. Nothing is hardcoded, so the set cannot drift as configuration changes
-and there is no list for anyone to maintain.
+Derived at boot from what the pod holds: the principal user ID, the MCP roster
+and Agent Proxy endpoints, and the Discord token. Nothing is hardcoded, so the
+set cannot drift and there is no list to maintain. Channel and guild IDs are
+absent: configured rather than secret, and guarding them made a channel link
+unsayable. The principal ID stays guarded in every shape. See issue 289.
 
 ## Admitted by shape, not by membership
 
