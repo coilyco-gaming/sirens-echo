@@ -985,6 +985,8 @@ func (a *Agent) runTurn(
 	recordContentVerdict(turnSpan, verdict)
 	if verdict.Blocked {
 		a.telemetry.Info(turnCtx, "content.blocked", slog.String("class", verdict.Class.ID))
+		// The boundary mark exists for exactly this and fired on nothing.
+		reactFromContext(turnCtx, reactionRefused)
 		return turn.Reply(turnCtx, BlockResponse(verdict.Class, "", a.cfg.Principal))
 	}
 

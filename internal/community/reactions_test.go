@@ -70,3 +70,19 @@ func TestEveryHarnessCaseHasADistinctReaction(t *testing.T) {
 		seen[emoji] = name
 	}
 }
+
+// The approved vocabulary, pinned to codepoints. Asserting only distinctness
+// is how two of these drifted. See sirens-echo#111.
+func TestTheReactionsAreTheOnesThatWereApproved(t *testing.T) {
+	t.Parallel()
+	for name, want := range map[string]struct{ got, approved string }{
+		"acknowledged":    {reactionAccepted, "\U0001F440"},
+		"tool call":       {reactionTool, "\U0001F528"},
+		"error":           {reactionFailed, "❌"},
+		"content blocked": {reactionRefused, "\U0001F6AB"},
+	} {
+		if want.got != want.approved {
+			t.Errorf("%s renders %q, want the approved %q", name, want.got, want.approved)
+		}
+	}
+}
