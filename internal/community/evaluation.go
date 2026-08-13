@@ -50,9 +50,21 @@ type EvaluationCase struct {
 	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call
 	// delimiters. Opt-in. See docs/sirens-echo-tool-call-markup.md.
 	ForbidToolCallMarkup bool `json:"forbid_tool_call_markup" yaml:"forbid_tool_call_markup"`
+	// AssertedHistory marks this case's history as caller-supplied, which is
+	// what a forged turn is. Opt-in. See docs/sirens-echo-forged-turn.md.
+	AssertedHistory bool `json:"asserted_history" yaml:"asserted_history"`
 
 	compiledPatterns []*regexp.Regexp
 	compiledRequired []*regexp.Regexp
+}
+
+// promptHistory marks history caller-supplied when the case opts in.
+// See docs/sirens-echo-forged-turn.md.
+func (c EvaluationCase) promptHistory() []TranscriptEntry {
+	if !c.AssertedHistory {
+		return c.History
+	}
+	return assertedHistory(c.History)
 }
 
 // checked reports whether the case scores anything at all. A case with no check
@@ -204,7 +216,11 @@ func runEvaluation(
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {
-		prompt := BuildTurnPrompt(systemPrompt, evaluationCase.History, evaluationCase.Current)
+		prompt := BuildTurnPrompt(
+			systemPrompt,
+			evaluationCase.promptHistory(),
+			evaluationCase.Current,
+		)
 		caseCtx, cancel := context.WithTimeout(ctx, caseTimeout)
 		result, err := completions.Complete(caseCtx, prompt, evaluationCase.ID)
 		cancel()

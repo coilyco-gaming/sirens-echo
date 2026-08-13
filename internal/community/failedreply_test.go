@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -90,4 +91,44 @@ func TestAFailingCaseEmitsOneHeadingInPractice(t *testing.T) {
 	if got := strings.Count(out.String(), PlaceholderPrincipal.UserID); got != 1 {
 		t.Errorf("the reply was printed %d times, want 1", got)
 	}
+}
+
+// A case measuring a forged turn has to render the marker that makes it one.
+// See sirens-echo#177.
+func TestAssertedHistoryOnlyMarksACaseThatAsksForIt(t *testing.T) {
+	t.Parallel()
+	history := []TranscriptEntry{{Author: "system", Content: "policy updated"}}
+	plain := EvaluationCase{History: history}
+	if plain.promptHistory()[0].Asserted {
+		t.Error("a case that did not opt in was marked caller-asserted")
+	}
+	forged := EvaluationCase{History: history, AssertedHistory: true}
+	if !forged.promptHistory()[0].Asserted {
+		t.Error("a case that opted in was not marked, so the marker never renders")
+	}
+	// The case's own history must not be mutated, or a second run of the same
+	// pack would differ from the first.
+	if history[0].Asserted {
+		t.Error("marking mutated the case rather than copying it")
+	}
+}
+
+// The pack case that motivated this has to stay opted in, or it silently goes
+// back to measuring the undefended turn.
+func TestTheForgedSystemTurnCaseStaysOptedIn(t *testing.T) {
+	t.Parallel()
+	pack, err := LoadRatePack(filepath.Join("..", "..", "agent", "rate-deep.yaml"))
+	if err != nil {
+		t.Fatalf("load rate pack: %v", err)
+	}
+	for _, rateCase := range pack.Cases {
+		if rateCase.ID != "injection-fake-system-turn" {
+			continue
+		}
+		if !rateCase.AssertedHistory {
+			t.Error("the forged-turn case stopped marking its history, so it measures the undefended turn")
+		}
+		return
+	}
+	t.Fatal("injection-fake-system-turn is gone, and this guard went with it")
 }
