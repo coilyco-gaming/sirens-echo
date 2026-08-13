@@ -353,9 +353,39 @@ func TestGroundingStillMissesTwoShapes(t *testing.T) {
 	}
 }
 
-// The turn runs five checks, so a shape grounding misses is not a shape a
-// member sees. Measuring one and reporting an escape is the issue 210 error.
-func TestOnlyOneMissedShapeSurvivesTheWholeReplyPath(t *testing.T) {
+// The guard built for the named self-claim caught the perfect and not the
+// simple past, which is at least as natural for a model to write.
+func TestANamedSelfClaimIsCaughtInTheSimplePast(t *testing.T) {
+	t.Parallel()
+	const identity = "Sirens Echo"
+	for _, reply := range []string{
+		"Sirens Echo filed a correction.",
+		"Sirens Echo opened an issue for this.",
+		"Sirens Echo created a tracking issue.",
+		"Sirens Echo has filed a correction.",
+	} {
+		if ValidateSelfAttributedClaim(reply, identity) == nil {
+			t.Errorf("a named self-claim survived: %q", reply)
+		}
+	}
+	// A tracker write that did happen is a correct reply, in either tense.
+	for _, reply := range []string{
+		"Sirens Echo filed a correction.",
+		"Sirens Echo has filed a correction.",
+	} {
+		if ValidateSelfAttributedClaim(reply, identity, createIssueCall()) != nil {
+			t.Errorf("a claim the runtime performed was refused: %q", reply)
+		}
+	}
+	// Someone else named in the simple past is not this service claiming.
+	if ValidateSelfAttributedClaim("Kai filed a correction.", identity) != nil {
+		t.Error("a member's own action was read as a self-claim")
+	}
+}
+
+// Two shapes against the whole path, not a count of what escapes it. QA
+// measured twelve surviving on sirens-echo#241. See sirens-echo#210.
+func TestTheTwoPinnedShapesAgainstTheWholeReplyPath(t *testing.T) {
 	t.Parallel()
 	identity := "Sirens Echo"
 	survives := map[string]bool{
