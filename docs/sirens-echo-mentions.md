@@ -50,6 +50,16 @@ occurrences stay as the name and still read correctly.
 the same link spans the reply validators mask, so a member called `eco`, `wiki`
 or `main` cannot corrupt a URL by being in the room.
 
+**A name inside a dotted identifier is not that person either.** A host written
+without a scheme is not a link by that shared definition, so the spans do not
+cover it and a second rule does. A name immediately preceded by a dot, or
+followed by a dot and then a letter or digit, is a label rather than a person.
+A trailing dot before a space or the end of the reply is the punctuation of a
+sentence, so a name that ends one still resolves. See sirens-echo#481.
+
+Resolution reads every occurrence in a span rather than the first, because the
+first can be a hostname label while the person is named later in the sentence.
+
 **An existing mention is left alone**, so nothing nests.
 
 **A longer name wins over a shorter one it contains**, so a display name that

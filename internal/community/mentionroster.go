@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Naming someone should reach them. Only people already in the conversation
@@ -111,14 +113,36 @@ func resolveWithin(spans []mentionSpan, pattern *regexp.Regexp, userID string) b
 			continue
 		}
 		text := spans[index].text
-		where := pattern.FindStringSubmatchIndex(text)
-		if where == nil {
-			continue
+		// Every occurrence, not the first. The first can be a hostname label
+		// while a real mention follows it. See sirens-echo#481.
+		for _, where := range pattern.FindAllStringSubmatchIndex(text, -1) {
+			if inDottedIdentifier(text, where[3], where[1]) {
+				continue
+			}
+			// Cut on the match rather than on the roster's spelling of the
+			// name, which the case-insensitive pattern need not match.
+			spans[index].text = text[:where[3]] + "<@" + userID + ">" + text[where[1]:]
+			return true
 		}
-		// Cut on the match rather than on the roster's spelling of the name,
-		// which the case-insensitive pattern is under no obligation to match.
-		spans[index].text = text[:where[3]] + "<@" + userID + ">" + text[where[1]:]
-		return true
 	}
 	return false
+}
+
+// inDottedIdentifier reports whether a name sits inside a dotted identifier
+// such as a hostname, where it is a label and not a person.
+func inDottedIdentifier(text string, start, end int) bool {
+	if start > 0 && text[start-1] == '.' {
+		return true
+	}
+	// A trailing dot before a letter or digit continues an identifier. A
+	// trailing dot before a space or the end is the punctuation of a sentence.
+	rest := text[end:]
+	if !strings.HasPrefix(rest, ".") {
+		return false
+	}
+	next, width := utf8.DecodeRuneInString(rest[1:])
+	if width == 0 {
+		return false
+	}
+	return unicode.IsLetter(next) || unicode.IsDigit(next)
 }
