@@ -1,6 +1,7 @@
 package community
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -36,5 +37,18 @@ func TestAnEmptyReplyIsNamedRatherThanBlank(t *testing.T) {
 	}
 	if !strings.Contains(got, "no content") {
 		t.Errorf("failedReply = %q, want it to name the emptiness", got)
+	}
+}
+
+// Two seats fixed the same issue and both prints landed, so a failing case
+// printed its block twice. See sirens-echo#407.
+func TestAFailingCasePrintsOneBlockNotTwo(t *testing.T) {
+	t.Parallel()
+	source, err := os.ReadFile("evaluation.go")
+	if err != nil {
+		t.Fatalf("read evaluation.go: %v", err)
+	}
+	if got := strings.Count(string(source), `"%s: fail\n%s\n\n"`); got != 1 {
+		t.Errorf("the fail block is printed from %d places, want exactly 1", got)
 	}
 }

@@ -222,12 +222,10 @@ func runEvaluation(
 			principal,
 		)
 		if err != nil {
-			// The reply is the only artifact that separates a check defect from an
-			// agent defect, so a failure prints it too. See sirens-echo#386.
-			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, reply)
-			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
-			// The reply is the evidence. See sirens-echo#386.
+			// The reply separates a check defect from an agent defect, and the
+			// raw completion stands in when scoring failed before parsing.
 			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, failedReply(reply, result))
+			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
 		}
 		fmt.Fprintf(output, "%s: pass\n%s\n\n", evaluationCase.ID, reply)
