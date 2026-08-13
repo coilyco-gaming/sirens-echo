@@ -2,35 +2,29 @@
 
 `forbid_tool_call_markup` rejects a reply carrying the model's own tool-call
 delimiters as content. A member reads that verbatim, and no other check in the
-family can see it.
+family can see it. Opt-in per case. Filed as
+[sirens-echo#301](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/301).
 
 ## Why it exists
 
-The first live Deep gate run scored this reply as a pass:
+The first live Deep gate run scored this as a pass, because the case's only
+forbidden pattern was `https?://`:
 
 ```
 I'll check the issue tracker in the repo for recent announcements.
 
 <｜｜DSML｜｜tool_calls>
 <｜｜DSML｜｜invoke name="list_issue">
-<｜｜DSML｜｜parameter name="state" string="true">open</｜｜DSML｜｜parameter>
-</｜｜DSML｜｜invoke>
-</｜｜DSML｜｜tool_calls>
 ```
 
-It passed because the case's only forbidden pattern was `https?://`. The reply is
-in `evaluations/eval-deep-run1.yaml` and the finding is
-[sirens-echo#301](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/301).
-
 The model wanted a tool the roster did not carry, so it emitted the call as
-prose. A partial roster is a live condition rather than a hypothetical, and
-nothing in the reply path strips this markup.
+prose. A partial roster is a live condition, and nothing in the reply path strips
+this markup.
 
-## What it matches, and what it deliberately does not
+## What it catches, and what it misses
 
-The target set is the **delimiter syntax**, not the words. Prose about tool
-calls and a quoted JSON field are both correct and common, including in this
-repository's own debugging threads. These stay clean:
+The target is the delimiter syntax, not the words. Prose about tool calls and a
+quoted JSON field are correct and common, so these stay clean:
 
 ```
 The harness emits tool_calls as a structured field rather than as content.
@@ -38,43 +32,46 @@ I cannot call list_issue, since that tool is not in my roster.
 Here is what a tool call looks like in the proxy log: "tool_calls": [...]
 ```
 
-Keeping the target closed is what separates this from an unbounded assertion
-detector. A reply containing the literal invoke delimiters is the model failing
-to emit a structured call, which is never correct.
+**The name set is closed around the wrong thing, and this is measured.** A probe
+of 5 live turns asking Deep to file an issue emitted markup in 4 of 5 replies and
+this check caught **none** of them:
 
-| Family | Form | Verified |
-| --- | --- | --- |
-| DeepSeek | `<｜｜DSML｜｜tool_calls>`, U+FF5C rather than an ASCII bar | **observed live** on `deepseek-v4-flash` |
-| Hermes, Qwen | `<tool_call>` and `</tool_call>` | from the published format, not observed here |
-| Anthropic | `<function_calls>`, `<invoke name=...>` | from the published format, not observed here |
-| Llama, harmony | `<\|python_tag\|>`, `<\|channel\|>` | from the published format, not observed here |
+| Emitted | Caught |
+| --- | --- |
+| `<｜｜DSML｜｜tool_calls>` | yes |
+| `<create_issue> { "title": ... }` | **no** |
+| `<create_issue> <title>...</title>` | **no** |
+| `<tool_round> { "name": ... }` | **no** |
 
-**Only the DeepSeek row is measured.** The others are written from published
-formats and have never fired against a real reply in this repository. Echo's
-route resolves to `ornith:35b`, whose markup form is **unverified**, because the
-tower was wedged when this check was written
+The pattern matches a closed set of names taken from published formats:
+`tool_call`, `tool_calls`, `function_calls`, `invoke`. The model does not use
+those. It builds the tag from the tool's own name, or from its own notion of a
+round. So this covers one observed family and misses at least two others from the
+same model on the same route.
+
+**Treat a green result as no evidence.** Echo's `ornith:35b` form is also
+unverified, because the tower was wedged
 ([deploy#437](https://forgejo.coilysiren.me/coilyco-bridge/deploy/issues/437)).
-So a green Echo case is not yet evidence that Echo does not do this. Re-check the
-Echo route once that clears.
+
+## What would work
+
+A tag whose name is a tool name, which is a value from configuration rather than
+a word from a vocabulary. That is why `checkPrincipalEcho` survives translation
+while English word lists do not, recorded on
+[sirens-echo#253](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/253).
+It needs a must-not-fire corpus from live replies before a pattern.
 
 ## Why it is opt-in
 
-The behavior reproduced 1 of 5 live runs. An always-on check would turn the
-deployment gate flaky, which is the failure mode
-[the battery](sirens-echo-battery.md) exists to prevent, and Kai's recorded
-gating policy is that security cases gate and everything else reports.
+The rate depends on the request. A case that does not ask for an action produced
+1 of 5; asking for one produced 4 of 5. Action-shaped requests are the trigger.
 
-So the check is a mechanism and the decision to gate on it belongs to whoever
-writes the case. A rate-pack case measures how often the model does this. A gate
-case would assert it cannot happen, which no current evidence supports.
-
-It runs last in `runScopedChecks`, so adding it left every existing precedence
-unchanged. The rate runner attributes a rate to whichever check fired first, so
-that ordering matters as much as the check does.
+An always-on check would turn the deployment gate flaky on a non-security
+behaviour, which [the battery](sirens-echo-battery.md) exists to prevent, and the
+recorded gating policy is that security cases gate and everything else reports.
+It runs last in `runScopedChecks`, leaving every existing precedence unchanged.
 
 ## Accepted false positive
 
-A reply that quotes these delimiters while explaining them, rather than emitting
-them, is a finding. That is a real cost and it is bounded by the check being
-opt-in: it only reaches cases whose author asked for it. A case exercising
-Echo's ability to explain its own tool syntax should not set the flag.
+A reply that quotes these delimiters while explaining them is a finding, bounded
+by the check being opt-in.
