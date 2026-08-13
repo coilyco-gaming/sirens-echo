@@ -89,6 +89,9 @@ type MCPProvider struct {
 	RefreshInterval time.Duration
 	// CallTimeout bounds one tool call. Zero uses defaultCallTimeout.
 	CallTimeout time.Duration
+	// Telemetry traces discovery. Nil records nothing, which is what a
+	// hand-built provider in a test gets unless it asks otherwise.
+	Telemetry *Telemetry
 
 	mu      sync.Mutex
 	started bool
@@ -261,6 +264,27 @@ func (p *MCPProvider) startLocked() {
 	}
 }
 
+// discoveryStage names where a round trip was when it failed, so a rejection is
+// attributable without a request body. See sirens-echo#139.
+const (
+	discoveryStageConnect   = "connect"
+	discoveryStageTools     = "tools"
+	discoveryStageResources = "resources"
+	discoveryStagePrompts   = "prompts"
+)
+
+// startDiscoverySpan names the server a round trip belongs to. Injected rather
+// than global, so two tests recording spans cannot overwrite each other.
+func (p *MCPProvider) startDiscoverySpan(
+	ctx context.Context, server string,
+) (context.Context, trace.Span) {
+	return telemetryOrNoop(p.Telemetry).StartSpan(
+		ctx,
+		"mcp.server.discovery",
+		attribute.String("mcp.server.name", server),
+	)
+}
+
 // readyLocked connects and lists only what this turn needs. Reaching the
 // network and completing a listing are different: a failed connect is neither.
 func (p *MCPProvider) readyLocked(
@@ -269,23 +293,35 @@ func (p *MCPProvider) readyLocked(
 	now time.Time,
 ) (reached, listed bool, err error) {
 	base := p.turnTraced(turnCtx)
-	if entry.session == nil {
-		if now.Before(entry.retryAfter) {
-			// Backing off spends no round trip, so it is neither.
-			return false, false, fmt.Errorf(
-				"MCP server %s is backing off", entry.definition.Name)
-		}
-		if err := p.connectLocked(base, entry); err != nil {
+	connecting := entry.session == nil
+	if connecting && now.Before(entry.retryAfter) {
+		// Backing off spends no round trip, so it is neither.
+		return false, false, fmt.Errorf(
+			"MCP server %s is backing off", entry.definition.Name)
+	}
+	// needsTools consumes a list_changed notification, so it runs exactly once
+	// on every path through this function.
+	if !connecting && !entry.needsTools(p.refreshInterval(), now) {
+		return false, false, nil
+	}
+	// From here a round trip happens, and it gets a span naming the server.
+	// See docs/sirens-echo-tool-discovery-telemetry.md.
+	discoveryCtx, span := p.startDiscoverySpan(base, entry.definition.Name)
+	defer span.End()
+	if connecting {
+		span.SetAttributes(attribute.String("mcp.discovery.stage", discoveryStageConnect))
+		if err := p.connectLocked(discoveryCtx, entry); err != nil {
 			entry.penalise(now)
 			return true, false, err
 		}
 		entry.backoff = 0
+		if !entry.needsTools(p.refreshInterval(), now) {
+			return true, false, nil
+		}
 	}
-	if !entry.needsTools(p.refreshInterval(), now) {
-		return false, false, nil
-	}
-	listCtx, cancel := context.WithTimeout(base, mcpListTimeout)
+	listCtx, cancel := context.WithTimeout(discoveryCtx, mcpListTimeout)
 	defer cancel()
+	span.SetAttributes(attribute.String("mcp.discovery.stage", discoveryStageTools))
 	discovered, err := discoverTools(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
@@ -293,11 +329,13 @@ func (p *MCPProvider) readyLocked(
 	}
 	// A server may publish tools without resources, so an unsupported listing
 	// is an empty one rather than a failure.
+	span.SetAttributes(attribute.String("mcp.discovery.stage", discoveryStageResources))
 	resources, err := discoverResources(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
 		return true, false, err
 	}
+	span.SetAttributes(attribute.String("mcp.discovery.stage", discoveryStagePrompts))
 	prompts, err := discoverPrompts(listCtx, entry.session)
 	if err != nil {
 		entry.dropSession(now)
