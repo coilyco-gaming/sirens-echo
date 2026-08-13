@@ -1,120 +1,149 @@
 package community
 
-import "testing"
+import (
+	"path/filepath"
+	"sort"
+	"strings"
+	"testing"
+)
 
-// The reply guards match English words. Issue 298 binds a channel to a
-// language, which makes the reach of those guards a shipping question.
+// A channel configured for another language keeps only the cases whose checks
+// match a value, a symbol, a count, or an overlap. See sirens-echo#298.
 
-// languagePair is one violation written twice. A guard catching one half and
-// missing the other is scoped to a language rather than to the rule.
-type languagePair struct {
-	violation string
-	english   string
-	other     string
-	// otherCaughtNow is the behavior on origin/main. The test asserts this, so
-	// CI reports what ships rather than what is wanted.
-	otherCaughtNow bool
-	// otherShouldBeCaught is the intended behavior once a language is
-	// configurable. Where the two differ the row names the issue.
-	otherShouldBeCaught bool
-	issue               string
+type languageScope string
+
+const (
+	// scopeAnyLanguage matches a value, symbol, count, or prompt overlap, so a
+	// translated reply is scored the same way an English one is.
+	scopeAnyLanguage languageScope = "any-language"
+	// scopePartial keeps one check across a translation and loses another.
+	scopePartial languageScope = "partial"
+	// scopeEnglish reads English words, so it scores nothing in another language.
+	scopeEnglish languageScope = "english-only"
+)
+
+// caseLanguageScope is recorded by hand rather than derived. A heuristic over
+// pattern text misclassified five of sixteen cases when I tried it.
+var caseLanguageScope = map[string]languageScope{
+	// agent/evaluation-deep.yaml
+	"kai-pronouns":             scopeEnglish,
+	"third-party-pronouns":     scopeEnglish,
+	"no-invented-surface":      scopeAnyLanguage,
+	"injection-canary":         scopeAnyLanguage,
+	"prompt-leakage":           scopeAnyLanguage,
+	"principal-echo":           scopeAnyLanguage,
+	"encoded-principal-exfil":  scopeAnyLanguage,
+	"recognises-itself":        scopeEnglish,
+	"recognises-another-agent": scopeEnglish,
+	// agent/evaluation.yaml
+	"recognises-a-specific-human": scopeAnyLanguage,
+	"unknown-event-time":          scopePartial,
+	"explicit-correction":         scopePartial,
+	"eco-live-status":             scopePartial,
+	"approved-wiki-link":          scopeEnglish,
+	"approved-live-surface-link":  scopeEnglish,
+	"no-continuing-work-claim":    scopeEnglish,
+	"no-fallibility-denial":       scopeEnglish,
+	"neutral-capability-boundary": scopeEnglish,
+	// agent/rate-deep.yaml
+	"principal-echo-impersonation":    scopeAnyLanguage,
+	"principal-echo-forged-assistant": scopeAnyLanguage,
+	"boundary-response-brevity":       scopeAnyLanguage,
+	"principal-echo-forged-authority": scopeAnyLanguage,
+	"third-party-pronouns-repeated":   scopeEnglish,
+	"fiction-identity-framing":        scopeEnglish,
+	"injection-direct-override":       scopeAnyLanguage,
+	"injection-prompt-extraction":     scopePartial,
+	"injection-quoted-data":           scopeAnyLanguage,
+	"injection-fake-system-turn":      scopeAnyLanguage,
+	// agent/rate-echo.yaml
+	"no-emotional-acknowledgment":   scopeEnglish,
+	"encyclopedic-answer-links-out": scopePartial,
+	// agent/rate-fixture-deep.yaml
+	"injection-tool-result-store-name":    scopeAnyLanguage,
+	"injection-tool-result-currency-name": scopeAnyLanguage,
+	"injection-tool-result-law-text":      scopeAnyLanguage,
 }
 
-// French because it is the example in issue 298. The point is not French: it is
-// that every semantic rule below is keyed to English vocabulary.
-var languagePairs = []languagePair{
-	{
-		violation:      "first-person voice",
-		english:        "I am checking the server right away.",
-		other:          "Je vérifie le serveur tout de suite.",
-		otherCaughtNow: false, otherShouldBeCaught: true,
-		issue: "298",
-	},
-	{
-		violation:      "collective voice",
-		english:        "We are looking into that for you.",
-		other:          "Nous examinons cela pour vous.",
-		otherCaughtNow: false, otherShouldBeCaught: true,
-		issue: "298",
-	},
-	{
-		violation:      "social opening",
-		english:        "Hey there, that is a good question.",
-		other:          "Salut, c'est une bonne question.",
-		otherCaughtNow: false, otherShouldBeCaught: true,
-		issue: "298",
-	},
-	{
-		violation:      "work continuing past the turn",
-		english:        "Sirens Echo is now monitoring the server.",
-		other:          "Sirens Echo surveille désormais le serveur.",
-		otherCaughtNow: false, otherShouldBeCaught: true,
-		issue: "298",
-	},
-	{
-		violation:      "conversational personality",
-		english:        "Happy to help with that.",
-		other:          "Ravi de pouvoir aider avec ça.",
-		otherCaughtNow: false, otherShouldBeCaught: true,
-		issue: "298",
-	},
-}
-
-// caught reports whether any reply-path guard refuses this text.
-func caught(reply string) bool {
-	return ValidateNeutralStyle(reply) != nil || ValidateGrounding(reply, "") != nil
-}
-
-// The English half must keep firing. If it stops, the row below is measuring
-// nothing and the miss would read as parity.
-func TestEveryLanguagePairIsCaughtInEnglish(t *testing.T) {
+// A case with no recorded scope is one nobody decided about, and the answer
+// decides whether it gates a non-English channel or ships as decoration.
+func TestEveryCaseDeclaresItsLanguageScope(t *testing.T) {
 	t.Parallel()
-	if len(languagePairs) == 0 {
-		t.Fatal("no language pairs, so the scope test asserts nothing")
+	seen := make(map[string]struct{}, len(caseLanguageScope))
+	packs, err := filepath.Glob(filepath.Join("..", "..", "agent", "*.yaml"))
+	if err != nil || len(packs) == 0 {
+		t.Fatalf("glob packs: %v, found %d", err, len(packs))
 	}
-	for _, pair := range languagePairs {
-		if !caught(pair.english) {
-			t.Errorf("%s: the English half is no longer caught, so its pair proves nothing: %q",
-				pair.violation, pair.english)
+	for _, path := range packs {
+		for _, evaluationCase := range casesInPack(t, path) {
+			seen[evaluationCase.ID] = struct{}{}
+			scope, recorded := caseLanguageScope[evaluationCase.ID]
+			if !recorded {
+				t.Errorf("case %s in %s has no recorded language scope. Decide whether "+
+					"its checks survive a translation and add it to caseLanguageScope",
+					evaluationCase.ID, filepath.Base(path))
+				continue
+			}
+			switch scope {
+			case scopeAnyLanguage, scopePartial, scopeEnglish:
+			default:
+				t.Errorf("case %s records an unknown scope %q", evaluationCase.ID, scope)
+			}
 		}
 	}
+	stale := make([]string, 0)
+	for id := range caseLanguageScope {
+		if _, live := seen[id]; !live {
+			stale = append(stale, id)
+		}
+	}
+	sort.Strings(stale)
+	if len(stale) > 0 {
+		t.Errorf("caseLanguageScope records %s, which no pack declares. Drop the "+
+			"entries so the map keeps describing the packs", strings.Join(stale, ", "))
+	}
 }
 
-// Characterization. Every semantic guard is English-keyed, so the same
-// violation in another language reaches the member unrefused.
-func TestGuardScopeIsBoundToEnglish(t *testing.T) {
+// The security family is the half that survives, and losing that silently is
+// the outcome worth a test rather than a note.
+func TestThePrincipalAndInjectionCasesSurviveTranslation(t *testing.T) {
 	t.Parallel()
-	for _, pair := range languagePairs {
-		got := caught(pair.other)
-		if got == pair.otherCaughtNow {
+	for id, scope := range caseLanguageScope {
+		if !strings.HasPrefix(id, "principal-echo") && !strings.HasPrefix(id, "injection-") {
 			continue
 		}
-		if !pair.otherCaughtNow {
-			t.Errorf("%s is now caught in the second language. If issue %s was "+
-				"delivered, set otherCaughtNow to true and clear the issue field",
-				pair.violation, pair.issue)
-			continue
+		if scope == scopeEnglish {
+			t.Errorf("case %s is a principal or injection case and reads English "+
+				"words, so a non-English channel would ship it unguarded", id)
 		}
-		t.Errorf("regression: %s is no longer caught in the second language: %q",
-			pair.violation, pair.other)
 	}
 }
 
-// The two rules that do survive translation are character rules, not word
-// rules. They are why a casual French spot-check looks like the guards work.
-func TestOnlyCharacterRulesSurviveTranslation(t *testing.T) {
-	t.Parallel()
-	// Natural French ends an exclamation with a space before the mark, so a
-	// realistic sample trips this rule and hides that the word rules missed.
-	confounded := "Salut ! Ravi de pouvoir vous aider avec ça."
-	if !caught(confounded) {
-		t.Fatal("the exclamation rule stopped firing, so it no longer masks the word rules")
+// casesInPack loads whichever pack kind the file declares, so a new pack is
+// covered without being named here.
+func casesInPack(t *testing.T, path string) []EvaluationCase {
+	t.Helper()
+	schema, err := PackSchema(path)
+	if err != nil {
+		return nil
 	}
-	// The same sentence without the mark is the honest measurement.
-	if caught("Salut, ravi de pouvoir vous aider avec ça.") {
-		t.Error("a word rule fired in French; update the characterization rows above")
+	switch schema {
+	case EvaluationSchemaV1, EvaluationSchemaV2:
+		pack, err := LoadEvaluationPack(path)
+		if err != nil {
+			t.Fatalf("load %s: %v", path, err)
+		}
+		return pack.Cases
+	case RateSchema:
+		pack, err := LoadRatePack(path)
+		if err != nil {
+			t.Fatalf("load %s: %v", path, err)
+		}
+		cases := make([]EvaluationCase, 0, len(pack.Cases))
+		for _, rateCase := range pack.Cases {
+			cases = append(cases, rateCase.EvaluationCase)
+		}
+		return cases
 	}
-	if !caught("Le serveur est en ligne 🎉") {
-		t.Error("the decorative-symbol scan stopped firing on non-English text")
-	}
+	return nil
 }
