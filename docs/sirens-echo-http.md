@@ -41,8 +41,9 @@ Echo's Tailscale sidecar, so reaching `/v1/turn` requires being an authorized
 node on the tailnet. The process carries no credential of its own. A deployment
 that exposes the listener any other way owns that boundary itself.
 
-`X-Sirens-Caller` selects the per-caller admission budget. Anonymous clients
-share one budget. A limited caller receives `429`. See
+`X-Sirens-Caller` splits the per-user admission tier alone, and is caller-asserted
+rather than a trust boundary. The context tier and the pending pool are shared
+across the whole transport. A limited caller receives `429`. See
 [admission control](sirens-echo-admission.md).
 
 `Retry-After` accompanies a `429` only when an exhausted token bucket denied it,
