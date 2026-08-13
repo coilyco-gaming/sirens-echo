@@ -13,7 +13,8 @@ edited the struct.
 | `runner` | The checkout that produced the prompt, definition, skillpack and checks. This is what actually produced the numbers. |
 | `roster` | The MCP roster, or `empty`. |
 | `fixture` | The tool fixture, or `none`. Exclusive with the roster. |
-| `substrate` | Host state at run time, free text, set through `SIRENS_ECHO_SUBSTRATE`. |
+| `substrate` | Host state at run time, free text, from `SIRENS_ECHO_SUBSTRATE`. |
+| `model` | The proxy model **group**. See [model groups](sirens-echo-model-groups.md). |
 | `composed` | Whether the agent-compose bundle was real or a stub. |
 | `image` | A deployed image, only when one participates. |
 
@@ -50,8 +51,7 @@ that prompt was last measured in production it was 53,133 bytes against the
 
 So a Deep rate describes **this configuration**, not the deployed service, and in
 a stronger sense than "a different image": the instructions differ. A model given
-11 KB is not obviously the same subject as the same model given 53 KB, and the
-cases most likely to move are the ones the pack measures.
+11 KB is not obviously the same subject as one given 53 KB.
 
 The stub is the default and stays, because the snapshot and `policy-check` must
 stay hermetic. Those are build-time paths and a rate is not one, so
