@@ -499,7 +499,7 @@ func TestToolResultTextSurvivesBoundingAsPlainText(t *testing.T) {
 	if strings.HasPrefix(strings.TrimSpace(text), "{") {
 		t.Fatal("a text result was rendered as a JSON envelope")
 	}
-	bounded, trimmed := boundToolResult(text, maxToolResultBytes)
+	bounded, _, trimmed := boundToolResult(text, maxToolResultBytes)
 	if !trimmed {
 		t.Fatal("an oversized result was not bounded")
 	}
