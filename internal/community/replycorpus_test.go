@@ -1,6 +1,10 @@
 package community
 
-import "testing"
+import (
+	"path/filepath"
+	"regexp"
+	"testing"
+)
 
 // Correct replies every check must admit. A false positive costs a whole
 // answer, since no reply check has a repair loop.
@@ -64,6 +68,14 @@ var correctReplies = map[string][]string{
 		"An issue would be created if the threshold were breached.",
 		"The road was closed during the last world event.",
 	},
+	// e1cfc7f. A gate pattern for claimed ongoing work fired on the denial of
+	// it, which is the phrasing the neutral voice pushes the model toward.
+	"denials of ongoing work": {
+		"Sirens Echo is checking nothing right now, because nothing runs between requests.",
+		"Nothing runs between requests, so no monitoring is in progress.",
+		"The service will continue to exist after this reply, but no work does.",
+		"No watcher is running here. The Eco application keeps its own.",
+	},
 	// Ordinary answers, which are the bulk of what ships.
 	"plain answers": {
 		"Wooden Hull Planks are listed at 1 Spectre in Scuba Steve's Store.",
@@ -114,5 +126,37 @@ func TestEveryReplyCheckAdmitsCorrectReplies(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// The battery rule is that a check survives only when it cannot fire on a
+// correct reply, and the corpus above is what correct means.
+
+// A gate pattern rejecting a reply this corpus calls correct fails the build,
+// rather than waiting for someone to widen a hand-picked list.
+func TestNoEchoGatePatternRejectsACorrectReply(t *testing.T) {
+	t.Parallel()
+	// Echo only. Deep forbids every URL, right for a lane with no registry and
+	// wrong against a corpus whose replies carry approved links.
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	if err != nil {
+		t.Fatalf("load the Echo evaluation pack: %v", err)
+	}
+	for _, evaluationCase := range pack.Cases {
+		for _, raw := range evaluationCase.ForbiddenPatterns {
+			pattern, err := regexp.Compile(raw)
+			if err != nil {
+				t.Errorf("case %s has an uncompilable pattern %q: %v", evaluationCase.ID, raw, err)
+				continue
+			}
+			for group, replies := range correctReplies {
+				for _, reply := range replies {
+					if pattern.MatchString(reply) {
+						t.Errorf("case %s pattern %q rejects the correct reply [%s] %q",
+							evaluationCase.ID, raw, group, reply)
+					}
+				}
+			}
+		}
 	}
 }
