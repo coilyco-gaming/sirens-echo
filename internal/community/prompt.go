@@ -46,6 +46,41 @@ type TranscriptEntry struct {
 	// Attachments carries media types only, never filenames or bytes. Without
 	// it a screenshot reads as text alone. See docs/sirens-echo-attachments.md.
 	Attachments []string
+	// ReplyTo is the message this one answers. A reply names its subject, and
+	// the channel's latest message is not it. See sirens-echo#579.
+	ReplyTo *ReplySubject
+}
+
+// ReplySubject is what a reply answers. Deliberately not a TranscriptEntry: a
+// self-referential field is a cycle the MCP tool schema cannot express.
+type ReplySubject struct {
+	Author  string
+	Content string
+	// Counterpart marks a bot the same way an entry's does, so a reply to this
+	// service does not read as a reply to a member.
+	Counterpart CounterpartKind
+}
+
+// replyLine names what a reply is answering, so the subject does not depend on
+// the referenced message happening to fall inside the history window.
+func (e TranscriptEntry) replyLine(speaker string) string {
+	if e.ReplyTo == nil {
+		return ""
+	}
+	author := cleanTranscriptText(e.ReplyTo.Author, 80)
+	content := cleanTranscriptText(e.ReplyTo.Content, 1000)
+	if author == "" && content == "" {
+		return ""
+	}
+	suffix := ""
+	if e.ReplyTo.Counterpart == CounterpartAgent {
+		suffix = " (an agent, not a person)"
+	}
+	if author == "" {
+		author = "an earlier message"
+	}
+	return fmt.Sprintf("\n%s is replying to %s%s: %s\n",
+		speaker, author, suffix, content)
 }
 
 // agentSuffix marks an author Discord flagged as a bot, so the model reads a
@@ -358,8 +393,9 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 		if speaker == "" {
 			return ""
 		}
-		return fmt.Sprintf("The request that follows is from %s%s.%s",
-			speaker, current.agentSuffix(), current.attachmentSuffix())
+		return strings.TrimLeft(current.replyLine(speaker), "\n") +
+			fmt.Sprintf("The request that follows is from %s%s.%s",
+				speaker, current.agentSuffix(), current.attachmentSuffix())
 	}
 	var output strings.Builder
 	output.WriteString("Recent conversation, oldest first:\n")
@@ -375,6 +411,7 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 		)
 	}
 	if speaker != "" {
+		output.WriteString(current.replyLine(speaker))
 		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.%s",
 			speaker, current.agentSuffix(), current.attachmentSuffix())
 	}
