@@ -163,6 +163,16 @@ already doing:
 
 See [duplicate work](docs/sirens-echo-duplicate-work.md).
 
+**Verify a write landed when you discard its output.** `aosguard ops forgejo
+issue-comment create` does not exist, and run with `>/dev/null` it lost an
+entire session of claims and findings without a symptom. One read after the
+write is the whole habit.
+
+The same operation fails in both directions: `issue comment` on a **closed**
+issue exits non-zero by design and the comment *is* still posted, so an exit
+status read without the note says a successful write failed. See
+[sirens-echo#693](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/693).
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
