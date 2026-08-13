@@ -147,27 +147,52 @@ func TestRateLimiterNotifiesOncePerWindow(t *testing.T) {
 	}
 }
 
+// The table holds one entry per tracked key plus the global bucket, which is
+// deliberately untracked so churn cannot evict it. Every other bucket has to be
+// reachable by eviction, or the capacity bound does not bound the table.
 func TestRateLimiterBoundsTrackedKeys(t *testing.T) {
 	const capacity = 8
+	// All three tiers, because a policy that leaves Global unset never creates
+	// the untracked bucket and holds the bound below for the wrong reason.
 	limiter, _ := testLimiter(RateLimitPolicy{
-		PerUser: RateLimit{Burst: 1, Every: time.Hour},
+		PerUser:    RateLimit{Burst: 1, Every: time.Hour},
+		PerContext: RateLimit{Burst: 1000, Every: time.Hour},
+		Global:     RateLimit{Burst: 1000, Every: time.Hour},
 	}, capacity)
 
 	// Rotating identities is the cheapest way to attack a limiter that keeps
 	// unbounded per-key state.
 	for index := 0; index < capacity*20; index++ {
 		limiter.Admit(admissionRequest{
-			UserKey:    string(rune('a'+index%26)) + string(rune('a'+index/26)),
+			UserKey:    fmt.Sprintf("u%d", index),
 			ContextKey: "guild:1",
 		})
 	}
 	limiter.mu.Lock()
 	defer limiter.mu.Unlock()
-	if len(limiter.buckets) > capacity {
-		t.Fatalf("tracked keys = %d, want at most %d", len(limiter.buckets), capacity)
+
+	if len(limiter.order) > capacity {
+		t.Fatalf("tracked keys = %d, want at most %d", len(limiter.order), capacity)
 	}
-	if len(limiter.order) != len(limiter.buckets) {
-		t.Fatalf("order = %d, buckets = %d, want equal", len(limiter.order), len(limiter.buckets))
+	// Asserting the global bucket exists keeps this test from going vacuous
+	// again if the policy above loses a tier.
+	if _, exists := limiter.buckets[globalBucketKey]; !exists {
+		t.Fatal("no global bucket was created, so the untracked case is not covered")
+	}
+	tracked := make(map[string]bool, len(limiter.order))
+	for _, key := range limiter.order {
+		tracked[key] = true
+	}
+	for key := range limiter.buckets {
+		if tracked[key] || key == globalBucketKey {
+			continue
+		}
+		t.Errorf("bucket %q is in the table but not in the eviction order, so "+
+			"nothing can ever reclaim it", key)
+	}
+	if len(limiter.buckets) != len(limiter.order)+1 {
+		t.Fatalf("buckets = %d against %d tracked keys; the only untracked bucket is %q",
+			len(limiter.buckets), len(limiter.order), globalBucketKey)
 	}
 }
 
@@ -245,9 +270,10 @@ func TestKeyChurnStaysBounded(t *testing.T) {
 	for attempt := 0; attempt < 40; attempt++ {
 		limiter.Admit(admissionRequest{UserKey: fmt.Sprintf("u%d", attempt), ContextKey: "c"})
 	}
-	// The global and context buckets sit outside or inside the bound; what must
-	// not happen is unbounded growth.
-	if len(limiter.buckets) > limiter.capacity+2 {
+	// The context tier is off here and the global bucket is the one untracked
+	// entry, so the ceiling is exact rather than a slack that would hide a
+	// second bucket escaping eviction.
+	if len(limiter.buckets) > limiter.capacity+1 {
 		t.Fatalf("bucket table grew to %d against a capacity of %d", len(limiter.buckets), limiter.capacity)
 	}
 }
