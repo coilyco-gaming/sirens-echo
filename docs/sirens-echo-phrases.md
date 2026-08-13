@@ -48,6 +48,15 @@ reaching a member, because a marker is not a phrase.
 An invocation must be the whole reply. Surrounding whitespace is not other
 text. See sirens-echo#588.
 
+## The prompt names keys, never texts
+
+When a registry is configured the prompt lists the keys and states the terminal
+rule. It does not carry the texts: a model given the text composes with it,
+which is the behaviour a registry exists to replace. The policy is appended to the built prompt rather than written into
+`BuildSystemPrompt`, so the snapshot generator and the policy check render what
+they rendered before, and the feature stays off until a deployment names a
+path.
+
 ## Changing a phrase
 
 The key stays and the text moves under it. A key is a contract with every reply

@@ -76,7 +76,19 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			return nil, err
 		}
 	}
-	systemPrompt := BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack)
+	var phrases PhraseRegistry
+	if cfg.PhrasesPath != "" {
+		phrases, err = LoadPhraseRegistry(cfg.PhrasesPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Appended rather than built in, so a caller with no registry renders the
+	// prompt it renders today. See docs/sirens-echo-phrases.md.
+	systemPrompt := withPhrasePolicy(
+		BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack),
+		phrases,
+	)
 	if err := ValidateSystemPrompt(cfg.Definition, cfg.Principal, systemPrompt); err != nil {
 		return nil, err
 	}
@@ -148,6 +160,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			Budget:        cfg.Definition.ModelBudget,
 		},
 		systemPrompt:      systemPrompt,
+		phrases:           phrases,
 		telemetry:         telemetry,
 		readinessClient:   newReadinessHTTPClient(defaultReadinessTimeout),
 		readinessEndpoint: readinessEndpoint,
@@ -157,13 +170,6 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
-	}
-	if cfg.PhrasesPath != "" {
-		phrases, err := LoadPhraseRegistry(cfg.PhrasesPath)
-		if err != nil {
-			return nil, err
-		}
-		agent.phrases = phrases
 	}
 	if cfg.ContentClassesPath != "" {
 		taxonomy, err := LoadContentTaxonomy(cfg.ContentClassesPath)
