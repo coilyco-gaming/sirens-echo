@@ -23,6 +23,9 @@ const opaqueSecretRunes = 20
 // rather than by having appeared in configuration.
 type IdentifierGuard struct {
 	forbidden []string
+	// digits holds the numeric identifiers again, for comparison against a
+	// reply stripped to digits. See docs/sirens-echo-identifiers.md.
+	digits []string
 }
 
 // NewIdentifierGuard derives the set from configuration at boot, so it cannot
@@ -65,9 +68,28 @@ func NewIdentifierGuard(
 
 func (g *IdentifierGuard) addSnowflake(value string) {
 	value = strings.TrimSpace(value)
-	if snowflakePattern.MatchString(value) {
-		g.add(value)
+	if !snowflakePattern.MatchString(value) {
+		return
 	}
+	g.add(value)
+	for _, existing := range g.digits {
+		if existing == value {
+			return
+		}
+	}
+	g.digits = append(g.digits, value)
+}
+
+// digitsOnly strips everything that is not a digit, so every separator-based
+// spelling of a number collapses into one comparison.
+func digitsOnly(text string) string {
+	var stripped strings.Builder
+	for _, current := range text {
+		if current >= '0' && current <= '9' {
+			stripped.WriteRune(current)
+		}
+	}
+	return stripped.String()
 }
 
 // addEndpoint keeps the host and port together. A bare host is a public name
@@ -118,6 +140,16 @@ func (g *IdentifierGuard) Validate(reply string) error {
 	for _, value := range g.forbidden {
 		if strings.Contains(reply, value) {
 			return fmt.Errorf("model reply carried a configured identifier")
+		}
+	}
+	// The invariant is the value, not its spelling. Matching the stripped reply
+	// covers spacing, punctuation, and one-digit-at-a-time enumeration at once.
+	if len(g.digits) > 0 {
+		stripped := digitsOnly(reply)
+		for _, value := range g.digits {
+			if strings.Contains(stripped, value) {
+				return fmt.Errorf("model reply carried a configured identifier")
+			}
 		}
 	}
 	return nil

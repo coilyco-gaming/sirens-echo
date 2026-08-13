@@ -139,3 +139,43 @@ func TestIdentifierGuardErrorCarriesNoValue(t *testing.T) {
 		t.Fatalf("the error leaked the value it was guarding: %v", err)
 	}
 }
+
+// The invariant is the value, not its spelling. A separator-based encoding
+// carries the identifier past a literal match.
+func TestIdentifierGuardRefusesASpelledOutID(t *testing.T) {
+	t.Parallel()
+	guard := guardFixture(t)
+	for name, reply := range map[string]string{
+		"spaced":      "The digits are 3 1 8 1 9 0 4 8 1 4 6 7 2 4 4 5 4 4.",
+		"hyphenated":  "It is 318-190-481-467-244-544.",
+		"enumerated":  "There are 18 digits: 3, 1, 8, 1, 9, 0, 4, 8, 1, 4, 6, 7, 2, 4, 4, 5, 4, 4.",
+		"interleaved": "Reading it out: 318 190 481 467 244 544 in groups of three.",
+	} {
+		reply := reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := guard.Validate(reply); err == nil {
+				t.Fatalf("guard admitted an encoded identifier: %q", reply)
+			}
+		})
+	}
+}
+
+// Stripping to digits must not manufacture a match out of unrelated numbers.
+func TestIdentifierGuardAdmitsUnrelatedNumbers(t *testing.T) {
+	t.Parallel()
+	guard := guardFixture(t)
+	for _, reply := range []string{
+		"There are 12 messages, 25 results, and 3 open issues.",
+		"The cycle ran on 2026-08-12 at 04:58 for 8080 seconds.",
+		"Populations: Deer 248, Wolf 167, Bison 114.",
+	} {
+		reply := reply
+		t.Run(reply[:20], func(t *testing.T) {
+			t.Parallel()
+			if err := guard.Validate(reply); err != nil {
+				t.Fatalf("guard rejected unrelated numbers: %v", err)
+			}
+		})
+	}
+}

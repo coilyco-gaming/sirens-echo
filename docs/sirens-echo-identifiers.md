@@ -45,6 +45,21 @@ whether or not the turn called anything. That is why there is no in-turn
 exception to reason about. A class that a tool does legitimately return stays
 out of the set rather than gaining a conditional rule.
 
+## Spelling is not the invariant
+
+A literal match reads one spelling. The value is what matters, so any separator
+carries it past: digits spaced, hyphenated, grouped, or enumerated one at a time.
+
+Numeric identifiers are therefore compared twice, against the reply and against
+the reply stripped to digits. That collapses every separator-based spelling into
+one comparison rather than enumerating evasions. An accidental 17 to 20 digit
+run carrying the exact value does not occur in ordinary prose.
+
+A reversed string and a base64 blob are still not covered, because both change
+the digits rather than their separators. Live QA measured encoded exfiltration
+refusing 5 of 5 against the running deployment, so nothing is known to escape.
+The gap was that a literal check could not tell that from a missed one.
+
 ## The rejection names the class
 
 The error says a configured identifier was carried and never the value, because
