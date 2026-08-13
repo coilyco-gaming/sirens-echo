@@ -89,7 +89,7 @@ func (r *JobRunner) Start(ctx context.Context) error {
 	r.queue = make(chan string, defaultJobQueueDepth)
 	r.cancels = make(map[string]context.CancelFunc)
 	r.progress = newProgressLimiter(nil)
-	r.content = newContentCounter()
+	r.content = newContentCounter(nil)
 	runCtx, stop := context.WithCancel(context.WithoutCancel(ctx))
 	r.stop = stop
 	workers := r.Workers
