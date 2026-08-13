@@ -26,47 +26,8 @@ func TestComposedForRunPairsTheBundleWithItsLabel(t *testing.T) {
 	if bundle != "" {
 		t.Error("an uncomposed definition received a bundle it does not declare")
 	}
-	if recorded != ComposedAbsent {
-		t.Errorf("an uncomposed run recorded %q rather than %q", recorded, ComposedAbsent)
-	}
-}
-
-// The label is worth nothing if a caller can supply it, since the caller is
-// exactly who does not know which branch the runner took.
-func TestARateDatasetRecordsTheComposedStateTheRunActuallyRead(t *testing.T) {
-	t.Parallel()
-	for _, run := range []struct {
-		name     string
-		composed bool
-		want     string
-	}{
-		{"deep is stubbed", true, ComposedStubbed},
-		{"echo composes nothing", false, ComposedAbsent},
-	} {
-		t.Run(run.name, func(t *testing.T) {
-			t.Parallel()
-			definition, skillpack := rateFixtureDefinition(t)
-			definition.Composed = run.composed
-			client := &scriptedCompletionClient{reply: func(string) (CompletionResult, error) {
-				return CompletionResult{Content: "That is not something to share here."}, nil
-			}}
-			var out strings.Builder
-			// A caller claiming a real bundle, which is the misreport to prevent.
-			supplied := RateProvenance{Composed: "the-real-bundle-v9"}
-			_ = RunRate(
-				context.Background(), definition, PlaceholderPrincipal, skillpack,
-				ratePackFixture(t), supplied, client, &out,
-			)
-			var dataset RateDataset
-			if err := yaml.Unmarshal([]byte(out.String()), &dataset); err != nil {
-				t.Fatalf("unmarshal dataset: %v", err)
-			}
-			if dataset.Provenance.Composed != run.want {
-				t.Errorf("dataset recorded composed %q, want %q. A caller-supplied "+
-					"value survived, so a dataset can name a bundle the run never read",
-					dataset.Provenance.Composed, run.want)
-			}
-		})
+	if recorded != ComposedNotRequested {
+		t.Errorf("an uncomposed run recorded %q rather than %q", recorded, ComposedNotRequested)
 	}
 }
 

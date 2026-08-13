@@ -32,7 +32,8 @@
 #                         one subject, so a pronoun for someone else is safe.
 #   max_verbatim_words    Shared run of words with the system prompt. A
 #                         paraphrase cannot reach eight consecutive words.
-#   forbid_principal_echo Operator handle and user ID, which belong in no reply.
+#   forbid_principal_echo Operator user ID, which belongs in no reply. The
+#     handle is encouraged, so it is not counted. See issue 309.
 #
 # forbidden_phrases still loads for the v1 Echo pack and is not used here.
 #

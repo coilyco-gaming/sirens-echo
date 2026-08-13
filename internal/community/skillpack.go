@@ -77,21 +77,13 @@ Agent-compose assigned the ` + "`<role>`" + ` role from the caller's compose req
 
 Placeholder. Deployment selects the role and the image bakes the real bundle.`
 
-// ComposedStubbed marks a run that read the placeholder where a deployed pod
-// reads the real bundle, so the instructions differ and not only the build.
-const ComposedStubbed = "stubbed"
-
-// ComposedAbsent marks a definition that composes nothing, where an evaluation
-// prompt and a deployed prompt agree on this point.
-const ComposedAbsent = "absent"
-
 // composedForRun returns the bundle a run reads and the label its dataset
 // records together, so a dataset cannot name a bundle the run never read.
 func composedForRun(definition Definition) (bundle string, recorded string) {
 	if definition.Composed {
 		return PlaceholderComposed, ComposedStubbed
 	}
-	return "", ComposedAbsent
+	return "", ComposedNotRequested
 }
 
 // LoadBundle reads one materialized agent-compose bundle: the identity card

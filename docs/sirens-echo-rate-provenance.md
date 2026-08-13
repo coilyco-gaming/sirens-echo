@@ -14,8 +14,8 @@ edited the struct.
 | `roster` | The MCP roster, or `empty`. |
 | `fixture` | The tool fixture, or `none`. Exclusive with the roster. |
 | `substrate` | Host state at run time, free text, set through `SIRENS_ECHO_SUBSTRATE`. |
+| `composed` | Whether the agent-compose bundle was real or a stub. |
 | `image` | A deployed image, only when one participates. |
-| `composed` | Whether the agent-compose bundle was real, `stubbed`, or `absent`. |
 
 **`image` stays `unrecorded` for every run of this instrument**, and that is
 correct rather than a gap. `cmd/sirens-echo-eval` assembles the prompt locally
@@ -29,15 +29,6 @@ pair to read is `roster` and `fixture` together. Getting this wrong turns a
 meaningful result into a vacuous one: the data-borne injection cases only mean
 something if the payload actually arrived in a tool result.
 
-**`composed: stubbed` bounds every Deep number here.** A composed definition
-reads a placeholder of a few hundred bytes where a deployed pod injects the real
-agent-compose bundle, so an eval run and production differ in their
-instructions and not only in their build. The stub is deliberate and keeps the
-tracked snapshot hermetic. The field exists so a reader can tell, since the
-cases most likely to move under a larger prompt are the ones these packs
-measure. The runner sets it from the prompt it built, so a caller cannot claim
-a bundle a run never read.
-
 `runner` is filled automatically by `scripts/ward-command.sh` from the current
 checkout, so it is present without anyone remembering it. `SIRENS_ECHO_RUNNER`
 overrides it, and a build carrying a `-X` revision stamp takes precedence over
@@ -48,3 +39,36 @@ into `substrate`.
 ## See also
 
 - [the rate pack](sirens-echo-rate.md) - how a run is scored and promoted.
+
+## The composed bundle is stubbed, and that bounds every Deep rate
+
+`agent/sirens-deep.yaml` sets `composed: true`. The runner substitutes
+`PlaceholderComposed`, which is **249 bytes**, where the deployed pod injects the
+role skill, the personality skills and the rest of the composed context. When
+that prompt was last measured in production it was 53,133 bytes against the
+11,392 the snapshot renders, so the bundle was most of it.
+
+So a Deep rate describes **this configuration**, not the deployed service, and in
+a stronger sense than "a different image": the instructions themselves differ. A
+model given 11 KB of instructions is not obviously the same subject as the same
+model given 53 KB, and the cases most likely to move are the ones the pack
+measures, since personality skills shape voice and tempo and the injection cases
+turn on how much instruction there is to contradict.
+
+The stub is correct and should stay. It keeps the tracked snapshot and
+`policy-check` hermetic, and a snapshot that varied with whatever bundle a caller
+happened to have would not be a snapshot. **What was missing was any statement in
+the dataset that the stub was used**, which is the difference between a bound a
+reader can see and one they cannot.
+
+`composed` is derived where the substitution happens rather than passed in by the
+caller, so a dataset cannot claim a real bundle when the run used the stub. A
+caller-supplied value is overwritten, and a test pins that.
+
+Echo is unaffected. `sirens-echo.yaml` is not composed, so its 20,397 byte
+snapshot is what a turn actually ships.
+
+Whether an eval run should be able to load a real bundle is
+[sirens-echo#316](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/316)
+part 2, and it is a runner decision with a hermeticity cost rather than a
+provenance one.

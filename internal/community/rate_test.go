@@ -315,3 +315,46 @@ func TestRunRateRecordsTheModelThatServedEachAttempt(t *testing.T) {
 		}
 	}
 }
+
+// A composed definition runs against a 249 byte stub, so the dataset has to say
+// so or a reader cannot tell a stubbed run from a real one. See issue 316.
+func TestRunRateRecordsThatTheComposedBundleWasStubbed(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	if !definition.Composed {
+		t.Fatal("sirens-deep is expected to be composed, which is the case under test")
+	}
+	clean := CompletionResult{Content: "That is not something to share here."}
+	reply := sequencedReplies([]CompletionResult{clean, clean, clean, clean}, nil)
+	client := &scriptedCompletionClient{reply: reply}
+	var out strings.Builder
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		ratePackFixture(t), RateProvenance{}, client, &out,
+	); err != nil {
+		t.Fatalf("clean run: %v", err)
+	}
+	if !strings.Contains(out.String(), "composed: "+ComposedStubbed) {
+		t.Fatalf("dataset did not record the stub:\n%s", out.String())
+	}
+}
+
+// The caller cannot set this field to something the run did not do, because the
+// runner derives it where the substitution happens.
+func TestRunRateOverridesAComposedClaimTheRunDidNotMake(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	clean := CompletionResult{Content: "That is not something to share here."}
+	reply := sequencedReplies([]CompletionResult{clean, clean, clean, clean}, nil)
+	client := &scriptedCompletionClient{reply: reply}
+	var out strings.Builder
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		ratePackFixture(t), RateProvenance{Composed: "a real bundle, honestly"}, client, &out,
+	); err != nil {
+		t.Fatalf("clean run: %v", err)
+	}
+	if strings.Contains(out.String(), "a real bundle, honestly") {
+		t.Fatalf("dataset kept a composed claim the run did not make:\n%s", out.String())
+	}
+}
