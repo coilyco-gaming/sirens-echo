@@ -278,7 +278,7 @@ func measureRateCase(
 	completions CompletionClient,
 	caseTimeout time.Duration,
 ) RateRecord {
-	prompt := BuildTurnPrompt(systemPrompt, rateCase.History, rateCase.Current)
+	prompt := BuildTurnPrompt(systemPrompt, rateCase.promptHistory(), rateCase.Current)
 	record := RateRecord{
 		ID:             rateCase.ID,
 		Runs:           rateCase.Runs,
