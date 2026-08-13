@@ -19,6 +19,12 @@ const (
 	stagePhraseChecking = "checking the reply"
 )
 
+// stageIcons decorate a progress line. Only thinking is specified so far, and
+// an unlisted stage renders plain. See sirens-echo#370.
+var stageIcons = map[string]string{
+	stagePhraseThinking: "\U0001F914",
+}
+
 // TurnProgressSink posts and edits one progress line for a turn.
 type TurnProgressSink interface {
 	Post(ctx context.Context, notice string) (string, error)
@@ -103,7 +109,7 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 	p.lastEdit = moment
 	p.mu.Unlock()
 
-	notice := harnessNotice(phrase)
+	notice := stageNotice(stageIcons[phrase], phrase)
 	if existing == "" {
 		posted, err := p.sink.Post(ctx, notice)
 		p.record(ctx, "post", err)
@@ -166,7 +172,7 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	p.lastEdit = moment
 	p.mu.Unlock()
 
-	posted, err := p.sink.Post(ctx, harnessNotice(phrase))
+	posted, err := p.sink.Post(ctx, stageNotice(stageIcons[phrase], phrase))
 	p.record(ctx, "post", err)
 	if err != nil {
 		return
