@@ -214,6 +214,13 @@ const (
 	maxHTTPBody = 64 << 10
 )
 
+// Repository inventory
+const (
+	// maxRepoInventoryEntries bounds one listing, so a large organization
+	// cannot fill a tool result on its own.
+	maxRepoInventoryEntries = 100
+)
+
 // Policy load
 const (
 	// maxSkillpackBytes bounds the concatenated policy roots, which become the
