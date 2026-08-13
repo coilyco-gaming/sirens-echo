@@ -54,16 +54,16 @@ type RateProvenance struct {
 	Transport  string `yaml:"transport"`
 	Roster     string `yaml:"roster"`
 	// Fixture names the tool fixture, exclusive with the roster. Without it a
-	// fixture run reads as roster: empty. See sirens-echo#311.
+	// fixture run reads as roster: empty. See docs/sirens-echo-rate-provenance.md.
 	Fixture string `yaml:"fixture"`
 	// Substrate records host state at run time. A contended GPU returns a
 	// complete but degraded reply, which no in-process check can detect.
 	Substrate string `yaml:"substrate"`
-	// Runner is the commit that produced the prompt, checks and definition. A
-	// comparison whose halves name no commits is not a comparison.
+	// Runner is the commit behind the prompt, definition, skillpack and checks.
+	// A pair whose halves cannot be attributed to commits is not a comparison.
 	Runner string `yaml:"runner"`
-	// Image records a deployed image only when one participates, which for this
-	// runner is never. Read Runner instead. See sirens-echo#311.
+	// Image records a deployed image only when one participates in the run. This
+	// runner never calls a pod, so it stays unrecorded. Read Runner instead.
 	Image       string `yaml:"image"`
 	GeneratedAt string `yaml:"generated_at"`
 }

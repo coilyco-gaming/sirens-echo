@@ -1,4 +1,8 @@
-# What a rate dataset's provenance can be trusted to say
+# Rate provenance
+
+What each field in a rate dataset records, and what it can be trusted to say.
+See [the rate pack](sirens-echo-rate.md) for how a run is scored.
+
 
 A rate is only comparable to another rate if the dataset can say what produced
 it. The fields that decide that are covered by test rather than by whoever last
@@ -30,3 +34,7 @@ overrides it, and a build carrying a `-X` revision stamp takes precedence over
 both. Provenance that depends on a human remembering is provenance that goes
 missing, which is how the first datasets were filed with the SHA hand-written
 into `substrate`.
+
+## See also
+
+- [the rate pack](sirens-echo-rate.md) - how a run is scored and promoted.

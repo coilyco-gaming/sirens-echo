@@ -11,6 +11,10 @@ alert filters remain stable.
   same fixed sentence from the catalog.
 - Operational tags - `error.stage` has nine possible values and
   `error.outcome` is a fixed outcome owned by the selected catalog entry.
+  `error.fault` is `caller` or `service`, so a caller mistake does not inflate
+  the service error rate. The stage cannot stand in for it: `prompt_failed` is
+  an MCP failure surfaced on the HTTP path, and `rate_limited` is the service
+  refusing a well-formed request. A code declaring neither fails the suite.
 - Span projection - `error.type`, `error.stage`, and `error.outcome` repeat the
   same bounded values for trace search and alert filters.
 - Stack traces - Echo emits no `exception.stacktrace`, preventing source or

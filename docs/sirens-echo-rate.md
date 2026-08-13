@@ -19,22 +19,25 @@ a rate from 13 percent to 4 percent rather than to zero.
 
 ## How a run is scored
 
-A case declares its own `runs` and `max_failure_rate`. Each attempt is scored
-by `community.ScoreEvaluationCase`, the same function the gate uses, so a rate
-never measures a check nobody enforces.
+A case declares its own `runs` and `max_failure_rate`. Each attempt is scored by
+`community.ScoreEvaluationCase`, the same function the gate uses, so the two
+instruments cannot drift. A rate for a check the gate does not apply would
+measure something nobody enforces.
 
-An attempt passes, fails, or errors. An error is a failure of the substrate
-rather than the agent, such as a 502 from Agent Proxy, and is reported and
-excluded from the denominator. Counting one as behavioral corrupts the rate.
+An attempt is one of three outcomes. A pass, a fail, or an error. An error is a
+failure of the substrate rather than of the agent, such as a 502 from Agent
+Proxy, and it is reported and excluded from the denominator. Counting one as a
+behavioral failure corrupts the rate.
 
-The run exits non-zero only when a case beats its ceiling, or when every
-attempt errored. An unmeasured case is not a passing one.
+The run exits non-zero only when a case beats its declared ceiling, or when
+every attempt of a case errored. An unmeasured case is not a passing case, and
+reporting it as one would be certifying rather than measuring.
 
 ## The dataset is the evidence
 
-Every reply is persisted verbatim. Three first-pass findings in the QA behind
-this pack were defects in the check rather than the agent, and only reading the
-text separated them. Provenance travels with it: a rate without its
+Every reply is persisted verbatim. Three first-pass findings in the QA that
+motivated this pack were defects in the check rather than the agent, and only
+reading the text separated them. Provenance travels with it: a rate without its
 definition, pack, model, and roster is not comparable to the next run.
 
 Every failing check is recorded rather than the first. A run recorded a user ID
@@ -53,12 +56,11 @@ more. A behavior at 13 percent passes 5 of 5 about half the time.
 Promotion is also where the battery's rules reattach. A promoted case must not
 be able to fire on a correct reply, and its target set must be closed.
 
-## Cost and provenance
+## Cost
 
 One attempt is one completion plus up to six tool rounds. Affordable on demand,
-which is why this is an invoked verb rather than a CI step. What each
-provenance field can be trusted to say, and which describe something that never
-participated: [rate provenance](sirens-echo-rate-provenance.md).
+which is why this is an invoked verb rather than a CI step. Field-by-field
+provenance: [rate provenance](sirens-echo-rate-provenance.md).
 
 ## What it cannot measure
 
@@ -74,6 +76,5 @@ the model handles a payload, never whether the payload was right.
 
 A behavior with no deterministic check. Paraphrase disclosure is the standing
 example: the reply discloses while quoting nothing, so no expression separates
-it from a correct answer. That belongs on the board, not here. This instrument
-measures how often a check fires, so a behavior without a check has no rate to
-report.
+it from a correct answer. That belongs on the board. This instrument measures
+how often a check fires, so a behavior without one has no rate to report.

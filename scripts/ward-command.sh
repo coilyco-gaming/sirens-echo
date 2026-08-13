@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Provenance nobody has to remember: a dataset that cannot name its checkout
-# cannot be compared to another. See issue 311.
+# cannot be compared. See docs/sirens-echo-rate-provenance.md.
 if [ -z "${SIRENS_ECHO_RUNNER:-}" ]; then
   SIRENS_ECHO_RUNNER=$(git rev-parse --short HEAD 2>/dev/null || echo "")
   export SIRENS_ECHO_RUNNER
