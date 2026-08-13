@@ -145,6 +145,9 @@ type Config struct {
 	// MCPRosterPath names the deployment-owned mcpServers file. Empty is a
 	// valid no-tool boundary.
 	MCPRosterPath string
+	// ContentClassesPath names the taxonomy the content gate enforces. Empty
+	// runs no gate at all, so the deployment is the switch.
+	ContentClassesPath string
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -227,6 +230,7 @@ func LoadConfig() (Config, error) {
 		HTTPListenAddr:         valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
 		MCPRosterPath:          strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
+		ContentClassesPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		RequestTimeout:         requestTimeout,
