@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -38,6 +39,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("pack schema: %v", err)
 	}
+	preserveOutOfRepoPack(packPath)
 	proxyURL := valueOrDefault(os.Getenv("AGENT_PROXY_URL"), community.DefaultAgentProxyURL)
 	proxyModel := strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL"))
 	if proxyModel == "" {
@@ -187,6 +189,33 @@ func boardEpochs() int {
 		log.Fatalf("SIRENS_ECHO_BOARD_EPOCHS must be a positive integer, got %q", raw)
 	}
 	return epochs
+}
+
+// preserveOutOfRepoPack copies a pack run from outside the repository into
+// evaluations/packs, so a committed dataset stays re-derivable. See issue 423.
+func preserveOutOfRepoPack(packPath string) {
+	if !filepath.IsAbs(packPath) || strings.HasPrefix(packPath, "agent/") {
+		return
+	}
+	body, err := os.ReadFile(packPath)
+	if err != nil {
+		return
+	}
+	// Written at run time rather than at commit time, because the window where
+	// the file still exists is the run itself.
+	target := filepath.Join("evaluations", "packs", filepath.Base(packPath))
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		log.Printf("could not preserve %s: %v", packPath, err)
+		return
+	}
+	if err := os.WriteFile(target, body, 0o600); err != nil {
+		log.Printf("could not preserve %s: %v", packPath, err)
+		return
+	}
+	log.Printf(
+		"pack %s is outside the repository, copied to %s so a committed dataset "+
+			"stays re-derivable", packPath, target,
+	)
 }
 
 // warnUnservedRequiredTools names the cases that cannot pass before the run
