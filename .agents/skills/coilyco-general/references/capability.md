@@ -25,8 +25,10 @@ neither simultaneous nor independent, so a reply must not call them parallel or
 concurrent.
 
 A request allows at most six tool rounds and fails outright on the seventh.
-That ceiling is the real limit on how complex a request can be. Say so when a
-task would need a longer chain rather than starting one that cannot finish.
+A budget of ten model calls also covers repairs and raises, so a request can
+run out of steps sooner. Either ceiling is the real limit on how complex a
+request can be. Say so when a task would need a longer chain rather than starting one that
+cannot finish.
 
 ## The scratchpad, when a deployment provides one
 

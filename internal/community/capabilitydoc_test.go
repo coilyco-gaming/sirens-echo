@@ -36,6 +36,24 @@ func lane(path string) string {
 	return filepath.Base(filepath.Dir(filepath.Dir(path)))
 }
 
+// The outer budget is what actually fired in issue 258, at a depth past the
+// tool-round ceiling, so the doc has to name it too.
+func TestCapabilityDocStatesTheModelCallBudget(t *testing.T) {
+	t.Parallel()
+	words := map[int]string{8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+	budget := maxToolRounds + maxResponseRepairs + budgetRaisesAllowed + 1
+	stated, known := words[budget]
+	if !known {
+		t.Fatalf("the model-call budget is %d and has no spelled form here; extend the map", budget)
+	}
+	for name, doc := range capabilityDocs(t) {
+		if !strings.Contains(doc, stated+" model calls") {
+			t.Errorf("%s does not say %q; the budget is %d and the doc must match",
+				name, stated+" model calls", budget)
+		}
+	}
+}
+
 // The tool-round ceiling is the stated limit on how complex a request can be,
 // so the doc has to name the number the proxy actually enforces.
 func TestCapabilityDocStatesTheRealToolRoundCeiling(t *testing.T) {
