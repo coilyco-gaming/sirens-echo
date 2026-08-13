@@ -48,6 +48,9 @@ commands:
   test:
     run: go test ./...
     description: Run the unit test suite.
+  test-skips:
+    run: bash scripts/ward-command.sh test-skips
+    description: Verify every test that skips is on the reviewed skip allowlist.
   tidy:
     run: go mod tidy
     description: go mod tidy.
