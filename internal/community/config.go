@@ -17,9 +17,11 @@ import (
 const (
 	defaultDefinitionPath = "agent/sirens-echo.yaml"
 	defaultHTTPListenAddr = "127.0.0.1:8080"
-	defaultInstanceName   = "sirens-echo"
-	defaultBundleDir      = "/app/agent/bundles"
-	defaultComposedRole   = "creator"
+	// The fallback is a live service, so it is only safe for the definition that
+	// service actually runs. See resolveInstanceName and sirens-echo#542.
+	defaultInstanceName = "sirens-echo"
+	defaultBundleDir    = "/app/agent/bundles"
+	defaultComposedRole = "creator"
 
 	ResponseStyleNeutral = "neutral"
 	ResponseStyleSocial  = "social"
@@ -272,6 +274,24 @@ type Config struct {
 	RateLimit     RateLimitPolicy
 }
 
+// resolveInstanceName refuses to hand a non-Echo definition Echo's service name.
+// Defaulting there merges another profile's spans into Echo's. See #542.
+func resolveInstanceName(definitionPath, configured string) (string, error) {
+	if name := strings.TrimSpace(configured); name != "" {
+		return name, nil
+	}
+	// The file, not the path to it. Deploy names it absolutely and the tests
+	// relatively, and both are the same definition.
+	if filepath.Base(definitionPath) != filepath.Base(defaultDefinitionPath) {
+		return "", fmt.Errorf(
+			"SIRENS_ECHO_INSTANCE is required when SIRENS_ECHO_DEFINITION is %q: "+
+				"defaulting to %q would report this profile as Echo",
+			definitionPath, defaultInstanceName,
+		)
+	}
+	return defaultInstanceName, nil
+}
+
 // LoadConfig loads the Sirens Echo deployment from environment and its
 // source-controlled definition. Secrets never have source defaults.
 func LoadConfig() (Config, error) {
@@ -280,6 +300,10 @@ func LoadConfig() (Config, error) {
 	applyTuningOverrides(os.Getenv)
 	definitionPath := valueOrDefault(os.Getenv("SIRENS_ECHO_DEFINITION"), defaultDefinitionPath)
 	definition, err := LoadDefinition(definitionPath)
+	if err != nil {
+		return Config{}, err
+	}
+	instanceName, err := resolveInstanceName(definitionPath, os.Getenv("SIRENS_ECHO_INSTANCE"))
 	if err != nil {
 		return Config{}, err
 	}
@@ -323,7 +347,7 @@ func LoadConfig() (Config, error) {
 	cfg := Config{
 		Definition:     definition,
 		DefinitionPath: definitionPath,
-		InstanceName:   valueOrDefault(os.Getenv("SIRENS_ECHO_INSTANCE"), defaultInstanceName),
+		InstanceName:   instanceName,
 		Principal: Principal{
 			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
 			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
