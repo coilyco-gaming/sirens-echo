@@ -59,6 +59,15 @@ type ReplySubject struct {
 	// Counterpart marks a bot the same way an entry's does, so a reply to this
 	// service does not read as a reply to a member.
 	Counterpart CounterpartKind
+	// Attachments carries media types only. Without it, replying to a screenshot
+	// reads as replying to empty text. See docs/sirens-echo-attachments.md.
+	Attachments []string
+}
+
+// attachmentSuffix borrows the transcript rendering, so a replied-to image is
+// described the same way an attached one is.
+func (r ReplySubject) attachmentSuffix() string {
+	return TranscriptEntry{Attachments: r.Attachments}.attachmentSuffix()
 }
 
 // replyLine names what a reply is answering, so the subject does not depend on
@@ -79,8 +88,8 @@ func (e TranscriptEntry) replyLine(speaker string) string {
 	if author == "" {
 		author = "an earlier message"
 	}
-	return fmt.Sprintf("\n%s is replying to %s%s: %s\n",
-		speaker, author, suffix, content)
+	return fmt.Sprintf("\n%s is replying to %s%s: %s%s\n",
+		speaker, author, suffix, content, e.ReplyTo.attachmentSuffix())
 }
 
 // agentSuffix marks an author Discord flagged as a bot, so the model reads a

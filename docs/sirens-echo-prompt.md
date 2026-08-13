@@ -41,6 +41,27 @@ A profile naming a channel adds its Discord boundary to the admission sentence,
 and a channel-less profile asserts no ingress the deployment did not select.
 `ValidateSystemPrompt` fails the build when any of that goes missing.
 
+## What a reply is answering
+
+A member replying to a message is addressing that message, so the turn names it
+rather than leaving the model to infer it from position:
+
+```
+bob is replying to alice: the plank market crashed on tuesday
+```
+
+The recent conversation still renders in full. Naming the subject supplements
+recency rather than replacing it, because a member who replies to something old
+and then asks an unrelated question is a real member.
+
+Discord delivers the addressed message inline for most replies, which costs no
+lookup. When it does not, and that is likeliest for the old messages this is
+worth most for, the harness fetches it under the same budget as the other
+gate-forced calls. A reference that cannot be read is an ordinary message.
+
+Only one level renders. A reply to a reply does not walk the chain, because the
+second level is a claim about what someone else was addressing.
+
 ## Snapshots
 
 The rendered prompt is checked in and a change to it cannot land without its
