@@ -27,8 +27,9 @@ func catalogRoot(t *testing.T) string {
 	return root
 }
 
-// The graph keeps globs, so the invariant is that no pattern can reach a denied
-// source. Expansion enforces it; this proves the enforcement bites.
+// What only the real catalogue can answer: whether the patterns in roles.kdl
+// still match anything. Enforcement itself is covered offline in
+// composedeny_test.go, because this skips wherever AOS_CATALOG is unset.
 func TestGraphPatternsNeverReachDeniedSources(t *testing.T) {
 	t.Parallel()
 	catalog := catalogRoot(t)
