@@ -149,9 +149,13 @@ See [the consult gate](docs/sirens-echo-consult-gate.md).
 
 **A claim reserves an issue number, and the collision surface is files.** Two
 issues can point at one function, so claiming correctly does not stop two agents
-building the same change. Three habits, each attached to something you are
+building the same change. Four habits, each attached to something you are
 already doing:
 
+- **List the open pull requests before you start.** `aosguard ops forgejo pr
+  list <owner> <repo> --state open`. An unclaimed issue with an open pull
+  request against it is the common shape, because the author of a small change
+  often opens one before commenting. This is the cheapest of the four.
 - **Fetch `origin/main` immediately before the first edit**, not only when
   branching. This repository merges several times an hour, and a claim is
   minutes old by the time work starts.
