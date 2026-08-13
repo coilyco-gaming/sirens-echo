@@ -3,7 +3,6 @@ package community
 import (
 	"errors"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 )
@@ -62,16 +61,6 @@ func (s JobState) CanTransitionTo(next JobState) bool {
 		}
 	}
 	return false
-}
-
-// JobStates lists every state in a stable order, for documentation and metrics.
-func JobStates() []JobState {
-	states := make([]JobState, 0, len(jobTransitions))
-	for state := range jobTransitions {
-		states = append(states, state)
-	}
-	sort.Slice(states, func(i, j int) bool { return states[i] < states[j] })
-	return states
 }
 
 // JobOrigin is where a job was asked for, so completion can be reported in the
