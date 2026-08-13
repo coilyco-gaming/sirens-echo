@@ -97,3 +97,68 @@ func TestSpillToolResultRefusesTraversalName(t *testing.T) {
 		t.Fatalf("traversal survived: %q", path)
 	}
 }
+
+// Provenance is a property rather than a convention: the model cannot write
+// where the runtime writes, so a file there was not planted. See issue 273.
+func TestTheModelCannotWriteIntoRuntimeOutput(t *testing.T) {
+	t.Parallel()
+	session := spillSession(t, "member-1")
+	for _, attempt := range []string{
+		"tool-output/get_trades-1.txt",
+		"tool-output/planted.txt",
+		"./tool-output/planted.txt",
+		"TOOL-OUTPUT/planted.txt",
+		"tool-output/nested/planted.txt",
+	} {
+		attempt := attempt
+		t.Run(attempt, func(t *testing.T) {
+			t.Parallel()
+			result, err := session.Call(context.Background(), "scratch_write", map[string]any{
+				"path": attempt, "content": "planted",
+			})
+			if err != nil {
+				t.Fatalf("scratch_write: %v", err)
+			}
+			if !result.IsError {
+				t.Fatalf("the model wrote into runtime output at %q", attempt)
+			}
+		})
+	}
+}
+
+// The model keeps its own scratchpad, so the reservation must not be a general
+// write refusal.
+func TestTheModelStillWritesItsOwnFiles(t *testing.T) {
+	t.Parallel()
+	session := spillSession(t, "member-1")
+	for _, allowed := range []string{"notes.txt", "work/plan.md", "tool-outputs.txt"} {
+		allowed := allowed
+		t.Run(allowed, func(t *testing.T) {
+			t.Parallel()
+			result, err := session.Call(context.Background(), "scratch_write", map[string]any{
+				"path": allowed, "content": "mine",
+			})
+			if err != nil {
+				t.Fatalf("scratch_write: %v", err)
+			}
+			if result.IsError {
+				t.Fatalf("an ordinary write was refused at %q: %s", allowed, result.Text)
+			}
+		})
+	}
+}
+
+// A saved result stays readable by the model, which is the whole point of
+// saving it rather than truncating it away.
+func TestRuntimeOutputStaysReadable(t *testing.T) {
+	t.Parallel()
+	session := spillSession(t, "member-1")
+	path := spillToolResult(context.Background(), session, "get_trades", 0, "alpha beta")
+	if path == "" {
+		t.Fatal("nothing was saved")
+	}
+	read, err := session.Call(context.Background(), "scratch_read", map[string]any{"path": path})
+	if err != nil || read.IsError {
+		t.Fatalf("saved result is unreadable: %v %s", err, read.Text)
+	}
+}

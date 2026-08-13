@@ -215,6 +215,15 @@ func scratchRefusal(format string, args ...any) (ToolResult, error) {
 	return ToolResult{Text: fmt.Sprintf(format, args...), IsError: true}, nil
 }
 
+// reservedScratchPath reports a path whose first segment is the reserved
+// directory, before any cleaning, so a spelling cannot smuggle one in.
+func reservedScratchPath(relative string) bool {
+	cleaned := path.Clean("/" + strings.ReplaceAll(strings.TrimSpace(relative), "\\", "/"))
+	trimmed := strings.TrimPrefix(cleaned, "/")
+	first, _, _ := strings.Cut(trimmed, "/")
+	return strings.EqualFold(first, scratchReservedDir)
+}
+
 // resolve confines a model-supplied path to the partition, deciding on where it
 // lands rather than on how it is spelled.
 func (s *scratchSession) resolve(relative string) (string, error) {
@@ -358,7 +367,26 @@ func (s *scratchSession) read(relative string) (ToolResult, error) {
 	return ToolResult{Text: string(data)}, nil
 }
 
+// scratchReservedDir holds what the runtime wrote. The model cannot write here,
+// so provenance is a property rather than a convention.
+const scratchReservedDir = "tool-output"
+
+// WriteReserved writes on the runtime's behalf, into the directory the model is
+// refused. See docs/sirens-echo-scratchpad-partitions.md.
+func (s *scratchSession) WriteReserved(relative, content string) (ToolResult, error) {
+	return s.writeAt(relative, content, true)
+}
+
 func (s *scratchSession) write(relative, content string) (ToolResult, error) {
+	return s.writeAt(relative, content, false)
+}
+
+// writeAt refuses a model-authored write into the reserved directory, so a file
+// found there was written by the runtime and not by something imitating it.
+func (s *scratchSession) writeAt(relative, content string, runtime bool) (ToolResult, error) {
+	if !runtime && reservedScratchPath(relative) {
+		return scratchRefusal("%s is reserved for runtime output", scratchReservedDir)
+	}
 	if strings.TrimSpace(relative) == "" {
 		return scratchRefusal("path is required")
 	}

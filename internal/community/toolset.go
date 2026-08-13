@@ -90,6 +90,17 @@ func (s *compositeSession) Unavailable() []string {
 	return unavailable
 }
 
+// WriteReserved forwards to the session that offers a reserved surface, so the
+// runtime reaches it through a composed provider.
+func (s *compositeSession) WriteReserved(relative, content string) (ToolResult, error) {
+	for _, session := range s.sessions {
+		if writer, ok := session.(reservedWriter); ok {
+			return writer.WriteReserved(relative, content)
+		}
+	}
+	return ToolResult{}, fmt.Errorf("no reserved scratch surface")
+}
+
 func (s *compositeSession) Call(
 	ctx context.Context,
 	name string,

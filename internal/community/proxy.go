@@ -551,9 +551,11 @@ func (c ProxyClient) Complete(
 	return CompletionResult{}, fmt.Errorf("Agent Proxy tool loop ended unexpectedly")
 }
 
-// scratchWriteTool saves a trimmed result. Going through the tool rather than
-// the filesystem keeps confinement, quota, and attribution unchanged.
-const scratchWriteTool = "scratch_write"
+// reservedWriter saves runtime output where the model cannot write. Going
+// through the session keeps confinement, quota, and attribution unchanged.
+type reservedWriter interface {
+	WriteReserved(relative, content string) (ToolResult, error)
+}
 
 // truncationNotice carries the magnitude of the loss. A marker without one
 // leaves refetching the same window a rational move. See issue 258.
@@ -575,13 +577,14 @@ func spillToolResult(
 	if session == nil {
 		return ""
 	}
+	writer, ok := session.(reservedWriter)
+	if !ok {
+		return ""
+	}
 	relative := spillPath(tool, index)
 	// No scratchpad errors here and an over-limit result refuses. Both fall back
 	// to plain truncation. See docs/sirens-echo-tool-results.md.
-	written, err := session.Call(ctx, scratchWriteTool, map[string]any{
-		"path":    relative,
-		"content": full,
-	})
+	written, err := writer.WriteReserved(relative, full)
 	if err != nil || written.IsError {
 		return ""
 	}

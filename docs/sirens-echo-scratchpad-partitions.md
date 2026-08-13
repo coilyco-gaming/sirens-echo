@@ -26,6 +26,22 @@ record rather than in the filesystem. Every partition name changes on the next
 roll, which orphans existing directories. The scratchpad is documented as living
 for one rollout, so that is within its contract.
 
+## Provenance inside a partition
+
+Keeping partitions apart says whose files these are. It does not say who wrote
+them. A trimmed tool result is saved under `tool-output`, and the model is
+refused any write whose first segment is that directory, checked before the path
+is cleaned so a spelling cannot smuggle one in.
+
+So a file there was written by the runtime rather than by a model imitating one.
+The model keeps the rest of the partition, and a saved result stays readable,
+since being readable is the whole reason for saving it.
+
+The runtime reaches that directory through a session method the tool schema
+never exposes, rather than through the write tool. Confinement, the per-file
+limit, and the per-requester quota all still apply, because it is the same write
+path with one check skipped.
+
 ## See also
 
 * [Scratchpad](sirens-echo-scratchpad.md) - the filesystem this partitions.
