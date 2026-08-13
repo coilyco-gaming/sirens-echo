@@ -16,6 +16,13 @@ repos:
         pass_filenames: false
         files: '^(agent/|\.agents/skills/|internal/community/prompt\.go|internal/community/skillpack\.go|cmd/sirens-echo-prompt/)'
 
+      - id: gofmt
+        name: gofmt
+        description: Rewrite Go sources to gofmt output, so unformatted code cannot reach main.
+        entry: gofmt -l -w
+        language: system
+        types: [go]
+
       - id: go-vet
         name: go vet
         entry: go vet ./...
