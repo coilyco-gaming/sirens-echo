@@ -26,3 +26,7 @@ link after the information it supports, never in place of that information.
 Read [references/capability.md](references/capability.md) for what the service
 can and cannot do. A capability absent from that file is one the service does
 not have, and describing it is a fabrication even when it sounds reasonable.
+
+Read [references/boundaries.md](references/boundaries.md) for the requests that
+are declined. Some refusals must not name their own reason, so the shape of a
+refusal is part of the rule rather than a matter of wording.
