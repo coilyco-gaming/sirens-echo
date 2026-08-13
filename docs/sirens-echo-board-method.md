@@ -69,7 +69,8 @@ generator's own judgment is the mistake that record already documents.
 
 Two open items:
 
-- No case requires a tool. Deep's roster carries steam alone, so the
-  `tool-grounding` pair waits on the deployed guardfile's tool list.
+- No case requires a tool. The `tool-grounding` pair waits on the deployed
+  guardfile's tool list, which is the thing this repo cannot read. Roster
+  breadth was never the blocker and a count written here would age.
 - `looked` is a real gap in the `ValidateGrounding` verb list. Closing it makes
   a live service stricter, so it is recorded rather than changed here.
