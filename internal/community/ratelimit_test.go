@@ -147,9 +147,8 @@ func TestRateLimiterNotifiesOncePerWindow(t *testing.T) {
 	}
 }
 
-// The table holds one entry per tracked key plus the global bucket, which is
-// deliberately untracked so churn cannot evict it. Every other bucket has to be
-// reachable by eviction, or the capacity bound does not bound the table.
+// The table holds one entry per tracked key plus the untracked global bucket.
+// Any other unreachable entry means the capacity bound does not bound it.
 func TestRateLimiterBoundsTrackedKeys(t *testing.T) {
 	const capacity = 8
 	// All three tiers, because a policy that leaves Global unset never creates
@@ -270,9 +269,8 @@ func TestKeyChurnStaysBounded(t *testing.T) {
 	for attempt := 0; attempt < 40; attempt++ {
 		limiter.Admit(admissionRequest{UserKey: fmt.Sprintf("u%d", attempt), ContextKey: "c"})
 	}
-	// The context tier is off here and the global bucket is the one untracked
-	// entry, so the ceiling is exact rather than a slack that would hide a
-	// second bucket escaping eviction.
+	// The context tier is off here, so the global bucket is the one untracked
+	// entry and the ceiling is exact. Slack would hide a second one escaping.
 	if len(limiter.buckets) > limiter.capacity+1 {
 		t.Fatalf("bucket table grew to %d against a capacity of %d", len(limiter.buckets), limiter.capacity)
 	}
