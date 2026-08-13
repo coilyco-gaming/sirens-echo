@@ -25,6 +25,18 @@ func maskURLs(text string) string {
 	return urlSpan.ReplaceAllString(text, " link ")
 }
 
+// trackerArtifact names what this runtime creates in the issue tracker. The
+// passive form anchors on it so it cannot fire on prose about the game world.
+const trackerArtifact = `(?:issues?|corrections?|tickets?|bug report|feature request)`
+
+// passiveActionClaim is the neutral profile's voice for the claim the
+// first-person matcher catches. See docs/sirens-echo-issues.md.
+var passiveActionClaim = regexp.MustCompile(
+	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:has|have|had|was|were|is|are)\s+` +
+		`(?:been\s+|being\s+)?(?:sent|posted|opened|filed|created|escalated|closed|` +
+		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
+)
+
 // ParseReply bounds the model's plain-text reply. Nothing unwraps a fence or
 // JSON: a fence is reply content now, and stripping it would corrupt an answer.
 func ParseReply(raw string) (string, error) {
@@ -41,21 +53,38 @@ func ParseReply(raw string) (string, error) {
 // ValidateGrounding rejects invented channel references and first-person
 // action claims that are not supported by a completed tool call.
 func ValidateGrounding(reply string, suppliedContext string, executed ...ExecutedTool) error {
+	masked := maskURLs(reply)
 	allowedChannels := make(map[string]struct{})
 	for _, channel := range channelPattern.FindAllString(maskURLs(suppliedContext), -1) {
 		allowedChannels[strings.ToLower(channel)] = struct{}{}
 	}
-	for _, channel := range channelPattern.FindAllString(maskURLs(reply), -1) {
+	for _, channel := range channelPattern.FindAllString(masked, -1) {
 		if _, ok := allowedChannels[strings.ToLower(channel)]; !ok {
 			return fmt.Errorf("model invented channel %s", channel)
 		}
 	}
-	for _, match := range claimedAction.FindAllStringSubmatch(reply, -1) {
+	for _, match := range claimedAction.FindAllStringSubmatch(masked, -1) {
 		if len(match) == 2 && !actionClaimSupported(match[1], executed) {
 			return fmt.Errorf("model claimed an action the runtime has not performed")
 		}
 	}
+	// The neutral profile forbids first person, so the matcher above can never
+	// fire on an Echo reply. This is the same claim in the voice Echo can use.
+	if passiveActionClaim.MatchString(masked) && !trackerWasTouched(executed) {
+		return fmt.Errorf("model claimed a tracker action the runtime has not performed")
+	}
 	return nil
+}
+
+// trackerWasTouched asks only whether the turn reached the issue tracker at
+// all. See docs/sirens-echo-issues.md for why the exact write tool is wrong.
+func trackerWasTouched(executed []ExecutedTool) bool {
+	for _, tool := range executed {
+		if strings.Contains(strings.ToLower(tool.Name), "issue") {
+			return true
+		}
+	}
+	return false
 }
 
 // Impersonation patterns. Deliberately narrow: naming its own identity and

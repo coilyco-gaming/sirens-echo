@@ -207,3 +207,71 @@ func TestValidateGroundingStillRejectsInventedChannelBesideLink(t *testing.T) {
 		t.Fatal("ValidateGrounding accepted an invented channel beside a link")
 	}
 }
+
+// The neutral profile forbids first person, so the first-person matcher can
+// never fire on an Echo reply. These are the forms Echo can actually emit.
+func TestValidateGroundingRejectsUngroundedPassiveClaim(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"A correction has been filed for review.",
+		"A correction issue has been filed for review.",
+		"The issue was created for tracking.",
+		"A ticket has been opened for the missing recipe.",
+		"The correction is being tracked.",
+	} {
+		reply := reply
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateGrounding(reply, "The current channel is #bots."); err == nil {
+				t.Fatal("ValidateGrounding accepted an ungrounded tracker claim")
+			}
+		})
+	}
+}
+
+// A turn that reached the tracker may report what it found, including a status
+// that reads as passive voice.
+func TestValidateGroundingAllowsGroundedPassiveClaim(t *testing.T) {
+	t.Parallel()
+	read := ExecutedTool{Name: "sirens-echo-forgejo__get_issue"}
+	filed := ExecutedTool{Name: "sirens-echo-forgejo__create_issue"}
+	for name, call := range map[string]ExecutedTool{"read": read, "filed": filed} {
+		call := call
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			reply := "A correction has been filed for review."
+			if err := ValidateGrounding(reply, "The current channel is #bots.", call); err != nil {
+				t.Fatalf("ValidateGrounding rejected a grounded claim: %v", err)
+			}
+		})
+	}
+}
+
+// Passive voice about the game world is not a tracker claim, and rejecting it
+// would fail a correct reply.
+func TestValidateGroundingAllowsPassiveWorldProse(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"The Eco server was updated at the start of the cycle.",
+		"The trade was created by a player in the settlement.",
+		"Elk populations are tracked by the ecosystem simulation.",
+		"The road was closed during the last world event.",
+	} {
+		reply := reply
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
+				t.Fatalf("ValidateGrounding rejected correct world prose: %v", err)
+			}
+		})
+	}
+}
+
+// A link carries the word "issues" in its path and must not seed the claim.
+func TestValidateGroundingIgnoresIssueWordInsideLink(t *testing.T) {
+	t.Parallel()
+	reply := "The prior report is at https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233"
+	if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
+		t.Fatalf("ValidateGrounding rejected a bare link: %v", err)
+	}
+}

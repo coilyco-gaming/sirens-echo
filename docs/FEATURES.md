@@ -21,15 +21,13 @@
   comment, label changes, and bounded reads
 - No Forgejo token in the Echo pod, one guarded handler serving the model's
   issue tools
-- Plain-text replies with one style-aware repair, bounds, grounding checks, and
-  neutral-style validation where selected
+- Plain-text replies with style-aware repair, appended issue links, bounds,
+  grounding checks, and neutral-style validation
 - Soft-reference replies with every Discord mention disabled
 - Repo-local Sirens knowledge with no automatic memory or autonomous edits
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
 - Model-filed ordinary Forgejo issues through the guarded tool, with
   exact-title reuse and no labels
-- Appended canonical links for every issue a turn observed or filed, built only
-  from returned tool results and bounded by the send budget
 - Transport-aware OpenTelemetry ingress and joined turn traces end to end
 - Trace-correlated metadata logs with byte counts and no member or model text
 - Turn, latency, model-call, tool-call, admission, and failure metrics, plus 23
