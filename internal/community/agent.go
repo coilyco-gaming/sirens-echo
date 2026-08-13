@@ -109,7 +109,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	tools := &MCPProvider{
 		Servers:    roster,
-		HTTPClient: httpClient,
+		HTTPClient: sessionHTTPClient(telemetry),
 		Sandbox: sandboxLabelPolicy{
 			Tracker: cfg.Definition.IssueTracker,
 			LabelID: cfg.SandboxLabelID,
@@ -176,6 +176,18 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		}
 	}
 	return agent, nil
+}
+
+// sessionHTTPClient serves the MCP transport, with no whole-request timeout
+// because a held-open session has no request to bound. See sirens-echo#160.
+func sessionHTTPClient(telemetry *Telemetry) *http.Client {
+	return &http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithTracerProvider(telemetry.traceProvider),
+			otelhttp.WithPropagators(telemetry.propagator),
+		),
+	}
 }
 
 // defaultLookupPolicy bounds Discord REST calls made while evaluating gates.
