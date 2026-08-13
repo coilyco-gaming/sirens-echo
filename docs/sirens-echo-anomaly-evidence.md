@@ -31,29 +31,9 @@ never as an account to check the traces against.
 
 ## The worked example
 
-2026-08-13, recorded because it followed this order before it was written down.
-See [issue 258](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/258).
-
-**Lead.** Kai reported that Sirens Deep was down. Correct that something was
-wrong, and wrong about what: the service was answering.
-
-**The false trail.** The service's own account was `model backend unavailable,
-retry shortly`. Taken as the explanation, that sends an operator to the
-inference tier to debug a backend that was healthy.
-
-**Settlement.** Ops reconstructed nine model request and response pairs, every
-one carrying `status: 200`, then a turn failure emitted 74 to 93 microseconds
-after the last good response. A sub-100 microsecond gap is in-process handling.
-It cannot be a network call, a timeout, or an upstream outage.
-
-**Boundary, written last.** The turn had spent its tool-round budget, and the
-notice was reporting an internal limit as an external failure. Both the notice
-and the missing truncation magnitude were then fixed from the evidence rather
-than from the report.
-
-Note what the recollection got right and wrong. "Down" was the correct alarm
-and the wrong diagnosis, and a process that took it literally would have
-restarted a healthy pod and seen the symptom disappear until the next deep turn.
+An anomaly settled in this order, including the false trail it produced and the
+number that ended it. See [the worked
+example](sirens-echo-anomaly-worked-example.md).
 
 Reviewing someone else's finding is the adjacent question, covered in
 [reviewing a claim](sirens-echo-reviewing-claims.md).

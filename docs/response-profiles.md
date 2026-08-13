@@ -64,17 +64,6 @@ ingress, secrets, namespace, and tailnet exposure remain explicit inputs.
 
 ## CoilyCo deployment gate
 
-The Sirens Deep workload selects the hosted DeepSeek route and loads the
-CoilyCo definition. It receives its own instance, namespace, tailnet hostname,
-and non-reusable Tailscale key. Its Discord ingress refuses every guild,
-channel, and account its deployment-owned [access policy](sirens-echo-access.md)
-does not name. It requires both MCP endpoints its definition selects and holds
-no Forgejo secret, because that credential lives only in the MCP pod.
-
-Before live rollout, an authorized operator verifies the immutable image and
-route registries, applies the Terraform-managed Tailscale service entry and
-namespace RBAC, then deploys the reviewed values. Tailnet HTTP verification
-must prove the general profile answers unrelated topics without assuming a
-game or community domain and without weakening truth, privacy, or action
-grounding. The neutral Sirens Echo deployment is verified separately and
-remains unchanged.
+The Sirens Deep workload holds its own instance, namespace, and tailnet
+identity, and an operator proves the general profile before it goes live. See
+[the CoilyCo deployment gate](coilyco-deployment-gate.md).
