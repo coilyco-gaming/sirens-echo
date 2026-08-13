@@ -741,3 +741,89 @@ func TestBoundToolResultHonoursTheByteBudgetOnMultibyteText(t *testing.T) {
 		t.Fatal("the bound cut a rune in half")
 	}
 }
+
+// alwaysOneTool offers a single tool that always answers, so a test can drive
+// the round loop to its ceiling.
+type alwaysOneTool struct{}
+
+func (alwaysOneTool) Open(context.Context) (ToolSession, error) { return alwaysOneTool{}, nil }
+func (alwaysOneTool) Grounding() []GroundingDocument            { return nil }
+func (alwaysOneTool) Unavailable() []string                     { return nil }
+func (alwaysOneTool) Close() error                              { return nil }
+
+func (alwaysOneTool) Tools() []ToolDefinition {
+	return []ToolDefinition{{
+		Name:        "probe__look",
+		Original:    "look",
+		Server:      "probe",
+		Description: "look at something",
+		InputSchema: map[string]any{"type": "object", "properties": map[string]any{}},
+	}}
+}
+
+func (alwaysOneTool) Call(context.Context, string, map[string]any) (ToolResult, error) {
+	return ToolResult{Text: `{"result":"a real observation"}`}, nil
+}
+
+// Spending the tool budget must answer from the results already gathered rather
+// than discarding eight rounds of real tool output. See issue 258.
+func TestProxyClientAnswersAfterSpendingTheToolBudget(t *testing.T) {
+	t.Parallel()
+	var rounds atomic.Int32
+	var sawBudgetNotice atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(
+		writer http.ResponseWriter,
+		request *http.Request,
+	) {
+		var body chatRequest
+		if err := json.NewDecoder(request.Body).Decode(&body); err != nil {
+			t.Errorf("decode body: %v", err)
+		}
+		rounds.Add(1)
+		writer.Header().Set("Content-Type", "application/json")
+		// Once the tools are withdrawn the model can only answer, which is the
+		// behavior under test.
+		if len(body.Tools) == 0 {
+			for _, message := range body.Messages {
+				if text, ok := message.Content.(string); ok &&
+					strings.Contains(text, "tool budget for this turn is spent") {
+					sawBudgetNotice.Store(true)
+				}
+			}
+			_, _ = writer.Write([]byte(
+				`{"choices":[{"message":{"content":"Partial answer from what was gathered."}}]}`,
+			))
+			return
+		}
+		_, _ = writer.Write([]byte(
+			`{"choices":[{"message":{"tool_calls":[{"id":"c1","type":"function",` +
+				`"function":{"name":"probe__look","arguments":"{}"}}]}}]}`,
+		))
+	}))
+	defer server.Close()
+
+	client := ProxyClient{
+		BaseURL:     server.URL,
+		Model:       "selected-model",
+		AuditRole:   "community",
+		Attribution: "Sirens Echo",
+		Tools:       alwaysOneTool{},
+		HTTPClient:  &http.Client{Timeout: 5 * time.Second},
+	}
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "s", Message: "u"}, "request")
+	if err != nil {
+		t.Fatalf("Complete returned an error instead of a degraded answer: %v", err)
+	}
+	if got.Content != "Partial answer from what was gathered." {
+		t.Fatalf("content = %q", got.Content)
+	}
+	if !sawBudgetNotice.Load() {
+		t.Error("the final call did not carry the spent-budget notice")
+	}
+	if len(got.ToolCalls) != maxToolRounds {
+		t.Errorf("kept %d tool results, want the %d the rounds produced", len(got.ToolCalls), maxToolRounds)
+	}
+	if calls := rounds.Load(); calls != maxToolRounds+1 {
+		t.Errorf("model rounds = %d, want %d", calls, maxToolRounds+1)
+	}
+}
