@@ -126,7 +126,20 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
 	var payload httpTurnRequest
 	decoder := json.NewDecoder(request.Body)
+	// A field the contract does not define took no effect, and a 200 tells the
+	// caller it did. See docs/sirens-echo-http-contract.md.
+	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
+		if field, unknown := unknownJSONField(err); unknown {
+			a.writeHTTPError(
+				writer,
+				request,
+				http.StatusBadRequest,
+				exceptionHTTPTurnUnknownField,
+				"request body carries an unknown field: "+field,
+			)
+			return
+		}
 		a.writeHTTPError(
 			writer,
 			request,
@@ -248,6 +261,17 @@ func httpPrincipal(request *http.Request) string {
 		return "http:" + cleanTranscriptText(caller, 64)
 	}
 	return "http:anonymous"
+}
+
+// unknownJSONField reads the field name out of the decoder's own error, so the
+// name comes from the struct rather than from a list that would drift from it.
+func unknownJSONField(err error) (string, bool) {
+	const prefix = "json: unknown field "
+	message := err.Error()
+	if !strings.HasPrefix(message, prefix) {
+		return "", false
+	}
+	return strings.Trim(strings.TrimPrefix(message, prefix), `"`), true
 }
 
 func (a *Agent) writeHTTPError(

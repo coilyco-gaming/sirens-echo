@@ -29,6 +29,7 @@ const (
 	exceptionModelResponseMissingChoice
 	exceptionHTTPTurnMethodNotAllowed
 	exceptionHTTPTurnInvalidJSON
+	exceptionHTTPTurnUnknownField
 	exceptionHTTPTurnContentRequired
 	exceptionHTTPTurnInputTooLong
 	exceptionHTTPTurnHistoryTooLong
@@ -193,6 +194,13 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The HTTP turn body is not valid JSON.",
 		stage:    "http",
 		outcome:  "invalid_json",
+		fault:    faultCaller,
+	},
+	exceptionHTTPTurnUnknownField: {
+		typeName: "sirens_echo.http.turn_unknown_field",
+		message:  "The HTTP turn body carries a field this contract does not define.",
+		stage:    "http",
+		outcome:  "unknown_field",
 		fault:    faultCaller,
 	},
 	exceptionHTTPTurnContentRequired: {

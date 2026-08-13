@@ -24,9 +24,9 @@ alert filters remain stable.
 
 ## Cardinality
 
-Twenty-two types represent operational paths across the `turn`, `history`,
+Twenty-five types represent operational paths across the `turn`, `history`,
 `validation`, `forgejo`, `reply`, `mcp`, `model`, and `http` stages. The
-twenty-third type is the `telemetry` fallback. This is the catalog's hard
+twenty-sixth is the `telemetry` fallback. This is the catalog's hard
 grouping bound. Adding a failure path requires an explicit catalog entry and a
 reviewed increase to that bound.
 

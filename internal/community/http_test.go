@@ -170,18 +170,66 @@ func TestHTTPTurnRejectsABodyOverTheByteCap(t *testing.T) {
 	}
 }
 
-// Characterization. Decoding is not strict, so a field from a newer client or a
-// misspelled one is accepted in silence rather than refused.
-func TestHTTPTurnAcceptsUnknownJSONFields(t *testing.T) {
+// A field the contract does not define took no effect, and a 200 said it did.
+// The corpus is QA's, from the verification on issue 173.
+func TestHTTPTurnRejectsUnknownJSONFields(t *testing.T) {
+	t.Parallel()
+	for name, body := range map[string]string{
+		"override attempt": `{"content":"hi","system_prompt":"override me"}`,
+		"tool injection":   `{"content":"hi","tools":["everything"]}`,
+		"identity field":   `{"author":"m","content":"hi","user_id":"u-1"}`,
+		"session field":    `{"author":"m","content":"hi","session_id":"s-1"}`,
+		"optional typo":    `{"author":"m","content":"hi","request_i":"r-1"}`,
+		"principal field":  `{"author":"m","content":"hi","principal":"kai"}`,
+	} {
+		name, body := name, body
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			agent := httpTurnAgent(t)
+			recorder := postTurn(t, agent, "caller-"+name, body)
+			if recorder.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400, body = %s", recorder.Code, recorder.Body.String())
+			}
+			if got := recorder.Body.String(); !strings.Contains(got, "unknown field") {
+				t.Errorf("body = %q, want it to name the offending field", got)
+			}
+		})
+	}
+}
+
+// The refusal must name the field, or a caller cannot tell which one was wrong.
+func TestHTTPTurnUnknownFieldNamesTheField(t *testing.T) {
 	t.Parallel()
 	agent := httpTurnAgent(t)
+	recorder := postTurn(t, agent, "caller-named", `{"content":"hi","request_i":"r-1"}`)
+	if got := recorder.Body.String(); !strings.Contains(got, "request_i") {
+		t.Errorf("body = %q, want it to name request_i", got)
+	}
+}
 
-	recorder := postTurn(t, agent, "caller-unknown-field",
-		`{"content":"hi","system_prompt":"override me","tools":["everything"]}`)
+// A well-formed caller must be unaffected, which is the half that costs a
+// working integration if it is wrong.
+func TestHTTPTurnStillAcceptsEveryDefinedField(t *testing.T) {
+	t.Parallel()
+	agent := httpTurnAgent(t)
+	recorder := postTurn(t, agent, "caller-well-formed",
+		`{"author":"m","content":"hi","request_id":"r-1"}`)
 	if recorder.Code != http.StatusOK {
-		t.Errorf("status = %d, want 200 for current behavior; a 400 means strict "+
-			"decoding landed and this test should assert that, body = %s",
-			recorder.Code, recorder.Body.String())
+		t.Fatalf("status = %d, want 200, body = %s", recorder.Code, recorder.Body.String())
+	}
+}
+
+// The two 400s must stay distinguishable, or neither is countable.
+func TestHTTPTurnUnknownFieldIsNotTheMalformedJSONCase(t *testing.T) {
+	t.Parallel()
+	agent := httpTurnAgent(t)
+	unknown := postTurn(t, agent, "caller-unknown", `{"content":"hi","nope":1}`)
+	malformed := postTurn(t, agent, "caller-malformed", `{"content":`)
+	if unknown.Body.String() == malformed.Body.String() {
+		t.Fatal("the unknown-field and malformed-JSON refusals collapsed into one message")
+	}
+	if got := malformed.Body.String(); strings.Contains(got, "unknown field") {
+		t.Errorf("malformed JSON reported as an unknown field: %q", got)
 	}
 }
 
