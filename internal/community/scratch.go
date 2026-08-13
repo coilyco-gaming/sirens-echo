@@ -215,8 +215,8 @@ func scratchRefusal(format string, args ...any) (ToolResult, error) {
 	return ToolResult{Text: fmt.Sprintf(format, args...), IsError: true}, nil
 }
 
-// reservedScratchPath reports a path whose first segment is the reserved
-// directory, before any cleaning, so a spelling cannot smuggle one in.
+// reservedScratchPath reports a path landing in the reserved directory. It
+// cleans first, so where a path lands decides it rather than how it is spelled.
 func reservedScratchPath(relative string) bool {
 	cleaned := path.Clean("/" + strings.ReplaceAll(strings.TrimSpace(relative), "\\", "/"))
 	trimmed := strings.TrimPrefix(cleaned, "/")

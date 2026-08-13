@@ -548,7 +548,11 @@ func (c ProxyClient) Complete(
 			})
 		}
 	}
-	return CompletionResult{}, fmt.Errorf("Agent Proxy tool loop ended unexpectedly")
+	// The outer budget spans tool rounds, repairs, and raises together, so
+	// spending it is running out of steps rather than a backend failure.
+	return CompletionResult{}, fmt.Errorf(
+		"Agent Proxy spent %d model calls: %w", maxModelCalls, ErrToolRoundsExhausted,
+	)
 }
 
 // reservedWriter saves runtime output where the model cannot write. Going
