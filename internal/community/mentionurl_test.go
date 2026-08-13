@@ -89,3 +89,39 @@ func TestALinkBeforeTheNameDoesNotConsumeTheResolution(t *testing.T) {
 		t.Errorf("resolved %v, want the one person named in prose", resolved)
 	}
 }
+
+// Discord markup is not prose either, and its inner text is an id or an emoji
+// name rather than a person. See sirens-echo#479.
+var mentionMarkupCorpus = map[string]string{
+	"trophy":              "nice work <:trophy:1234567890>",
+	"wave":                "she sent <a:wave:1234567891> back",
+	"1499488069269590262": "ask in <#1499488069269590262>",
+	"1499488069269590263": "that is <@&1499488069269590263> territory",
+}
+
+func TestMarkupIsCarriedThroughByteIdentical(t *testing.T) {
+	t.Parallel()
+	for name, reply := range mentionMarkupCorpus {
+		roster := mentionRoster{}
+		roster.add(name, "999")
+		out, resolved := roster.resolveMentions(reply)
+		if out != reply || len(resolved) != 0 {
+			t.Errorf("the name %q rewrote markup it sits inside: %s -> %s", name, reply, out)
+		}
+	}
+}
+
+// The bound is where it looks, not whether it looks. A name beside markup is
+// still that person.
+func TestANameBesideMarkupStillResolves(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("trophy", "999")
+	out, resolved := roster.resolveMentions("trophy earned <:trophy:1234567890>")
+	if len(resolved) != 1 {
+		t.Fatalf("the standalone name did not resolve: %q %v", out, resolved)
+	}
+	if !strings.HasSuffix(out, "<:trophy:1234567890>") {
+		t.Errorf("the markup was altered: %q", out)
+	}
+}
