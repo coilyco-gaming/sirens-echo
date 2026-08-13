@@ -128,6 +128,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	tools := &MCPProvider{
 		Servers:    roster,
 		HTTPClient: sessionHTTPClient(telemetry),
+		Telemetry:  telemetry,
 		Sandbox: sandboxLabelPolicy{
 			Tracker: cfg.Definition.IssueTracker,
 			LabelID: cfg.SandboxLabelID,

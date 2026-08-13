@@ -41,14 +41,11 @@ there is nothing to cache, and a profile with no tools should not read as a hit.
 ## Which server, and which stage
 
 Discovery covers a connect and three listings per server, and the whole roster
-used to sit under one span. A rejection left an `HTTP POST` carrying a URL and
-nothing else, attributable to neither a server nor an operation.
-
-`mcp.server.discovery` wraps one server's round trips and carries
-`mcp.server.name`. `mcp.discovery.stage` moves through `connect`, `tools`,
-`resources` and `prompts`, so a failure's stage is the span's last value. A
-server served from cache does no round trip and gets no span. See
-sirens-echo#139.
+used to sit under one span, so a rejection was an `HTTP POST` carrying a URL and
+nothing else. `mcp.server.discovery` now wraps one server's round trips and
+carries `mcp.server.name`, and `mcp.discovery.stage` moves through `connect`,
+`tools`, `resources` and `prompts`, so a failure's stage is the span's last
+value. A cached server does no round trip and gets no span. See #139.
 
 ## Why not the duration
 
@@ -73,20 +70,10 @@ A count that is still one per turn therefore means the cache is being missed
 rather than absent, and the likeliest cause is connections not surviving between
 turns. That is a different defect from a missing cache and wants its own issue.
 
-## What one call returned
-
-`mcp.tool.call` carries `mcp.tool.outcome` and `mcp.tool.result_bytes`, so a
-reader holding one trace can tell a call that returned rows from one that
-returned none. The outcome is the same three-state `ToolOutcome` the disclosure
-footer renders to members, rather than a fourth vocabulary.
-
-Before that, the outcome reached a metric, which aggregates and cannot be joined
-to a turn, and a log line. Neither is reachable from the trace in front of you,
-so an investigation into a reply asserting absence stopped one step short of
-what the tool actually returned. See sirens-echo#570.
-
 ## See also
 
+- [MCP call telemetry](sirens-echo-mcp-call-telemetry.md) - what one call
+  returned, what the bound did to it, and why a session is not a request.
 - [the roster](sirens-echo-mcp-roster.md) - refresh, backoff, and staleness.
 - [tool call disclosure](sirens-echo-tool-disclosure.md) - the member-facing
   receipt, as opposed to this operator-facing one.

@@ -16,7 +16,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -90,6 +89,9 @@ type MCPProvider struct {
 	RefreshInterval time.Duration
 	// CallTimeout bounds one tool call. Zero uses defaultCallTimeout.
 	CallTimeout time.Duration
+	// Telemetry traces discovery. Nil records nothing, which is what a
+	// hand-built provider in a test gets unless it asks otherwise.
+	Telemetry *Telemetry
 
 	mu      sync.Mutex
 	started bool
@@ -271,13 +273,15 @@ const (
 	discoveryStagePrompts   = "prompts"
 )
 
-// startDiscoverySpan names the server a round trip belongs to. The provider is
-// the global one, because MCPProvider holds no telemetry handle.
-func startDiscoverySpan(ctx context.Context, server string) (context.Context, trace.Span) {
-	return otel.Tracer("sirens-echo/mcp").Start(
+// startDiscoverySpan names the server a round trip belongs to. Injected rather
+// than global, so two tests recording spans cannot overwrite each other.
+func (p *MCPProvider) startDiscoverySpan(
+	ctx context.Context, server string,
+) (context.Context, trace.Span) {
+	return telemetryOrNoop(p.Telemetry).StartSpan(
 		ctx,
 		"mcp.server.discovery",
-		trace.WithAttributes(attribute.String("mcp.server.name", server)),
+		attribute.String("mcp.server.name", server),
 	)
 }
 
@@ -302,7 +306,7 @@ func (p *MCPProvider) readyLocked(
 	}
 	// From here a round trip happens, and it gets a span naming the server.
 	// See docs/sirens-echo-tool-discovery-telemetry.md.
-	discoveryCtx, span := startDiscoverySpan(base, entry.definition.Name)
+	discoveryCtx, span := p.startDiscoverySpan(base, entry.definition.Name)
 	defer span.End()
 	if connecting {
 		span.SetAttributes(attribute.String("mcp.discovery.stage", discoveryStageConnect))

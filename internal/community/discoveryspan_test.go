@@ -2,11 +2,13 @@ package community
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
@@ -15,21 +17,25 @@ import (
 // could say which server or which stage. See sirens-echo#139.
 
 // discoverySpans runs a real Open and returns the discovery spans. The provider
-// is set globally, because a noop one would record nothing and assert nothing.
+// is injected, so two of these running at once cannot record into each other.
 func discoverySpans(t *testing.T, servers []MCPServerDefinition) []sdktrace.ReadOnlySpan {
 	t.Helper()
 	recorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
-	previous := otel.GetTracerProvider()
-	otel.SetTracerProvider(provider)
-	t.Cleanup(func() {
-		otel.SetTracerProvider(previous)
-		_ = provider.Shutdown(context.Background())
-	})
+	t.Cleanup(func() { _ = provider.Shutdown(context.Background()) })
+	telemetry, err := newTelemetry(
+		slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		provider,
+		metricnoop.NewMeterProvider(),
+	)
+	if err != nil {
+		t.Fatalf("telemetry: %v", err)
+	}
 
 	roster := &MCPProvider{
 		Servers:    servers,
 		HTTPClient: &http.Client{Timeout: time.Second},
+		Telemetry:  telemetry,
 	}
 	_, _ = roster.Open(context.Background())
 
