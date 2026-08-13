@@ -4,6 +4,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
@@ -14,25 +15,31 @@ import (
 const usage = "usage: sirens-echo-access-check <access-policy.yaml> [...]"
 
 func main() {
-	paths := os.Args[1:]
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
+}
+
+// run returns the code rather than calling os.Exit, because the codes are what
+// deploy's CI keys on and an untestable main cannot prove them.
+func run(paths []string, stdout, stderr io.Writer) int {
 	if len(paths) == 0 {
-		fmt.Fprintln(os.Stderr, usage)
-		os.Exit(2)
+		fmt.Fprintln(stderr, usage)
+		return 2
 	}
 	failed := false
 	for _, path := range paths {
 		if err := check(path); err != nil {
 			// The path is repeated because a CI log shows one line, and which
 			// file failed is the first thing the reader needs.
-			fmt.Fprintf(os.Stderr, "%s: %v\n", path, err)
+			fmt.Fprintf(stderr, "%s: %v\n", path, err)
 			failed = true
 			continue
 		}
-		fmt.Printf("%s: ok\n", path)
+		fmt.Fprintf(stdout, "%s: ok\n", path)
 	}
 	if failed {
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 // check runs the same loader the runtime does, so this cannot drift from what
