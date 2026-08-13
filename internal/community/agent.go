@@ -315,6 +315,7 @@ func (a *Agent) recoverJobs(ctx context.Context) {
 
 // Run opens the Gateway session and blocks until shutdown.
 func (a *Agent) Run(ctx context.Context) error {
+	a.logCapabilities(ctx)
 	if a.jobs != nil {
 		if err := a.jobs.Start(ctx); err != nil {
 			return err
