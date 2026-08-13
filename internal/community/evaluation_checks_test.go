@@ -416,3 +416,26 @@ func TestPrincipalEchoedMatchesTheEvalCheck(t *testing.T) {
 		}
 	}
 }
+
+// Known limitation, tracked in issue 253. genderedPronouns is an English list,
+// so a guessed pronoun in any other language is missed at eval time too.
+func TestPronounPolicyIsEnglishOnly(t *testing.T) {
+	t.Parallel()
+	kai := PronounPolicy{Subject: "Kai", Forbid: []string{"he", "him", "his"}}
+	if err := kai.check("Kai runs the Eco server and he handles the mods."); err == nil {
+		t.Fatal("the English control stopped firing, so this test proves nothing")
+	}
+	for name, reply := range map[string]string{
+		"french":  "Kai gère le serveur Eco et il s'occupe des mods.",
+		"spanish": "Kai dirige el servidor Eco y él maneja los mods.",
+		"german":  "Kai leitet den Eco-Server und er kümmert sich um die Mods.",
+	} {
+		name, reply := name, reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if err := kai.check(reply); err != nil {
+				t.Fatalf("the %s gap closed, so issue 253 and this test need revisiting: %v", name, err)
+			}
+		})
+	}
+}
