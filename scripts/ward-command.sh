@@ -40,12 +40,20 @@ case "${1:-}" in
     # pre-commit and missed by the verbs an engineer runs. See issue 305.
     gate_step() {
       local name=$1; shift
+      # Per run, not a fixed path. Four seats share this host and a concurrent
+      # gate corrupted this file into one a reader could not use.
+      local log
+      log=$(mktemp "${TMPDIR:-/tmp}/ward-gate.XXXXXX")
       printf '%-14s ' "$name"
-      if "$@" >/tmp/ward-gate.log 2>&1; then
+      if "$@" >"$log" 2>&1; then
         echo PASS
+        rm -f "$log"
       else
         echo FAIL
-        grep -ivE 'Passed|Skipped' /tmp/ward-gate.log >&2 || tail -20 /tmp/ward-gate.log >&2
+        # -a because one NUL turns the whole diagnostic into "Binary file
+        # matches", which greps clean and leaves nothing to read.
+        grep -a -ivE 'Passed|Skipped' "$log" >&2 || tail -20 "$log" >&2
+        rm -f "$log"
         exit 1
       fi
     }
