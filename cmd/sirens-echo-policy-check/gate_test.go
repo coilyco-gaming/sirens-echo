@@ -47,3 +47,28 @@ func TestTheGateCoversEveryCheckCIRuns(t *testing.T) {
 		t.Error("the gate does not run pre-commit, which is the step that keeps failing")
 	}
 }
+
+// The repository declares its lane in ward.yaml and nothing read it, so an
+// agent could push to main with every check green. See issue 329.
+func TestTheGateReadsTheDeclaredWorkflow(t *testing.T) {
+	t.Parallel()
+	gate, err := os.ReadFile("../../scripts/ward-command.sh")
+	if err != nil {
+		t.Fatalf("read the ward command script: %v", err)
+	}
+	ward, err := os.ReadFile("../../.ward/ward.yaml")
+	if err != nil {
+		t.Fatalf("read ward.yaml: %v", err)
+	}
+	if !strings.Contains(string(ward), "workflow: pull-request-and-merge") {
+		t.Skip("the repository is not on the pull-request lane")
+	}
+	body := string(gate)
+	if !strings.Contains(body, "pull-request-and-merge") {
+		t.Error("the gate does not read the declared workflow, so main is pushable " +
+			"with every check green")
+	}
+	if !strings.Contains(body, "symbolic-ref") {
+		t.Error("the gate does not check which branch it is on")
+	}
+}
