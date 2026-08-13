@@ -18,22 +18,6 @@ import (
 
 const (
 	maxAgentProxyResponseBytes = 2 * 1024 * 1024
-	maxToolRounds              = 6
-	maxResponseRepairs         = 1
-
-	// maxToolResultBytes bounds one tool result before it re-enters the
-	// prompt. Four parallel Eco calls inflated a 6k prompt past 47k.
-	maxToolResultBytes = 8 * 1024
-
-	// Completion budget, escalated rather than fixed.
-	// See docs/sirens-echo-budget.md.
-	baseCompletionTokens = 1800
-	maxCompletionTokens  = 3600
-	completionBudgetStep = 2
-
-	// budgetRaisesAllowed bounds the escalation so a pathological turn cannot
-	// loop. One real rung remains: 1800 to 3600, then exhausted.
-	budgetRaisesAllowed = 1
 )
 
 // finishReasonLength is the upstream signal that the completion was truncated

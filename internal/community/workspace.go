@@ -17,8 +17,6 @@ const (
 	// maxCommandOutputBytes bounds what one command can return, so a runaway
 	// build cannot be read into memory unbounded.
 	maxCommandOutputBytes = 64 << 10
-	// defaultCommandTimeout bounds one command inside a job's own budget.
-	defaultCommandTimeout = 10 * time.Minute
 	// workspacePermissions keeps a job's tree readable only by this process.
 	workspacePermissions = 0o700
 )
