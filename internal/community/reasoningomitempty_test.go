@@ -12,7 +12,7 @@ import (
 )
 
 // The repair path now carries reasoning content. A model that returns none
-// still produces an assistant message with no such key. See sirens-echo#678.
+// still produces an assistant message with no such key. See sirens-echo#717.
 
 // assistantKeys returns the JSON keys of the first assistant message in a raw
 // request body. Decoding first would erase the absent-against-empty difference.
@@ -94,8 +94,8 @@ func TestAnEmptyReasoningContentLeavesNoKey(t *testing.T) {
 	// nobody has established whether the provider accepts an empty string.
 	if keys["reasoning_content"] {
 		t.Errorf("the assistant message now carries reasoning_content when the "+
-			"model returned none, keys = %v. If sirens-echo#678 was closed, "+
-			"invert this assertion and record what the provider accepts", keys)
+			"model returned none, keys = %v. Invert this assertion and record "+
+			"what the provider accepts on sirens-echo#717", keys)
 	}
 	if !keys["tool_calls"] || !keys["role"] {
 		t.Errorf("the assistant message lost a key this test relies on: %v", keys)
