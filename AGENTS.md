@@ -100,8 +100,10 @@ the guild, channel, thread, and message ids, so a trace id a member was handed
 can be placed. Nothing member-visible goes with them, and no direct message
 contributes any of it. See [turn
 identifiers](docs/sirens-echo-turn-identifiers.md). Rejected events and DMs
-never enter the turn logger. Forgejo issues contain sanitized summaries and no
-labels.
+never enter the turn logger. Forgejo issues contain sanitized summaries and
+exactly one label, the sandbox marker the harness injects before dispatch so a
+member-influenced filing is never unmarked. See [knowledge gaps and
+corrections](docs/sirens-echo-issues.md).
 
 For live diagnosis, an authorized ops or director session can correlate
 bounded history from the deploy-owned read-only Discord MCP with Echo's
