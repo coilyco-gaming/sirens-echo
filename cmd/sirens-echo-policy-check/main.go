@@ -33,6 +33,7 @@ func main() {
 	} {
 		verifyRatePack(path)
 	}
+	verifyContentTaxonomy("agent/content-classes.yaml")
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
@@ -80,6 +81,27 @@ func verifyRatePack(path string) {
 		path,
 		len(pack.Cases),
 		runs,
+	)
+}
+
+// A taxonomy that is not closed forces a wrong classification rather than
+// producing a bad one, which is harder to notice at a member.
+func verifyContentTaxonomy(path string) {
+	taxonomy, err := community.LoadContentTaxonomy(path)
+	if err != nil {
+		log.Fatalf("content taxonomy %s: %v", path, err)
+	}
+	denied := 0
+	for _, class := range taxonomy.Classes {
+		if class.Deny {
+			denied++
+		}
+	}
+	fmt.Printf(
+		"verified content taxonomy %s with %d classes, %d denied\n",
+		path,
+		len(taxonomy.Classes),
+		denied,
 	)
 }
 

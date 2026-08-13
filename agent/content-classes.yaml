@@ -1,0 +1,79 @@
+# The closed content taxonomy the classifier chooses from.
+#
+# Kai's requirement is that the list cover every content type theoretically
+# possible to communicate. A denylist alone cannot do that: if the only choices
+# are the categories to refuse, an ordinary request has nowhere to go and the
+# model either forces it into a deny bucket or answers outside the list. So the
+# allowed classes are enumerated too, and `other` is the explicit catch-all.
+#
+# Boundary model is allow by default. `deny: true` is the exception, and the
+# denylist is the maintenance surface. Adding a category is an edit to this
+# file rather than a code change, per the decision on issue 227.
+#
+# `sensitive: true` changes the refusal shape, not the verdict. An ordinary
+# block names its reason. A sensitive block emits a generic redirect naming no
+# category, because saying which rule fired tells the member what to avoid
+# saying next time.
+#
+# SENSITIVE WINS TIES. A request matching both a sensitive and an ordinary
+# class resolves to the sensitive one. The bedtime story trips creative
+# long-form and minor suspicion together, and naming the ordinary category out
+# loud would leak exactly the signal the sensitive branch exists to hide.
+#
+# Every block is visible. Silent no-reply was rejected, so a refusal is never
+# mistakable for an outage.
+#
+# A block is one sentence. Every volunteered justification is a handle to pull,
+# and a refusal that argues its own case is the longest thing Echo says.
+# See docs/sirens-echo-content-classes.md and issue 175.
+#
+# The allowed classes come first and exist so the set is closed, not because
+# they need a rule. The denied classes follow, each carrying deny: true.
+
+schema: sirens-discord-ops.content-classes.v1
+
+classes:
+  - id: eco-gameplay
+    summary: Eco mechanics, items, recipes, skills, professions, or world state.
+  - id: server-operations
+    summary: Server status, uptime, restarts, connection problems, performance.
+  - id: community-logistics
+    summary: Events, channels, roles, rules, moderation process, how things work here.
+  - id: repository-request
+    summary: Issues, labels, comments, or anything about this service's own tracker.
+  - id: service-capability
+    summary: What the service can do, its limits, or how it works.
+  - id: general-knowledge
+    summary: Ordinary factual or encyclopedic questions with no sensitive content.
+  - id: small-talk
+    summary: Greetings, jokes, banter, and brief social exchanges.
+  - id: other
+    summary: Anything the classes above do not describe. The explicit catch-all.
+
+  - id: nsfw
+    summary: Sexual content, explicit material, or a request to produce it.
+    deny: true
+    sensitive: true
+  - id: minor-suspected
+    summary: >
+      The member states or strongly implies they are a child, by explicit age or
+      school context, or the request shape skews young. Bedtime stories,
+      homework help, and requests to explain in very simple language count.
+    deny: true
+    sensitive: true
+  - id: creative-long-form
+    summary: >
+      A request to compose extended original fiction, poetry, or narrative.
+      Naming a work, or discussing fiction that already exists, is not this.
+    deny: true
+  - id: emotional-support
+    summary: >
+      A request for comfort, reassurance, validation, or help with feelings.
+      This is what the member asks for. It is not the separate defect of Echo
+      asserting a member's inner state, which is a grounding failure and is not
+      classified here. A member asking whether their message read as hostile is
+      asking a question about text, which is community-logistics.
+    deny: true
+  - id: medical-legal-advice
+    summary: A request for diagnosis, treatment, dosage, or legal guidance.
+    deny: true
