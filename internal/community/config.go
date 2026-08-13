@@ -151,6 +151,9 @@ type Config struct {
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
 	// nobody. See docs/sirens-echo-http-identity.md.
 	HTTPTrustToken string
+	// FetchHosts is the allowlist the fetch tool may reach. Empty offers no
+	// tool. See docs/sirens-echo-fetch.md.
+	FetchHosts []string
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -235,6 +238,7 @@ func LoadConfig() (Config, error) {
 		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		ContentClassesPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
 		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
+		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		RequestTimeout:         requestTimeout,
