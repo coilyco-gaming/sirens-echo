@@ -28,7 +28,7 @@ guilds:
 
 func TestABoundedPolicyPasses(t *testing.T) {
 	t.Parallel()
-	if err := check(write(t, boundedGuild)); err != nil {
+	if _, err := check(write(t, boundedGuild)); err != nil {
 		t.Fatalf("a valid policy was rejected: %v", err)
 	}
 }
@@ -37,7 +37,7 @@ func TestABoundedPolicyPasses(t *testing.T) {
 // per-user bound is an unbounded guild.
 func TestAnOpenGuildWithoutAPerUserBoundFails(t *testing.T) {
 	t.Parallel()
-	err := check(write(t, `schema: coilyco-harness.access.v1
+	_, err := check(write(t, `schema: coilyco-harness.access.v1
 guilds:
   - id: "111111111111111111"
     channels: ["222222222222222222"]
@@ -53,7 +53,7 @@ guilds:
 
 func TestAMissingFileIsAnError(t *testing.T) {
 	t.Parallel()
-	if err := check(filepath.Join(t.TempDir(), "absent.yaml")); err == nil {
+	if _, err := check(filepath.Join(t.TempDir(), "absent.yaml")); err == nil {
 		t.Fatal("a missing policy file was accepted")
 	}
 }
@@ -62,7 +62,7 @@ func TestAMissingFileIsAnError(t *testing.T) {
 // failure mode a plain YAML parse in another repository cannot see.
 func TestAnUnknownFieldIsAnError(t *testing.T) {
 	t.Parallel()
-	err := check(write(t, `schema: coilyco-harness.access.v1
+	_, err := check(write(t, `schema: coilyco-harness.access.v1
 guilds:
   - id: "111111111111111111"
     channels: ["222222222222222222"]
@@ -76,7 +76,7 @@ guilds:
 
 func TestAnUnsupportedSchemaIsAnError(t *testing.T) {
 	t.Parallel()
-	err := check(write(t, `schema: something.else.v9
+	_, err := check(write(t, `schema: something.else.v9
 guilds:
   - id: "111111111111111111"
     channels: ["222222222222222222"]
@@ -140,5 +140,63 @@ func TestOneBadFileFailsTheWholeRun(t *testing.T) {
 	// The good one is still reported, so a reader can see which failed.
 	if !strings.Contains(out.String(), ": ok") {
 		t.Error("the passing file was not reported")
+	}
+}
+
+// Deploy's policies live inside a ConfigMap, so the extracted key arrives on
+// stdin rather than as a path. See sirens-echo#628.
+
+// withStdin replaces os.Stdin for one call, which is the only way to exercise
+// the branch deploy uses.
+func withStdin(t *testing.T, body string) {
+	t.Helper()
+	reader, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	original := os.Stdin
+	os.Stdin = reader
+	t.Cleanup(func() { os.Stdin = original })
+	go func() {
+		defer writer.Close()
+		_, _ = writer.WriteString(body)
+	}()
+}
+
+func TestABoundedPolicyOnStdinPasses(t *testing.T) {
+	withStdin(t, boundedGuild)
+	policy, err := check("-")
+	if err != nil {
+		t.Fatalf("a valid policy on stdin was rejected: %v", err)
+	}
+	if policy == nil {
+		t.Fatal("no policy was returned, so nothing can be summarised")
+	}
+}
+
+// The stdin path has to refuse what the file path refuses, or the seam deploy
+// uses is a hole rather than a gate.
+func TestAnOpenGuildOnStdinFails(t *testing.T) {
+	withStdin(t, `schema: coilyco-harness.access.v1
+guilds:
+  - id: "111111111111111111"
+    channels: ["222222222222222222"]
+    users: all
+`)
+	if _, err := check("-"); err == nil {
+		t.Fatal("an unbounded open guild passed through the stdin path")
+	}
+}
+
+// The spooled copy must not outlive the call that made it.
+func TestTheSpooledPolicyIsRemoved(t *testing.T) {
+	withStdin(t, boundedGuild)
+	before, _ := filepath.Glob(filepath.Join(os.TempDir(), "access-policy-*.yaml"))
+	if _, err := check("-"); err != nil {
+		t.Fatalf("check: %v", err)
+	}
+	after, _ := filepath.Glob(filepath.Join(os.TempDir(), "access-policy-*.yaml"))
+	if len(after) > len(before) {
+		t.Errorf("the spooled policy was left behind: %v", after)
 	}
 }

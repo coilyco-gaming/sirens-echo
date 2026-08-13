@@ -6,17 +6,31 @@ can run it.
 
 ```sh
 sirens-echo-access-check path/to/access-policy.yaml [...]
+sirens-echo-access-check -                      read one policy from stdin
 ```
 
-Prints `<path>: ok` per file, exits 1 with the reason on stderr for any file
-that fails, and exits 2 with usage when handed no arguments.
+Prints `<path>: ok` and what the policy admits, exits 1 with the reason on
+stderr for any file that fails, and exits 2 with usage when handed no arguments.
+
+## Deploy holds a ConfigMap, not a policy
+
+**Every file in deploy fails this check when passed as a path**, including the
+correct ones. They are Kubernetes manifests with the policy nested under
+`data["access-policy.yaml"]`, and the runtime never sees that wrapper because
+the ConfigMap projects the key as a file. So deploy extracts the key first:
+
+```sh
+yq '.data."access-policy.yaml"' access-policy.yml | sirens-echo-access-check -
+```
+
+That split is the boundary rather than a workaround: deploy owns the manifest
+format and this repository owns the policy schema.
 
 ## Why it exists
 
-Deploy applies `access-policy.yml` as a ConfigMap during rollout. Its
-pre-commit parses the file as YAML, which catches a syntax error and nothing
-else. Every check that matters is semantic and lives here, so until this
-existed the first thing to evaluate a policy was **pod boot** — after the
+Deploy's pre-commit parses the file as YAML, which catches a syntax error and
+nothing else. Every check that matters is semantic and lives here, so until
+this existed the first thing to evaluate a policy was **pod boot**, after the
 ConfigMap was already applied.
 
 Deploy's standing rule is that it never reimplements a parser for a format
@@ -41,13 +55,22 @@ per-user rate limit:
 guild "…" opens to every member: set rate_limit.per_user to a real bound
 ```
 
-Strict decoding catches the quieter one. A misspelled key like `ratelimit`
-fails rather than being ignored, which is the failure a plain YAML parse in
-another repository cannot see — the file is valid YAML and the bound it was
-meant to set is simply absent.
-
-Schema mismatch, unreadable file, and non-snowflake IDs all fail with their
+Strict decoding catches the quieter one: a misspelled key like `ratelimit`
+fails rather than being ignored, which a plain YAML parse in another repository
+cannot see, because the file is valid YAML and the bound is simply absent.
+Schema mismatch, unreadable file, and non-snowflake IDs each fail with their
 own reason.
+
+## What it prints when it passes
+
+A policy can be entirely valid and still open a guild nobody meant to open, so
+a passing run lists each guild's channels, members, roles, and resolved rate
+tiers, and says in prose when every member is admitted.
+
+**An unset tier and a disabled one are not the same.** An absent
+`rate_limit.per_user` inherits the deployment tier, which this file cannot see,
+and `off` removes limiting. They read as `deployment default` and `unlimited`,
+because conflating them makes an unbounded guild look bounded.
 
 ## See also
 
