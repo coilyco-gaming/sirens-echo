@@ -101,6 +101,81 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 	_ = p.sink.Edit(ctx, existing, notice)
 }
 
+// Watch narrates a turn that is waiting rather than changing stage. Stage alone
+// only posts on a transition, and a long model call makes none.
+func (p *turnProgress) Watch(ctx context.Context) func() {
+	if p == nil || p.sink == nil {
+		return func() {}
+	}
+	done := make(chan struct{})
+	go func() {
+		ticker := time.NewTicker(turnProgressEvery)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				p.refresh(ctx)
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
+// refresh posts the current stage once the turn has run long enough. A line
+// already up says the right thing until Stage edits it.
+func (p *turnProgress) refresh(ctx context.Context) {
+	p.mu.Lock()
+	if p.finished || p.lastStage == "" || p.messageID != "" {
+		p.mu.Unlock()
+		return
+	}
+	moment := p.now()
+	if moment.Sub(p.start) < turnProgressAfter {
+		p.mu.Unlock()
+		return
+	}
+	phrase := p.lastStage
+	p.lastEdit = moment
+	p.mu.Unlock()
+
+	posted, err := p.sink.Post(ctx, harnessNotice(phrase))
+	if err != nil {
+		return
+	}
+	p.mu.Lock()
+	// A reply may have landed while the post was in flight, in which case the
+	// line is already unwanted.
+	finished := p.finished
+	p.messageID = posted
+	p.mu.Unlock()
+	if finished {
+		_ = p.sink.Delete(ctx, posted)
+	}
+}
+
+// turnProgressKey carries the turn's progress line to the tool loop, which
+// lives behind the completion boundary and takes no progress argument.
+type turnProgressKey struct{}
+
+// WithTurnProgress marks a context as narrating one turn.
+func WithTurnProgress(ctx context.Context, progress *turnProgress) context.Context {
+	if progress == nil {
+		return ctx
+	}
+	return context.WithValue(ctx, turnProgressKey{}, progress)
+}
+
+// reportStage narrates from a layer that holds no progress reference. A context
+// without one is the ordinary case for a non-Discord transport.
+func reportStage(ctx context.Context, phrase string) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.Stage(ctx, phrase)
+}
+
 // Finish removes the progress line. The reply or the failure notice is the
 // turn's real answer, so the narration does not outlive it.
 func (p *turnProgress) Finish(ctx context.Context) {

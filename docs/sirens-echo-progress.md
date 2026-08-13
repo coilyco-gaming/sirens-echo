@@ -53,6 +53,25 @@ HTTP and MCP answer synchronously, so there is nothing to narrate to. Only a
 Discord turn gets a progress line, and the non-Discord path is a nil progress
 that every method accepts.
 
+## Narrating a wait, not only a change
+
+Stage transitions alone are not enough. A turn changes stage twice in its first
+moments, reading history and then thinking, and then sits in one stage for as
+long as the model takes. Since a line is only posted on a stage change that
+happens after the threshold, the first post landed on the last transition, just
+before the reply, and was deleted milliseconds later. The feature was present
+and effectively invisible.
+
+A watcher therefore ticks alongside the turn and posts the current stage once
+the threshold passes, whether or not anything changed. A line already up is left
+alone until a real stage change edits it, so the watcher can never produce a
+column of messages.
+
+The tool loop narrates through the turn context rather than through an argument,
+because it sits behind the completion boundary and takes no progress parameter.
+A context without a progress line makes that call inert, which is the ordinary
+case for a transport that answers synchronously.
+
 Job progress is a separate mechanism with the same shape, because a job's origin
 outlives its turn. See [job telemetry](sirens-echo-jobs-telemetry.md).
 

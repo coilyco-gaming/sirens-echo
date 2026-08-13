@@ -785,6 +785,10 @@ func (a *Agent) runTurn(
 	// Attribution reaches the tool layer here. The requester is deliberately
 	// not a span attribute, because an account id is not operational telemetry.
 	turnCtx = WithRequester(turnCtx, turn.Requester())
+	// The tool loop narrates from behind the completion boundary, and the
+	// watcher narrates a stage that is waiting rather than changing.
+	turnCtx = WithTurnProgress(turnCtx, progress)
+	defer progress.Watch(turnCtx)()
 	outcome := "ok"
 	defer func() {
 		if turnErr != nil {
