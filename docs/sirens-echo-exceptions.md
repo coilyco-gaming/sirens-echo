@@ -24,15 +24,17 @@ alert filters remain stable.
 
 ## Cardinality
 
-Twenty-six types represent operational paths across the `turn`, `history`,
-`validation`, `forgejo`, `reply`, `mcp`, `model`, and `http` stages. The
-twenty-seventh is the `telemetry` fallback. This is the catalog's hard
+Thirty-one types represent operational paths across the `turn`, `history`,
+`validation`, `forgejo`, `reply`, `mcp`, `model`, `http`, and `jobs` stages. The
+thirty-second is the `telemetry` fallback. This is the catalog's hard
 grouping bound. Adding a failure path requires an explicit catalog entry and a
 reviewed increase to that bound.
 
-The most recent increase is `turn_body_too_large`, split from `input_too_long`
-because a body cap and a field cap are different limits and a caller can only
-act on the one they broke. See sirens-echo#351.
+The most recent increase is the five `jobs` types. That surface failed through
+bare `http.Error` and recorded nothing, so the failure rate omitted it entirely.
+Five rather than fewer because `queue_full` is the service's fault and the rest
+are the caller's, and collapsing them would lose the split sirens-echo#159 needs.
+See sirens-echo#383.
 
 ## Redaction boundary
 

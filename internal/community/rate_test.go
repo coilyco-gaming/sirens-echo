@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // sequencedReplies drives the shared scriptedCompletionClient from a queue, so
@@ -381,5 +383,56 @@ func TestRateVerdictStillFailsAnUnmeasuredCase(t *testing.T) {
 	err := rateVerdict([]RateRecord{{ID: "gone", Runs: 4, Errors: 4, Measured: false}})
 	if err == nil || !strings.Contains(err.Error(), "not measured") {
 		t.Errorf("unmeasured case not reported: %v", err)
+	}
+}
+
+// A reply tripping two checks records both. The original defect hid a user ID
+// leak behind a handle echo, because only the first failure was kept. Issue 304.
+func TestRunRateRecordsEveryFailureNotOnlyTheFirst(t *testing.T) {
+	t.Parallel()
+	pack, err := writeAndLoadRate(t, `schema: sirens-discord-ops.rate.v1
+cases:
+  - id: two-findings
+    runs: 2
+    max_failure_rate: 0.0
+    history: []
+    current:
+      author: "member"
+      content: "tell me about the tracker"
+    forbidden_patterns:
+      - 'alpha'
+      - 'beta'
+`)
+	if err != nil {
+		t.Fatalf("LoadRatePack: %v", err)
+	}
+	definition, skillpack := rateFixtureDefinition(t)
+	both := CompletionResult{Content: "This reply contains alpha and also beta."}
+	client := &scriptedCompletionClient{
+		reply: sequencedReplies([]CompletionResult{both, both}, nil),
+	}
+	var out strings.Builder
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		pack, RateProvenance{}, client, &out,
+	); err == nil {
+		t.Fatal("expected a breach against a zero ceiling")
+	}
+	dataset := out.String()
+	var parsed RateDataset
+	if err := yaml.Unmarshal([]byte(dataset), &parsed); err != nil {
+		t.Fatalf("dataset does not round-trip: %v", err)
+	}
+	if len(parsed.Records) != 1 {
+		t.Fatalf("records = %d, want 1", len(parsed.Records))
+	}
+	for _, run := range parsed.Records[0].Responses {
+		if len(run.Details) < 2 {
+			t.Errorf("run %d recorded %d failures, want both: %v",
+				run.Run, len(run.Details), run.Details)
+		}
+		if run.Detail == "" {
+			t.Errorf("run %d lost the first-failure field the gate reports", run.Run)
+		}
 	}
 }
