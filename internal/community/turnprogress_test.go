@@ -293,3 +293,52 @@ func TestReportStageNarratesThroughTheContext(t *testing.T) {
 	// A context carrying no progress must be inert rather than panic.
 	reportStage(context.Background(), stagePhraseTool)
 }
+
+// The reported ambiguity. A rejected post and a turn too short to narrate looked
+// identical from outside, because the failure was discarded.
+func TestAFailedProgressPostIsRecorded(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{postErr: errors.New("missing SEND_MESSAGES")}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newReportingTurnProgress(sink, telemetryOrNoop(nil), now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter + time.Second)
+	progress.refresh(context.Background())
+
+	// The turn is unaffected and nothing panics. The record call is what makes
+	// the failure observable, and a noop telemetry exercises that path.
+	if posts, _, _ := sink.counts(); posts != 0 {
+		t.Fatalf("a failing sink recorded a post: %d", posts)
+	}
+}
+
+// Kai asked for a four second threshold and a two second edit bound.
+func TestProgressThresholdsMatchTheRequestedCadence(t *testing.T) {
+	t.Parallel()
+	if turnProgressAfter != 4*time.Second {
+		t.Errorf("turnProgressAfter = %s, want 4s", turnProgressAfter)
+	}
+	if turnProgressEvery != 2*time.Second {
+		t.Errorf("turnProgressEvery = %s, want 2s", turnProgressEvery)
+	}
+}
+
+// A turn that beats the threshold still narrates nothing, which is what keeps an
+// ordinary reply clean at the lower cadence.
+func TestAFastTurnStillPostsNothingAtTheLowerThreshold(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseHistory)
+	advance(turnProgressAfter - time.Second)
+	progress.Stage(context.Background(), stagePhraseThinking)
+	progress.refresh(context.Background())
+	progress.Finish(context.Background())
+
+	if posts, edits, deletes := sink.counts(); posts != 0 || edits != 0 || deletes != 0 {
+		t.Errorf("a fast turn touched Discord: %d posts, %d edits, %d deletes", posts, edits, deletes)
+	}
+}

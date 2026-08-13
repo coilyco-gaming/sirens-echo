@@ -5,7 +5,7 @@ line for a two-second reply is noise.
 
 ## What a member sees
 
-Nothing for the first eight seconds. After that, one line in the harness notice
+Nothing for the first four seconds. After that, one line in the harness notice
 format that edits in place as the turn moves:
 
 > `reading recent messages`
@@ -56,24 +56,25 @@ that every method accepts.
 ## Narrating a wait, not only a change
 
 Stage transitions alone are not enough. A turn changes stage twice in its first
-moments, reading history and then thinking, and then sits in one stage for as
-long as the model takes. Since a line is only posted on a stage change that
-happens after the threshold, the first post landed on the last transition, just
-before the reply, and was deleted milliseconds later. The feature was present
-and effectively invisible.
+moments and then sits in one stage for as long as the model takes, so a line
+posted only on a transition landed just before the reply and was deleted
+milliseconds later. A watcher therefore ticks alongside the turn and posts the
+current stage once the threshold passes, whether or not anything changed. A line
+already up is left alone until a real stage change edits it.
 
-A watcher therefore ticks alongside the turn and posts the current stage once
-the threshold passes, whether or not anything changed. A line already up is left
-alone until a real stage change edits it, so the watcher can never produce a
-column of messages.
-
-The tool loop narrates through the turn context rather than through an argument,
-because it sits behind the completion boundary and takes no progress parameter.
-A context without a progress line makes that call inert, which is the ordinary
-case for a transport that answers synchronously.
+The tool loop narrates through the turn context rather than an argument, because
+it sits behind the completion boundary. A context without a progress line makes
+that call inert.
 
 Job progress is a separate mechanism with the same shape, because a job's origin
 outlives its turn. See [job telemetry](sirens-echo-jobs-telemetry.md).
+
+## Every sink call is recorded
+
+A discarded failure made three states indistinguishable: too short to narrate,
+posted and missed, or refused in silence. Post, edit, and delete now record
+their outcome as `discord.progress.posted` or `discord.progress.failed`. A
+refused post is still not a turn failure, but it is visible.
 
 See [notices](sirens-echo-notices.md), [reactions](sirens-echo-reactions.md),
 and [the service](sirens-echo.md).

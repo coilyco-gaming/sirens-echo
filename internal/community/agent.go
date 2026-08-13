@@ -768,10 +768,10 @@ func (a *Agent) progressFor(turn turnIO) *turnProgress {
 	if !ok || discord.session == nil {
 		return nil
 	}
-	return newTurnProgress(discordTurnProgress{
+	return newReportingTurnProgress(discordTurnProgress{
 		session: discord.session,
 		channel: discord.message.ChannelID,
-	}, nil)
+	}, a.telemetry, nil)
 }
 
 func (a *Agent) runTurn(

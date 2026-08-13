@@ -2,6 +2,7 @@ package community
 
 import (
 	"context"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -12,10 +13,10 @@ import (
 const (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
-	turnProgressAfter = 8 * time.Second
+	turnProgressAfter = 4 * time.Second
 	// turnProgressEvery bounds edits, so a tool-heavy turn cannot spend its
 	// budget on Discord calls.
-	turnProgressEvery = 4 * time.Second
+	turnProgressEvery = 2 * time.Second
 )
 
 // The stage phrases. They come from the closed notice vocabulary, so a progress
@@ -37,9 +38,10 @@ type TurnProgressSink interface {
 // turnProgress reports a long turn's stage. Every method is safe before the
 // threshold, which is what keeps the fast path free of special cases.
 type turnProgress struct {
-	sink  TurnProgressSink
-	start time.Time
-	now   func() time.Time
+	sink      TurnProgressSink
+	telemetry *Telemetry
+	start     time.Time
+	now       func() time.Time
 
 	mu        sync.Mutex
 	messageID string
@@ -49,10 +51,38 @@ type turnProgress struct {
 }
 
 func newTurnProgress(sink TurnProgressSink, now func() time.Time) *turnProgress {
+	return newReportingTurnProgress(sink, nil, now)
+}
+
+// newReportingTurnProgress carries the telemetry handle. Without one the line is
+// still posted, so a hand-built progress in a test needs no telemetry.
+func newReportingTurnProgress(
+	sink TurnProgressSink,
+	telemetry *Telemetry,
+	now func() time.Time,
+) *turnProgress {
 	if now == nil {
 		now = time.Now
 	}
-	return &turnProgress{sink: sink, start: now(), now: now}
+	return &turnProgress{sink: sink, telemetry: telemetry, start: now(), now: now}
+}
+
+// record reports what the progress line did. Without it a rejected post and a
+// turn too short to narrate look identical from outside.
+func (p *turnProgress) record(ctx context.Context, action string, err error) {
+	if p.telemetry == nil {
+		return
+	}
+	if err != nil {
+		p.telemetry.Info(
+			ctx,
+			"discord.progress.failed",
+			slog.String("action", action),
+			slog.String("error", err.Error()),
+		)
+		return
+	}
+	p.telemetry.Info(ctx, "discord.progress.posted", slog.String("action", action))
 }
 
 // Stage records what the turn is doing. It posts once the turn has run long
@@ -84,6 +114,7 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 	notice := harnessNotice(phrase)
 	if existing == "" {
 		posted, err := p.sink.Post(ctx, notice)
+		p.record(ctx, "post", err)
 		if err != nil {
 			return
 		}
@@ -94,11 +125,11 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 		p.messageID = posted
 		p.mu.Unlock()
 		if finished {
-			_ = p.sink.Delete(ctx, posted)
+			p.record(ctx, "delete", p.sink.Delete(ctx, posted))
 		}
 		return
 	}
-	_ = p.sink.Edit(ctx, existing, notice)
+	p.record(ctx, "edit", p.sink.Edit(ctx, existing, notice))
 }
 
 // Watch narrates a turn that is waiting rather than changing stage. Stage alone
@@ -143,6 +174,7 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	p.mu.Unlock()
 
 	posted, err := p.sink.Post(ctx, harnessNotice(phrase))
+	p.record(ctx, "post", err)
 	if err != nil {
 		return
 	}
@@ -192,6 +224,6 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	p.messageID = ""
 	p.mu.Unlock()
 	if messageID != "" {
-		_ = p.sink.Delete(ctx, messageID)
+		p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
 	}
 }
