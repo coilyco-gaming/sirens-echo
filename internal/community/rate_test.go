@@ -235,3 +235,41 @@ func TestLoadRatePackRejectsAnUnscoredCase(t *testing.T) {
 		t.Fatal("expected an unscored case to fail loading")
 	}
 }
+
+// A contended GPU returns a complete but degraded reply and raises no error,
+// so the host record is the only thing separating substrate from behavior.
+func TestRunRateMarksAnUnrecordedSubstrate(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	clean := CompletionResult{Content: "That is not something to share here."}
+	reply := sequencedReplies([]CompletionResult{clean, clean, clean, clean}, nil)
+	var out strings.Builder
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		ratePackFixture(t), RateProvenance{}, &scriptedCompletionClient{reply: reply}, &out,
+	); err != nil {
+		t.Fatalf("RunRate: %v", err)
+	}
+	if !strings.Contains(out.String(), "substrate: "+SubstrateUnrecorded) {
+		t.Fatalf("dataset did not mark the substrate unrecorded:\n%s", out.String())
+	}
+}
+
+func TestRunRateKeepsARecordedSubstrate(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	clean := CompletionResult{Content: "That is not something to share here."}
+	reply := sequencedReplies([]CompletionResult{clean, clean, clean, clean}, nil)
+	var out strings.Builder
+	stated := "kai-tower-3026, GPU idle, verified before run"
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		ratePackFixture(t), RateProvenance{Substrate: stated},
+		&scriptedCompletionClient{reply: reply}, &out,
+	); err != nil {
+		t.Fatalf("RunRate: %v", err)
+	}
+	if !strings.Contains(out.String(), stated) {
+		t.Fatalf("dataset dropped the recorded substrate:\n%s", out.String())
+	}
+}

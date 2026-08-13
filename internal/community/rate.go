@@ -48,13 +48,20 @@ type RatePack struct {
 // RateProvenance records the substrate. A rate without it is not reproducible
 // and not comparable to the next run, so the runner refuses to omit it.
 type RateProvenance struct {
-	Definition  string `yaml:"definition"`
-	Pack        string `yaml:"pack"`
-	Model       string `yaml:"model"`
-	Transport   string `yaml:"transport"`
-	Roster      string `yaml:"roster"`
+	Definition string `yaml:"definition"`
+	Pack       string `yaml:"pack"`
+	Model      string `yaml:"model"`
+	Transport  string `yaml:"transport"`
+	Roster     string `yaml:"roster"`
+	// Substrate records host state at run time. A contended GPU returns a
+	// complete but degraded reply, which no in-process check can detect.
+	Substrate   string `yaml:"substrate"`
 	GeneratedAt string `yaml:"generated_at"`
 }
+
+// SubstrateUnrecorded marks a dataset nobody described the host for. Saying so
+// beats letting a later reader assume it was idle. See docs/sirens-echo-sweep.md.
+const SubstrateUnrecorded = "unrecorded"
 
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.
@@ -166,6 +173,9 @@ func runRate(
 		composed = PlaceholderComposed
 	}
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	if strings.TrimSpace(provenance.Substrate) == "" {
+		provenance.Substrate = SubstrateUnrecorded
+	}
 	dataset := RateDataset{
 		Schema:     RateDatasetSchema,
 		Provenance: provenance,

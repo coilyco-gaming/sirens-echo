@@ -153,11 +153,15 @@ func runRatePack(
 		log.Fatalf("rate pack: %v", err)
 	}
 	provenance := community.RateProvenance{
-		Definition:  evaluationDefinitionPath(),
-		Pack:        packPath,
-		Model:       proxyModel,
-		Transport:   proxyURL,
-		Roster:      valueOrDefault(rosterPath, "empty"),
+		Definition: evaluationDefinitionPath(),
+		Pack:       packPath,
+		Model:      proxyModel,
+		Transport:  proxyURL,
+		Roster:     valueOrDefault(rosterPath, "empty"),
+		Substrate: valueOrDefault(
+			os.Getenv("SIRENS_ECHO_SUBSTRATE"),
+			community.SubstrateUnrecorded,
+		),
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	if err := community.RunRate(
