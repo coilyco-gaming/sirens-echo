@@ -136,6 +136,29 @@ func checkVerbatimLeak(reply, systemPrompt string, width int) error {
 	return nil
 }
 
+// checkReplyLength bounds a reply's word count. A refusal states the boundary
+// and stops. See docs/sirens-echo-brevity.md for the exploit this closes.
+func checkReplyLength(reply string, limit int) error {
+	if limit <= 0 {
+		return nil
+	}
+	words := countWords(reply)
+	if words > limit {
+		return fmt.Errorf("reply ran to %d words against a %d word ceiling", words, limit)
+	}
+	return nil
+}
+
+// countWords counts whitespace-separated tokens. Trimming first keeps a
+// leading newline from counting as a word.
+func countWords(text string) int {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return 0
+	}
+	return len(wordSplit.Split(trimmed, -1))
+}
+
 func shingles(text string, width int) []string {
 	words := wordSplit.Split(strings.ToLower(strings.TrimSpace(text)), -1)
 	if len(words) < width {
