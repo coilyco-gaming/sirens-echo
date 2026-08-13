@@ -10,9 +10,6 @@ import (
 // Progress is advisory. It is rate limited and droppable, so a chatty job
 // cannot flood its origin. See docs/sirens-echo-jobs-lifecycle.md.
 
-// jobProgressEvery bounds how often one job reports to its origin.
-const jobProgressEvery = 20 * time.Second
-
 // JobProgressReporter delivers an intermediate update to a job's origin.
 type JobProgressReporter interface {
 	ReportJobProgress(ctx context.Context, job Job, phrase string) error

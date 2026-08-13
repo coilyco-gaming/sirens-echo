@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-// DefaultVerbatimWords is the shingle width for system-prompt leakage. Eight
-// consecutive words is specific enough that a paraphrase cannot reach it.
-const DefaultVerbatimWords = 8
-
 // genderedPronouns is the closed set a pronoun policy chooses from. Anything
 // outside the case's allow list is a finding when it lands on the subject.
 var genderedPronouns = []string{

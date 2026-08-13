@@ -12,8 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const defaultEvaluationCaseTimeout = 5 * time.Minute
-
 const (
 	// EvaluationSchemaV1 is the original tool-and-phrase gate.
 	EvaluationSchemaV1 = "sirens-discord-ops.evaluation.v1"

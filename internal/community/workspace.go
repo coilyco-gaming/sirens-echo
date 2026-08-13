@@ -14,9 +14,6 @@ import (
 // A workspace is one job's private directory. See docs/sirens-echo-execution.md.
 
 const (
-	// maxCommandOutputBytes bounds what one command can return, so a runaway
-	// build cannot be read into memory unbounded.
-	maxCommandOutputBytes = 64 << 10
 	// workspacePermissions keeps a job's tree readable only by this process.
 	workspacePermissions = 0o700
 )

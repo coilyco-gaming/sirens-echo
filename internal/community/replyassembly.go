@@ -35,9 +35,6 @@ func serviceSuffixOrder() []serviceSuffix {
 }
 
 const (
-	// maxAssemblyPasses guards a future suffix that could grow faster than the
-	// answer shrinks. A test reaches it.
-	maxAssemblyPasses = 8
 
 	// unboundedReply is what a transport with no ceiling declares, and what a
 	// convergence pass renders against so the overflow stays visible.

@@ -11,13 +11,6 @@ import (
 // A long answer gets somewhere of its own. The channel keeps the progress line,
 // which is what points at it. See docs/sirens-echo-threads.md.
 
-// threadArchiveMinutes matches the guild's own hide-after setting, so a thread
-// does not outlive the channel's expectation of it.
-const threadArchiveMinutes = 60
-
-// threadNameRunes is Discord's cap. A longer name is refused outright.
-const threadNameRunes = 100
-
 // threadNameFallback names a thread whose message was all mention and
 // punctuation, so a thread is never created without a readable name.
 const threadNameFallback = "a longer answer"

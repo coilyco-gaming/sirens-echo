@@ -15,10 +15,6 @@ import (
 // whitespace or an opening bracket. See docs/sirens-echo-mentions.md.
 var mentionLead = `(?i)(^|[\s(\["'*_~])`
 
-// mentionNameRunes is the shortest name worth resolving. A one or two
-// character display name matches too much ordinary prose to be safe.
-const mentionNameRunes = 3
-
 // mentionRoster maps a display name to the account it belongs to, built from
 // the turn's own transcript.
 type mentionRoster map[string]string

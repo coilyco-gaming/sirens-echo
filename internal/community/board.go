@@ -19,10 +19,6 @@ const BoardSchema = "sirens-discord-ops.board.v1"
 // BoardDatasetSchema names the emitted annotation input.
 const BoardDatasetSchema = "sirens-discord-ops.board-dataset.v1"
 
-// DefaultBoardEpochs repeats every case so the grader reads epoch 1 and the
-// remaining runs stay in the dataset as a failure-spread estimate.
-const DefaultBoardEpochs = 5
-
 const (
 	// BoardHalfIn is the half where the clause requires the agent to act.
 	BoardHalfIn = "in"
