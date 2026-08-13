@@ -230,18 +230,30 @@ func runRate(
 		Records:    make([]RateRecord, 0, len(pack.Cases)),
 	}
 	for _, rateCase := range pack.Cases {
+		// A cut run still emits what it measured. Timeouts against a wedged route
+		// are results, and discarding them costs the next run the same wait.
+		if ctx.Err() != nil {
+			break
+		}
 		record := measureRateCase(
 			ctx, rateCase, definition, principal,
 			systemPrompt, completions, caseTimeout,
 		)
 		dataset.Records = append(dataset.Records, record)
 	}
+	cutShort := ctx.Err()
 	encoded, err := yaml.Marshal(dataset)
 	if err != nil {
 		return fmt.Errorf("encode rate dataset: %w", err)
 	}
 	if _, err := output.Write(encoded); err != nil {
 		return fmt.Errorf("write rate dataset: %w", err)
+	}
+	if cutShort != nil {
+		return fmt.Errorf(
+			"rate run cut short after %d of %d cases, dataset written: %w",
+			len(dataset.Records), len(pack.Cases), cutShort,
+		)
 	}
 	return rateVerdict(dataset.Records)
 }

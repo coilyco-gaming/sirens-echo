@@ -5,8 +5,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
@@ -152,8 +154,14 @@ func runRatePack(
 		log.Fatalf("rate pack: %v", err)
 	}
 	provenance := rateProvenance(packPath, proxyURL, proxyModel, rosterPath)
+	// Interrupt cancels the run so the dataset is still written. Killing the
+	// process loses every attempt, which is sirens-echo#324.
+	rateCtx, stopRate := signal.NotifyContext(
+		context.Background(), os.Interrupt, syscall.SIGTERM,
+	)
+	defer stopRate()
 	if err := community.RunRate(
-		context.Background(),
+		rateCtx,
 		definition,
 		community.PlaceholderPrincipal,
 		localSkillpack,
