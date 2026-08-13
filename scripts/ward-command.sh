@@ -26,6 +26,16 @@ case "${1:-}" in
     pre-commit install --install-hooks
     ;;
   gate)
+    # The repository declares its lane and nothing read it, so an agent could
+    # violate it with every check green. See sirens-echo#329.
+    declared=$(sed -n 's/^  workflow: *//p' .ward/ward.yaml | head -1)
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
+    if [ "$declared" = "pull-request-and-merge" ] && [ "$branch" = "main" ]; then
+      echo "gate: this repository is on the $declared lane, so main is not a" >&2
+      echo "  branch to push. Create one, then open a pull request:" >&2
+      echo "    git switch -c <owner>/<topic>" >&2
+      exit 1
+    fi
     # One habit instead of six. Four red mains in one evening were all caught by
     # pre-commit and missed by the verbs an engineer runs. See issue 305.
     gate_step() {
