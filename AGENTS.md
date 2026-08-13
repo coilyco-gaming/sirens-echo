@@ -116,6 +116,16 @@ trusted deploy lane. The workload holds no cluster credential. Deploy owns rollo
 
 **Git workflow** - `pull-request-and-merge`, declared as `agent.workflow` in [`.ward/ward.yaml`](.ward/ward.yaml). Agents push a branch and open a Forgejo pull request. Nothing lands straight on `main`, and the merge stays director-gated. Byte-identical across the five PR-lane repos (agentic-os, deploy, infrastructure, sirens-echo, ward) per agentic-os#994.
 
+**A pull request body must carry a closing reference**, or the merge verb will
+not merge it. `closes #N` and `closes owner/repo#N` are the accepted spellings,
+and `fixes` and `resolves` work the same way. A full issue URL does **not**
+satisfy it, which matters here because a URL is the house convention everywhere
+else. See [the merge lane](docs/sirens-echo-merge-lane.md).
+
+If a pull request does not fully close the issue that motivated it, file the
+slice as its own issue and close that one. Do not weaken the reference to
+satisfy the verb.
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
