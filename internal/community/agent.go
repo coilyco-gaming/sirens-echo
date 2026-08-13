@@ -1146,6 +1146,9 @@ type discordMessageTurn struct {
 	session *discordgo.Session
 	message *discordgo.Message
 	limit   int
+	// mentions is built from this turn's transcript, so only people already in
+	// the conversation can be reached. See docs/sirens-echo-mentions.md.
+	mentions mentionRoster
 }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
@@ -1259,8 +1262,30 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 			Counterpart: counterpartOf(message),
 			Attachments: attachmentTypes(message),
 		})
+		t.recordMentionable(message)
 	}
+	t.recordMentionable(t.message)
 	return history, nil
+}
+
+// recordMentionable adds a message's author and anyone it mentioned, which is
+// the whole source: no membership lookup and no API call.
+func (t *discordMessageTurn) recordMentionable(message *discordgo.Message) {
+	if message == nil {
+		return
+	}
+	if t.mentions == nil {
+		t.mentions = mentionRoster{}
+	}
+	if message.Author != nil {
+		t.mentions.add(displayName(message), message.Author.ID)
+	}
+	for _, mentioned := range message.Mentions {
+		if mentioned != nil {
+			t.mentions.add(mentioned.GlobalName, mentioned.ID)
+			t.mentions.add(mentioned.Username, mentioned.ID)
+		}
+	}
 }
 
 // Typing shows the Discord indicator for this turn's channel.
@@ -1286,6 +1311,9 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	)...)
 	target := t.message.ChannelID
 	reference := t.message.SoftReference()
+	// Only ids the harness resolved, never Parse. A mention is something the
+	// harness decided to deliver. See docs/sirens-echo-mentions.md.
+	content, mentioned := t.mentions.resolveMentions(content)
 	// A thread hangs off the member's message, so a reference inside it would
 	// point at its own parent. See docs/sirens-echo-threads.md.
 	if turnLongReply(ctx) {
@@ -1299,6 +1327,7 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 		Reference: reference,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse:       []discordgo.AllowedMentionType{},
+			Users:       mentioned,
 			RepliedUser: false,
 		},
 	})
