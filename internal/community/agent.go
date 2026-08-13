@@ -144,6 +144,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(cfg.FetchHosts) > 0 {
 		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
 	}
+	if cfg.RepoInventoryOrg != "" && cfg.RepoInventoryURL != "" {
+		extras = append(extras, &RepoInventoryProvider{
+			BaseURL: cfg.RepoInventoryURL,
+			Org:     cfg.RepoInventoryOrg,
+		})
+	}
 	if len(extras) > 1 {
 		modelTools = &CompositeProvider{Providers: extras}
 	}

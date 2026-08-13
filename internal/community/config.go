@@ -253,6 +253,11 @@ type Config struct {
 	// JobStoreDir is the durable job store's directory. Empty keeps jobs in
 	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
 	JobStoreDir string
+	// RepoInventoryURL and RepoInventoryOrg name the forge and organization the
+	// inventory lists. Either empty offers no tool.
+	RepoInventoryURL string
+	// The read is unauthenticated, so it sees public repositories only.
+	RepoInventoryOrg string
 	// ScratchDir mounts the per-requester scratchpad. Empty offers no scratchpad
 	// tools at all. See docs/sirens-echo-scratchpad.md.
 	ScratchDir string
@@ -340,6 +345,8 @@ func LoadConfig() (Config, error) {
 		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
+		RepoInventoryURL:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_URL")),
+		RepoInventoryOrg:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_ORG")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		PhrasesPath:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
 		RequestTimeout:         requestTimeout,
