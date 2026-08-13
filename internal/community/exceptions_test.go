@@ -165,3 +165,38 @@ func stringAttributes(attributes []attribute.KeyValue) map[string]string {
 	}
 	return values
 }
+
+// A new exception must not be silently unclassified. The fault is a string
+// rather than a bool so a forgotten field is empty, not "service". Issue 159.
+func TestEveryExceptionDeclaresAFault(t *testing.T) {
+	t.Parallel()
+	for code := exceptionCode(0); code < exceptionCodeCount; code++ {
+		spec := exceptionFor(code)
+		switch spec.fault {
+		case faultCaller, faultService:
+		default:
+			t.Errorf("%s declares fault %q; it must be %q or %q",
+				spec.typeName, spec.fault, faultCaller, faultService)
+		}
+	}
+}
+
+// The stage cannot stand in for the fault, which is the reason this field
+// exists rather than a query grouping by stage.
+func TestTheHTTPStageIsNotTheCallerBucket(t *testing.T) {
+	t.Parallel()
+	promptFailed := exceptionFor(exceptionHTTPTurnPromptFailed)
+	if promptFailed.stage != "http" {
+		t.Fatalf("prompt_failed is no longer on the http stage: %q", promptFailed.stage)
+	}
+	if promptFailed.fault != faultService {
+		t.Error("an MCP failure surfaced on the HTTP path is being blamed on the caller")
+	}
+	invalidJSON := exceptionFor(exceptionHTTPTurnInvalidJSON)
+	if invalidJSON.stage != promptFailed.stage {
+		t.Fatal("the two codes no longer share a stage, so this test proves nothing")
+	}
+	if invalidJSON.fault != faultCaller {
+		t.Error("a malformed request body is not the caller's fault here")
+	}
+}
