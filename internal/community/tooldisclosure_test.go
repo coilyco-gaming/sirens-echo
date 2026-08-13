@@ -138,3 +138,38 @@ func TestTheFooterFollowsTheAnswer(t *testing.T) {
 		t.Error("an empty answer produced a footer with leading blank lines")
 	}
 }
+
+// The reactions and the footer render one vocabulary on two surfaces, so the
+// shared symbols are one definition rather than two. See sirens-echo#448.
+func TestTheFooterAndTheReactionsShareOneSpelling(t *testing.T) {
+	t.Parallel()
+	if toolDisclosureGlyph != reactionTool {
+		t.Errorf("footer hammer %q, reaction hammer %q", toolDisclosureGlyph, reactionTool)
+	}
+	if toolOutcomeGlyph(ToolOutcomeFailed) != reactionFailed {
+		t.Errorf("footer failure %q, reaction failure %q",
+			toolOutcomeGlyph(ToolOutcomeFailed), reactionFailed)
+	}
+	// The other two have no reaction counterpart. Asserting their values keeps
+	// them from drifting the way the reactions did before sirens-echo#447.
+	if got := toolOutcomeGlyph(ToolOutcomeOK); got != "✅" {
+		t.Errorf("ok glyph = %q", got)
+	}
+	if got := toolOutcomeGlyph(ToolOutcomeEmpty); got != "\U0001F4ED" {
+		t.Errorf("empty glyph = %q", got)
+	}
+	// All four distinct, which is the property the reaction test had and which
+	// is worth keeping alongside the pinned values rather than instead of them.
+	seen := map[string]bool{}
+	for _, g := range []string{
+		toolDisclosureGlyph,
+		toolOutcomeGlyph(ToolOutcomeFailed),
+		toolOutcomeGlyph(ToolOutcomeOK),
+		toolOutcomeGlyph(ToolOutcomeEmpty),
+	} {
+		if seen[g] {
+			t.Errorf("glyph %q is used for two states", g)
+		}
+		seen[g] = true
+	}
+}

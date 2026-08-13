@@ -8,8 +8,15 @@ import (
 // The receipt a reader can see. See docs/sirens-echo-tool-disclosure.md.
 
 const (
-	toolDisclosureGlyph = "🔨"
-	toolEmptyNote       = " — no results"
+	// The two shared with the reaction set are references, not copies, so the
+	// surfaces cannot drift apart. See docs/sirens-echo-tool-disclosure.md.
+	toolDisclosureGlyph = reactionTool
+	toolFailedGlyph     = reactionFailed
+	// These two have no reaction counterpart and are defined here, as escapes
+	// for the same reason sirens-echo#447 escaped the reactions.
+	toolOKGlyph    = "\u2705"
+	toolEmptyGlyph = "\U0001F4ED"
+	toolEmptyNote  = " — no results"
 )
 
 // toolOutcomeGlyph is the status vocabulary, shared with the reaction set and
@@ -17,11 +24,11 @@ const (
 func toolOutcomeGlyph(outcome ToolOutcome) string {
 	switch outcome {
 	case ToolOutcomeFailed:
-		return "❌"
+		return toolFailedGlyph
 	case ToolOutcomeEmpty:
-		return "📭"
+		return toolEmptyGlyph
 	default:
-		return "✅"
+		return toolOKGlyph
 	}
 }
 
