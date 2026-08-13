@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,29 +11,50 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
+// startupLogger matches Telemetry's JSON shape and stream, for the two
+// failures that land before Telemetry exists. See docs/sirens-echo-exit-paths.md.
+func startupLogger() *slog.Logger {
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+}
+
 func main() {
+	startup := startupLogger()
 	cfg, err := community.LoadConfig()
 	if err != nil {
-		log.Fatalf("config: %v", err)
+		startup.Error("startup.config.failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	telemetry, err := community.NewTelemetry(context.Background(), cfg)
 	if err != nil {
-		log.Fatalf("telemetry: %v", err)
+		startup.Error("startup.telemetry.failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := telemetry.Close(shutdownCtx); err != nil {
-			log.Printf("telemetry shutdown: %v", err)
+			telemetry.Error(
+				shutdownCtx,
+				"shutdown.telemetry.failed",
+				slog.String("error", err.Error()),
+			)
 		}
 	}()
 	agent, err := community.NewAgent(cfg, telemetry)
 	if err != nil {
-		log.Fatalf("agent: %v", err)
+		telemetry.Error(
+			context.Background(),
+			"startup.agent.failed",
+			slog.String("error", err.Error()),
+		)
+		os.Exit(1)
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := agent.Run(ctx); err != nil {
-		log.Fatalf("run: %v", err)
+		telemetry.Error(ctx, "run.failed", slog.String("error", err.Error()))
+		os.Exit(1)
 	}
 }
