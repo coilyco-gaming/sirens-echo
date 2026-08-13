@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// The gate verifies a hand-written list of paths. A pack absent from that list
-// ships unverified, and the build says nothing because it was never asked.
+// policy-check names its inputs by hand, so a pack added to agent/ and left off
+// the list is verified by nothing while the output still reads green.
 
 // agentDefinitionGlob is every file the gate could be asked to verify. Deriving
 // the target set is the point: a list checked against a list drifts together.
@@ -30,8 +30,8 @@ func TestTheGateNamesEveryPackUnderAgent(t *testing.T) {
 		// The literal as main.go spells it, relative to the repository root.
 		reference := "agent/" + filepath.Base(pack)
 		if !strings.Contains(source, `"`+reference+`"`) {
-			t.Errorf("%s is not verified by the gate; add it to the matching list in main.go",
-				reference)
+			t.Errorf("%s is verified by nothing. Add it to the right verify "+
+				"call in main.go, or delete it if it is no longer tracked.", reference)
 		}
 	}
 }
