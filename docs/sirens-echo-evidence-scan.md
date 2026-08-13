@@ -34,6 +34,17 @@ boundaries, so they can report that markup is present and never how often per
 attempt. Summing the two into one rate would invent a denominator, so the share
 covers structured records only and the transcripts are listed on their own.
 
+## Reading a dataset committed before the stdout split
+
+Logs and the record shared stdout until the eval runner moved its logs to
+stderr, so every dataset committed before that interleaves JSON log lines with
+the document and will not unmarshal. Those files stay as they are, because they
+are cited evidence and rewriting them would edit the record.
+
+This scanner reads both forms. It seeks the record rather than starting at byte
+zero, so nobody counting a behaviour across evidence has to strip log lines by
+hand. Reading one of those files directly still does.
+
 ## Where a zero stops meaning absence
 
 Two limits, both worth stating with any number this produces.
