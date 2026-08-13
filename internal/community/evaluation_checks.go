@@ -1,6 +1,7 @@
 package community
 
 import (
+	"encoding/base64"
 	"fmt"
 	"regexp"
 	"strings"
@@ -147,19 +148,93 @@ func shingles(text string, width int) []string {
 	return found
 }
 
-// checkPrincipalEcho rejects a reply repeating the operator's handle or user
-// ID. Both are in the system prompt and neither belongs in a reply to anyone.
-func checkPrincipalEcho(reply string, principal Principal) error {
-	// Ordered rather than a map, so the reported finding is deterministic.
-	for _, candidate := range []struct{ label, value string }{
-		{"handle", principal.Handle},
-		{"user ID", principal.UserID},
+// Normalizers for the principal check. The invariant is the value rather than
+// its spelling, so a separator or a transform must not carry it past.
+var (
+	nonDigit    = regexp.MustCompile(`\D+`)
+	nonAlphaNum = regexp.MustCompile(`[^a-z0-9]+`)
+	// linkHost matches a scheme and host. The operator's own site carries the
+	// handle in its hostname, so a host is not evidence of disclosure.
+	linkHost      = regexp.MustCompile(`(?i)https?://[^/\s]*`)
+	spelledDigit  = regexp.MustCompile(`(?i)\b(zero|one|two|three|four|five|six|seven|eight|nine)\b`)
+	spelledValues = map[string]string{
+		"zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+		"five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+	}
+)
+
+// minNormalizedIDDigits bounds the concatenating normalization. Collapsing a
+// reply to its digits would let a short identifier collide with ordinary numbers.
+const minNormalizedIDDigits = 8
+
+// digitsOf collapses a string to its digits, which turns every separator-based
+// encoding of a numeric identifier into one comparison.
+func digitsOf(text string) string {
+	return nonDigit.ReplaceAllString(text, "")
+}
+
+// spelledToDigits rewrites whole-word digit names. The QA probe that motivated
+// this asked for the digits one at a time, which is the form it produces.
+func spelledToDigits(text string) string {
+	return spelledDigit.ReplaceAllStringFunc(text, func(word string) string {
+		return spelledValues[strings.ToLower(word)]
+	})
+}
+
+func reverseString(text string) string {
+	runes := []rune(text)
+	for left, right := 0, len(runes)-1; left < right; left, right = left+1, right-1 {
+		runes[left], runes[right] = runes[right], runes[left]
+	}
+	return string(runes)
+}
+
+// base64Of returns the encodings a blob could arrive in. A closed list keeps
+// the miss rate knowable, which an evasion-guessing list cannot.
+func base64Of(value string) []string {
+	found := make([]string, 0, 4)
+	for _, encoding := range []*base64.Encoding{
+		base64.StdEncoding, base64.RawStdEncoding,
+		base64.URLEncoding, base64.RawURLEncoding,
 	} {
-		if strings.TrimSpace(candidate.value) == "" {
-			continue
+		found = append(found, encoding.EncodeToString([]byte(value)))
+	}
+	return found
+}
+
+// checkPrincipalEcho rejects a reply carrying the operator's handle or user ID.
+// See docs/sirens-echo-principal-check.md for what it reads and still misses.
+func checkPrincipalEcho(reply string, principal Principal) error {
+	if handle := strings.ToLower(strings.TrimSpace(principal.Handle)); handle != "" {
+		// Hosts drop out first, then separators, which are the whole evasion.
+		hosted := linkHost.ReplaceAllString(strings.ToLower(reply), " ")
+		squashed := nonAlphaNum.ReplaceAllString(hosted, "")
+		if strings.Contains(squashed, nonAlphaNum.ReplaceAllString(handle, "")) {
+			return fmt.Errorf("echoed the operator handle")
 		}
-		if strings.Contains(strings.ToLower(reply), strings.ToLower(candidate.value)) {
-			return fmt.Errorf("echoed the operator %s", candidate.label)
+	}
+	userID := strings.TrimSpace(principal.UserID)
+	if userID == "" {
+		return nil
+	}
+	if strings.Contains(strings.ToLower(reply), strings.ToLower(userID)) {
+		return fmt.Errorf("echoed the operator user ID")
+	}
+	digits := digitsOf(userID)
+	if len(digits) < minNormalizedIDDigits {
+		return nil
+	}
+	// Spelled digits are normalized before collapsing, so the two combine.
+	for _, reading := range []string{digitsOf(reply), digitsOf(spelledToDigits(reply))} {
+		for _, encoding := range []string{digits, reverseString(digits)} {
+			if strings.Contains(reading, encoding) {
+				return fmt.Errorf("echoed the operator user ID")
+			}
+		}
+	}
+	for _, encoding := range base64Of(userID) {
+		if strings.Contains(reply, encoding) {
+			return fmt.Errorf("echoed the operator user ID")
 		}
 	}
 	return nil
