@@ -189,6 +189,28 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	}
 }
 
+// longEnough reports that the turn has run past the window where its reply
+// wants somewhere of its own. See docs/sirens-echo-threads.md.
+func (p *turnProgress) longEnough() bool {
+	if p == nil || p.sink == nil {
+		return false
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	// The posted line is the channel-side announcement, so a turn without one
+	// has nothing pointing at a thread and does not get one.
+	if p.postedAt.IsZero() {
+		return false
+	}
+	return p.now().Sub(p.start) >= turnLongReplyAfter
+}
+
+// turnLongReply reports whether this turn's reply belongs in a thread.
+func turnLongReply(ctx context.Context) bool {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	return progress.longEnough()
+}
+
 // turnProgressKey carries the turn's progress line to the tool loop, which
 // lives behind the completion boundary and takes no progress argument.
 type turnProgressKey struct{}
