@@ -113,6 +113,9 @@ func TestTheTailnetRangeIsRefused(t *testing.T) {
 		"100.64.0.1:443",
 		"100.100.100.100:443",
 		"100.127.255.254:443",
+		// The mapped form works only because Contains normalises through To4.
+		// A resolver may hand back either, so the guard has to hold for both.
+		"[::ffff:100.64.0.1]:443",
 	} {
 		if err := refusePrivateAddress(address); err == nil {
 			t.Errorf("%s was dialled, so the fetch tool reaches the tailnet", address)
