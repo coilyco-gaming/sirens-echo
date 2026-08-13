@@ -15,14 +15,20 @@ import (
 
 func TestComposedForRunPairsTheBundleWithItsLabel(t *testing.T) {
 	t.Parallel()
-	bundle, recorded := composedForRun(Definition{Composed: true})
+	bundle, recorded, err := composedForRun(Definition{Composed: true})
+	if err != nil {
+		t.Fatalf("composedForRun: %v", err)
+	}
 	if bundle != PlaceholderComposed {
 		t.Error("a composed definition did not receive the placeholder")
 	}
 	if recorded != ComposedStubbed {
 		t.Errorf("a stubbed run recorded %q, so a reader cannot tell it was stubbed", recorded)
 	}
-	bundle, recorded = composedForRun(Definition{Composed: false})
+	bundle, recorded, err = composedForRun(Definition{Composed: false})
+	if err != nil {
+		t.Fatalf("composedForRun: %v", err)
+	}
 	if bundle != "" {
 		t.Error("an uncomposed definition received a bundle it does not declare")
 	}

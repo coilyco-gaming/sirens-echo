@@ -182,7 +182,10 @@ func runEvaluation(
 	output io.Writer,
 	caseTimeout time.Duration,
 ) error {
-	composed, _ := composedForRun(definition)
+	composed, _, err := composedForRun(definition)
+	if err != nil {
+		return err
+	}
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {

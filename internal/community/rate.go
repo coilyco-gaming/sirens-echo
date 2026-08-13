@@ -94,6 +94,10 @@ const (
 	ComposedNotRequested = "not composed"
 )
 
+// ComposedBundleEnv opts a run into a real bundle. Unset keeps the stub, so an
+// existing run does not change meaning. See docs/sirens-echo-compose.md.
+const ComposedBundleEnv = "SIRENS_ECHO_COMPOSED_BUNDLE"
+
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.
 type RateRun struct {
@@ -208,7 +212,10 @@ func runRate(
 ) error {
 	// Derived where the substitution happens, so a caller cannot claim a bundle
 	// the run did not use.
-	composed, composedState := composedForRun(definition)
+	composed, composedState, err := composedForRun(definition)
+	if err != nil {
+		return err
+	}
 	provenance.Composed = composedState
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	if strings.TrimSpace(provenance.Substrate) == "" {

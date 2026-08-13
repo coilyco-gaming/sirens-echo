@@ -213,7 +213,10 @@ func runBoard(
 	if epochs < 1 {
 		return fmt.Errorf("board run requires at least one epoch")
 	}
-	composed, composedState := composedForRun(definition)
+	composed, composedState, err := composedForRun(definition)
+	if err != nil {
+		return err
+	}
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	// Derived rather than accepted, so a graded dataset cannot name a bundle
 	// this run did not read. See sirens-echo#316.

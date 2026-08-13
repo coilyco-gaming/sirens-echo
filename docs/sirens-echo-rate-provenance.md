@@ -49,15 +49,16 @@ that prompt was last measured in production it was 53,133 bytes against the
 11,392 the snapshot renders, so the bundle was most of it.
 
 So a Deep rate describes **this configuration**, not the deployed service, and in
-a stronger sense than "a different image": the instructions themselves differ. A
-model given 11 KB of instructions is not obviously the same subject as the same
-model given 53 KB, and the cases most likely to move are the ones the pack
-measures, since personality skills shape voice and tempo and the injection cases
-turn on how much instruction there is to contradict.
+a stronger sense than "a different image": the instructions differ. A model given
+11 KB is not obviously the same subject as the same model given 53 KB, and the
+cases most likely to move are the ones the pack measures.
 
-The stub is correct and should stay. It keeps the tracked snapshot and
-`policy-check` hermetic, and a snapshot that varied with whatever bundle a caller
-happened to have would not be a snapshot. **What was missing was any statement in
+The stub is the default and stays, because the snapshot and `policy-check` must
+stay hermetic. Those are build-time paths and a rate is not one, so
+`SIRENS_ECHO_COMPOSED_BUNDLE` points a run at a staged bundle and `composed`
+names it. An unreadable bundle fails the run rather than falling back: a dataset
+naming a bundle it never read is worse than the gap. This closes the instruction
+gap, not the build gap, since no pod participates either way. **What was missing was any statement in
 the dataset that the stub was used**, which is the difference between a bound a
 reader can see and one they cannot.
 

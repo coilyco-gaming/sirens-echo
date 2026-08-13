@@ -79,11 +79,21 @@ Placeholder. Deployment selects the role and the image bakes the real bundle.`
 
 // composedForRun returns the bundle a run reads and the label its dataset
 // records together, so a dataset cannot name a bundle the run never read.
-func composedForRun(definition Definition) (bundle string, recorded string) {
-	if definition.Composed {
-		return PlaceholderComposed, ComposedStubbed
+func composedForRun(definition Definition) (bundle string, recorded string, err error) {
+	if !definition.Composed {
+		return "", ComposedNotRequested, nil
 	}
-	return "", ComposedNotRequested
+	dir := strings.TrimSpace(os.Getenv(ComposedBundleEnv))
+	if dir == "" {
+		return PlaceholderComposed, ComposedStubbed, nil
+	}
+	// A failure must not fall back to the stub. A dataset labelled with a bundle
+	// it did not read is worse than one honestly labelled stubbed.
+	loaded, loadErr := LoadBundle(dir)
+	if loadErr != nil {
+		return "", "", fmt.Errorf("%s=%s: %w", ComposedBundleEnv, dir, loadErr)
+	}
+	return loaded, fmt.Sprintf("bundle %s (%d bytes)", dir, len(loaded)), nil
 }
 
 // LoadBundle reads one materialized agent-compose bundle: the identity card
