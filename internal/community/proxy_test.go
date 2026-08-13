@@ -710,8 +710,13 @@ func TestBoundToolResultCapsReinjectionButKeepsGrounding(t *testing.T) {
 	if len(got) >= len(huge) {
 		t.Fatalf("bounded length %d is not smaller than %d", len(got), len(huge))
 	}
-	if !strings.Contains(got, "[truncated by the runtime]") {
+	if !strings.Contains(got, "[truncated by the runtime") {
 		t.Fatal("the bound is not visible to the model")
+	}
+	// The magnitude is the part that makes the marker actionable. Without it
+	// refetching the same window is a rational move. See issue 258.
+	if !strings.Contains(got, fmt.Sprintf("%d of %d bytes delivered", maxToolResultBytes, len(huge))) {
+		t.Fatalf("the marker does not say how much was lost: %q", got[len(got)-80:])
 	}
 }
 
@@ -724,7 +729,11 @@ func TestBoundToolResultHonoursTheByteBudgetOnMultibyteText(t *testing.T) {
 	if !trimmed {
 		t.Fatal("an oversized multibyte result was not bounded")
 	}
-	body := strings.TrimSuffix(got, "\n[truncated by the runtime]")
+	marker := strings.LastIndex(got, "\n[truncated by the runtime")
+	if marker < 0 {
+		t.Fatal("the bound is not visible to the model")
+	}
+	body := got[:marker]
 	if len(body) > maxToolResultBytes {
 		t.Fatalf("bounded body is %d bytes, want at most %d", len(body), maxToolResultBytes)
 	}

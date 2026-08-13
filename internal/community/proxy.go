@@ -547,6 +547,10 @@ func (c ProxyClient) Complete(
 // the filesystem keeps confinement, quota, and attribution unchanged.
 const scratchWriteTool = "scratch_write"
 
+// truncationNotice carries the magnitude of the loss. A marker without one
+// leaves refetching the same window a rational move. See issue 258.
+const truncationNotice = "\n[truncated by the runtime, %d of %d bytes delivered]"
+
 // spillNotice tells the model where the rest of a result went. Without it a
 // trimmed result reads as the whole result.
 const spillNotice = "[full %d byte result saved to %s, read it with scratch_read]"
@@ -605,7 +609,7 @@ func boundToolResult(result string) (string, bool) {
 	for cut > 0 && !utf8.RuneStart(result[cut]) {
 		cut--
 	}
-	return result[:cut] + "\n[truncated by the runtime]", true
+	return result[:cut] + fmt.Sprintf(truncationNotice, cut, len(result)), true
 }
 
 // groundingMessage renders reference material the servers marked for the
