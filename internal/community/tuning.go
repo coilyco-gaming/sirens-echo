@@ -1,6 +1,10 @@
 package community
 
-import "time"
+import (
+	"sort"
+	"strings"
+	"time"
+)
 
 // Every tuning number this package has, in one file. See
 // docs/sirens-echo-tuning.md for why they are here and how to change one.
@@ -36,14 +40,14 @@ const (
 )
 
 // MCP: refresh, timeouts, backoff, and grounding size
-const (
+var (
 	// defaultRosterRefresh bounds staleness for a transport that cannot push
 	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
 	defaultRosterRefresh = time.Hour
 	mcpConnectTimeout    = 10 * time.Second
 	mcpListTimeout       = 15 * time.Second
 	mcpBackoffMin        = 5 * time.Second
-	mcpBackoffMax        = 2 * time.Minute
+	mcpBackoffMax        = 2 * time.Minute //nolint:unused // read via the override table
 	// defaultCallTimeout keeps one tool call well inside the turn budget, so a
 	// server that never answers cannot spend the whole turn.
 	defaultCallTimeout = 45 * time.Second
@@ -53,8 +57,9 @@ const (
 	maxGroundingDocuments = 8
 )
 
-// Turn progress cadence. Only the wait is written down
-const (
+// Turn progress cadence. Only the wait is written down. Overridable, and the
+// derived pair is recomputed. See docs/sirens-echo-tuning-overrides.md.
+var (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
 	turnProgressAfter = 5 * time.Second
@@ -88,8 +93,9 @@ const (
 	modelRetryBackoff  = 250 * time.Millisecond
 )
 
-// Turn timeouts
-const (
+// Turn timeouts. Overridable, because these are what a deployment tunes.
+// See docs/sirens-echo-tuning-overrides.md.
+var (
 	defaultRequestTimeout = 3 * time.Minute
 	// defaultQueueTimeout bounds the wait for the execution slot. A longer
 	// wait answers a conversation that has already moved on.
@@ -226,3 +232,41 @@ const (
 	// defaultEvaluationCaseTimeout bounds one case, which never runs in a turn.
 	defaultEvaluationCaseTimeout = 5 * time.Minute
 )
+
+// tuningOverrides names every number a deployment may set. A table rather than
+// a parser per constant, so a name cannot be typed once and read never.
+func tuningOverrides() map[string]*time.Duration {
+	return map[string]*time.Duration{
+		"SIRENS_ECHO_REQUEST_TIMEOUT": &defaultRequestTimeout,
+		"SIRENS_ECHO_QUEUE_TIMEOUT":   &defaultQueueTimeout,
+		"SIRENS_ECHO_PROGRESS_AFTER":  &turnProgressAfter,
+		"SIRENS_ECHO_ROSTER_REFRESH":  &defaultRosterRefresh,
+		"SIRENS_ECHO_MCP_CONNECT":     &mcpConnectTimeout,
+		"SIRENS_ECHO_MCP_LIST":        &mcpListTimeout,
+		"SIRENS_ECHO_TOOL_CALL":       &defaultCallTimeout,
+	}
+}
+
+// applyTuningOverrides reads the table and recomputes what derives from it. A
+// bad value keeps the default. See docs/sirens-echo-tuning-overrides.md.
+func applyTuningOverrides(lookup func(string) string) []string {
+	applied := make([]string, 0)
+	for name, target := range tuningOverrides() {
+		raw := strings.TrimSpace(lookup(name))
+		if raw == "" {
+			continue
+		}
+		value, err := time.ParseDuration(raw)
+		if err != nil || value <= 0 {
+			continue
+		}
+		*target = value
+		applied = append(applied, name)
+	}
+	// Derived, and recomputed after rather than read before. An override that
+	// moved the beat and not the threshold would half-work in silence.
+	turnProgressEvery = turnProgressAfter * 2
+	turnLongReplyAfter = turnProgressAfter + turnProgressEvery*2
+	sort.Strings(applied)
+	return applied
+}
