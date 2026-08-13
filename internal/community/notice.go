@@ -50,6 +50,7 @@ var (
 	noticeHistoryFailed = harnessNotice("channel history unavailable")
 	noticeModelFailed   = harnessNotice("model backend unavailable, retry shortly")
 	noticeToolFailed    = harnessNotice("tool call failed")
+	noticeRoundsSpent   = harnessNotice("ran out of steps, ask for something narrower")
 	noticeReplyBlocked  = harnessNotice("reply blocked by response check, rephrase")
 	noticeTurnCrashed   = harnessNotice("turn crashed")
 )
@@ -62,6 +63,10 @@ func turnFailureNotice(stage string, cause error) string {
 		return noticeTimedOut
 	case isToolFailure(cause):
 		return noticeToolFailed
+	// Ahead of the stage switch, because this happens at the model stage and
+	// the backend answered every call. See issue 258.
+	case errors.Is(cause, ErrToolRoundsExhausted):
+		return noticeRoundsSpent
 	}
 	switch stage {
 	case stageHistory:

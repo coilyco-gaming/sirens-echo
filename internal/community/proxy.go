@@ -66,6 +66,10 @@ func (e ToolFailure) Error() string {
 
 func (e ToolFailure) Unwrap() error { return e.Err }
 
+// ErrToolRoundsExhausted marks a turn that spent its whole tool budget. The
+// backend answered every call, so it must never read as an outage.
+var ErrToolRoundsExhausted = errors.New("tool rounds exhausted")
+
 // isToolFailure reports a cause that reached the turn from an MCP surface.
 func isToolFailure(cause error) bool {
 	var failure ToolFailure
@@ -424,7 +428,10 @@ func (c ProxyClient) Complete(
 				nil
 		}
 		if toolRounds == maxToolRounds {
-			return CompletionResult{}, fmt.Errorf("Agent Proxy exceeded %d MCP tool rounds", maxToolRounds)
+			return CompletionResult{}, fmt.Errorf(
+				"Agent Proxy exceeded %d MCP tool rounds: %w",
+				maxToolRounds, ErrToolRoundsExhausted,
+			)
 		}
 		toolRounds++
 		if toolSession == nil {

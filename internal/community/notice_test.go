@@ -1,6 +1,8 @@
 package community
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -69,5 +71,27 @@ func TestCooldownNoticeNamesTheWaitWhenItIsKnown(t *testing.T) {
 	}
 	if got := cooldownNotice(200 * time.Millisecond); got != noticeRateLimited {
 		t.Errorf("sub-second cooldown = %q, want the plain form", got)
+	}
+}
+
+// The live incident on issue 258: nine model calls returned 200 and the member
+// was told the backend was down, which sent an operator to the wrong system.
+func TestExhaustedRoundsDoNotReadAsAnOutage(t *testing.T) {
+	t.Parallel()
+	cause := fmt.Errorf("Agent Proxy exceeded 6 MCP tool rounds: %w", ErrToolRoundsExhausted)
+	got := turnFailureNotice(stageModel, cause)
+	if got == noticeModelFailed {
+		t.Fatal("an exhausted budget still claims the backend is unavailable")
+	}
+	if got != noticeRoundsSpent {
+		t.Fatalf("notice = %q, want the rounds-spent notice", got)
+	}
+	// A genuine model-stage failure must keep its own notice.
+	if turnFailureNotice(stageModel, errors.New("dial tcp: connection refused")) != noticeModelFailed {
+		t.Fatal("an ordinary model failure stopped reading as one")
+	}
+	// Boundary responses stay short. See issue 175.
+	if words := countWords(noticeRoundsSpent); words > 12 {
+		t.Fatalf("the notice runs to %d words, which is a handle to pull", words)
 	}
 }
