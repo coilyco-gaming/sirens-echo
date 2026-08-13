@@ -143,9 +143,15 @@ func issuePolicy(tracker string) string {
 	if tracker == "" {
 		return `State uncertainty plainly when the supplied context and available tools cannot answer the request.`
 	}
-	return `When approved knowledge cannot answer a question, or a user explicitly corrects a
-prior answer, call the configured issue-tracker tool to file it. Search for an
-open issue with the same title first and add nothing when one exists.
+	return `File in exactly two cases. A user corrects a factual claim, or a capability the
+user actually needed turns out to be missing. In either case call the
+configured issue-tracker tool. Search for an open issue with the same title
+first and add nothing when one exists.
+
+Mild confusion, a gap nobody asked for, and general feedback are not filed.
+
+Announce the filing in the same reply and give the issue's full URL, taken from
+the tool result rather than assembled from a number.
 
 Keep the title one short line and never attach labels. Never copy names,
 handles, raw quotes, Discord identifiers, links to Discord messages, secrets,

@@ -92,6 +92,9 @@ func TestBuildSystemPromptBoundsToolActionsAndAutomaticFollowUp(t *testing.T) {
 		"",
 		"approved Sirens facts",
 	)
+	// Compared against reflowed text. These are policy phrases, not a layout,
+	// and hard-coding a wrap makes a reworded paragraph fail for the wrong reason.
+	flowed := strings.Join(strings.Fields(prompt), " ")
 	for _, expected := range []string{
 		"You are Sirens Echo, an agent running the custom sirens-echo harness",
 		"Coilyco Gaming Intelligence Team",
@@ -102,13 +105,14 @@ func TestBuildSystemPromptBoundsToolActionsAndAutomaticFollowUp(t *testing.T) {
 		"approved Sirens facts",
 		"Use an available MCP tool",
 		"call the configured issue-tracker tool",
-		"Search for an\nopen issue with the same title first",
+		"Search for an open issue with the same title first",
+		"Announce the filing in the same reply",
 		"never attach labels",
 		"only when the tool result in this turn confirms it",
 		"Reply with plain text",
 	} {
-		if !strings.Contains(prompt, expected) {
-			t.Fatalf("system prompt missing %q", expected)
+		if !strings.Contains(flowed, strings.Join(strings.Fields(expected), " ")) {
+			t.Errorf("system prompt missing %q", expected)
 		}
 	}
 	if err := ValidateNeutralSystemPrompt(prompt); err != nil {
@@ -315,7 +319,7 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 // promptBudgets ratchet the tracked snapshots. These are not targets and not
 // judgements about the right size. See docs/sirens-echo-prompt-budget.md.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 19800,
+	"sirens-echo.prompt.txt": 20000,
 	"sirens-deep.prompt.txt": 11200,
 }
 
