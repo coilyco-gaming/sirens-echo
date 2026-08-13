@@ -62,11 +62,11 @@ shutdown closes one.
 
 A tool listing is cached until something invalidates it. A transport carrying
 server-initiated messages invalidates on `tools/list_changed`. Streamable cannot
-while its standalone SSE stream stays disabled, so those listings expire on an
-interval, bounding staleness rather than removing it. A failed connection
-retries with backoff between five seconds and two minutes. Connection and
-discovery traffic carries the calling turn's trace context even though the
-connection outlives that turn.
+while its standalone SSE stream stays disabled, so those listings expire after
+an hour, and `Refresh` ends that wait early without dialling anything. A failed
+connection retries with backoff between five seconds and two minutes. Discovery
+traffic carries the calling turn's trace context even though the connection
+outlives that turn.
 
 ## Failure
 

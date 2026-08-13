@@ -65,7 +65,7 @@ type ToolProvider interface {
 const (
 	// defaultRosterRefresh bounds staleness for a transport that cannot push
 	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
-	defaultRosterRefresh = 5 * time.Minute
+	defaultRosterRefresh = time.Hour
 	mcpConnectTimeout    = 10 * time.Second
 	mcpListTimeout       = 15 * time.Second
 	mcpBackoffMin        = 5 * time.Second
@@ -287,6 +287,17 @@ func (p *MCPProvider) connectLocked(base context.Context, entry *supervisedServe
 	entry.tools = nil
 	entry.stale.Store(false)
 	return nil
+}
+
+// Refresh marks every rostered server stale, so the next turn re-lists instead
+// of waiting out the interval. It dials nothing itself. See sirens-echo#163.
+func (p *MCPProvider) Refresh() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for _, entry := range p.entries {
+		entry.stale.Store(true)
+	}
+	return len(p.entries)
 }
 
 func (p *MCPProvider) refreshInterval() time.Duration {
