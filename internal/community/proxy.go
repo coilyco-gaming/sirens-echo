@@ -578,7 +578,8 @@ const truncationNotice = "\n[truncated by the runtime, %d of %d bytes delivered]
 
 // spillNotice tells the model where the rest of a result went. Without it a
 // trimmed result reads as the whole result.
-const spillNotice = "[full %d byte result saved to %s, read it with scratch_read]"
+const spillNotice = "[full %d byte result saved to %s, read it with " +
+	"scratch_read or search it with scratch_search]"
 
 // spillToolResult saves a trimmed result to the requester's scratchpad and
 // returns the path it took. An empty return means nothing was saved.

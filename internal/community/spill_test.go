@@ -2,6 +2,7 @@ package community
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -173,5 +174,17 @@ func TestRuntimeOutputStaysReadable(t *testing.T) {
 	read, err := session.Call(context.Background(), "scratch_read", map[string]any{"path": path})
 	if err != nil || read.IsError {
 		t.Fatalf("saved result is unreadable: %v %s", err, read.Text)
+	}
+}
+
+// Reading a large result back spends the budget the trim protected, so search
+// is the half that scales and the notice has to name both.
+func TestTheSpillNoticeNamesBothWaysBackToTheResult(t *testing.T) {
+	t.Parallel()
+	notice := fmt.Sprintf(spillNotice, 262144, "tool-output/eco__get_stores-0")
+	for _, tool := range []string{"scratch_read", "scratch_search"} {
+		if !strings.Contains(notice, tool) {
+			t.Errorf("the spill notice does not name %s: %q", tool, notice)
+		}
 	}
 }
