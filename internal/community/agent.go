@@ -1220,9 +1220,19 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 		discordLocationFor(t.session, t.message),
 		"",
 	)...)
-	reply, err := t.session.ChannelMessageSendComplex(t.message.ChannelID, &discordgo.MessageSend{
+	target := t.message.ChannelID
+	reference := t.message.SoftReference()
+	// A thread hangs off the member's message, so a reference inside it would
+	// point at its own parent. See docs/sirens-echo-threads.md.
+	if turnLongReply(ctx) {
+		if threadID, threaded := threadForReply(t.session, t.message); threaded {
+			target, reference = threadID, nil
+			span.SetAttributes(attribute.String("discord.thread.id", threadID))
+		}
+	}
+	reply, err := t.session.ChannelMessageSendComplex(target, &discordgo.MessageSend{
 		Content:   truncateRunes(content, discordReplyLimit),
-		Reference: t.message.SoftReference(),
+		Reference: reference,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse:       []discordgo.AllowedMentionType{},
 			RepliedUser: false,
