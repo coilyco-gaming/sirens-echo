@@ -2,6 +2,24 @@
 set -euo pipefail
 
 case "${1:-}" in
+  gate)
+    # One habit instead of five. pre-commit runs last and on the final tree,
+    # because its fixers rewrite files. See docs/sirens-echo-gate.md.
+    step() {
+      echo ""
+      echo "=== gate: $1 ==="
+      shift
+      "$@"
+    }
+    step build bash "$0" build
+    step policy-check bash "$0" policy-check
+    step vet go vet ./...
+    step test go test ./...
+    step test-skips bash "$0" test-skips
+    step pre-commit pre-commit run --all-files
+    echo ""
+    echo "gate: everything CI checks passed here first"
+    ;;
   build)
     mkdir -p bin
     go build -o bin/sirens-echo ./cmd/sirens-echo
