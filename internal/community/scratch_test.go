@@ -149,9 +149,8 @@ func TestScratchRefusesSymlinkEscape(t *testing.T) {
 	// literal name plants the door somewhere the session never looks.
 	partition := filepath.Join(root, scratchPartitionName("111"))
 	if err := os.Symlink(outside, filepath.Join(partition, "door")); err != nil {
-		// Only a platform that cannot make symlinks is a reason to skip. Any
-		// other error means the door was never planted and the escape below
-		// would pass without being attempted.
+		// Only a platform that cannot make symlinks may skip. Any other error
+		// means the door was never planted, so the escape below is not tried.
 		if errors.Is(err, errors.ErrUnsupported) {
 			t.Skipf("symlinks unsupported on this platform: %v", err)
 		}
