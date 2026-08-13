@@ -670,7 +670,10 @@ func (a *Agent) handleMessage(
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
-		a.telemetry.Error(receiveCtx, "discord.turn.failed", slog.String("error_type", "turn_failed"))
+		a.telemetry.Error(receiveCtx, "discord.turn.failed", append(
+			[]slog.Attr{slog.String("error_type", "turn_failed")},
+			discordFailureAttrs(err)...,
+		)...)
 	}
 }
 
@@ -941,6 +944,7 @@ func (a *Agent) failTurn(
 		"turn.stage.failed",
 		slog.String("stage", stage),
 		slog.String("error_type", stage+"_failed"),
+		slog.String("failure_cause", failureCause(cause)),
 		slog.String("notice", notice),
 	)
 	settleFromContext(ctx)
@@ -976,6 +980,12 @@ func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) erro
 		err = turn.Reply(discordCtx, content)
 		if err != nil {
 			a.telemetry.MarkSpanError(discordSpan, exceptionDiscordReplyFailed)
+			// The reply was composed and paid for, so why it did not land is the
+			// whole diagnosis. See docs/sirens-echo-delivery-failures.md.
+			a.telemetry.Error(discordCtx, "discord.reply.failed", append(
+				[]slog.Attr{slog.Int("reply_bytes", len(content))},
+				discordFailureAttrs(err)...,
+			)...)
 		}
 		discordSpan.End()
 	} else {

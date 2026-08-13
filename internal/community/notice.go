@@ -55,6 +55,29 @@ var (
 	noticeTurnCrashed   = harnessNotice("turn crashed")
 )
 
+// The failure causes, a closed set. error_type is the stage, so two conditions
+// at one stage collapse into it and neither can be alerted on. See issue 292.
+const (
+	causeTimeout     = "timeout"
+	causeToolFailed  = "tool_failed"
+	causeRoundsSpent = "rounds_spent"
+	causeStage       = "stage_failed"
+)
+
+// failureCause classifies what went wrong, in the same order the notice does,
+// so the label and the phrase a member reads can never disagree.
+func failureCause(cause error) string {
+	switch {
+	case errors.Is(cause, context.DeadlineExceeded):
+		return causeTimeout
+	case isToolFailure(cause):
+		return causeToolFailed
+	case errors.Is(cause, ErrToolRoundsExhausted):
+		return causeRoundsSpent
+	}
+	return causeStage
+}
+
 // turnFailureNotice names the class a member can act on. The next useful move
 // differs per class, which is the whole reason these are not one string.
 func turnFailureNotice(stage string, cause error) string {

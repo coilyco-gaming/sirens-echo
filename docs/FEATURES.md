@@ -25,6 +25,8 @@ See [deploy.md](deploy.md).
   pre-commit
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit
 - Structure, skills, links, modules, comments, secrets, and prompt validated
+- Entrypoint failures logged as severity-carrying JSON, never bare stderr. See
+  [exit paths](sirens-echo-exit-paths.md)
 
 ## Deliberate exclusions
 
