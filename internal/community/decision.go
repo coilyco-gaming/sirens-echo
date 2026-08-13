@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	channelPattern    = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
-	claimedAction     = regexp.MustCompile(`(?i)\bI (?:have )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
+	channelPattern = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
+	// An adverb between the pronoun and the verb used to defeat this. See
+	// sirens-echo#575.
+	claimedAction     = regexp.MustCompile(`(?i)\bI (?:have )?(?:already |just |now |since )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
 	firstPersonVoice  = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:i|i['’](?:m|ve|d|ll)|me|my|mine|myself|we|we['’](?:re|ve|d|ll)|us|our|ours|ourselves)(?:$|[^A-Za-z0-9_])`)
 	socialOpening     = regexp.MustCompile(`(?i)^\s*(?:hi|hello|hey|greetings|thanks|thank you|sorry|sure|absolutely|of course)\b`)
 	personalityPhrase = regexp.MustCompile(`(?i)\b(?:happy to help|glad to help|let me know|what can I help|how can I help|would you like|hope that helps|here['’]s the thing|no worries|community host|my toolset|my tools)\b`)
@@ -40,8 +42,8 @@ var passiveActionClaim = regexp.MustCompile(
 // pastReference places an event before this turn. The check asks whether this
 // turn wrote to the tracker, so a dated event is out of scope by construction.
 var pastReference = regexp.MustCompile(
-	`(?i)\b(?:yesterday|previously|originally|formerly|already|earlier|recently|` +
-		`since|ago|before|after|during|prior|` +
+	// Only words that cannot mean inside this turn. See sirens-echo#575.
+	`(?i)\b(?:yesterday|previously|originally|formerly|ago|before|prior\s+to|` +
 		`last\s+(?:week|month|year|night|time|season|wipe|patch|cycle)|` +
 		`january|february|march|april|may|june|july|august|september|` +
 		`october|november|december|\d{4})\b`,

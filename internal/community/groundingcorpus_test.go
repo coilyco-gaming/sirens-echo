@@ -68,6 +68,12 @@ var falsePositives = []groundingRow{
 	{reply: "The Eco app is now tracking prices for that item.", rejectedNow: false, shouldReject: false},
 	{reply: "Searching the tracker is something an operator can do.", rejectedNow: false, shouldReject: false},
 	{
+		// Genuinely past, and the only thing carrying it is the month, so this
+		// row fails if the unambiguous half is ever trimmed too.
+		reply:       "That correction was filed in March.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
 		// The June row above is held by "by" in notAClaim. Without it nothing
 		// protects a real past tense, which is what a was or were widening hits.
 		reply:       "The issue was created in June, before the wipe.",
