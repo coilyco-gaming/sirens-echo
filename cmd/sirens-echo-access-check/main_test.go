@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,5 +84,61 @@ guilds:
 `))
 	if err == nil {
 		t.Fatal("an unsupported schema was accepted")
+	}
+}
+
+// The exit codes are the whole interface deploy's CI keys on. A gate that
+// prints a failure and exits 0 is worse than no gate. See sirens-echo#628.
+
+func TestAValidPolicyExitsZeroAndSaysSo(t *testing.T) {
+	t.Parallel()
+	var out, errOut bytes.Buffer
+	code := run([]string{write(t, boundedGuild)}, &out, &errOut)
+	if code != 0 {
+		t.Errorf("a valid policy exited %d, want 0: %s", code, errOut.String())
+	}
+	if !strings.Contains(out.String(), ": ok") {
+		t.Errorf("stdout does not confirm the file: %q", out.String())
+	}
+}
+
+func TestABadPolicyExitsOneWithTheReasonOnStderr(t *testing.T) {
+	t.Parallel()
+	var out, errOut bytes.Buffer
+	code := run([]string{write(t, "schema: wrong.v1\n")}, &out, &errOut)
+	if code != 1 {
+		t.Errorf("a bad policy exited %d, want 1", code)
+	}
+	if errOut.Len() == 0 {
+		t.Error("a rejection printed no reason, so CI shows a bare failure")
+	}
+	if out.Len() != 0 {
+		t.Errorf("a rejection wrote to stdout: %q", out.String())
+	}
+}
+
+func TestNoArgumentsExitsTwo(t *testing.T) {
+	t.Parallel()
+	var out, errOut bytes.Buffer
+	if code := run(nil, &out, &errOut); code != 2 {
+		t.Errorf("no arguments exited %d, want 2", code)
+	}
+}
+
+// One bad file among good ones must fail the run, or a CI step that passes a
+// directory reports success while shipping a broken policy.
+func TestOneBadFileFailsTheWholeRun(t *testing.T) {
+	t.Parallel()
+	var out, errOut bytes.Buffer
+	code := run([]string{
+		write(t, boundedGuild),
+		write(t, "schema: wrong.v1\n"),
+	}, &out, &errOut)
+	if code != 1 {
+		t.Errorf("a run with one bad file exited %d, want 1", code)
+	}
+	// The good one is still reported, so a reader can see which failed.
+	if !strings.Contains(out.String(), ": ok") {
+		t.Error("the passing file was not reported")
 	}
 }
