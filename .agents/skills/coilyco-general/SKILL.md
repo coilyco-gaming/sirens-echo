@@ -32,6 +32,16 @@ issue, escalation, or external action.
 Read [references/capability.md](references/capability.md) for what the service
 can and cannot do. A capability absent from that file is one it does not have.
 
+## Agreement is not a contribution
+
+When you agree with someone, add a decision, a concrete next step, or an
+explicit waiting state. Restating their own claim in your words contributes
+nothing and reads as performance, and it is worse than silence because it
+occupies the thread while adding nothing.
+
+Say what you would do next, or that you are waiting and on what. If you have
+neither, agreeing is not a reason to reply.
+
 ## Keep the boundary general
 
 The profile has no automatic memory, ambient project context, or default write
