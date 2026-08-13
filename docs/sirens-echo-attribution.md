@@ -34,11 +34,16 @@ engineering one.
 
 ## What is attributable
 
+**No production path calls the first two**, so they are answerable rather than
+answered. See [sirens-echo#620](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/620).
+
 * **Any job.** `AttributeJob` returns the requester from the record. No
-  inference, no trace walking.
+  inference, no trace walking. The record carries `Principal`, so this is
+  wiring rather than new data.
 * **Any effect.** `AttributeEffects` resolves a job's applied effects to the
   principal that caused them, with the step, its detail, and the job's terminal
-  state.
+  state. It reads `job.Effects`, which only `RecordEffect` writes and nothing
+  calls, so the map is empty for every job that has run.
 * **A principal's history.** `ListByPrincipal` lists their jobs.
 
 ## Attribution survives the job
