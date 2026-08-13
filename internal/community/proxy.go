@@ -523,7 +523,10 @@ func (c ProxyClient) Complete(
 				}
 				messages = append(
 					messages,
-					chatMessage{Role: "user", Content: responseRepairPrompt(c.ResponseStyle)},
+					chatMessage{
+						Role:    "user",
+						Content: responseRepairPrompt(c.ResponseStyle, contractErr),
+					},
 				)
 				continue
 			}
@@ -799,11 +802,17 @@ func unavailableToolNotice(unavailable []string) string {
 		". Do not claim any result from them. Say the surface was unavailable."
 }
 
-func responseRepairPrompt(style string) string {
+// responseRepairPrompt names the check that refused. A model deducing it
+// spends the budget it needs to answer. See sirens-echo#549.
+func responseRepairPrompt(style string, refused error) string {
+	prompt := neutralResponseRepairPrompt
 	if style == ResponseStyleSocial {
-		return socialResponseRepairPrompt
+		prompt = socialResponseRepairPrompt
 	}
-	return neutralResponseRepairPrompt
+	if refused == nil {
+		return prompt
+	}
+	return prompt + "\n\nThe check that refused it: " + refused.Error() + "."
 }
 
 // modelHTTPError carries the status so availability can be told from a
