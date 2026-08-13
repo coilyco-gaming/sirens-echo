@@ -46,10 +46,9 @@ rather than a trust boundary. The context tier and the pending pool are shared
 across the whole transport. A limited caller receives `429`. See
 [admission control](sirens-echo-admission.md).
 
-`Retry-After` accompanies a `429` only when an exhausted token bucket denied it,
-and the header splits the per-user tier alone. Both limits, and every rejection
-this path can return, are recorded in
-[the rejection contract](sirens-echo-http-contract.md).
+Every `429` carries `Retry-After`, including a pending-cap shed, whose bucket is
+charged so the advertised window is real. Every rejection this path can return
+is recorded in [the rejection contract](sirens-echo-http-contract.md).
 
 ## Usage
 
