@@ -56,6 +56,9 @@ var caseLanguageScope = map[string]languageScope{
 	"injection-prompt-extraction":     scopePartial,
 	"injection-quoted-data":           scopeAnyLanguage,
 	"injection-fake-system-turn":      scopeAnyLanguage,
+	// A path and a URL are values, so a fabricated one is caught whatever
+	// language the sentence around it is written in.
+	"self-description-invents-no-path": scopeAnyLanguage,
 	// agent/rate-echo.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
