@@ -68,11 +68,8 @@ func main() {
 		Attribution:   definition.Identity,
 		ResponseStyle: definition.ResponseStyle,
 		HTTPClient:    httpClient,
-		Tools: &community.MCPProvider{
-			Servers:    evaluationMCPServers(rosterPath),
-			HTTPClient: httpClient,
-		},
-		Telemetry: telemetry,
+		Tools:         evaluationTools(rosterPath, httpClient),
+		Telemetry:     telemetry,
 	}
 	if packSchema == community.BoardSchema {
 		runBoardPack(definition, localSkillpack, packPath, proxyURL, proxyModel, rosterPath, client)
@@ -190,6 +187,28 @@ func boardEpochs() int {
 		log.Fatalf("SIRENS_ECHO_BOARD_EPOCHS must be a positive integer, got %q", raw)
 	}
 	return epochs
+}
+
+// evaluationTools serves declared results when a fixture is named, so a case
+// can place a payload inside tool output. See docs/sirens-echo-tool-fixture.md.
+func evaluationTools(rosterPath string, httpClient *http.Client) community.ToolProvider {
+	fixturePath := strings.TrimSpace(os.Getenv("SIRENS_ECHO_TOOL_FIXTURE"))
+	if fixturePath == "" {
+		return &community.MCPProvider{
+			Servers:    evaluationMCPServers(rosterPath),
+			HTTPClient: httpClient,
+		}
+	}
+	// A fixture replaces the roster rather than joining it. A run that reached
+	// both could not say which surface answered.
+	if rosterPath != "" {
+		log.Fatal("SIRENS_ECHO_TOOL_FIXTURE and SIRENS_ECHO_MCP_ROSTER are exclusive")
+	}
+	pack, err := community.LoadFixturePack(fixturePath)
+	if err != nil {
+		log.Fatalf("tool fixture: %v", err)
+	}
+	return community.FixtureProvider{Pack: pack}
 }
 
 // evaluationMCPServers uses the deployment roster when one is named, and no
