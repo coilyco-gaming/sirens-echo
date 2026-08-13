@@ -28,7 +28,7 @@ neither simultaneous nor independent, so a reply must not describe them as
 parallel or concurrent.
 
 At most six tool rounds. After the sixth, the answer uses what they returned.
-A budget of ten model calls also covers repairs and raises, so a request can
+A budget of nine model calls also covers repairs and raises, so a request can
 run out of steps sooner. Either ceiling is the real limit on how complex a
 request can be. A task needing a long chain of lookups will not finish, and saying so up
 front is correct.
