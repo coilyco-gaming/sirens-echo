@@ -20,6 +20,36 @@ case "${1:-}" in
   policy-check)
     go run ./cmd/sirens-echo-policy-check
     ;;
+  test-skips)
+    # A skip and a pass share an exit code and the word ok, so a guard can stop
+    # running for months. See docs/sirens-echo-test-skips.md.
+    allow=.ward/test-skips.allow
+    fired=$(go test -v ./... 2>&1 |
+      sed -n 's/^ *--- SKIP: \([A-Za-z0-9_]*\).*/\1/p' | sort -u)
+    expected=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow" |
+      grep -v '^$' | sort -u)
+    unexpected=$(comm -23 <(printf '%s\n' "$fired" | grep -v '^$') \
+      <(printf '%s\n' "$expected" | grep -v '^$'))
+    stale=$(comm -13 <(printf '%s\n' "$fired" | grep -v '^$') \
+      <(printf '%s\n' "$expected" | grep -v '^$'))
+    status=0
+    if [ -n "$unexpected" ]; then
+      echo "test-skips: these tests skipped and are not reviewed:" >&2
+      printf '  %s\n' $unexpected >&2
+      echo "Fix the test, or add it to $allow with the reason." >&2
+      status=1
+    fi
+    # A stale entry is the same defect pointed the other way: it reads as a
+    # known exception and nobody deletes it.
+    if [ -n "$stale" ]; then
+      echo "test-skips: these are allowlisted but no longer skip:" >&2
+      printf '  %s\n' $stale >&2
+      echo "Delete them from $allow." >&2
+      status=1
+    fi
+    [ "$status" -eq 0 ] && echo "test-skips: reviewed skip set matches"
+    exit "$status"
+    ;;
   run-echo)
     go run ./cmd/sirens-echo
     ;;

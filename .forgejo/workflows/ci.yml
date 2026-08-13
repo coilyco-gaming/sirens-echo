@@ -27,6 +27,9 @@ jobs:
       - name: test
         run: bash scripts/ci-command.sh ward exec test
 
+      - name: reviewed skip set
+        run: bash scripts/ci-command.sh ward exec test-skips
+
       - name: pre-commit
         run: bash scripts/ci-command.sh pre-commit run --all-files --show-diff-on-failure
 

@@ -1,0 +1,17 @@
+# Tests allowed to skip. A skip and a pass print the same word, so every skip
+# that fires has to be a reviewed line rather than a silence.
+#
+# Adding a name here means the guard it carries is knowingly not running.
+# Removing a test from this list is required the moment it stops skipping,
+# because a stale entry reads as a known exception forever.
+#
+# Checked by `ward exec test-skips`. See docs/sirens-echo-test-skips.md
+# and https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/291.
+
+# Retires itself. It checks a claim capability.md no longer makes, which is a
+# guard reporting that its subject is gone rather than a guard going quiet.
+TestCapabilityDocIsRightThatTheBuildCarriesNoRevision
+
+# Needs AOS_CATALOG, which CI sets nowhere, so the private-skill deny list is
+# unguarded. Fixed by pull request 288; delete this line when that merges.
+TestGraphPatternsNeverReachDeniedSources
