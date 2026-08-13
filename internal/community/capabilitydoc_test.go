@@ -63,17 +63,22 @@ func TestCapabilityDocStatesTheRealToolRoundCeiling(t *testing.T) {
 	if !known {
 		t.Fatalf("maxToolRounds = %d has no spelled form in this test; extend the map", maxToolRounds)
 	}
-	// The round after the ceiling is the one that fails, so the off-by-one has to
-	// track it. Matched as a phrase, since a number word hides in prose.
-	ordinals := map[int]string{6: "sixth", 7: "seventh", 8: "eighth", 9: "ninth"}
+	// The last round is the one after which tools are withdrawn, so the doc has
+	// to name it. Matched as a phrase, since a number word hides in prose.
+	ordinals := map[int]string{5: "fifth", 6: "sixth", 7: "seventh", 8: "eighth"}
 
 	for name, doc := range capabilityDocs(t) {
 		if !strings.Contains(doc, stated+" tool rounds") {
 			t.Errorf("%s does not say %q; maxToolRounds is %d and the doc must match",
 				name, stated+" tool rounds", maxToolRounds)
 		}
-		if next, ok := ordinals[maxToolRounds+1]; ok && !strings.Contains(doc, "on the "+next) {
-			t.Errorf("%s does not name %q as the failing round", name, "on the "+next)
+		if last, ok := ordinals[maxToolRounds]; ok && !strings.Contains(doc, "the "+last) {
+			t.Errorf("%s does not name %q as the last round", name, "the "+last)
+		}
+		// The turn answers from the results rather than failing, so a doc still
+		// promising a failure would send a member the wrong expectation.
+		if strings.Contains(doc, "fails outright") {
+			t.Errorf("%s still says the turn fails outright; it degrades to an answer", name)
 		}
 	}
 }

@@ -39,6 +39,7 @@ docker build \
   --pull \
   --build-arg HTTP_PROXY="${FORGEJO_EGRESS_PROXY}" \
   --build-arg HTTPS_PROXY="${FORGEJO_EGRESS_PROXY}" \
+  --build-arg SIRENS_ECHO_REVISION="${sha}" \
   -t "${image}" \
   .
 
