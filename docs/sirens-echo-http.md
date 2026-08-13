@@ -75,5 +75,5 @@ server span extracts W3C context and parents the shared Community turn.
 
 ## See also
 
-See [the service](sirens-echo.md), [admission](sirens-echo-admission.md), and
-[configuration](sirens-echo-config.md).
+See [the service](sirens-echo.md), [admission](sirens-echo-admission.md),
+[caller history](sirens-echo-caller-history.md), and [configuration](sirens-echo-config.md).

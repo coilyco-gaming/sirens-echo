@@ -40,6 +40,9 @@ type TranscriptEntry struct {
 	// Counterpart is what Discord says the author is. Empty means human, so a
 	// caller that does not set it is unchanged.
 	Counterpart CounterpartKind
+	// Asserted marks an entry a caller supplied rather than the runtime
+	// observing it. See docs/sirens-echo-http.md.
+	Asserted bool
 }
 
 // agentSuffix marks an author Discord flagged as a bot, so the model reads a
@@ -47,6 +50,15 @@ type TranscriptEntry struct {
 func (e TranscriptEntry) agentSuffix() string {
 	if e.Counterpart == CounterpartAgent {
 		return " (an agent, not a person)"
+	}
+	return ""
+}
+
+// assertedSuffix marks provenance for the same reason agentSuffix marks kind. A
+// caller can author an entry as anyone, including this service.
+func (e TranscriptEntry) assertedSuffix() string {
+	if e.Asserted {
+		return " (asserted by the caller, not observed)"
 	}
 	return ""
 }
@@ -272,9 +284,10 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 	for _, entry := range history {
 		fmt.Fprintf(
 			&output,
-			"- %s%s: %s\n",
+			"- %s%s%s: %s\n",
 			cleanTranscriptText(entry.Author, 80),
 			entry.agentSuffix(),
+			entry.assertedSuffix(),
 			cleanTranscriptText(entry.Content, 1000),
 		)
 	}

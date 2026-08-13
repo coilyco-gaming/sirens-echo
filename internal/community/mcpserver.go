@@ -97,7 +97,7 @@ func (a *Agent) handleMCPTurn(
 		requestID: fmt.Sprintf("mcp-%d", time.Now().UnixNano()),
 		requester: mcpPrincipal(request),
 		transport: transportMCP,
-		history:   append([]TranscriptEntry(nil), input.History...),
+		history:   assertedHistory(input.History),
 		current:   TranscriptEntry{Author: input.Author, Content: input.Content},
 	}
 	if err := a.runSerialized(ctx, turn, transportMCP); err != nil {

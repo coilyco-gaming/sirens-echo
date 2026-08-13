@@ -174,7 +174,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		payload.RequestID = fmt.Sprintf("http-%d", time.Now().UnixNano())
 	}
 
-	history := append([]TranscriptEntry(nil), payload.History...)
+	history := assertedHistory(payload.History)
 	current := TranscriptEntry{Author: payload.Author, Content: payload.Content}
 	if payload.Prompt != nil {
 		resolved, err := a.resolvePrompt(request.Context(), payload.Prompt)
@@ -321,6 +321,17 @@ func (a *Agent) resolvePrompt(
 			"prompt %s/%s returned no readable messages", selected.Server, selected.Name)}
 	}
 	return messages, nil
+}
+
+// assertedHistory copies caller-supplied history and marks its provenance. A
+// caller can author an entry as anyone, including this service.
+func assertedHistory(supplied []TranscriptEntry) []TranscriptEntry {
+	history := make([]TranscriptEntry, 0, len(supplied))
+	for _, entry := range supplied {
+		entry.Asserted = true
+		history = append(history, entry)
+	}
+	return history
 }
 
 // seedFromPrompt folds a prompt into the turn as conversation, which its roles
