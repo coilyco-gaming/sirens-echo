@@ -6,12 +6,12 @@ import (
 	"time"
 )
 
-// Two capacity-bounded caches evict differently. exchangeLimiter evicts by last
-// use; rateLimiter evicts by insertion, which reaches the global bucket.
+// Two capacity-bounded caches evict by last use. The global bucket sits in one
+// of them under a fixed key and is exempt from eviction entirely.
 
-// Characterization. The global budget is restored by key rotation, because the
-// bucket it lives in is evicted on insertion order and recreated full.
-func TestGlobalBucketIsEvictedByKeyRotation(t *testing.T) {
+// This began as a characterization of the opposite, and 8978e97 fixed it by
+// exempting the global bucket and moving eviction to recency.
+func TestGlobalBudgetSurvivesKeyRotation(t *testing.T) {
 	t.Parallel()
 	limiter := newRateLimiter(RateLimitPolicy{
 		PerUser: RateLimit{Burst: 100, Every: time.Hour},
@@ -26,10 +26,10 @@ func TestGlobalBucketIsEvictedByKeyRotation(t *testing.T) {
 	}
 
 	// No time passes, so a correct limiter admits exactly the burst.
-	if admitted <= 2 {
-		t.Errorf("admitted %d of 9 against a burst of 2. If the global bucket is "+
-			"now exempt from eviction or eviction became LRU, this issue is fixed "+
-			"and the test should assert admitted == 2", admitted)
+	if admitted != 2 {
+		t.Errorf("nine rotating callers were admitted %d times against a global "+
+			"burst of 2, so key rotation is refilling the global budget again",
+			admitted)
 	}
 }
 
