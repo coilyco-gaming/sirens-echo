@@ -219,6 +219,9 @@ const (
 	// maxRepoInventoryEntries bounds one listing, so a large organization
 	// cannot fill a tool result on its own.
 	maxRepoInventoryEntries = 100
+	// maxRepoFileBytes bounds one file read, so a large source file cannot fill
+	// a tool result on its own.
+	maxRepoFileBytes = 64 * 1024
 )
 
 // Policy load

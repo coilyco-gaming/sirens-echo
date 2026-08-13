@@ -46,11 +46,30 @@ The dialer is the fetch tool's, which refuses loopback, private ranges,
 link-local, and carrier-grade NAT. An inventory pointed at an internal address
 fails at connect rather than reaching a cluster service.
 
-## What it does not do
+## Reading one file
 
-It does not read repository contents, and it carries no grant that could. It
-lists what exists and where, and every URL it returns is one a member could
-have opened themselves.
+`read_public_file` takes owner, repo, path, and an optional ref. Same forge,
+same absence of a credential. A path that climbs out of the repository is
+refused before any request is made, and each segment is escaped separately so a
+segment carrying a slash cannot forge one.
+
+Output is capped at `maxRepoFileBytes` and says so when it cuts, because a half
+file the model cannot tell from a whole one is answered from with ordinary
+confidence.
+
+**Neither tool writes anything**, and every URL either returns is one a member
+could have opened themselves.
+
+## Why not a mount
+
+[sirens-echo#633](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/633)
+asked for public repositories mounted ward-style so the agent could read its own
+source. These two tools answer that need without a volume: a mounted clone is
+stale the moment anything merges, and an API read is current by construction.
+
+A mount still buys what an API read cannot — grep across a whole tree, following
+imports, a repository too large to read a file at a time. That question stays
+open on 633.
 
 See [the fetch tool](sirens-echo-fetch.md) for the dialer, and
 [configuration](sirens-echo-config.md).

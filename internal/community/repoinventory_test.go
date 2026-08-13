@@ -130,10 +130,138 @@ func TestTheToolSaysItIsPublicOnly(t *testing.T) {
 	t.Parallel()
 	session, _ := inventoryAgainst(t, orgReposJSON)
 	tools := session.Tools()
-	if len(tools) != 1 {
-		t.Fatalf("tools = %d, want 1", len(tools))
+	if len(tools) != 2 {
+		t.Fatalf("tools = %d, want the inventory and the file read", len(tools))
 	}
-	if !strings.Contains(tools[0].Description, "Public only") {
-		t.Errorf("the description does not bound what it covers: %q", tools[0].Description)
+	// Both, because a model reads the description and not this file when
+	// deciding what an answer covers.
+	for _, tool := range tools {
+		if !strings.Contains(tool.Description, "Public only") {
+			t.Errorf("%s does not bound what it covers: %q", tool.Name, tool.Description)
+		}
+	}
+}
+
+// The file read, sibling to the inventory. See sirens-echo#679.
+
+// fileServer records the request and serves the body.
+func fileServer(t *testing.T, body string, status int) (*repoInventorySession, *string, *http.Header) {
+	t.Helper()
+	path := new(string)
+	seen := &http.Header{}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		*path = r.URL.RequestURI()
+		*seen = r.Header.Clone()
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+			return
+		}
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+	provider := &RepoInventoryProvider{
+		BaseURL: server.URL, Org: "coilyco-gaming", Client: server.Client(),
+	}
+	session, _ := provider.Open(context.Background())
+	return session.(*repoInventorySession), path, seen
+}
+
+func TestAPublicFileIsReturnedWithItsPath(t *testing.T) {
+	t.Parallel()
+	session, requested, seen := fileServer(t, "package community\n", http.StatusOK)
+	result, err := session.Call(context.Background(), readFileToolName, map[string]any{
+		"owner": "coilyco-gaming", "repo": "sirens-echo", "path": "internal/community/fetch.go",
+	})
+	if err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	if result.IsError {
+		t.Fatalf("a public file was refused: %s", result.Text)
+	}
+	if !strings.Contains(result.Text, "package community") {
+		t.Errorf("the body is missing:\n%s", result.Text)
+	}
+	if !strings.Contains(*requested, "/raw/internal/community/fetch.go") {
+		t.Errorf("the path was not preserved through escaping: %s", *requested)
+	}
+	if value := seen.Get("Authorization"); value != "" {
+		t.Errorf("the file read sent Authorization: %q", value)
+	}
+}
+
+// A ref reaches the query rather than being dropped, or every read silently
+// answers from the default branch.
+func TestARefReachesTheRequest(t *testing.T) {
+	t.Parallel()
+	session, requested, _ := fileServer(t, "x", http.StatusOK)
+	if _, err := session.Call(context.Background(), readFileToolName, map[string]any{
+		"owner": "o", "repo": "r", "path": "a.go", "ref": "main",
+	}); err != nil {
+		t.Fatalf("call: %v", err)
+	}
+	if !strings.Contains(*requested, "ref=main") {
+		t.Errorf("the ref was dropped: %s", *requested)
+	}
+}
+
+// A path that climbs out is refused before any request is made.
+func TestAnEscapingPathIsRefused(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{"../secrets", "a/../../b", "/etc/passwd"} {
+		session, requested, _ := fileServer(t, "x", http.StatusOK)
+		result, err := session.Call(context.Background(), readFileToolName, map[string]any{
+			"owner": "o", "repo": "r", "path": path,
+		})
+		if err != nil {
+			t.Fatalf("call: %v", err)
+		}
+		if !result.IsError {
+			t.Errorf("%q was accepted", path)
+		}
+		if *requested != "" {
+			t.Errorf("%q reached the forge as %s", path, *requested)
+		}
+	}
+}
+
+// A missing file says so rather than returning an empty body, which would read
+// as a file that exists and is empty.
+func TestAMissingFileIsAnError(t *testing.T) {
+	t.Parallel()
+	session, _, _ := fileServer(t, "", http.StatusNotFound)
+	result, _ := session.Call(context.Background(), readFileToolName, map[string]any{
+		"owner": "o", "repo": "r", "path": "absent.go",
+	})
+	if !result.IsError {
+		t.Errorf("a 404 was reported as a file: %q", result.Text)
+	}
+}
+
+// A file past the bound is cut with the loss stated, so a half file is not
+// answered from with ordinary confidence.
+func TestALargeFileIsTruncatedAudibly(t *testing.T) {
+	t.Parallel()
+	session, _, _ := fileServer(t, strings.Repeat("x", maxRepoFileBytes+500), http.StatusOK)
+	result, _ := session.Call(context.Background(), readFileToolName, map[string]any{
+		"owner": "o", "repo": "r", "path": "big.go",
+	})
+	if result.IsError {
+		t.Fatalf("a large file was refused: %s", result.Text)
+	}
+	if !strings.Contains(result.Text, "truncated at") {
+		t.Errorf("a truncated file does not say so:\n%s", result.Text[:200])
+	}
+}
+
+// Missing arguments are refused rather than producing a request for an empty
+// path, which the forge would answer with something unhelpful.
+func TestTheFileReadRequiresItsArguments(t *testing.T) {
+	t.Parallel()
+	session, requested, _ := fileServer(t, "x", http.StatusOK)
+	result, _ := session.Call(context.Background(), readFileToolName, map[string]any{
+		"owner": "o", "repo": "r",
+	})
+	if !result.IsError || *requested != "" {
+		t.Errorf("a missing path was not refused: %q, requested %q", result.Text, *requested)
 	}
 }
