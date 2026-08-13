@@ -54,6 +54,18 @@ than assumed futile because the failure classes differ in size: a reply refused
 for length succeeds as a short notice, and a permissions failure costs one call
 and fails again. Losing that call beats a member concluding they were ignored.
 
+## When the notice itself cannot be sent
+
+A member who has waited long enough already has an acknowledgement in the
+channel: the progress line. Deleting it after a notice fails to send ends the
+turn with less than they had, and dead air is the worst outcome this service has.
+
+So a notice that cannot be sent is carried by that line instead. An edit is a
+different call against a message that already exists, so it can land where the
+send did not, and a claimed line is never deleted even when the edit fails too.
+
+A turn too short to have posted a line has nothing to carry and is unchanged.
+
 ## What this does not do
 
 It does not reduce the failure rate. It records what a failure was, so the rate
