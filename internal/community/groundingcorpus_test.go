@@ -195,10 +195,10 @@ var ungroundedClaims = []groundingRow{
 		rejectedNow: true, shouldReject: true,
 	},
 	{
-		// One adverb between the auxiliary and the participle, and the pattern
-		// no longer matches. The only shape 575 did not reach.
+		// One adverb between the auxiliary and the participle. The auxiliary now
+		// carries a bounded adverb slot, so this is caught. Closed by #602.
 		reply:       "An issue has already been filed for this.",
-		rejectedNow: false, shouldReject: true, issue: "602",
+		rejectedNow: true, shouldReject: true,
 	},
 }
 
