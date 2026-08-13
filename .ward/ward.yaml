@@ -54,6 +54,9 @@ commands:
   rate-deep:
     run: bash scripts/ward-command.sh rate-deep
     description: Measure the Sirens Deep intermittent-behavior rates. Gates nothing.
+  rate-fixture-deep:
+    run: bash scripts/ward-command.sh rate-fixture-deep
+    description: Measure data-borne injection against a tool fixture. Gates nothing.
   format:
     run: bash scripts/ward-command.sh format
     description: Format Go source.

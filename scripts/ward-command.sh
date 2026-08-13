@@ -45,6 +45,14 @@ case "${1:-}" in
       SIRENS_ECHO_EVALUATION_PACK=agent/rate-deep.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  rate-fixture-deep)
+    # The data-borne injection pack. SIRENS_ECHO_TOOL_FIXTURE is exclusive with
+    # the MCP roster, so this runs separately from rate-deep.
+    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agent/rate-fixture-deep.yaml \
+      SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-injection.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   format)
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;
