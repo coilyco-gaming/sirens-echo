@@ -69,4 +69,5 @@ human is caught by the human-claim patterns only when it says so in the first
 person. Prompt instruction carries the rest.
 
 See [the prompt](sirens-echo-prompt.md), [response
-profiles](response-profiles.md), and [notices](sirens-echo-notices.md).
+profiles](response-profiles.md), [guarded
+identifiers](sirens-echo-identifiers.md), and [notices](sirens-echo-notices.md).

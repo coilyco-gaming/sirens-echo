@@ -46,6 +46,8 @@ type Agent struct {
 	jobs *JobRunner
 	// exchanges bounds a run of agent-to-agent turns per channel.
 	exchanges *exchangeLimiter
+	// identifiers refuses a reply carrying a value this process holds.
+	identifiers *IdentifierGuard
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -140,6 +142,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
 	}
+	agent.identifiers = NewIdentifierGuard(cfg, accessPolicy, roster)
 	agent.ensureRuntimeDefaults()
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err
@@ -344,6 +347,8 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("discord_user", ready.User.Username),
 		slog.String("channel", a.cfg.Definition.Channel),
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
+		// The count, never the values. See docs/sirens-echo-identifiers.md.
+		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
 	)
 }
 
@@ -854,6 +859,11 @@ func (a *Agent) runTurn(
 	}
 	if err == nil {
 		err = ValidateSelfAttributedClaim(reply, a.cfg.Definition.Identity, result.ToolCalls...)
+	}
+	// Output values are enumerable where input framings are not, so this is the
+	// check that does not depend on anticipating the framing.
+	if err == nil {
+		err = a.identifiers.Validate(reply)
 	}
 	// Bound for every style. Not being mistaken for a human is a safety
 	// property, not a voice preference. See docs/sirens-echo-prompt.md.
