@@ -147,6 +147,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if session != nil {
 		session.AddHandler(agent.onReady)
 		session.AddHandler(agent.onMessage)
+		session.AddHandler(agent.onMessageEdit)
 		if cfg.DiscordCommandsEnabled {
 			session.AddHandler(agent.onInteraction)
 		}
@@ -369,7 +370,41 @@ func (c summonContext) Key() string {
 }
 
 func (a *Agent) onMessage(session *discordgo.Session, event *discordgo.MessageCreate) {
+	a.admitMessage(session, event.Message)
+}
+
+// onMessageEdit answers a message that became a summon only after it was
+// posted. The duplicate gate keeps an already-answered message answered once.
+func (a *Agent) onMessageEdit(session *discordgo.Session, event *discordgo.MessageUpdate) {
+	if !editSummons(session, event) {
+		return
+	}
+	a.admitMessage(session, event.Message)
+}
+
+// editSummons decides whether an update is a member edit that newly names this
+// service. See docs/sirens-echo-summons.md for why each gate is here.
+func editSummons(session *discordgo.Session, event *discordgo.MessageUpdate) bool {
+	if event == nil || event.Message == nil {
+		return false
+	}
 	message := event.Message
+	// Discord emits this event when it resolves a link preview too, and only a
+	// member edit sets the timestamp. An unfurl must never summon.
+	if message.EditedTimestamp == nil {
+		return false
+	}
+	// An edit arrives partial, so a missing guild id cannot be read as a direct
+	// message. Guild-only keeps a partial payload off the direct message policy.
+	if message.GuildID == "" {
+		return false
+	}
+	// A reply reference is not re-derived from a partial payload, so an edit
+	// summons on an explicit mention alone. That is what was asked for.
+	return mentionsBot(session, message)
+}
+
+func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Message) {
 	if !eligibleMessage(session, message, a.access) {
 		return
 	}
@@ -513,12 +548,10 @@ func summonedLocally(
 	if message.GuildID == "" {
 		return true, false
 	}
-	botID := session.State.User.ID
-	for _, mention := range message.Mentions {
-		if mention.ID == botID {
-			return true, false
-		}
+	if mentionsBot(session, message) {
+		return true, false
 	}
+	botID := session.State.User.ID
 	if message.ReferencedMessage != nil && message.ReferencedMessage.Author != nil {
 		return message.ReferencedMessage.Author.ID == botID, false
 	}
@@ -526,6 +559,20 @@ func summonedLocally(
 		return false, false
 	}
 	return false, true
+}
+
+// mentionsBot reads an explicit mention off the Gateway payload, which is the
+// one summon signal a partial edit payload still carries intact.
+func mentionsBot(session *discordgo.Session, message *discordgo.Message) bool {
+	if session.State == nil || session.State.User == nil {
+		return false
+	}
+	for _, mention := range message.Mentions {
+		if mention != nil && mention.ID == session.State.User.ID {
+			return true
+		}
+	}
+	return false
 }
 
 func summonedByReference(session *discordgo.Session, message *discordgo.Message) bool {

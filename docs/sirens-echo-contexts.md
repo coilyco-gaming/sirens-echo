@@ -75,5 +75,5 @@ in that install mode.
 ## See also
 
 See [the access policy](sirens-echo-access.md),
-[admission control](sirens-echo-admission.md),
+[admission control](sirens-echo-admission.md), [summons](sirens-echo-summons.md),
 [the service](sirens-echo.md), and [configuration](sirens-echo-config.md).

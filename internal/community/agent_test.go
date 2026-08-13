@@ -766,3 +766,124 @@ func TestDeploymentHarnessFollowsTheConfiguredIngress(t *testing.T) {
 		t.Errorf("HTTP-only deployment harness = %q, want %q", got, transportHTTP)
 	}
 }
+
+func editSession(botID string) *discordgo.Session {
+	state := discordgo.NewState()
+	state.User = &discordgo.User{ID: botID}
+	return &discordgo.Session{State: state}
+}
+
+func editEvent(message *discordgo.Message) *discordgo.MessageUpdate {
+	return &discordgo.MessageUpdate{Message: message}
+}
+
+// An edit that newly names the service is the whole point of the handler.
+func TestEditSummonsOnNewMention(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	edited := time.Now()
+	event := editEvent(&discordgo.Message{
+		GuildID:         "guild-1",
+		ChannelID:       "channel-1",
+		Author:          &discordgo.User{ID: "member-1"},
+		Mentions:        []*discordgo.User{{ID: botID}},
+		EditedTimestamp: &edited,
+	})
+	if !editSummons(editSession(botID), event) {
+		t.Fatal("an edit that adds the mention must summon")
+	}
+}
+
+// Discord emits the same event when it resolves a link preview. That carries no
+// edit timestamp and must stay silent even though the mention is present.
+func TestEditIgnoresLinkUnfurl(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	event := editEvent(&discordgo.Message{
+		GuildID:   "guild-1",
+		ChannelID: "channel-1",
+		Author:    &discordgo.User{ID: "member-1"},
+		Mentions:  []*discordgo.User{{ID: botID}},
+	})
+	if editSummons(editSession(botID), event) {
+		t.Fatal("a link unfurl must not summon")
+	}
+}
+
+// A partial payload without a guild id must not fall through to the direct
+// message path, which summons without a mention and uses a different policy.
+func TestEditIgnoresMissingGuild(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	edited := time.Now()
+	event := editEvent(&discordgo.Message{
+		ChannelID:       "channel-1",
+		Author:          &discordgo.User{ID: "member-1"},
+		Mentions:        []*discordgo.User{{ID: botID}},
+		EditedTimestamp: &edited,
+	})
+	if editSummons(editSession(botID), event) {
+		t.Fatal("an edit without a guild id must not summon")
+	}
+}
+
+func TestEditIgnoresUnmentionedAndEmptyEvents(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	session := editSession(botID)
+	edited := time.Now()
+	unmentioned := editEvent(&discordgo.Message{
+		GuildID:         "guild-1",
+		ChannelID:       "channel-1",
+		Author:          &discordgo.User{ID: "member-1"},
+		Mentions:        []*discordgo.User{{ID: "someone-else"}},
+		EditedTimestamp: &edited,
+	})
+	if editSummons(session, unmentioned) {
+		t.Fatal("an edit naming someone else must not summon")
+	}
+	if editSummons(session, nil) || editSummons(session, editEvent(nil)) {
+		t.Fatal("an empty update must not summon")
+	}
+}
+
+// Replying to one of this service's own messages is a summon without a mention.
+func TestReplyToServiceMessageSummons(t *testing.T) {
+	t.Parallel()
+	const botID = "bot-1"
+	session := editSession(botID)
+	author := &discordgo.User{ID: "member-1"}
+
+	summoned, lookup := summonedLocally(session, &discordgo.Message{
+		GuildID:           "guild-1",
+		ChannelID:         "channel-1",
+		Author:            author,
+		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: botID}},
+	})
+	if !summoned || lookup {
+		t.Fatalf("a reply to the service must summon, got summoned=%v lookup=%v", summoned, lookup)
+	}
+
+	// A reply aimed at another member is not a summon.
+	summoned, lookup = summonedLocally(session, &discordgo.Message{
+		GuildID:           "guild-1",
+		ChannelID:         "channel-1",
+		Author:            author,
+		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: "member-2"}},
+	})
+	if summoned || lookup {
+		t.Fatalf("a reply to a member must not summon, got summoned=%v lookup=%v", summoned, lookup)
+	}
+
+	// An unresolved reference defers to the rate-limited lookup rather than
+	// guessing either way.
+	summoned, lookup = summonedLocally(session, &discordgo.Message{
+		GuildID:          "guild-1",
+		ChannelID:        "channel-1",
+		Author:           author,
+		MessageReference: &discordgo.MessageReference{MessageID: "m-9"},
+	})
+	if summoned || !lookup {
+		t.Fatalf("an unresolved reply must defer to lookup, got summoned=%v lookup=%v", summoned, lookup)
+	}
+}
