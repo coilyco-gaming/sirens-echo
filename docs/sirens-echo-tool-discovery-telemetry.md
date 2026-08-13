@@ -73,6 +73,18 @@ A count that is still one per turn therefore means the cache is being missed
 rather than absent, and the likeliest cause is connections not surviving between
 turns. That is a different defect from a missing cache and wants its own issue.
 
+## What one call returned
+
+`mcp.tool.call` carries `mcp.tool.outcome` and `mcp.tool.result_bytes`, so a
+reader holding one trace can tell a call that returned rows from one that
+returned none. The outcome is the same three-state `ToolOutcome` the disclosure
+footer renders to members, rather than a fourth vocabulary.
+
+Before that, the outcome reached a metric, which aggregates and cannot be joined
+to a turn, and a log line. Neither is reachable from the trace in front of you,
+so an investigation into a reply asserting absence stopped one step short of
+what the tool actually returned. See sirens-echo#570.
+
 ## See also
 
 - [the roster](sirens-echo-mcp-roster.md) - refresh, backoff, and staleness.

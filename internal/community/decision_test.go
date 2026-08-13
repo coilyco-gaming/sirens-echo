@@ -321,13 +321,12 @@ func TestValidateNeutralStyleStillRejectsEmoji(t *testing.T) {
 	}
 }
 
-// Characterization of ValidateGrounding alone, tracked in issue 241. One of the
-// two below is refused by a later check, so read the pipeline test beside it.
-func TestGroundingStillMissesTwoShapes(t *testing.T) {
+// Characterization of ValidateGrounding alone. The one below is refused by a
+// later check, so read the pipeline test beside it.
+func TestGroundingStillMissesOneShape(t *testing.T) {
 	t.Parallel()
 	missed := map[string]string{
-		"simple past passive": "A tracking issue was created.",
-		"third-person named":  "Sirens Echo has filed a correction.",
+		"third-person named": "Sirens Echo has filed a correction.",
 	}
 	for name, reply := range missed {
 		name, reply := name, reply
@@ -345,6 +344,7 @@ func TestGroundingStillMissesTwoShapes(t *testing.T) {
 		"An issue has been opened for this.",
 		"Filed a correction for review.",
 		"I filed a correction for review.",
+		"A tracking issue was created.",
 		"The system is now processing these requests sequentially as instructed.",
 	} {
 		if ValidateGrounding(reply, "The current channel is #bots.") == nil {
@@ -389,9 +389,10 @@ func TestTheTwoPinnedShapesAgainstTheWholeReplyPath(t *testing.T) {
 	t.Parallel()
 	identity := "Sirens Echo"
 	survives := map[string]bool{
-		// Simple past with no agent is how a member's own action reads, so this
-		// one is deliberately unread. See docs/sirens-echo-grounding.md.
-		"A tracking issue was created.": true,
+		// Undated simple past is caught since the tense widened. A dated one
+		// stays reportage. See docs/sirens-echo-grounding.md.
+		"A tracking issue was created.":                   false,
+		"The issue was created in June, before the wipe.": true,
 		// Caught by the check built for a named self-claim, not by grounding.
 		"Sirens Echo has filed a correction.": false,
 	}
@@ -406,5 +407,50 @@ func TestTheTwoPinnedShapesAgainstTheWholeReplyPath(t *testing.T) {
 					"changed, so update issue 241 rather than this assertion", !refused, expected)
 			}
 		})
+	}
+}
+
+// A reply this service wrote calling itself "the service" is naming itself, and
+// the guard matched one literal identity. See sirens-echo#557.
+func TestAGenericSelfNounIsStillThisService(t *testing.T) {
+	t.Parallel()
+	const identity = "Sirens Echo"
+	for _, reply := range []string{
+		"The service filed a correction.",
+		"The service has filed a correction.",
+		"The harness created a tracking issue.",
+		"The bot opened an issue for this.",
+		"The agent has closed that.",
+	} {
+		if ValidateSelfAttributedClaim(reply, identity) == nil {
+			t.Errorf("a generic self-claim survived: %q", reply)
+		}
+	}
+	// A write that did happen is a correct reply, however the runtime names it.
+	if ValidateSelfAttributedClaim(
+		"The service filed a correction.", identity, createIssueCall(),
+	) != nil {
+		t.Error("a claim the runtime performed was refused")
+	}
+	// A member is not this service, in any voice.
+	for _, reply := range []string{
+		"Kai filed a correction.",
+		"The server owner opened an issue for this.",
+	} {
+		if ValidateSelfAttributedClaim(reply, identity) != nil {
+			t.Errorf("a member's own action was read as a self-claim: %q", reply)
+		}
+	}
+}
+
+// A short form of the identity is not derived, because the last word of an
+// identity is the organisation for one profile. See sirens-echo#557.
+func TestAShortFormOfTheIdentityIsNotDerived(t *testing.T) {
+	t.Parallel()
+	if ValidateSelfAttributedClaim(
+		"Coilyco filed a correction.", "Sirens Deep of Coilyco",
+	) != nil {
+		t.Error("the organisation was read as the service, which is the derivation " +
+			"this rule deliberately does not do")
 	}
 }

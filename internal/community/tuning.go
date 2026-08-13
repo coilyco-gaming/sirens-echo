@@ -79,6 +79,12 @@ const (
 	// defaultQueueTimeout bounds the wait for the execution slot. A longer
 	// wait answers a conversation that has already moved on.
 	defaultQueueTimeout = 30 * time.Second
+	// defaultShutdownGrace lets the turns in flight answer before a restart
+	// takes them. It fits inside Kubernetes' 30s default kill window.
+	defaultShutdownGrace = 15 * time.Second
+	// shutdownNoticeGrace is the moment a cancelled turn gets to say why it
+	// ended, after which the gateway closes and it could not say anything.
+	shutdownNoticeGrace = 3 * time.Second
 )
 
 // Workspace commands

@@ -91,6 +91,25 @@ func (r PhraseRegistry) Keys() []string {
 	return keys
 }
 
+// Configured reports whether a registry was loaded. An empty one renders
+// nothing, which is the deployment that names no path.
+func (r PhraseRegistry) Configured() bool { return len(r.Phrases) > 0 }
+
+// Invoked reports whether a reply carries an invocation at all, so the reply
+// path can leave an ordinary reply untouched.
+func Invoked(reply string) bool { return phraseInvocation.MatchString(reply) }
+
+// Terminal reports whether one invocation is the whole reply. A prefix returns
+// every padding problem the registry exists to prevent. See sirens-echo#176.
+func Terminal(reply string) bool {
+	// Exactly one. Stripping them all and finding nothing left was also true of
+	// two, and two phrases is not a phrase. See sirens-echo#613.
+	if len(phraseInvocation.FindAllStringIndex(reply, -1)) != 1 {
+		return false
+	}
+	return strings.TrimSpace(phraseInvocation.ReplaceAllString(reply, "")) == ""
+}
+
 // RenderPhrases replaces every invocation with its rendered phrase. An unknown
 // key is an error rather than a marker a member reads.
 func (r PhraseRegistry) RenderPhrases(reply string) (string, error) {
@@ -108,4 +127,34 @@ func (r PhraseRegistry) RenderPhrases(reply string) (string, error) {
 		return "", fmt.Errorf("reply invokes unknown phrase %s", strings.Join(unknown, ", "))
 	}
 	return rendered, nil
+}
+
+// renderPhrases resolves an invocation the model wrote. A reply carrying none
+// is returned untouched, which is every reply until the prompt names the keys.
+func (a *Agent) renderPhrases(reply string) (string, error) {
+	if !Invoked(reply) {
+		return reply, nil
+	}
+	if !a.phrases.Configured() {
+		return "", fmt.Errorf("reply invokes a phrase and no registry is configured")
+	}
+	if !Terminal(reply) {
+		return "", fmt.Errorf("reply invokes a phrase alongside other text")
+	}
+	return a.phrases.RenderPhrases(reply)
+}
+
+// withPhrasePolicy names the keys a reply may invoke. A prompt with no registry
+// is returned unchanged, which is the deployment that renders nothing.
+func withPhrasePolicy(prompt string, registry PhraseRegistry) string {
+	if !registry.Configured() {
+		return prompt
+	}
+	return prompt + "\n" + fmt.Sprintf(
+		`Some answers are canonical phrases rather than prose. Invoke one by writing
+{{phrase:key}} and nothing else, because an invocation is the whole reply and a
+phrase beside other text is refused. Use one only when it answers exactly, and
+answer normally otherwise. Available keys: %s.`,
+		strings.Join(registry.Keys(), ", "),
+	) + "\n"
 }

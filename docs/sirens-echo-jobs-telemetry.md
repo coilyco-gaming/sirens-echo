@@ -60,7 +60,9 @@ memory, so a restart posts a fresh line rather than editing the old one.
 than on a reply, because a job speaks without being asked again.
 
 When a thread is bound to the job, updates go there instead of the channel, so
-job chatter stays out of the conversation that started it.
+job chatter stays out of the conversation that started it. **No production path
+binds one today**, so updates land in the channel. See
+[sirens-echo#620](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/620).
 
 See [the lifecycle](sirens-echo-jobs-lifecycle.md) and
 [observability](sirens-echo-observability.md).

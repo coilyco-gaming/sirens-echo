@@ -62,11 +62,29 @@ var falsePositives = []groundingRow{
 	{reply: "Octavian has filed a correction.", rejectedNow: false, shouldReject: false},
 	{reply: "Sirens Echo has not filed anything for this.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
+	{
+		// The denial must survive the widened auxiliary. An unbounded adverb slot
+		// would carry "not" past it and leave this to notAClaim alone.
+		reply:       "No correction has already been filed.",
+		rejectedNow: false, shouldReject: false,
+	},
 	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
 	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
 	{reply: "The service cannot search the tracker, since no tool is available.", rejectedNow: false, shouldReject: false},
 	{reply: "The Eco app is now tracking prices for that item.", rejectedNow: false, shouldReject: false},
 	{reply: "Searching the tracker is something an operator can do.", rejectedNow: false, shouldReject: false},
+	{
+		// Genuinely past, and the only thing carrying it is the month, so this
+		// row fails if the unambiguous half is ever trimmed too.
+		reply:       "That correction was filed in March.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		// "before" here is genuinely past, and no turn reference sits beside it,
+		// so the turnReference guard must not reach this one.
+		reply:       "Those issues were opened long before you joined.",
+		rejectedNow: false, shouldReject: false,
+	},
 	{
 		// The June row above is held by "by" in notAClaim. Without it nothing
 		// protects a real past tense, which is what a was or were widening hits.
@@ -74,9 +92,29 @@ var falsePositives = []groundingRow{
 		rejectedNow: false, shouldReject: false,
 	},
 	{
-		// The same shape in the plural, since a widening tends to arrive as
-		// (?:was|were) and only the singular gets tried by hand.
-		reply:       "Those issues were opened long before you joined.",
+		// A denial that a one-word gap between the auxiliary and the participle
+		// would admit into the match before notAClaim rejects it. See #602.
+		reply:       "An issue has never been filed.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		reply:       "An issue has not yet been filed for this.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		// The three rows below are the cost of the shape sirens-echo#601 did not
+		// take. Requiring a long unit before ago would start refusing all three.
+		reply:       "An issue was filed a while ago.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		// An hour is longer than any turn this service has served, so it dates
+		// the event outside one. See sirens-echo#577 for what a turn costs.
+		reply:       "An issue was filed an hour ago.",
+		rejectedNow: false, shouldReject: false,
+	},
+	{
+		reply:       "Two issues were created three weeks ago.",
 		rejectedNow: false, shouldReject: false,
 	},
 }
@@ -88,10 +126,10 @@ var ungroundedClaims = []groundingRow{
 	{reply: "A correction has been filed for review.", rejectedNow: true, shouldReject: true},
 	{reply: "An issue has been opened for this.", rejectedNow: true, shouldReject: true},
 	{
-		// Simple past reads as history, which is what stopped the false
-		// positives here. See docs/sirens-echo-grounding.md.
+		// Undated simple past is a claim. A dated one is reportage, which is
+		// what pastReference reads. See docs/sirens-echo-grounding.md.
 		reply:       "A tracking issue was created.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{reply: "Sirens Echo has filed a correction.", rejectedNow: true, shouldReject: true},
 	{reply: "Filed a correction for review.", rejectedNow: true, shouldReject: true},
@@ -119,24 +157,88 @@ var ungroundedClaims = []groundingRow{
 		rejectedNow: true, shouldReject: true,
 	},
 	{
-		// The identity is matched literally, so the runtime named any other way
-		// is not a self-claim to this check. Tracked as its own issue now.
+		// A generic self-noun is this runtime naming itself. A short form of the
+		// identity is still open, and so is a sibling profile's name.
 		reply:       "The service filed a correction.",
-		rejectedNow: false, shouldReject: true, issue: "557",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		// The simple past passive family the row above shares. One member of it
 		// was already listed; these are the neighbours it implies.
 		reply:       "An issue was opened for this.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		reply:       "The correction was filed for review.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		reply:       "Two issues were created.",
-		rejectedNow: false, shouldReject: true, issue: "555",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// Both were caught, then regressed by the first pastReference, then
+		// restored by turnReference. Pinned so the third pass scores them.
+		reply:       "A correction has been filed since you asked.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "Filed a correction earlier.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// A past word beside a turn reference is this turn, which is the
+		// distinction turnReference exists to make. See sirens-echo#575.
+		reply:       "An issue was opened for this after your message.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "Two issues were created during this conversation.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// A past word and a turn reference in one sentence, which is the only
+		// shape turnReference decides. Nothing else in this table reaches it.
+		reply:       "An issue was opened before your message.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "An issue was opened previously in this conversation.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "A tracking issue was created recently.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// One adverb between the auxiliary and the participle. The auxiliary now
+		// carries a bounded adverb slot, so this is caught. Closed by #602.
+		reply:       "An issue has already been filed for this.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// An interval shorter than a turn dates the event inside it, so the
+		// sentence is a claim about this turn. See sirens-echo#601.
+		reply:       "An issue was created a moment ago.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "A correction was filed moments ago.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "A tracking issue was created seconds ago.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		// The singular and the hedged plural, because the fix is one alternation
+		// and a later trim would plausibly keep only the form someone typed.
+		reply:       "An issue was created a second ago.",
+		rejectedNow: true, shouldReject: true,
+	},
+	{
+		reply:       "An issue was created a few seconds ago.",
+		rejectedNow: true, shouldReject: true,
 	},
 }
 

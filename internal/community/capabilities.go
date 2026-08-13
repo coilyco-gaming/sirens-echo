@@ -26,6 +26,7 @@ func (a *Agent) logCapabilities(ctx context.Context) {
 		slog.Bool("discord_direct_messages", a.cfg.DiscordDMEnabled),
 		slog.Bool("discord_commands", a.cfg.DiscordCommandsEnabled),
 		slog.Bool("content_gate", len(a.taxonomy.Classes) > 0),
+		slog.Bool("phrase_registry", a.phrases.Configured()),
 		slog.String("job_store", a.jobStoreKind()),
 		slog.Bool("jobs", a.jobs != nil),
 		slog.Bool("scratchpad", a.cfg.ScratchDir != ""),

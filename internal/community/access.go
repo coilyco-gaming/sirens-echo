@@ -29,6 +29,9 @@ const (
 	// accessDeniedAgent is a bot the deployment never allowlisted. Separate
 	// from the exchange bound, which refuses an agent it does permit.
 	accessDeniedAgent accessReason = "denied_agent"
+	// accessDeniedDraining is a summon that arrived during a restart. The
+	// policy allowed it and the process is going away. See sirens-echo#597.
+	accessDeniedDraining accessReason = "denied_draining"
 )
 
 // Allowlist is either the literal `all` or an explicit ID list. See

@@ -600,6 +600,21 @@ func (c ProxyClient) Complete(
 				slog.Bool("tool_error", result.IsError),
 			)
 			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, outcome)
+			// Bounded before the span ends, so a truncation reaches the trace
+			// rather than only a log. See sirens-echo#640.
+			reinjected, delivered, trimmed := boundToolResult(result.Text, budget.ToolResultBytes)
+			// On the span as well as the metric, so a reader holding one trace
+			// can tell a call that returned rows from one that returned none.
+			toolSpan.SetAttributes(
+				attribute.String("mcp.tool.outcome", string(outcomeOf(result))),
+				attribute.Int("mcp.tool.result_bytes", len(result.Text)),
+				// The bound that applied, not the bytes delivered. Those differ
+				// by the notices, which is what made the cap look wrong.
+				attribute.Int("mcp.tool.limit_bytes", budget.ToolResultBytes),
+				attribute.Bool("mcp.tool.truncated", trimmed),
+			)
+			// Ended before the spill, which writes a file. A disk write inside
+			// this span would report as tool latency.
 			toolSpan.End()
 			// The full result is retained. Only the copy re-entering the prompt
 			// is bounded.
@@ -609,7 +624,6 @@ func (c ProxyClient) Complete(
 				Result:    result.Text,
 				Outcome:   outcomeOf(result),
 			})
-			reinjected, trimmed := boundToolResult(result.Text, budget.ToolResultBytes)
 			if trimmed {
 				// The remainder is preserved rather than discarded wherever the
 				// deployment mounts a scratchpad. See docs/sirens-echo-scratchpad.md.
@@ -627,6 +641,10 @@ func (c ProxyClient) Complete(
 					slog.String("tool", definition.Original),
 					slog.Int("result_bytes", len(result.Text)),
 					slog.Int("reinjected_bytes", len(reinjected)),
+					// The bound and the loss, so neither is arithmetic against a
+					// definition file the reader has to go and find.
+					slog.Int("limit_bytes", budget.ToolResultBytes),
+					slog.Int("dropped_bytes", len(result.Text)-delivered),
 					slog.String("spill_path", spilled),
 				)
 			}
@@ -712,9 +730,9 @@ func spillPath(tool string, index int) string {
 
 // boundToolResult caps one tool result before it re-enters the prompt, so a
 // round of parallel calls cannot inflate the context past the model's budget.
-func boundToolResult(result string, limit int) (string, bool) {
+func boundToolResult(result string, limit int) (bounded string, delivered int, trimmed bool) {
 	if len(result) <= limit {
-		return result, false
+		return result, len(result), false
 	}
 	// Walk back to a rune boundary at or below the byte budget. Slicing runes
 	// against a byte cap let a multibyte result land several times over it.
@@ -722,7 +740,9 @@ func boundToolResult(result string, limit int) (string, bool) {
 	for cut > 0 && !utf8.RuneStart(result[cut]) {
 		cut--
 	}
-	return result[:cut] + fmt.Sprintf(truncationNotice, cut, len(result)), true
+	// The cut is returned rather than the limit, because the walk-back lands
+	// below it and a caller subtracting the limit misreports the loss.
+	return result[:cut] + fmt.Sprintf(truncationNotice, cut, len(result)), cut, true
 }
 
 // groundingMessage renders reference material the servers marked for the

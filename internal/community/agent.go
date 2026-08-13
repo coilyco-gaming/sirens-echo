@@ -51,6 +51,12 @@ type Agent struct {
 	identifiers *IdentifierGuard
 	// taxonomy is empty when the deployment configures no content gate.
 	taxonomy ContentTaxonomy
+	// phrases is empty when the deployment names no registry, which renders
+	// nothing and is today's behaviour.
+	phrases PhraseRegistry
+	// drain holds the Discord turns in flight, so a restart can wait for them
+	// and then tell the rest why they stopped.
+	drain drainState
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -73,7 +79,19 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			return nil, err
 		}
 	}
-	systemPrompt := BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack)
+	var phrases PhraseRegistry
+	if cfg.PhrasesPath != "" {
+		phrases, err = LoadPhraseRegistry(cfg.PhrasesPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// Appended rather than built in, so a caller with no registry renders the
+	// prompt it renders today. See docs/sirens-echo-phrases.md.
+	systemPrompt := withPhrasePolicy(
+		BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack),
+		phrases,
+	)
 	if err := ValidateSystemPrompt(cfg.Definition, cfg.Principal, systemPrompt); err != nil {
 		return nil, err
 	}
@@ -109,7 +127,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	tools := &MCPProvider{
 		Servers:    roster,
-		HTTPClient: httpClient,
+		HTTPClient: sessionHTTPClient(telemetry),
 		Sandbox: sandboxLabelPolicy{
 			Tracker: cfg.Definition.IssueTracker,
 			LabelID: cfg.SandboxLabelID,
@@ -145,6 +163,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			Budget:        cfg.Definition.ModelBudget,
 		},
 		systemPrompt:      systemPrompt,
+		phrases:           phrases,
 		telemetry:         telemetry,
 		readinessClient:   newReadinessHTTPClient(defaultReadinessTimeout),
 		readinessEndpoint: readinessEndpoint,
@@ -178,6 +197,25 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	return agent, nil
 }
 
+// mcpSessionSpanName keeps a held-open session out of the request-path
+// percentiles. Its lifetime is not a latency. See sirens-echo#560.
+func mcpSessionSpanName(_ string, request *http.Request) string {
+	return "mcp.session " + request.Method
+}
+
+// sessionHTTPClient serves the MCP transport, with no whole-request timeout
+// because a held-open session has no request to bound. See sirens-echo#160.
+func sessionHTTPClient(telemetry *Telemetry) *http.Client {
+	return &http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithTracerProvider(telemetry.traceProvider),
+			otelhttp.WithPropagators(telemetry.propagator),
+			otelhttp.WithSpanNameFormatter(mcpSessionSpanName),
+		),
+	}
+}
+
 // defaultLookupPolicy bounds Discord REST calls made while evaluating gates.
 // See docs/sirens-echo-admission.md.
 var defaultLookupPolicy = RateLimitPolicy{
@@ -193,6 +231,9 @@ func (a *Agent) ensureRuntimeDefaults() {
 	}
 	if a.cfg.QueueTimeout <= 0 {
 		a.cfg.QueueTimeout = defaultQueueTimeout
+	}
+	if a.cfg.ShutdownGrace <= 0 {
+		a.cfg.ShutdownGrace = defaultShutdownGrace
 	}
 	if a.limiter == nil {
 		a.limiter = newRateLimiter(a.cfg.RateLimit, defaultRateLimiterCapacity)
@@ -350,12 +391,7 @@ func (a *Agent) Run(ctx context.Context) error {
 	}()
 	select {
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := httpServer.Shutdown(shutdownCtx); err != nil {
-			return fmt.Errorf("HTTP shutdown: %w", err)
-		}
-		return nil
+		return a.drainTurns(ctx, httpServer)
 	case err := <-httpErr:
 		if errors.Is(err, http.ErrServerClosed) {
 			return nil
@@ -505,8 +541,31 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 	if !a.seen.Add(message.ID) {
 		return
 	}
+	// Last, because a summon refused for a restart was otherwise admissible and
+	// the count should say so. See docs/sirens-echo-shutdown.md.
+	if !a.drain.enter() {
+		a.telemetry.RecordAccess(context.Background(), string(accessDeniedDraining))
+		a.onDraining(session, message)
+		return
+	}
 	a.telemetry.RecordAccess(context.Background(), string(accessAllowed))
-	go a.handleMessage(session, message, origin, decision.Guild.Overrides())
+	go func() {
+		defer a.drain.leave()
+		a.handleMessage(session, message, origin, decision.Guild.Overrides())
+	}()
+}
+
+// onDraining turns away a summon that arrived during a restart. It marks and
+// says nothing, because the gateway it would reply through is closing.
+func (a *Agent) onDraining(session *discordgo.Session, message *discordgo.Message) {
+	ctx := context.Background()
+	a.telemetry.Info(
+		ctx,
+		"turn.input.draining",
+		slog.String("transport", transportDiscord),
+		slog.String("outcome", string(accessDeniedDraining)),
+	)
+	a.react(ctx, &discordMessageTurn{session: session, message: message}, reactionRefused)
 }
 
 // eligibleMessage rejects payloads that can never be a summon. A bot author
@@ -679,6 +738,38 @@ func summonedByReference(session *discordgo.Session, message *discordgo.Message)
 		referenced.Author.ID == session.State.User.ID
 }
 
+// resolveReplyTo fetches the message a reply answers when the Gateway did not
+// deliver it inline, which is likeliest for the old ones.
+func (a *Agent) resolveReplyTo(
+	session *discordgo.Session,
+	message *discordgo.Message,
+	origin summonContext,
+) *discordgo.Message {
+	// Delivered inline for most replies, and a fetch for those would be a REST
+	// call per message for nothing.
+	if message.ReferencedMessage != nil {
+		return nil
+	}
+	if message.MessageReference == nil || message.MessageReference.MessageID == "" {
+		return nil
+	}
+	// Shares the budget the other gate-forced REST calls draw on, so a channel
+	// of old replies cannot make this one lookup per message.
+	if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
+		a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
+		return nil
+	}
+	referenced, err := session.ChannelMessage(
+		message.ChannelID,
+		message.MessageReference.MessageID,
+	)
+	// A reference that cannot be read is an ordinary message, not a failure.
+	if err != nil {
+		return nil
+	}
+	return referenced
+}
+
 func (a *Agent) handleMessage(
 	session *discordgo.Session,
 	message *discordgo.Message,
@@ -719,7 +810,8 @@ func (a *Agent) handleMessage(
 	a.telemetry.RecordAdmission(context.Background(), string(admissionAccepted), transportDiscord)
 
 	receiveCtx, receiveSpan := a.telemetry.StartSpan(
-		context.Background(),
+		// The drain root rather than Background, so a restart can reach the turn.
+		a.drain.root(),
 		"discord.receive",
 		discordMessageSpanAttributes(
 			"process",
@@ -733,6 +825,7 @@ func (a *Agent) handleMessage(
 		message: message,
 		limit:   a.cfg.Definition.MaxContextMessages,
 		titler:  a.completions,
+		replyTo: a.resolveReplyTo(session, message, origin),
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -1035,6 +1128,12 @@ func (a *Agent) runTurn(
 	}
 	validateSpan.End()
 
+	// A canonical phrase is a deployment artifact rather than model prose, so it
+	// renders after the checks. See docs/sirens-echo-phrases.md.
+	if reply, err = a.renderPhrases(reply); err != nil {
+		return a.failTurn(turnCtx, turn, stageValidation, err)
+	}
+
 	// Service-authored, so it runs after the checks rather than through them.
 	// One step, one budget. See docs/sirens-echo-issues.md and sirens-echo#413.
 	reply = AssembleReply(reply, replyLimitOf(turn), result.ToolCalls...)
@@ -1075,6 +1174,11 @@ func (a *Agent) failTurn(
 	stage string,
 	cause error,
 ) error {
+	// A drained turn's stage error is context.Canceled, which is what every
+	// other cancellation also looks like. Only the cause separates them.
+	if errors.Is(context.Cause(ctx), errShuttingDown) {
+		cause = errShuttingDown
+	}
 	notice := turnFailureNotice(stage, cause)
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
@@ -1089,7 +1193,13 @@ func (a *Agent) failTurn(
 		slog.String("notice", notice),
 	)
 	settleFromContext(ctx)
-	failure := errors.Join(cause, a.notifyFailure(ctx, turn, notice))
+	noticeErr := a.notifyFailure(ctx, turn, notice)
+	// The send lost, so the line already in the channel becomes the answer.
+	// Deleting it leaves less than the acknowledgement. See sirens-echo#624.
+	if noticeErr != nil {
+		carryFromContext(context.WithoutCancel(ctx), notice)
+	}
+	failure := errors.Join(cause, noticeErr)
 	// The outcome mark stays. The in-flight ones have stopped being true.
 	a.clearTurnMarks(ctx)
 	return failure
@@ -1107,7 +1217,13 @@ func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) e
 		failureNoticeTimeout,
 	)
 	defer cancel()
-	return a.sendReply(noticeCtx, turn, noticeWithTrace(ctx, notice))
+	return a.sendReply(withoutThreading(noticeCtx), turn, noticeWithTrace(ctx, notice))
+}
+
+// withoutThreading drops the turn's progress so a notice cannot take the
+// threading path. A notice is known bytes and needs no title. See #619.
+func withoutThreading(ctx context.Context) context.Context {
+	return context.WithValue(ctx, turnProgressKey{}, (*turnProgress)(nil))
 }
 
 func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) error {
@@ -1152,6 +1268,9 @@ type discordMessageTurn struct {
 	mentions mentionRoster
 	// titler names a thread. Nil keeps the derived name.
 	titler CompletionClient
+	// replyTo is a reference the Gateway did not deliver inline, resolved before
+	// the turn ran. See docs/sirens-echo-prompt.md.
+	replyTo *discordgo.Message
 }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
@@ -1239,6 +1358,28 @@ func (t *discordMessageTurn) Current() TranscriptEntry {
 		Content:     t.message.ContentWithMentionsReplaced(),
 		Counterpart: counterpartOf(t.message),
 		Attachments: attachmentTypes(t.message),
+		ReplyTo:     replyTarget(t.message, t.replyTo),
+	}
+}
+
+// replyTarget is the message a reply answers. Discord supplies it inline for
+// most replies, and resolved carries the ones it did not. See sirens-echo#630.
+func replyTarget(message, resolved *discordgo.Message) *ReplySubject {
+	if message == nil {
+		return nil
+	}
+	referenced := message.ReferencedMessage
+	if referenced == nil {
+		referenced = resolved
+	}
+	if referenced == nil {
+		return nil
+	}
+	return &ReplySubject{
+		Author:      displayName(referenced),
+		Content:     referenced.ContentWithMentionsReplaced(),
+		Counterpart: counterpartOf(referenced),
+		Attachments: attachmentTypes(referenced),
 	}
 }
 

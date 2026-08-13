@@ -8,8 +8,10 @@ import (
 )
 
 var (
-	channelPattern    = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
-	claimedAction     = regexp.MustCompile(`(?i)\bI (?:have )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
+	channelPattern = regexp.MustCompile(`#[A-Za-z_][A-Za-z0-9_-]*`)
+	// An adverb between the pronoun and the verb used to defeat this. See
+	// sirens-echo#575.
+	claimedAction     = regexp.MustCompile(`(?i)\bI (?:have )?(?:already |just |now |since )?(sent|posted|opened|filed|created|escalated|contacted|checked|changed|updated|pinned|deleted|edited|messaged|closed|commented|labeled)\b`)
 	firstPersonVoice  = regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_])(?:i|i['’](?:m|ve|d|ll)|me|my|mine|myself|we|we['’](?:re|ve|d|ll)|us|our|ours|ourselves)(?:$|[^A-Za-z0-9_])`)
 	socialOpening     = regexp.MustCompile(`(?i)^\s*(?:hi|hello|hey|greetings|thanks|thank you|sorry|sure|absolutely|of course)\b`)
 	personalityPhrase = regexp.MustCompile(`(?i)\b(?:happy to help|glad to help|let me know|what can I help|how can I help|would you like|hope that helps|here['’]s the thing|no worries|community host|my toolset|my tools)\b`)
@@ -32,9 +34,32 @@ const trackerArtifact = `(?:issues?|corrections?|tickets?|bug report|feature req
 // passiveActionClaim is the neutral profile's voice for the claim the
 // first-person matcher catches. See docs/sirens-echo-grounding.md.
 var passiveActionClaim = regexp.MustCompile(
-	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:has|have)\s+been\s+` +
+	// The adverb slot is bounded rather than \w+: an open gap would carry "not"
+	// past the auxiliary and leave the denial to notAClaim. See sirens-echo#602.
+	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b` +
+		`(?:(?:has|have)\s+(?:already\s+|just\s+|now\s+|recently\s+|since\s+)?been|was|were)\s+` +
 		`(?:sent|posted|opened|filed|created|escalated|closed|` +
 		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
+)
+
+// pastReference places an event before this turn. The check asks whether this
+// turn wrote to the tracker, so a dated event is out of scope by construction.
+var pastReference = regexp.MustCompile(
+	// Only words that cannot mean inside this turn. See sirens-echo#575.
+	`(?i)\b(?:yesterday|previously|originally|formerly|ago|before|prior\s+to|` +
+		`last\s+(?:week|month|year|night|time|season|wipe|patch|cycle)|` +
+		`january|february|march|april|may|june|july|august|september|` +
+		`october|november|december|\d{4})\b`,
+)
+
+// turnReference anchors a sentence to this exchange, which outranks any past
+// word beside it: before your message is not before this turn.
+var turnReference = regexp.MustCompile(
+	`(?i)\b(?:your\s+message|you\s+asked|this\s+message|this\s+turn|` +
+		`this\s+conversation|just\s+now|` +
+		// An interval shorter than a turn dates an event inside it. Longer
+		// ones stay reportage, so a while ago is untouched. See #601.
+		`(?:a\s+few\s+|a\s+|several\s+)?(?:moments?|seconds?)\s+ago)\b`,
 )
 
 // subjectlessClaim is the clipped form, a sentence opening on the participle
@@ -68,7 +93,9 @@ var sentenceBreak = regexp.MustCompile(`[.!?]+`)
 // write finished. See docs/sirens-echo-grounding.md for what each gate excludes.
 func claimsCompletedTrackerAction(reply string) bool {
 	for _, sentence := range sentenceBreak.Split(reply, -1) {
-		if notAClaim.MatchString(sentence) {
+		// A dated event is reportage, unless the date is this exchange.
+		dated := pastReference.MatchString(sentence) && !turnReference.MatchString(sentence)
+		if notAClaim.MatchString(sentence) || dated {
 			continue
 		}
 		if passiveActionClaim.MatchString(sentence) || subjectlessClaim.MatchString(sentence) {
@@ -137,6 +164,21 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 // reply uses when it names itself as the actor.
 const selfClaimVerbs = `(?:filed|created|opened|closed|posted|sent|commented on|updated|labeled|escalated)`
 
+// genericSelfNouns are ways this runtime names itself without its identity. A
+// reply this service wrote calling itself "the service" is naming itself.
+var genericSelfNouns = []string{"the service", "the harness", "the bot", "the agent"}
+
+// selfReferencePattern alternates the configured identity with the generic
+// nouns. A short form of the identity is not derived. See sirens-echo#557.
+func selfReferencePattern(identity string) string {
+	references := make([]string, 0, len(genericSelfNouns)+1)
+	references = append(references, regexp.QuoteMeta(identity))
+	for _, noun := range genericSelfNouns {
+		references = append(references, regexp.QuoteMeta(noun))
+	}
+	return strings.Join(references, "|")
+}
+
 // ValidateSelfAttributedClaim rejects a reply naming this service as having
 // completed a tracker write. See docs/sirens-echo-grounding.md.
 func ValidateSelfAttributedClaim(reply string, identity string, executed ...ExecutedTool) error {
@@ -149,7 +191,7 @@ func ValidateSelfAttributedClaim(reply string, identity string, executed ...Exec
 	// The auxiliary is optional, because the simple past is at least as natural
 	// a thing for a model to write as the perfect. See sirens-echo#241.
 	claim := regexp.MustCompile(
-		`(?i)\b` + regexp.QuoteMeta(identity) +
+		`(?i)\b(?:` + selfReferencePattern(identity) + `)` +
 			`\s+(?:(?:has|have)\s+)?` + selfClaimVerbs + `\b`,
 	)
 	for _, sentence := range sentenceBreak.Split(maskURLs(reply), -1) {

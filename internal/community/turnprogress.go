@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 )
@@ -46,6 +47,8 @@ type turnProgress struct {
 	lastEdit  time.Time
 	lastStage string
 	finished  bool
+	// carried marks a line repurposed as the turn's answer, so Finish leaves it.
+	carried bool
 }
 
 func newTurnProgress(sink TurnProgressSink, now func() time.Time) *turnProgress {
@@ -274,6 +277,34 @@ func settleFromContext(ctx context.Context) {
 	progress.Settle(ctx)
 }
 
+// Carry turns the narration into the turn's answer, for a notice that could not
+// be sent. See docs/sirens-echo-delivery-failures.md.
+func (p *turnProgress) Carry(ctx context.Context, notice string) {
+	if p == nil || p.sink == nil || strings.TrimSpace(notice) == "" {
+		return
+	}
+	p.mu.Lock()
+	messageID := p.messageID
+	if p.finished || messageID == "" {
+		p.mu.Unlock()
+		return
+	}
+	// Claimed before the edit is attempted, so a line that could not be updated
+	// is left rather than deleted. A stale stage beats nothing at all.
+	p.carried = true
+	p.mu.Unlock()
+	// An edit is a different call from a send, against a message that already
+	// exists, so it can land where the send did not.
+	p.record(ctx, "carry", p.sink.Edit(ctx, messageID, notice))
+}
+
+// carryFromContext repurposes the line from a layer that holds no progress
+// reference, the same route the stage narration already takes.
+func carryFromContext(ctx context.Context, notice string) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.Carry(ctx, notice)
+}
+
 // Finish removes the progress line. The reply or the failure notice is the
 // turn's real answer, so the narration does not outlive it.
 func (p *turnProgress) Finish(ctx context.Context) {
@@ -287,8 +318,14 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	}
 	p.finished = true
 	messageID := p.messageID
+	carried := p.carried
 	p.messageID = ""
 	p.mu.Unlock()
+	// A line carrying the notice is the answer. Deleting it here would remove
+	// the only thing the member got. See sirens-echo#624.
+	if carried {
+		return
+	}
 	if messageID != "" {
 		p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
 	}

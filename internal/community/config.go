@@ -255,10 +255,16 @@ type Config struct {
 	JobStoreDir string
 	// ScratchDir mounts the per-requester scratchpad. Empty offers no scratchpad
 	// tools at all. See docs/sirens-echo-scratchpad.md.
-	ScratchDir     string
+	ScratchDir string
+	// PhrasesPath names the canonical phrase registry. Empty renders nothing,
+	// which is today's behaviour. See docs/sirens-echo-phrases.md.
+	PhrasesPath    string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
-	RateLimit      RateLimitPolicy
+	// ShutdownGrace is how long a restart waits for the turns already running.
+	// It has to fit the pod's kill window. See docs/sirens-echo-shutdown.md.
+	ShutdownGrace time.Duration
+	RateLimit     RateLimitPolicy
 }
 
 // LoadConfig loads the Sirens Echo deployment from environment and its
@@ -295,6 +301,13 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_QUEUE_TIMEOUT: %w", err)
 	}
+	shutdownGrace, err := durationOrDefault(
+		os.Getenv("SIRENS_ECHO_SHUTDOWN_GRACE"),
+		defaultShutdownGrace,
+	)
+	if err != nil {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_SHUTDOWN_GRACE: %w", err)
+	}
 	rateLimit, err := loadRateLimitPolicy()
 	if err != nil {
 		return Config{}, err
@@ -325,8 +338,10 @@ func LoadConfig() (Config, error) {
 		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
+		PhrasesPath:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
 		RequestTimeout:         requestTimeout,
 		QueueTimeout:           queueTimeout,
+		ShutdownGrace:          shutdownGrace,
 		RateLimit:              rateLimit,
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {

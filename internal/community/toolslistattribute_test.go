@@ -29,14 +29,13 @@ func listingSpanAttributes(
 		context.Background(),
 		"mcp.tools.list",
 	)
-	session, err := provider.Open(ctx)
-	if err != nil {
-		span.End()
-		t.Fatalf("Open: %v", err)
-	}
-	if err := session.Close(); err != nil {
-		span.End()
-		t.Fatalf("Close: %v", err)
+	// An unreachable roster is one of the states under test, so a failed Open
+	// is a case rather than a fixture problem. The span is written either way.
+	if session, err := provider.Open(ctx); err == nil {
+		if err := session.Close(); err != nil {
+			span.End()
+			t.Fatalf("Close: %v", err)
+		}
 	}
 	span.End()
 	attributes := make(map[string]string)
@@ -63,9 +62,21 @@ func liveToolServer(t *testing.T) string {
 	return httpServer.URL
 }
 
-// Both directions on one provider, because the attribute is only worth
-// anything if the two cases it separates actually report differently.
-func TestTheListingAttributeSeparatesAListingFromAHit(t *testing.T) {
+// unreachableToolServer is an address nothing is listening on, so a connect
+// reaches the network and fails. See sirens-echo#540.
+func unreachableToolServer(t *testing.T) string {
+	t.Helper()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(http.ResponseWriter, *http.Request) {},
+	))
+	url := server.URL
+	server.Close()
+	return url
+}
+
+// All three states on one table, because a field is only worth anything if the
+// cases it separates actually report differently. See sirens-echo#540.
+func TestTheListingAttributeSeparatesAllThreeStates(t *testing.T) {
 	t.Parallel()
 	provider := &MCPProvider{
 		Servers:    []MCPServerDefinition{{Name: "eco", URL: liveToolServer(t)}},
@@ -74,14 +85,33 @@ func TestTheListingAttributeSeparatesAListingFromAHit(t *testing.T) {
 	t.Cleanup(func() { _ = provider.Close() })
 
 	first := listingSpanAttributes(t, provider)
-	if first["mcp.tools.cached"] != "false" || first["mcp.tools.listed"] != "1" {
+	if first["mcp.tools.cached"] != "false" ||
+		first["mcp.tools.reached"] != "1" ||
+		first["mcp.tools.listed"] != "1" {
 		t.Errorf("a first listing was not reported as one: %v", first)
 	}
 
 	// The same provider again, inside the refresh interval. Nothing changed, so
 	// the roster is served from memory and the span must say so.
 	second := listingSpanAttributes(t, provider)
-	if second["mcp.tools.cached"] != "true" || second["mcp.tools.listed"] != "0" {
+	if second["mcp.tools.cached"] != "true" ||
+		second["mcp.tools.reached"] != "0" ||
+		second["mcp.tools.listed"] != "0" {
 		t.Errorf("a cache hit was not reported as one: %v", second)
+	}
+
+	// The state 540 was filed about. A failed connect spends a round trip and
+	// completes no listing, so it is neither a hit nor a listing.
+	dead := &MCPProvider{
+		Servers:    []MCPServerDefinition{{Name: "eco", URL: unreachableToolServer(t)}},
+		HTTPClient: &http.Client{Timeout: time.Second},
+	}
+	t.Cleanup(func() { _ = dead.Close() })
+	outage := listingSpanAttributes(t, dead)
+	if outage["mcp.tools.cached"] != "false" ||
+		outage["mcp.tools.reached"] != "1" ||
+		outage["mcp.tools.listed"] != "0" {
+		t.Errorf("an outage was not reported as one, which is the turn an "+
+			"operator is most likely reading traces on: %v", outage)
 	}
 }

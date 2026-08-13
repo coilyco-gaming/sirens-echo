@@ -41,3 +41,5 @@ fixed.
 
 - [observability](sirens-echo-observability.md) - the full telemetry contract.
 - [exception taxonomy](sirens-echo-exceptions.md) - handled failure grouping.
+- [shutdown](sirens-echo-shutdown.md) - what an orderly exit does before it
+  reaches any of these, and the `shutdown.drained` record it leaves.
