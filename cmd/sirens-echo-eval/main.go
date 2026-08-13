@@ -159,6 +159,10 @@ func runRatePack(
 			os.Getenv("SIRENS_ECHO_SUBSTRATE"),
 			community.SubstrateUnrecorded,
 		),
+		Image: valueOrDefault(
+			os.Getenv("SIRENS_ECHO_IMAGE"),
+			community.ImageUnrecorded,
+		),
 		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 	if err := community.RunRate(

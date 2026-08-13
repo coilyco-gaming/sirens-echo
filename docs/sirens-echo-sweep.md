@@ -45,30 +45,21 @@ records a behavioral failure, and from inside the turn that is indistinguishable
 from a model getting it wrong. No in-process check closes this, which is why the
 host-state record is the load-bearing rule rather than the void rule.
 
-## Recording substrate
+## Recording provenance
 
-`SIRENS_ECHO_SUBSTRATE` is copied verbatim into the emitted provenance. Give it
-the host and its state at run time, for example
-`kai-tower-3026, GPU idle, no encoding load, verified before run`.
+`SIRENS_ECHO_SUBSTRATE` and `SIRENS_ECHO_IMAGE` are copied verbatim into the
+emitted provenance. Give the first a host and its state, for example
+`kai-tower-3026, GPU idle, verified before run`. Give the second the build the
+measured service is running.
 
-Unset, the provenance records `unrecorded`. That is deliberate and it is not a
-neutral default: a dataset that does not know what host produced it should say
-so where a later reader cannot miss it. Treat `unrecorded` as unusable for any
-cross-tier comparison.
+The image matters more than it looks. Roughly half of main's pushes publish no
+image, so the deployed build is often older than the change under measurement,
+and a dataset that does not name it still looks entirely legitimate.
 
-## Recording the model that served
-
-Provenance records the route that was *requested*. A route carrying a fallback
-can answer as a different model, so each attempt also records the model that
-actually served it, taken from the response rather than from configuration.
-
-A cell whose attempts do not all name the same served model has silently
-changed its independent variable partway through. Treat it the same way as a
-cell run on a contended host: void it and re-run, rather than reasoning about
-the mixture.
-
-This records the outcome and does not prevent it. Whether fallbacks should be
-suppressed during a sweep is a routing decision owned elsewhere.
+Unset, either field records `unrecorded`. That is deliberate and not a neutral
+default: a dataset that does not know its host or its build should say so where
+a later reader cannot miss it. Treat `unrecorded` as unusable for any
+comparison.
 
 ## Scope
 

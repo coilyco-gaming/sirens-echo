@@ -55,13 +55,20 @@ type RateProvenance struct {
 	Roster     string `yaml:"roster"`
 	// Substrate records host state at run time. A contended GPU returns a
 	// complete but degraded reply, which no in-process check can detect.
-	Substrate   string `yaml:"substrate"`
+	Substrate string `yaml:"substrate"`
+	// Image is what the measured service is running. A rate against an unknown
+	// build describes nothing, and half of main's pushes publish no image.
+	Image       string `yaml:"image"`
 	GeneratedAt string `yaml:"generated_at"`
 }
 
 // SubstrateUnrecorded marks a dataset nobody described the host for. Saying so
 // beats letting a later reader assume it was idle. See docs/sirens-echo-sweep.md.
 const SubstrateUnrecorded = "unrecorded"
+
+// ImageUnrecorded marks a dataset whose build is unknown, which makes it
+// unusable for before-and-after comparison. See docs/sirens-echo-sweep.md.
+const ImageUnrecorded = "unrecorded"
 
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.
@@ -178,6 +185,9 @@ func runRate(
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	if strings.TrimSpace(provenance.Substrate) == "" {
 		provenance.Substrate = SubstrateUnrecorded
+	}
+	if strings.TrimSpace(provenance.Image) == "" {
+		provenance.Image = ImageUnrecorded
 	}
 	dataset := RateDataset{
 		Schema:     RateDatasetSchema,

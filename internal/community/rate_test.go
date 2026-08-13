@@ -250,8 +250,13 @@ func TestRunRateMarksAnUnrecordedSubstrate(t *testing.T) {
 	); err != nil {
 		t.Fatalf("RunRate: %v", err)
 	}
-	if !strings.Contains(out.String(), "substrate: "+SubstrateUnrecorded) {
-		t.Fatalf("dataset did not mark the substrate unrecorded:\n%s", out.String())
+	for _, want := range []string{
+		"substrate: " + SubstrateUnrecorded,
+		"image: " + ImageUnrecorded,
+	} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("dataset did not mark %q:\n%s", want, out.String())
+		}
 	}
 }
 
@@ -262,15 +267,18 @@ func TestRunRateKeepsARecordedSubstrate(t *testing.T) {
 	reply := sequencedReplies([]CompletionResult{clean, clean, clean, clean}, nil)
 	var out strings.Builder
 	stated := "kai-tower-3026, GPU idle, verified before run"
+	image := "sirens-echo:41ad239f"
 	if err := RunRate(
 		context.Background(), definition, PlaceholderPrincipal, skillpack,
-		ratePackFixture(t), RateProvenance{Substrate: stated},
+		ratePackFixture(t), RateProvenance{Substrate: stated, Image: image},
 		&scriptedCompletionClient{reply: reply}, &out,
 	); err != nil {
 		t.Fatalf("RunRate: %v", err)
 	}
-	if !strings.Contains(out.String(), stated) {
-		t.Fatalf("dataset dropped the recorded substrate:\n%s", out.String())
+	for _, want := range []string{stated, image} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("dataset dropped %q:\n%s", want, out.String())
+		}
 	}
 }
 
