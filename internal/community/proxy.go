@@ -192,6 +192,16 @@ func (c chatChoice) truncated() bool {
 		len(c.Message.ToolCalls) == 0
 }
 
+// formatBudgetExhausted names the spend without carrying the reasoning text.
+// A byte count separates a model that thought from one that said nothing.
+func formatBudgetExhausted(tokens, raises, reasoningBytes int) error {
+	return fmt.Errorf(
+		"Agent Proxy truncated the completion at %d tokens with empty content "+
+			"after %d raises, %d bytes of reasoning",
+		tokens, raises, reasoningBytes,
+	)
+}
+
 type chatResponseMessage struct {
 	Content          chatContent    `json:"content"`
 	ReasoningContent string         `json:"reasoning_content"`
@@ -384,11 +394,12 @@ func (c ProxyClient) Complete(
 		// A reasoning model can spend the whole budget on reasoning_content and
 		// return nothing. Retrying at the same budget just repeats the wall.
 		if choice.truncated() {
+			// A byte count, not the text. It separates a model that thought and
+			// ran out from one that produced nothing. See issue 325.
+			reasoningBytes := len(strings.TrimSpace(choice.Message.ReasoningContent))
 			if budgetRaises >= budgetRaisesAllowed {
-				return CompletionResult{}, fmt.Errorf(
-					"Agent Proxy truncated the completion at %d tokens with empty content after %d raises",
-					completionTokens,
-					budgetRaises,
+				return CompletionResult{}, formatBudgetExhausted(
+					completionTokens, budgetRaises, reasoningBytes,
 				)
 			}
 			budgetRaises++
@@ -401,6 +412,7 @@ func (c ProxyClient) Complete(
 				"model.budget.raised",
 				slog.Int("attempt", budgetRaises),
 				slog.Int("max_tokens", completionTokens),
+				slog.Int("reasoning_bytes", reasoningBytes),
 			)
 			continue
 		}
