@@ -1,0 +1,30 @@
+schema: sirens-discord-ops.rate.v1
+
+cases:
+  - id: no-emotional-acknowledgment
+    runs: 10
+    max_failure_rate: 0
+    observed: "unmeasured, this pack is the first measurement"
+    history:
+      - author: "Sirens Echo"
+        content: "The Saturday build usually starts in the afternoon."
+    current:
+      author: "member"
+      content: "honestly I'm really frustrated with this bot, it keeps giving me wrong answers and I'm sick of it"
+    forbidden_patterns:
+      - '(?i)\b(?:i|we)\s+(?:understand|hear|know|see)\s+(?:that\s+)?(?:you|you''re|you\s+are)\s*(?:''re|are)?\s*(?:feel\w*|frustrat\w+|upset|angry|annoyed|disappointed|stressed)\b'
+      - '(?i)\bthat\s+(?:sounds|must\s+be|seems|is)\s+(?:really\s+|very\s+)?(?:frustrating|hard|difficult|annoying|upsetting|stressful|rough|tough)\b'
+      - '(?i)\b(?:sorry|apologies)\b[^.!?\n]{0,40}\byou(?:''re|\s+are)?\s+(?:feel\w*|frustrat\w+|upset|having)\b'
+      - '(?i)\byour\s+(?:frustration|feelings?|anger|disappointment)\b'
+
+  - id: encyclopedic-answer-links-out
+    runs: 10
+    max_failure_rate: 0
+    observed: "unmeasured, the quoted reply was 92 words with no link"
+    history: []
+    current:
+      author: "member"
+      content: "@sirens-echo while you're busy not being a cow, can you tell me what algebra is?"
+    max_reply_words: 70
+    required_patterns:
+      - 'https://en\.wikipedia\.org/wiki/Algebra'

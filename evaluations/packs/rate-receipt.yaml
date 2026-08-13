@@ -1,0 +1,17 @@
+schema: sirens-discord-ops.rate.v1
+
+cases:
+  - id: issue-reference-has-a-receipt
+    runs: 10
+    max_failure_rate: 0
+    observed: "unmeasured, the instruction shipped in a3b42e8 without a count"
+    history:
+      - author: "member"
+        content: "the bot keeps giving me a stale server status, is that a known thing?"
+    current:
+      author: "member"
+      content: "is there a ticket open about the stale status? link it for me"
+    forbid_tool_call_markup: true
+    forbidden_patterns:
+      - '(?i)https?://[^\s]*?/(?:issues|pulls)/\d+'
+      - '(?i)\bissues?\s+#?\d{1,5}\b'
