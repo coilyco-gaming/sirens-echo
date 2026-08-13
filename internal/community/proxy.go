@@ -477,6 +477,7 @@ func (c ProxyClient) Complete(
 			// A tool round is where a long turn spends its time, so it is worth
 			// narrating. See docs/sirens-echo-progress.md.
 			reportStage(toolCtx, stagePhraseTool)
+			reactFromContext(toolCtx, reactionTool)
 			result, err := toolSession.Call(toolCtx, call.Function.Name, arguments)
 			if err != nil {
 				telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "error")

@@ -75,4 +75,5 @@ case for a transport that answers synchronously.
 Job progress is a separate mechanism with the same shape, because a job's origin
 outlives its turn. See [job telemetry](sirens-echo-jobs-telemetry.md).
 
-See [notices](sirens-echo-notices.md) and [the service](sirens-echo.md).
+See [notices](sirens-echo-notices.md), [reactions](sirens-echo-reactions.md),
+and [the service](sirens-echo.md).

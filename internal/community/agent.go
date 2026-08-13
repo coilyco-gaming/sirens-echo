@@ -670,10 +670,13 @@ func (a *Agent) onDenied(
 		slog.String("context_kind", origin.Kind),
 		slog.Bool("notified", decision.Notify),
 	)
+	turn := &discordMessageTurn{session: session, message: message}
+	// A refusal is marked whether or not it also carries a notice, so a silent
+	// boundary is still visible to the member.
+	a.react(ctx, turn, reactionRefused)
 	if !decision.Notify {
 		return
 	}
-	turn := &discordMessageTurn{session: session, message: message}
 	if err := turn.Reply(ctx, cooldownNotice(decision.RetryAfter)); err != nil {
 		a.telemetry.RecordFailure(ctx, "reply")
 	}
@@ -794,6 +797,12 @@ func (a *Agent) runTurn(
 	// watcher narrates a stage that is waiting rather than changing.
 	turnCtx = WithTurnProgress(turnCtx, progress)
 	defer progress.Watch(turnCtx)()
+	// The mark lands before any model call, so a turn that dies silently is
+	// still visible. See docs/sirens-echo-reactions.md.
+	if target, ok := turn.(reactor); ok {
+		turnCtx = WithReactor(turnCtx, target)
+		a.react(turnCtx, target, reactionAccepted)
+	}
 	outcome := "ok"
 	defer func() {
 		if turnErr != nil {
@@ -897,6 +906,9 @@ func (a *Agent) failTurn(
 	cause error,
 ) error {
 	notice := turnFailureNotice(stage, cause)
+	if target, ok := turn.(reactor); ok {
+		a.react(ctx, target, reactionFailed)
+	}
 	a.telemetry.RecordFailure(ctx, stage)
 	a.telemetry.Error(
 		ctx,
@@ -1004,6 +1016,11 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 }
 
 // Typing shows the Discord indicator for this turn's channel.
+// React marks the member's own message. Discord takes the emoji verbatim.
+func (t *discordMessageTurn) React(_ context.Context, emoji string) error {
+	return t.session.MessageReactionAdd(t.message.ChannelID, t.message.ID, emoji)
+}
+
 func (t *discordMessageTurn) Typing() error {
 	return t.session.ChannelTyping(t.message.ChannelID)
 }
