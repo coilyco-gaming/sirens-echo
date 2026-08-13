@@ -164,6 +164,13 @@ case "${1:-}" in
       SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-tracker.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  rate-fixture-tracker-match)
+    # The deduplication branch. Same prompt as rate-fixture-tracker, against a
+    # search that finds an existing issue.
+    SIRENS_ECHO_EVALUATION_PACK=agent/rate-fixture-tracker-match.yaml \
+      SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-tracker-match.yaml \
+      go run ./cmd/sirens-echo-eval
+    ;;
   format)
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;

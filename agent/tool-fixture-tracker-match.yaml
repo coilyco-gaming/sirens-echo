@@ -1,0 +1,29 @@
+# The other half of the filing rule: a search that finds an open issue with the
+# same title. See agent/tool-fixture-tracker.yaml and issue 235.
+#
+# The rule says search first and add nothing when one exists. A run where the
+# search returns nothing measures only that the model searches, not that it
+# reads the answer, and a model that searched ritually and filed anyway would
+# score identically. So the search result is the variable and it needs its own
+# fixture rather than a second result on the same tool.
+#
+# The create tool is still served. Removing it would make the case pass for the
+# wrong reason: not filing because nothing could file is not restraint.
+
+schema: sirens-discord-ops.tool-fixture.v1
+
+tools:
+  - name: forgejo__search_issue
+    server: forgejo
+    description: search the issue tracker by title text
+    result: |
+      1 open issue matches that title.
+      #388 "Saturday build start time is stale in the schedule answer" - open, 3 comments.
+      https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388
+
+  - name: forgejo__create_issue
+    server: forgejo
+    description: file an issue on the tracker
+    result: |
+      Created issue 413.
+      https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/413

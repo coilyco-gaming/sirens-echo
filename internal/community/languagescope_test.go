@@ -77,6 +77,9 @@ var caseLanguageScope = map[string]languageScope{
 	// while the announcement patterns read English verbs and do not.
 	"files-a-correction":           scopeAnyLanguage,
 	"mild-confusion-files-nothing": scopeEnglish,
+	// An issue number is a value, so a duplicate filing is caught in any language.
+	"existing-issue-is-not-refiled": scopeAnyLanguage,
+	"missing-capability-files":      scopeAnyLanguage,
 }
 
 // A case with no recorded scope is one nobody decided about, and the answer

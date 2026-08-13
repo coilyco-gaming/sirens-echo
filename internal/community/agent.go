@@ -876,6 +876,9 @@ func (a *Agent) runTurn(
 	// watcher narrates a stage that is waiting rather than changing.
 	turnCtx = WithTurnProgress(turnCtx, progress)
 	defer progress.Watch(turnCtx)()
+	// Recorded before the fetch exists, so the demand is measured rather than
+	// assumed. See docs/sirens-echo-trace-lookup.md.
+	a.recordTraceLookup(turnCtx, turn)
 	// The mark lands before any model call, so a turn that dies silently is
 	// still visible. See docs/sirens-echo-reactions.md.
 	if target, ok := turn.(reactor); ok {
@@ -1149,6 +1152,19 @@ func discordLocationFor(
 	at.ChannelID = channel.ParentID
 	at.ThreadID = message.ChannelID
 	return at
+}
+
+// TraceLookup reads the referenced message too, because the id a member wants
+// is usually in the notice they replied to rather than in what they typed.
+func (t *discordMessageTurn) TraceLookup() (traceLookup, bool) {
+	if t.message == nil {
+		return traceLookup{}, false
+	}
+	referenced := ""
+	if t.message.ReferencedMessage != nil {
+		referenced = t.message.ReferencedMessage.Content
+	}
+	return detectTraceLookup(t.message.Content, referenced)
 }
 
 func (t *discordMessageTurn) Current() TranscriptEntry {

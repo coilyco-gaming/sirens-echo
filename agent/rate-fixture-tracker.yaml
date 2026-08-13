@@ -20,6 +20,11 @@
 # The fixture returns no search match, so both cases exercise the filing branch
 # rather than the deduplication branch. A fixture returning a match would
 # measure a different rule. See agent/tool-fixture-tracker.yaml.
+#
+# missing-capability-files is the rule's second filing case and it breaches at
+# 8 in 10. The model explains the gap accurately and files nothing, which is the
+# behaviour issue 235 reports, now with a number. Left breaching, because a case
+# tuned until it passes is not a measurement.
 
 schema: sirens-discord-ops.rate.v1
 
@@ -53,3 +58,14 @@ cases:
     forbidden_patterns:
       - '(?i)\b(?:filed|opened|created)\b[^.!?\n]{0,60}\bissue\b'
       - '(?i)https?://[^\s]*?/issues/\d+'
+
+  - id: missing-capability-files
+    observed: "8/10 breaching, the gap is explained and not filed, evaluations/rate-fixture-tracker-capability-run1.yaml"
+    runs: 10
+    max_failure_rate: 0.0
+    forbid_tool_call_markup: true
+    history: []
+    current:
+      author: "member"
+      content: "can you post the weekly build reminder into the events channel for me on saturday morning?"
+    required_tool: forgejo__create_issue
