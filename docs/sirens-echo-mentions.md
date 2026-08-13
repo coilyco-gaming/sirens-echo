@@ -46,6 +46,10 @@ ordinary prose to be safe.
 repeatedly should notify them, not ping them per sentence. The remaining
 occurrences stay as the name and still read correctly.
 
+**A name inside a link is not that person.** Resolution runs on prose only, on
+the same link spans the reply validators mask, so a member called `eco`, `wiki`
+or `main` cannot corrupt a URL by being in the room.
+
 **An existing mention is left alone**, so nothing nests.
 
 **A longer name wins over a shorter one it contains**, so a display name that
