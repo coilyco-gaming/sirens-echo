@@ -45,9 +45,15 @@ func (r mentionRoster) names() []string {
 	return names
 }
 
-// opaqueSpan is a run no name is read inside: a link, or Discord markup whose
-// inner text is an id or an emoji name. See docs/sirens-echo-mentions.md.
-var opaqueSpan = regexp.MustCompile(urlSpan.String() + `|<[@#:][^>]{0,64}>|<a?:[^>]{0,64}>`)
+// codeSpanPattern matches a fenced block or an inline span. The longest
+// delimiter is listed first, so a fence is not read as an empty inline span.
+const codeSpanPattern = "```(?s:.*?)```" + "|``[^`]*``" + "|`[^`\n]*`"
+
+// opaqueSpan is a run no name is read inside: a link, a code span, or Discord
+// markup whose inner text is an id or an emoji name. See docs/sirens-echo-mentions.md.
+var opaqueSpan = regexp.MustCompile(
+	urlSpan.String() + `|<[@#:][^>]{0,64}>|<a?:[^>]{0,64}>|` + codeSpanPattern,
+)
 
 // mentionSpan is a run of the reply. An opaque run is carried through
 // byte-identical, because its components are not people.

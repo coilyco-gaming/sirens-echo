@@ -125,3 +125,62 @@ func TestANameBesideMarkupStillResolves(t *testing.T) {
 		t.Errorf("the markup was altered: %q", out)
 	}
 }
+
+// A code span holds a command, a tool name, or an identifier, so a person's
+// name inside one is a collision rather than a reference. See sirens-echo#486.
+var mentionCodeCorpus = map[string]string{
+	"eco":     "run `eco status` to check",
+	"steam":   "the ``steam`` reader is separate",
+	"forgejo": "```\nforgejo --version\n```",
+	"main":    "on branch `main` only",
+}
+
+func TestACodeSpanIsCarriedThroughByteIdentical(t *testing.T) {
+	t.Parallel()
+	for name, reply := range mentionCodeCorpus {
+		roster := mentionRoster{}
+		roster.add(name, "999")
+		out, resolved := roster.resolveMentions(reply)
+		if out != reply {
+			t.Errorf("the name %q rewrote the code it sits inside:\n  want %s\n  got  %s",
+				name, reply, out)
+		}
+		if len(resolved) != 0 {
+			t.Errorf("the name %q reached %v for a code span that merely contains it",
+				name, resolved)
+		}
+	}
+}
+
+// The reported shape. Every tool-using turn carries backticked tool names, and
+// a receipt naming a person instead of a tool is worse than no receipt.
+func TestTheDisclosureFooterSurvivesAMemberNamedAfterATool(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("eco", "999")
+	reply := "Trading is busy right now.\n\n" +
+		"> \U0001F528 ✅ `eco.get_market`\n" +
+		"> \U0001F528 \U0001F4ED `eco.find_trade` — no results"
+	out, resolved := roster.resolveMentions(reply)
+	if out != reply {
+		t.Errorf("the footer was rewritten:\n  want %s\n  got  %s", reply, out)
+	}
+	if len(resolved) != 0 {
+		t.Errorf("a tool name in the footer pinged %v", resolved)
+	}
+}
+
+// The half that must survive. A name in prose beside a code span is still that
+// person, and the span is still left alone.
+func TestANameBesideACodeSpanStillResolves(t *testing.T) {
+	t.Parallel()
+	roster := mentionRoster{}
+	roster.add("eco", "999")
+	out, resolved := roster.resolveMentions("eco asked about `eco status` today")
+	if len(resolved) != 1 {
+		t.Fatalf("the prose name did not resolve: %q %v", out, resolved)
+	}
+	if !strings.HasPrefix(out, "<@999> asked") || !strings.Contains(out, "`eco status`") {
+		t.Errorf("the wrong occurrence was rewritten: %q", out)
+	}
+}
