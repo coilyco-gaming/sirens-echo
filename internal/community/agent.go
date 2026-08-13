@@ -1140,7 +1140,7 @@ func (a *Agent) runTurn(
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
-	progress.Settle(turnCtx)
+	a.settleWithSpan(turnCtx, progress.settleDelay(), progress.Settle)
 
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return errors.Join(err, a.reportUndelivered(turnCtx, turn))
@@ -1192,7 +1192,7 @@ func (a *Agent) failTurn(
 		slog.String("failure_cause", failureCause(cause)),
 		slog.String("notice", notice),
 	)
-	settleFromContext(ctx)
+	a.settleWithSpan(ctx, settleDelayFromContext(ctx), settleFromContext)
 	noticeErr := a.notifyFailure(ctx, turn, notice)
 	// The send lost, so the line already in the channel becomes the answer.
 	// Deleting it leaves less than the acknowledgement. See sirens-echo#624.
@@ -1218,6 +1218,23 @@ func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) e
 	)
 	defer cancel()
 	return a.sendReply(withoutThreading(noticeCtx), turn, noticeWithTrace(ctx, notice))
+}
+
+// settleWithSpan names the deliberate hold before a reply lands. Without it the
+// wait reads as unexplained latency. See sirens-echo#652.
+func (a *Agent) settleWithSpan(ctx context.Context, hold time.Duration, settle func(context.Context)) {
+	if hold <= 0 {
+		settle(ctx)
+		return
+	}
+	settleCtx, span := a.telemetry.StartSpan(
+		ctx,
+		"turn.progress.settle",
+		attribute.Int64("turn.progress.hold_ms", hold.Milliseconds()),
+		attribute.Int64("turn.progress.beat_ms", turnProgressEvery.Milliseconds()),
+	)
+	settle(settleCtx)
+	span.End()
 }
 
 // withoutThreading drops the turn's progress so a notice cannot take the

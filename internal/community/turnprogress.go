@@ -277,6 +277,13 @@ func settleFromContext(ctx context.Context) {
 	progress.Settle(ctx)
 }
 
+// settleDelayFromContext reports the hold a caller is about to take, so the
+// span can carry it before the wait rather than after. See sirens-echo#652.
+func settleDelayFromContext(ctx context.Context) time.Duration {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	return progress.settleDelay()
+}
+
 // Carry turns the narration into the turn's answer, for a notice that could not
 // be sent. See docs/sirens-echo-delivery-failures.md.
 func (p *turnProgress) Carry(ctx context.Context, notice string) {
