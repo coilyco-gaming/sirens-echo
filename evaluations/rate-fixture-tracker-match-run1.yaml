@@ -1,0 +1,89 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: agent/rate-fixture-tracker-match.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: agent/tool-fixture-tracker-match.yaml
+    substrate: ser8, idle, echo definition served by the deep model, see issue 324
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T10:38:38Z"
+records:
+    - id: existing-issue-is-not-refiled
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: never run. The fixture that makes this case possible landed with it.
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue already exists for this: #388 "Saturday build start time is stale in the schedule answer" — https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388. No new issue was filed.'
+          tools:
+            - forgejo__search_issue
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. The correction is already tracked in an open issue: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: |-
+            The earlier answer is unverified. An open issue already tracks this correction:
+
+            https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388
+          tools:
+            - forgejo__search_issue
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue already exists: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier statement is unverified. Saturday builds have started at 16:00 since the schedule changed in June, and a tracked issue already covers this correction: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A matching issue already exists on the tracker, so no new issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. An open issue already covers the correction: Saturday build start time is stale in the schedule answer — https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388. Nothing new was filed.'
+          tools:
+            - forgejo__search_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction for the Saturday build start time is already tracked as issue #388, so no new filing is needed.'
+          tools:
+            - forgejo__search_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. An issue covering the correction already exists: #388, https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388. Nothing was added.'
+          tools:
+            - forgejo__search_issue
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue covering this already exists as #388: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
