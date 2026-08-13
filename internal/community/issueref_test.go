@@ -129,3 +129,18 @@ func TestAppendIssueReferencesKeepsNeutralStyle(t *testing.T) {
 		t.Fatalf("appended block breaks neutral style: %v", err)
 	}
 }
+
+// The append path resolves a short reference the model wrote, so the model has
+// to know which references are safe to write. Nothing else states the rule.
+func TestTheModelIsToldWhichIssueReferencesAreSafe(t *testing.T) {
+	t.Parallel()
+	prose := policyRootProse(t)
+	for _, phrase := range []string{
+		"A tracked issue is named by number, not by URL",
+		"Name one only when a tool result this turn returned it",
+	} {
+		if !strings.Contains(prose, phrase) {
+			t.Errorf("no policy root tells the model %q", phrase)
+		}
+	}
+}
