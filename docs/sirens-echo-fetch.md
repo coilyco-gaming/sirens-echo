@@ -37,6 +37,13 @@ Carrier-grade NAT is named separately because Go's `IsPrivate` is RFC1918 only,
 so `100.64.0.0/10` reads as public to every other predicate. That range is the
 tailnet, which is the network this bound exists to keep out.
 
+**A page over the cap is marked, not silently cut.** The read takes one byte
+past the limit, so a page that fits is distinguishable from one that does not,
+and an oversize body comes back with the text it did fetch plus a line saying
+it was truncated. A half document the model cannot tell from a whole one is
+answered from with ordinary confidence. The seam is repaired to a valid rune
+boundary, since cutting on a byte offset can split a character.
+
 **Redirects refused.** A redirect is a second destination the allowlist never
 saw, and following one turns an approved host into an open relay.
 

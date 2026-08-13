@@ -3,6 +3,7 @@ package community
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // An arbitrary-URL fetch runs inside the cluster, so the allowlist is the
@@ -145,5 +146,52 @@ func TestTheGuardKeepsItsExistingReachAndRefusals(t *testing.T) {
 		if err := refusePrivateAddress(address); err != nil {
 			t.Errorf("%s was refused, so the guard blocks public destinations: %v", address, err)
 		}
+	}
+}
+
+// A page cut at the cap used to come back looking whole, so the model answered
+// from a document whose ending it never saw. See sirens-echo#435.
+func TestATruncatedPageSaysSo(t *testing.T) {
+	t.Parallel()
+	oversized := []byte(strings.Repeat("a", maxFetchBytes+1))
+	got := fetchText(200, oversized)
+	if !strings.Contains(got, "truncated at") {
+		t.Error("an oversize page came back with no sign it was cut")
+	}
+	// The body is still delivered. Refusing outright would waste a request that
+	// succeeded, and a page is usually front-loaded.
+	if !strings.Contains(got, "aaa") {
+		t.Error("the page was discarded rather than truncated")
+	}
+}
+
+func TestAPageThatFitsIsUnchanged(t *testing.T) {
+	t.Parallel()
+	got := fetchText(200, []byte("hello"))
+	if got != "200\nhello" {
+		t.Errorf("body = %q, want it untouched", got)
+	}
+	if strings.Contains(got, "truncated") {
+		t.Error("a page within the cap was marked as truncated")
+	}
+	// Exactly at the cap is not over it.
+	exact := fetchText(200, []byte(strings.Repeat("b", maxFetchBytes)))
+	if strings.Contains(exact, "truncated") {
+		t.Error("a page exactly at the cap was marked as truncated")
+	}
+}
+
+// Cutting on a byte offset can split a rune, and a broken character at the seam
+// is a different defect from the one being fixed.
+func TestTruncationDoesNotSplitARune(t *testing.T) {
+	t.Parallel()
+	// Multi-byte characters arranged so the cap lands mid-rune.
+	body := []byte(strings.Repeat("a", maxFetchBytes-1) + "日本語")
+	got := fetchText(200, body)
+	if !utf8.ValidString(got) {
+		t.Error("truncation produced invalid UTF-8 at the seam")
+	}
+	if !strings.Contains(got, "truncated at") {
+		t.Error("the oversize page was not marked")
 	}
 }
