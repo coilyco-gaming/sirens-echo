@@ -3,19 +3,40 @@
 How a progress line behaves once it exists. See
 [progress](sirens-echo-progress.md) for the line itself.
 
-## A posted line is held before the reply replaces it
+## The line starts a grid, and everything later lands on it
 
 A turn just over the threshold posts a line and answers a moment later, so the
-line vanishes before it is readable and the channel churns for nothing. Once a
-line is posted the reply waits until it has been up for a minimum window.
+line vanishes before it is readable and the channel churns for nothing. The
+line therefore starts a beat. It posts at three seconds, and every message
+after it releases on a six second grid measured from that post.
 
-An unnarrated turn is never held, which is what keeps an ordinary reply fast. A
-line already visible longer than the window is not held again, so a genuinely
-long turn does not pay the delay twice. A cancelled turn stops waiting rather
-than sitting on the member's answer.
+| moment | what happens |
+| --- | --- |
+| 3s | the line posts, and anything ready now goes now |
+| 3.1s | ready, and held |
+| 9s | it posts |
+| 9.1s | ready, and held |
+| 15s | it posts |
+
+The grid does not stop. A turn still running at the tenth beat waits for the
+eleventh, so the hold is at most one window and averages half of one however
+long the turn runs. Landing exactly on a beat is on time, since rounding a
+punctual reply up to a whole extra window would be the cadence working against
+the member.
+
+An unnarrated turn is never held, which is what keeps an ordinary reply fast: a
+reply before three seconds posts no line, so there is no grid to wait for. A
+cancelled turn stops waiting rather than sitting on the member's answer.
 
 The failure path holds too, reaching the line through the turn context, since a
-notice replacing a just-posted line churns as much as a reply does.
+notice replacing a just-posted line churns as much as a reply does. That means
+a dead turn can show a stale line for up to one window before the notice
+replaces it. A notice that jumped the grid would make failure the one thing
+that answers instantly.
+
+Edits ride the same beat. An edit is bounded by the same six seconds since the
+last one, and the post counts as the first, so the first edit lands with the
+first beat rather than on a cadence of its own.
 
 ## Every sink call is recorded
 

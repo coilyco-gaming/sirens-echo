@@ -5,7 +5,7 @@ line for a two-second reply is noise.
 
 ## What a member sees
 
-Nothing for the first four seconds. After that, one line in the harness notice
+Nothing for the first three seconds. After that, one line in the harness notice
 format that edits in place as the turn moves:
 
 > `reading recent messages`

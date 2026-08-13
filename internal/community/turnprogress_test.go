@@ -313,14 +313,14 @@ func TestAFailedProgressPostIsRecorded(t *testing.T) {
 	}
 }
 
-// Kai asked for a four second threshold and a two second edit bound.
+// Kai asked for a three second threshold and a six second grid after it.
 func TestProgressThresholdsMatchTheRequestedCadence(t *testing.T) {
 	t.Parallel()
-	if turnProgressAfter != 4*time.Second {
-		t.Errorf("turnProgressAfter = %s, want 4s", turnProgressAfter)
+	if turnProgressAfter != 3*time.Second {
+		t.Errorf("turnProgressAfter = %s, want 3s", turnProgressAfter)
 	}
-	if turnProgressEvery != 2*time.Second {
-		t.Errorf("turnProgressEvery = %s, want 2s", turnProgressEvery)
+	if turnProgressEvery != 6*time.Second {
+		t.Errorf("turnProgressEvery = %s, want 6s", turnProgressEvery)
 	}
 }
 
@@ -343,8 +343,8 @@ func TestAFastTurnStillPostsNothingAtTheLowerThreshold(t *testing.T) {
 	}
 }
 
-// Kai's scenario: a 4.1 second turn posts a line at 4 seconds and the reply
-// lands 0.1 seconds later, replacing it before anyone can read it.
+// Kai's scenario: a line at 3 seconds and a reply 0.1 seconds later, which
+// releases on the next beat at 9 seconds rather than replacing the line.
 func TestAPostedLineIsHeldBeforeTheReplyReplacesIt(t *testing.T) {
 	t.Parallel()
 	sink := &recordingSink{}
@@ -364,7 +364,7 @@ func TestAPostedLineIsHeldBeforeTheReplyReplacesIt(t *testing.T) {
 	if held <= 0 {
 		t.Fatal("the reply was not held at all")
 	}
-	want := minProgressVisible - 100*time.Millisecond
+	want := turnProgressEvery - 100*time.Millisecond
 	if held != want {
 		t.Fatalf("held for %s, want %s", held, want)
 	}
@@ -389,9 +389,9 @@ func TestAnUnnarratedTurnIsNotHeld(t *testing.T) {
 	}
 }
 
-// A line already visible long enough is not held again, so a genuinely long
-// turn does not pay the delay twice.
-func TestALongVisibleLineIsNotHeldAgain(t *testing.T) {
+// The grid keeps going, so a turn still running past the first beat waits for
+// the next one rather than being released early.
+func TestTheGridRepeatsPastTheFirstBeat(t *testing.T) {
 	t.Parallel()
 	sink := &recordingSink{}
 	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
@@ -400,10 +400,30 @@ func TestALongVisibleLineIsNotHeldAgain(t *testing.T) {
 	progress.Stage(context.Background(), stagePhraseThinking)
 	advance(turnProgressAfter)
 	progress.refresh(context.Background())
-	advance(minProgressVisible + time.Second)
+
+	// Kai's second step: ready at 9.1 seconds, so it releases at 15.
+	advance(turnProgressEvery + 100*time.Millisecond)
+	want := turnProgressEvery - 100*time.Millisecond
+	if held := progress.settleDelay(); held != want {
+		t.Fatalf("held for %s past the first beat, want %s", held, want)
+	}
+}
+
+// Landing exactly on a beat is on time. Without this the grid would round a
+// punctual reply up to a whole extra window.
+func TestAReplyOnTheBeatIsNotHeld(t *testing.T) {
+	t.Parallel()
+	sink := &recordingSink{}
+	now, advance := stepClock(time.Unix(1700000000, 0).UTC())
+	progress := newTurnProgress(sink, now)
+
+	progress.Stage(context.Background(), stagePhraseThinking)
+	advance(turnProgressAfter)
+	progress.refresh(context.Background())
+	advance(turnProgressEvery * 2)
 
 	if held := progress.settleDelay(); held != 0 {
-		t.Fatalf("an already visible line was held for %s", held)
+		t.Fatalf("a reply on the beat was held for %s", held)
 	}
 }
 

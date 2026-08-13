@@ -13,13 +13,10 @@ import (
 const (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
-	turnProgressAfter = 4 * time.Second
-	// turnProgressEvery bounds edits, so a tool-heavy turn cannot spend its
-	// budget on Discord calls.
-	turnProgressEvery = 2 * time.Second
-	// minProgressVisible holds a reply back so a posted line stays readable
-	// rather than being replaced the instant the model returns.
-	minProgressVisible = 6 * time.Second
+	turnProgressAfter = 3 * time.Second
+	// turnProgressEvery is the grid every later message releases on, so an edit,
+	// a reply, and a failure notice all land on the same beat.
+	turnProgressEvery = 6 * time.Second
 )
 
 // The stage phrases. They come from the closed notice vocabulary, so a progress
@@ -214,8 +211,8 @@ func reportStage(ctx context.Context, phrase string) {
 	progress.Stage(ctx, phrase)
 }
 
-// settleDelay is how much longer a posted line should stay up. A turn that
-// never posted one returns zero, so an ordinary reply is never delayed.
+// settleDelay is how long until the next beat of the grid the line started. A
+// turn that never posted one returns zero, so an ordinary reply is never held.
 func (p *turnProgress) settleDelay() time.Duration {
 	if p == nil || p.sink == nil {
 		return 0
@@ -226,8 +223,13 @@ func (p *turnProgress) settleDelay() time.Duration {
 	if posted.IsZero() {
 		return 0
 	}
-	if remaining := minProgressVisible - p.now().Sub(posted); remaining > 0 {
-		return remaining
+	elapsed := p.now().Sub(posted)
+	if elapsed <= 0 {
+		return 0
+	}
+	// Landing exactly on a beat is already on time, so only a remainder waits.
+	if remainder := elapsed % turnProgressEvery; remainder > 0 {
+		return turnProgressEvery - remainder
 	}
 	return 0
 }
