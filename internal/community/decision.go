@@ -15,6 +15,16 @@ var (
 	personalityPhrase = regexp.MustCompile(`(?i)\b(?:happy to help|glad to help|let me know|what can I help|how can I help|would you like|hope that helps|here['’]s the thing|no worries|community host|my toolset|my tools)\b`)
 )
 
+// urlSpan matches a bare link. Every check here reads prose, and a link is not
+// prose. See docs/sirens-echo-prompt.md.
+var urlSpan = regexp.MustCompile(`https?://[^\s<>()\[\]]+`)
+
+// maskURLs hides links from a prose check. The replacement is a plain word, so
+// masking cannot join the words on either side into a phrase neither had.
+func maskURLs(text string) string {
+	return urlSpan.ReplaceAllString(text, " link ")
+}
+
 // ParseReply bounds the model's plain-text reply. Nothing unwraps a fence or
 // JSON: a fence is reply content now, and stripping it would corrupt an answer.
 func ParseReply(raw string) (string, error) {
@@ -32,10 +42,10 @@ func ParseReply(raw string) (string, error) {
 // action claims that are not supported by a completed tool call.
 func ValidateGrounding(reply string, suppliedContext string, executed ...ExecutedTool) error {
 	allowedChannels := make(map[string]struct{})
-	for _, channel := range channelPattern.FindAllString(suppliedContext, -1) {
+	for _, channel := range channelPattern.FindAllString(maskURLs(suppliedContext), -1) {
 		allowedChannels[strings.ToLower(channel)] = struct{}{}
 	}
-	for _, channel := range channelPattern.FindAllString(reply, -1) {
+	for _, channel := range channelPattern.FindAllString(maskURLs(reply), -1) {
 		if _, ok := allowedChannels[strings.ToLower(channel)]; !ok {
 			return fmt.Errorf("model invented channel %s", channel)
 		}
@@ -84,7 +94,7 @@ func ValidateIdentityClaim(reply string, principal Principal) error {
 // ValidateNeutralStyle rejects the model-facing traits that make a service
 // reply read as a person or character instead of a direct result.
 func ValidateNeutralStyle(reply string) error {
-	reply = strings.TrimSpace(reply)
+	reply = maskURLs(strings.TrimSpace(reply))
 	if socialOpening.MatchString(reply) {
 		return fmt.Errorf("model reply used a social opening")
 	}

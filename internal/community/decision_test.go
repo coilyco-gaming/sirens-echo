@@ -144,3 +144,47 @@ func TestValidateResponseStyleAllowsSocialVoice(t *testing.T) {
 		t.Fatal("neutral response style accepted social voice")
 	}
 }
+
+// A link is not prose: `coilysiren.me` ends in the pronoun "me" and a Forgejo
+// fragment looks like a channel.
+func TestValidateNeutralStyleAllowsLinks(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"The tracked report is https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233",
+		"Trade history is at https://eco.coilysiren.me/trades",
+		"The reference is https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233#issue-8117",
+	} {
+		reply := reply
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateNeutralStyle(reply); err != nil {
+				t.Fatalf("ValidateNeutralStyle rejected a link: %v", err)
+			}
+		})
+	}
+}
+
+func TestValidateGroundingAllowsURLFragment(t *testing.T) {
+	t.Parallel()
+	reply := "The report is https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233#issue-8117"
+	if err := ValidateGrounding(reply, "The current channel is #bots."); err != nil {
+		t.Fatalf("ValidateGrounding rejected a URL fragment: %v", err)
+	}
+}
+
+// Masking must not weaken the check for prose outside the link.
+func TestValidateNeutralStyleStillRejectsProseAroundLinks(t *testing.T) {
+	t.Parallel()
+	reply := "Here is my tracked report: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233"
+	if err := ValidateNeutralStyle(reply); err == nil {
+		t.Fatal("ValidateNeutralStyle accepted first-person prose beside a link")
+	}
+}
+
+func TestValidateGroundingStillRejectsInventedChannelBesideLink(t *testing.T) {
+	t.Parallel()
+	reply := "See #announcements and https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233"
+	if err := ValidateGrounding(reply, "The current channel is #bots."); err == nil {
+		t.Fatal("ValidateGrounding accepted an invented channel beside a link")
+	}
+}
