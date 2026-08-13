@@ -46,6 +46,7 @@ type Agent struct {
 	jobs *JobRunner
 	// exchanges bounds a run of agent-to-agent turns per channel.
 	exchanges *exchangeLimiter
+	beats     *heartbeat
 	// identifiers refuses a reply carrying a value this process holds.
 	identifiers *IdentifierGuard
 }
@@ -307,6 +308,10 @@ func (a *Agent) Run(ctx context.Context) error {
 			return fmt.Errorf("Discord open: %w", err)
 		}
 		defer a.session.Close()
+		// A positive signal, so a quiet guild and a stopped gateway stop
+		// producing the same telemetry. See docs/sirens-echo-heartbeat.md.
+		a.beats = &heartbeat{}
+		defer a.watchGateway(ctx)()
 	}
 	if a.tools != nil {
 		// Supervised MCP connections outlive every turn, so shutdown is the only
@@ -412,6 +417,9 @@ func editSummons(session *discordgo.Session, event *discordgo.MessageUpdate) boo
 }
 
 func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Message) {
+	// Counted before eligibility, since ingress stopping and every message
+	// being ineligible are different failures.
+	a.beats.observe()
 	if !eligibleMessage(session, message, a.access) {
 		// A misconfigured allowlist and a quiet channel looked identical, since
 		// this path recorded nothing at all. See docs/sirens-echo-counterparts.md.
@@ -439,6 +447,7 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		)
 		return
 	}
+	a.beats.admit()
 	origin := summonContextFor(message)
 	// The whole allowlist decides from the payload already in memory, so a
 	// guild, member, or channel outside it costs nothing.
@@ -970,6 +979,7 @@ func (a *Agent) runTurn(
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
 		return errors.Join(err, a.reportUndelivered(turnCtx, turn))
 	}
+	a.beats.reply()
 	return nil
 }
 
