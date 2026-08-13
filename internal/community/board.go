@@ -59,6 +59,7 @@ type BoardProvenance struct {
 	Transport   string `yaml:"transport"`
 	Roster      string `yaml:"roster"`
 	Epochs      int    `yaml:"epochs"`
+	Composed    string `yaml:"composed"`
 	GeneratedAt string `yaml:"generated_at"`
 }
 
@@ -212,11 +213,11 @@ func runBoard(
 	if epochs < 1 {
 		return fmt.Errorf("board run requires at least one epoch")
 	}
-	composed := ""
-	if definition.Composed {
-		composed = PlaceholderComposed
-	}
+	composed, composedState := composedForRun(definition)
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	// Derived rather than accepted, so a graded dataset cannot name a bundle
+	// this run did not read. See sirens-echo#316.
+	provenance.Composed = composedState
 	dataset := BoardDataset{
 		Schema:     BoardDatasetSchema,
 		Provenance: provenance,

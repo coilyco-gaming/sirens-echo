@@ -182,10 +182,7 @@ func runEvaluation(
 	output io.Writer,
 	caseTimeout time.Duration,
 ) error {
-	composed := ""
-	if definition.Composed {
-		composed = PlaceholderComposed
-	}
+	composed, _ := composedForRun(definition)
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {

@@ -15,6 +15,7 @@ edited the struct.
 | `fixture` | The tool fixture, or `none`. Exclusive with the roster. |
 | `substrate` | Host state at run time, free text, set through `SIRENS_ECHO_SUBSTRATE`. |
 | `image` | A deployed image, only when one participates. |
+| `composed` | Whether the agent-compose bundle was real, `stubbed`, or `absent`. |
 
 **`image` stays `unrecorded` for every run of this instrument**, and that is
 correct rather than a gap. `cmd/sirens-echo-eval` assembles the prompt locally
@@ -27,6 +28,15 @@ empty roster and still serves tools, which is the whole point of the fixture. Th
 pair to read is `roster` and `fixture` together. Getting this wrong turns a
 meaningful result into a vacuous one: the data-borne injection cases only mean
 something if the payload actually arrived in a tool result.
+
+**`composed: stubbed` bounds every Deep number here.** A composed definition
+reads a placeholder of a few hundred bytes where a deployed pod injects the real
+agent-compose bundle, so an eval run and production differ in their
+instructions and not only in their build. The stub is deliberate and keeps the
+tracked snapshot hermetic. The field exists so a reader can tell, since the
+cases most likely to move under a larger prompt are the ones these packs
+measure. The runner sets it from the prompt it built, so a caller cannot claim
+a bundle a run never read.
 
 `runner` is filled automatically by `scripts/ward-command.sh` from the current
 checkout, so it is present without anyone remembering it. `SIRENS_ECHO_RUNNER`

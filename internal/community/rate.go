@@ -64,7 +64,10 @@ type RateProvenance struct {
 	Runner string `yaml:"runner"`
 	// Image records a deployed image only when one participates in the run. This
 	// runner never calls a pod, so it stays unrecorded. Read Runner instead.
-	Image       string `yaml:"image"`
+	Image string `yaml:"image"`
+	// Composed records whether the agent-compose bundle was stubbed. The runner
+	// sets it from the prompt it built. See sirens-echo#316.
+	Composed    string `yaml:"composed"`
 	GeneratedAt string `yaml:"generated_at"`
 }
 
@@ -196,11 +199,11 @@ func runRate(
 	output io.Writer,
 	caseTimeout time.Duration,
 ) error {
-	composed := ""
-	if definition.Composed {
-		composed = PlaceholderComposed
-	}
+	composed, composedState := composedForRun(definition)
 	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	// Derived rather than accepted. A caller cannot report a bundle this run
+	// did not read, which is the whole value of the field.
+	provenance.Composed = composedState
 	if strings.TrimSpace(provenance.Substrate) == "" {
 		provenance.Substrate = SubstrateUnrecorded
 	}
