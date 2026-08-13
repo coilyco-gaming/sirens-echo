@@ -32,8 +32,8 @@ Forgejo MCP, names no channel, and has no automatic issue tracker.
 
 ## Commands
 
-Route every dev verb through Ward: `ward exec build`, `policy-check`, `vet`,
-`test`, `tidy`, and `run-echo`. Do not invoke bare `go` or `uv`.
+Route every dev verb through Ward: `ward exec setup`, `build`, `policy-check`,
+`vet`, `test`, `tidy`, and `run-echo`. Do not invoke bare `go` or `uv`.
 
 ## Validation
 
@@ -41,9 +41,14 @@ Run `ward exec gate` before pushing. It runs build, policy-check, vet, test,
 test-skips, and pre-commit last, which is what CI runs and the order it runs
 them in. See [the gate](docs/sirens-echo-gate.md).
 
-`vet` and `test` alone pass on a tree CI rejects, and a fresh clone has no
-pre-commit hooks installed, so the separate verbs leave a gap. Never use
-`--no-verify`.
+`vet` and `test` alone pass on a tree CI rejects, so the separate verbs still
+leave a coverage gap that only `gate` closes. Never use `--no-verify`.
+
+A fresh clone starts with no hooks. Run `ward exec setup` to install them.
+Forgetting is survivable, because every verb routed through
+`scripts/ward-command.sh` installs a missing hook on the way past, and the
+daily loop of `vet`, `test`, and `tidy` all route through it. The snapshot,
+regeneration, and image verbs name their tool directly and install nothing.
 
 ### Live evaluation cadence
 

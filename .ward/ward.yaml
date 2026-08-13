@@ -9,6 +9,9 @@
 # Schema: coilysiren/agentic-os-kai#420 (tracker).
 
 commands:
+  setup:
+    run: bash scripts/ward-command.sh setup
+    description: Install the pre-commit hooks into this checkout. Run on a fresh clone or after .pre-commit-config.yaml changes.
   gate:
     run: bash scripts/ward-command.sh gate
     description: Run every check a push must pass, in order, with pre-commit last.
@@ -46,11 +49,11 @@ commands:
     run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles --check
     description: Fail when a baked role selects something its tracked record does not.
   vet:
-    run: go vet ./...
-    description: go vet across the tree.
+    run: bash scripts/ward-command.sh vet
+    description: go vet across the tree. Routed through the script so a hookless checkout installs the commit gate on the way past.
   test:
-    run: go test ./...
-    description: Run the unit test suite.
+    run: bash scripts/ward-command.sh test
+    description: Run the unit test suite. Routed through the script so a hookless checkout installs the commit gate on the way past.
   evidence-scan:
     run: bash scripts/ward-command.sh evidence-scan
     description: Count tool-call markup across committed run records. Gates nothing.
@@ -58,8 +61,8 @@ commands:
     run: bash scripts/ward-command.sh test-skips
     description: Verify every test that skips is on the reviewed skip allowlist.
   tidy:
-    run: go mod tidy
-    description: go mod tidy.
+    run: bash scripts/ward-command.sh tidy
+    description: go mod tidy. Routed through the script so a hookless checkout installs the commit gate on the way past.
   rate-echo:
     run: bash scripts/ward-command.sh rate-echo
     description: Measure the Sirens Echo intermittent-behavior rates. Gates nothing.

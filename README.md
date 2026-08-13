@@ -54,12 +54,15 @@ channel and guild scope, admission limits, and instance name. Reachability of
 Run commands through Ward:
 
 ```sh
+ward exec setup
 ward exec build
 ward exec policy-check
 ward exec test
 ward exec vet
 ward exec pre-commit-all
 ```
+
+`ward exec setup` installs the pre-commit hooks. Run it once per clone.
 
 `ward exec eval-echo` exercises the production prompt, Agent Proxy, and static
 Eco MCP roster without sending Discord messages or creating issues. Set
