@@ -15,9 +15,9 @@ const (
 	// reactionTool marks a turn that called a tool.
 	reactionTool = "\U0001F528"
 	// reactionFailed marks a turn that did not produce a reply.
-	reactionFailed = "⚠️"
+	reactionFailed = "\u274C"
 	// reactionRefused marks a message a boundary turned away.
-	reactionRefused = "⛔"
+	reactionRefused = "\U0001F6AB"
 )
 
 // reactor applies one reaction to the message that started a turn. A transport
