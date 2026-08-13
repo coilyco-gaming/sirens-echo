@@ -148,6 +148,21 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 // reply uses when it names itself as the actor.
 const selfClaimVerbs = `(?:filed|created|opened|closed|posted|sent|commented on|updated|labeled|escalated)`
 
+// genericSelfNouns are ways this runtime names itself without its identity. A
+// reply this service wrote calling itself "the service" is naming itself.
+var genericSelfNouns = []string{"the service", "the harness", "the bot", "the agent"}
+
+// selfReferencePattern alternates the configured identity with the generic
+// nouns. A short form of the identity is not derived. See sirens-echo#557.
+func selfReferencePattern(identity string) string {
+	references := make([]string, 0, len(genericSelfNouns)+1)
+	references = append(references, regexp.QuoteMeta(identity))
+	for _, noun := range genericSelfNouns {
+		references = append(references, regexp.QuoteMeta(noun))
+	}
+	return strings.Join(references, "|")
+}
+
 // ValidateSelfAttributedClaim rejects a reply naming this service as having
 // completed a tracker write. See docs/sirens-echo-grounding.md.
 func ValidateSelfAttributedClaim(reply string, identity string, executed ...ExecutedTool) error {
@@ -160,7 +175,7 @@ func ValidateSelfAttributedClaim(reply string, identity string, executed ...Exec
 	// The auxiliary is optional, because the simple past is at least as natural
 	// a thing for a model to write as the perfect. See sirens-echo#241.
 	claim := regexp.MustCompile(
-		`(?i)\b` + regexp.QuoteMeta(identity) +
+		`(?i)\b(?:` + selfReferencePattern(identity) + `)` +
 			`\s+(?:(?:has|have)\s+)?` + selfClaimVerbs + `\b`,
 	)
 	for _, sentence := range sentenceBreak.Split(maskURLs(reply), -1) {
