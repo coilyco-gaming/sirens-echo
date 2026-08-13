@@ -45,6 +45,7 @@ func main() {
 		verifyFixturePack(path)
 	}
 	verifyContentTaxonomy("agent/content-classes.yaml")
+	verifyPhraseRegistry("agent/phrases.yaml")
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
@@ -93,6 +94,16 @@ func verifyRatePack(path string) {
 		len(pack.Cases),
 		runs,
 	)
+}
+
+// A phrase that does not survive rendering says one thing in git and another
+// in the channel. See docs/sirens-echo-phrases.md.
+func verifyPhraseRegistry(path string) {
+	registry, err := community.LoadPhraseRegistry(path)
+	if err != nil {
+		log.Fatalf("phrase registry %s: %v", path, err)
+	}
+	fmt.Printf("verified phrase registry %s with %d phrases\n", path, len(registry.Phrases))
 }
 
 // A taxonomy that is not closed forces a wrong classification rather than
