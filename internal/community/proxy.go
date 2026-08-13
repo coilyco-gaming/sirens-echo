@@ -247,6 +247,7 @@ func (c ProxyClient) Complete(
 ) (CompletionResult, error) {
 	telemetry := telemetryOrNoop(c.Telemetry)
 	var toolSession ToolSession
+	var uploads []storedUpload
 	var tools []chatTool
 	var unavailable []string
 	var groundingDocuments []GroundingDocument
@@ -286,11 +287,12 @@ func (c ProxyClient) Complete(
 		}
 		// An upload lands before the first model call, so the turn can read it
 		// through a tool rather than paying for it in the prompt.
-		if stored := ingestAttachments(ctx, toolSession, nil); len(stored) > 0 {
+		uploads = ingestAttachments(ctx, toolSession, nil)
+		if len(uploads) > 0 {
 			telemetry.Info(
 				ctx,
 				"discord.attachment.stored",
-				slog.Int("attachment_count", len(stored)),
+				slog.Int("attachment_count", len(uploads)),
 			)
 		}
 		unavailable = toolSession.Unavailable()
@@ -329,6 +331,14 @@ func (c ProxyClient) Complete(
 		messages = append(messages, chatMessage{Role: "user", Content: prompt.Context})
 	}
 	messages = append(messages, chatMessage{Role: "user", Content: prompt.Message})
+	// A path the model has to think to look for is a path it will not read.
+	// See docs/sirens-echo-attachments.md.
+	if len(uploads) > 0 {
+		messages = append(messages, chatMessage{
+			Role:    "system",
+			Content: uploadNotice(uploads),
+		})
+	}
 	// Named so the model reports the gap rather than answering as though the
 	// surface had been consulted and returned nothing.
 	if len(unavailable) > 0 {

@@ -37,8 +37,13 @@ Route every dev verb through Ward: `ward exec build`, `policy-check`, `vet`,
 
 ## Validation
 
-Run `ward exec vet` and `ward exec test` before committing. The full
-pre-commit gate must pass. Never use `--no-verify`.
+Run `ward exec gate` before pushing. It runs build, policy-check, vet, test,
+test-skips, and pre-commit last, which is what CI runs and the order it runs
+them in. See [the gate](docs/sirens-echo-gate.md).
+
+`vet` and `test` alone pass on a tree CI rejects, and a fresh clone has no
+pre-commit hooks installed, so the separate verbs leave a gap. Never use
+`--no-verify`.
 
 ### Live evaluation cadence
 

@@ -1,20 +1,12 @@
-# Telemetry ids are hex, and long hex runs collide with English words:
-# b885f60f469ff3ba reads as "ba", 236e245caf5ab98b reads as "caf". Those appear
-# in captured evaluation datasets, which are evidence only while they stay
-# verbatim, so correcting one would corrupt the artefact. See docs/sirens-echo-rate.md.
-#
-# Ignored by content rather than by path. pre-commit passes explicit filenames,
-# and an extend-exclude does not apply to a file named on the command line.
-#
-# This file rather than the hook's args, because the typos hook lives inside the
-# block managed by agentic-os and an edit there is overwritten on the next sync.
-#
-# Bounded to 16 or more hex characters, which no English word reaches, so an
-# ordinary misspelling anywhere in the repository is still reported.
-[default]
-extend-ignore-re = ["\\b[0-9a-f]{16,}\\b"]
+# evaluations/ holds machine-written run records: model replies, trace and span
+# identifiers, and raw tool payloads. A reply is evidence and must stay
+# verbatim, so a spell checker has nothing correct to say about that content.
 
-# ser8 is a host in this deployment, not a misspelling of "set". It appears in
-# provenance blocks, roster endpoints, and the node-stats server name.
+[default]
+# A hex trace or span id reads as prose to a spell checker. b885f60f469ff3ba
+# ends in "ba", which it offers to correct to "by".
+extend-ignore-re = ["\\b[0-9a-f]{16,32}\\b"]
+
 [default.extend-words]
+# ser8 is a host this deployment actually runs on, not a misspelling of "set".
 ser = "ser"

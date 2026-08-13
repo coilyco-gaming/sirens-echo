@@ -9,6 +9,9 @@
 # Schema: coilysiren/agentic-os-kai#420 (tracker).
 
 commands:
+  gate:
+    run: bash scripts/ward-command.sh gate
+    description: Run every check CI runs, in CI's order, before pushing.
   build:
     run: bash scripts/ward-command.sh build
     description: Compile Sirens Echo and the Echo evaluation gate.
@@ -48,6 +51,9 @@ commands:
   test:
     run: go test ./...
     description: Run the unit test suite.
+  gate:
+    run: bash scripts/ward-command.sh gate
+    description: Run every check a push must pass, in order, with pre-commit last.
   test-skips:
     run: bash scripts/ward-command.sh test-skips
     description: Verify every test that skips is on the reviewed skip allowlist.
