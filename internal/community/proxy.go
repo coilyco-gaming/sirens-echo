@@ -318,6 +318,9 @@ func (c ProxyClient) Complete(
 		})
 	}
 	executed := make([]ExecutedTool, 0)
+	// spills numbers saved results so a second call to one tool cannot overwrite
+	// what the first one saved.
+	spills := 0
 	toolRounds := 0
 	repairAttempts := 0
 	budgetRaises := 0
@@ -495,6 +498,15 @@ func (c ProxyClient) Complete(
 			})
 			reinjected, trimmed := boundToolResult(result.Text)
 			if trimmed {
+				// The remainder is preserved rather than discarded wherever the
+				// deployment mounts a scratchpad. See docs/sirens-echo-scratchpad.md.
+				spilled := spillToolResult(
+					toolCtx, toolSession, definition.Original, spills, result.Text,
+				)
+				if spilled != "" {
+					reinjected += "\n" + fmt.Sprintf(spillNotice, len(result.Text), spilled)
+					spills++
+				}
 				telemetry.Info(
 					toolCtx,
 					"mcp.tool.result.bounded",
@@ -502,6 +514,7 @@ func (c ProxyClient) Complete(
 					slog.String("tool", definition.Original),
 					slog.Int("result_bytes", len(result.Text)),
 					slog.Int("reinjected_bytes", len(reinjected)),
+					slog.String("spill_path", spilled),
 				)
 			}
 			messages = append(messages, chatMessage{
@@ -513,6 +526,56 @@ func (c ProxyClient) Complete(
 		}
 	}
 	return CompletionResult{}, fmt.Errorf("Agent Proxy tool loop ended unexpectedly")
+}
+
+// scratchWriteTool saves a trimmed result. Going through the tool rather than
+// the filesystem keeps confinement, quota, and attribution unchanged.
+const scratchWriteTool = "scratch_write"
+
+// spillNotice tells the model where the rest of a result went. Without it a
+// trimmed result reads as the whole result.
+const spillNotice = "[full %d byte result saved to %s, read it with scratch_read]"
+
+// spillToolResult saves a trimmed result to the requester's scratchpad and
+// returns the path it took. An empty return means nothing was saved.
+func spillToolResult(
+	ctx context.Context,
+	session ToolSession,
+	tool string,
+	index int,
+	full string,
+) string {
+	if session == nil {
+		return ""
+	}
+	relative := spillPath(tool, index)
+	// No scratchpad errors here and an over-limit result refuses. Both fall back
+	// to plain truncation. See docs/sirens-echo-tool-results.md.
+	written, err := session.Call(ctx, scratchWriteTool, map[string]any{
+		"path":    relative,
+		"content": full,
+	})
+	if err != nil || written.IsError {
+		return ""
+	}
+	return relative
+}
+
+// spillPath keeps a server-supplied tool name from reaching the filesystem as
+// anything but a flat, predictable file under one directory.
+func spillPath(tool string, index int) string {
+	cleaned := strings.Map(func(r rune) rune {
+		switch {
+		case r >= '0' && r <= '9', r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r == '-', r == '_':
+			return r
+		default:
+			return -1
+		}
+	}, tool)
+	if cleaned == "" {
+		cleaned = "tool"
+	}
+	return fmt.Sprintf("tool-output/%s-%d.txt", cleaned, index+1)
 }
 
 // boundToolResult caps one tool result before it re-enters the prompt, so a

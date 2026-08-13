@@ -76,5 +76,5 @@ addresses from deployment, and names no issue tracker.
 The live Echo evaluation selects only static MCP URLs, then requires an
 `eco__get_eco_server_status` call without sending Discord or Forgejo writes.
 
-See [the service](sirens-echo.md) and
-[observability](sirens-echo-observability.md).
+See [the service](sirens-echo.md), [large results](sirens-echo-tool-results.md),
+and [observability](sirens-echo-observability.md).
