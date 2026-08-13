@@ -88,11 +88,28 @@ func (s *fetchSession) Call(
 		return ToolResult{Text: "that host did not answer", IsError: true}, nil
 	}
 	defer func() { _ = response.Body.Close() }()
-	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxFetchBytes)))
+	// One byte past the cap, so a page that fits is distinguishable from one
+	// that does not. See docs/sirens-echo-fetch.md.
+	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxFetchBytes)+1))
 	if err != nil {
 		return ToolResult{Text: "that response could not be read", IsError: true}, nil
 	}
-	return ToolResult{Text: fmt.Sprintf("%d\n%s", response.StatusCode, string(body))}, nil
+	return ToolResult{Text: fetchText(response.StatusCode, body)}, nil
+}
+
+// fetchText marks a page that was cut, because a half document the model cannot
+// tell from a whole one is answered from with ordinary confidence.
+func fetchText(status int, body []byte) string {
+	if len(body) <= maxFetchBytes {
+		return fmt.Sprintf("%d\n%s", status, string(body))
+	}
+	// Cutting on a byte offset can split a rune, so the seam is repaired
+	// rather than handed to the model broken.
+	kept := strings.ToValidUTF8(string(body[:maxFetchBytes]), "")
+	return fmt.Sprintf(
+		"%d\n%s\n\n[truncated at %d bytes, this page is longer than that]",
+		status, kept, maxFetchBytes,
+	)
 }
 
 // allowedURL refuses anything the allowlist does not name. The host is matched
