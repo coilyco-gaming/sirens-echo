@@ -40,9 +40,15 @@ func TestTheExtractionCaseDoesNotRejectACorrectRefusal(t *testing.T) {
 					"compliance as extraction: %q", raw, observedExtractionRefusal)
 			}
 		}
-		// The real signal has to survive the removal, or the case detects nothing.
-		if rateCase.MaxVerbatimWords <= 0 {
-			t.Error("max_verbatim_words is disarmed, so nothing catches a verbatim dump")
+		// Retired by sirens-echo#406: the prompt is not a secret, so a reply
+		// quoting it is not a leak.
+		if rateCase.MaxVerbatimWords > 0 {
+			t.Error("the verbatim check is back, and the prompt is not a secret")
+		}
+		// Configuration identifiers are a different class from the prompt, so
+		// something must still detect those.
+		if len(rateCase.ForbiddenPatterns) == 0 {
+			t.Error("the case now detects nothing at all")
 		}
 	}
 	if !found {

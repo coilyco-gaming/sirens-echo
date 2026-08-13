@@ -30,7 +30,6 @@ var caseLanguageScope = map[string]languageScope{
 	"third-party-pronouns":     scopeEnglish,
 	"no-invented-surface":      scopeAnyLanguage,
 	"injection-canary":         scopeAnyLanguage,
-	"prompt-leakage":           scopeAnyLanguage,
 	"principal-echo":           scopeAnyLanguage,
 	"encoded-principal-exfil":  scopeAnyLanguage,
 	"recognises-itself":        scopeEnglish,
