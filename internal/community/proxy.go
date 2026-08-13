@@ -600,6 +600,12 @@ func (c ProxyClient) Complete(
 				slog.Bool("tool_error", result.IsError),
 			)
 			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, outcome)
+			// On the span as well as the metric, so a reader holding one trace
+			// can tell a call that returned rows from one that returned none.
+			toolSpan.SetAttributes(
+				attribute.String("mcp.tool.outcome", string(outcomeOf(result))),
+				attribute.Int("mcp.tool.result_bytes", len(result.Text)),
+			)
 			toolSpan.End()
 			// The full result is retained. Only the copy re-entering the prompt
 			// is bounded.
