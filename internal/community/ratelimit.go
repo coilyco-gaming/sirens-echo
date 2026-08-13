@@ -164,8 +164,14 @@ func (l *rateLimiter) Admit(request admissionRequest) admissionDecision {
 	if request.Queued && l.policy.MaxPending > 0 && l.pending >= l.policy.MaxPending {
 		// Keyed on the context so one guild's flood does not mute another
 		// guild's cooldown notice.
-		state := l.bucketFor("queue:"+request.ContextKey, RateLimit{Burst: 1, Every: time.Second}, now)
-		return l.denyLocked(state, RateLimit{}, admissionQueue, now)
+		shed := RateLimit{Burst: 1, Every: time.Second}
+		state := l.bucketFor("queue:"+request.ContextKey, shed, now)
+		// Nothing else draws on this bucket, so an uncharged one always reads
+		// full and the wait computes to zero. Charging it reports the real window.
+		if state.tokens > 0 {
+			state.tokens--
+		}
+		return l.denyLocked(state, shed, admissionQueue, now)
 	}
 
 	for _, state := range charge {

@@ -280,9 +280,9 @@ func TestHTTPTurnNeverAnswersACallerErrorWithServerError(t *testing.T) {
 	}
 }
 
-// Characterization. A pending-cap denial passes a zero-value RateLimit into
-// denyLocked, so the handler omits the Retry-After the contract promises.
-func TestQueueDenialCarriesNoRetryAfter(t *testing.T) {
+// A pending-cap denial carries Retry-After like every other class. It is the
+// denial that dominates under burst, so it is the one a client most needs.
+func TestQueueDenialCarriesRetryAfter(t *testing.T) {
 	t.Parallel()
 	limiter := newRateLimiter(RateLimitPolicy{MaxPending: 1, NotifyEvery: time.Minute}, 16)
 
@@ -294,9 +294,11 @@ func TestQueueDenialCarriesNoRetryAfter(t *testing.T) {
 	if second.Outcome != admissionQueue {
 		t.Fatalf("second outcome = %s, want %s", second.Outcome, admissionQueue)
 	}
-	if second.RetryAfter != 0 {
-		t.Errorf("RetryAfter = %s; a non-zero value means the queue denial now "+
-			"advertises a delay and this test should assert it", second.RetryAfter)
+	if second.RetryAfter <= 0 {
+		t.Error("queue denial carried no Retry-After, contradicting the documented contract")
+	}
+	if second.RetryAfter > time.Second {
+		t.Errorf("RetryAfter = %s, over the one second shed window", second.RetryAfter)
 	}
 }
 

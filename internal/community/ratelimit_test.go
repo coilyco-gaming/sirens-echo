@@ -182,3 +182,30 @@ func TestRateLimiterZeroPolicyAdmitsEverything(t *testing.T) {
 		}
 	}
 }
+
+// A queue shed is the denial class that dominates under burst, which is exactly
+// when a client needs backoff guidance. It must carry Retry-After like the rest.
+func TestQueueShedCarriesRetryAfter(t *testing.T) {
+	t.Parallel()
+	limiter := newRateLimiter(RateLimitPolicy{
+		PerUser:    RateLimit{Burst: 100, Every: time.Second},
+		PerContext: RateLimit{Burst: 100, Every: time.Second},
+		Global:     RateLimit{Burst: 100, Every: time.Second},
+		MaxPending: 1,
+	}, 16)
+
+	first := limiter.Admit(admissionRequest{UserKey: "u1", ContextKey: "c1", Queued: true})
+	if first.Outcome.denied() {
+		t.Fatalf("first request denied: %v", first.Outcome)
+	}
+	shed := limiter.Admit(admissionRequest{UserKey: "u2", ContextKey: "c1", Queued: true})
+	if shed.Outcome != admissionQueue {
+		t.Fatalf("outcome = %v, want a queue shed", shed.Outcome)
+	}
+	if shed.RetryAfter <= 0 {
+		t.Fatal("queue shed carried no Retry-After, contradicting the documented contract")
+	}
+	if shed.RetryAfter > time.Second {
+		t.Fatalf("Retry-After = %v, over the one second shed window", shed.RetryAfter)
+	}
+}

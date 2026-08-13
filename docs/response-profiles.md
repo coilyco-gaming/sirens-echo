@@ -66,10 +66,10 @@ ingress, secrets, namespace, and tailnet exposure remain explicit inputs.
 
 The Sirens Deep workload selects the hosted DeepSeek route and loads the
 CoilyCo definition. It receives its own instance, namespace, tailnet hostname,
-and non-reusable Tailscale key. Its Discord ingress is direct messages from an
-allowlisted account, gated by a deployment-owned access policy that names no
-guild. It requires both MCP endpoints its definition selects and holds no
-Forgejo secret, because that credential lives only in the MCP pod.
+and non-reusable Tailscale key. Its Discord ingress refuses every guild,
+channel, and account its deployment-owned [access policy](sirens-echo-access.md)
+does not name. It requires both MCP endpoints its definition selects and holds
+no Forgejo secret, because that credential lives only in the MCP pod.
 
 Before live rollout, an authorized operator verifies the immutable image and
 route registries, applies the Terraform-managed Tailscale service entry and
