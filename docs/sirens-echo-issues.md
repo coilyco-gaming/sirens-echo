@@ -35,6 +35,12 @@ no first person, no exclamation, and no emoji of its own. A block that cannot
 fit the send budget is dropped rather than truncated into a broken URL by the
 transport.
 
+One number can name an issue in two repositories, and a tool result quotes a
+sibling repository's issue often enough that this is reachable rather than
+theoretical. A number observed with two different URLs is suppressed. The block
+promises every URL came back from a tool call, and on a collision it is the
+number-to-URL association that would be the guess.
+
 The API URL for an issue rides along in the same tool payload and is skipped,
 because it is not a link a member can follow. The created issue is read from the
 response's `html_url` rather than matched anywhere in the payload, so an issue

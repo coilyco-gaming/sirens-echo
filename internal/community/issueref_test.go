@@ -144,3 +144,29 @@ func TestTheModelIsToldWhichIssueReferencesAreSafe(t *testing.T) {
 		}
 	}
 }
+
+// A bare number is ambiguous across repositories, and a tool result can quote a
+// sibling repository's issue. Linking either one is a guess.
+func TestACollidingNumberIsSuppressedRatherThanGuessed(t *testing.T) {
+	t.Parallel()
+	quoted := ExecutedTool{Name: "forgejo__get_issue", Result: `{"result":{
+	 "html_url":"https://forgejo.coilysiren.me/coilyco-bridge/deploy/issues/425",
+	 "body":"see https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/425"}}`}
+	got := AppendIssueReferences("Tracked as #425.", quoted)
+	if strings.Contains(got, "/issues/425") {
+		t.Errorf("a colliding number was linked anyway:\n%s", got)
+	}
+}
+
+// Suppression is for a genuine conflict only. The same issue quoted twice is
+// one observation, and dropping it would lose the case this feature exists for.
+func TestARepeatedObservationIsNotACollision(t *testing.T) {
+	t.Parallel()
+	repeated := ExecutedTool{Name: "forgejo__get_issue", Result: `{"result":{
+	 "html_url":"https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233",
+	 "body":"duplicate of https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/233"}}`}
+	got := AppendIssueReferences("Tracked as #233.", repeated)
+	if !strings.Contains(got, "coilyco-gaming/sirens-echo/issues/233") {
+		t.Errorf("a repeated observation was treated as a conflict:\n%s", got)
+	}
+}

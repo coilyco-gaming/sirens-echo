@@ -80,10 +80,15 @@ func observedIssueURLs(executed []ExecutedTool) map[string]string {
 	observed := make(map[string]string)
 	for _, tool := range executed {
 		for _, ref := range issueRefsIn(tool.Result) {
-			// The repository-fixed Forgejo MCP makes a number collide only
-			// across repositories, so the first observation wins.
-			if _, ok := observed[ref.number]; !ok {
+			previous, seen := observed[ref.number]
+			if !seen {
 				observed[ref.number] = ref.url
+				continue
+			}
+			// One number, two repositories. Linking either is a guess, and the
+			// empty value suppresses it. See docs/sirens-echo-issues.md.
+			if previous != ref.url {
+				observed[ref.number] = ""
 			}
 		}
 	}
