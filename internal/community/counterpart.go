@@ -8,15 +8,6 @@ import (
 // Recognition is grounded in Discord's bot flag, never inferred from prose.
 // See docs/sirens-echo-counterparts.md.
 
-const (
-	// maxAgentExchange bounds consecutive agent-to-agent turns in one channel,
-	// because two agents each answering the other is a runaway.
-	maxAgentExchange = 4
-	// agentExchangeWindow is how long a run of agent turns stays counted. A
-	// quiet channel forgets, so an exchange later is a fresh one.
-	agentExchangeWindow = 10 * time.Minute
-)
-
 // CounterpartKind is what the author of a message is. It is grounded, so it
 // carries only what Discord asserted.
 type CounterpartKind string

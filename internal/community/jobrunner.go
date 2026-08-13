@@ -13,11 +13,6 @@ import (
 // docs/sirens-echo-jobs-lifecycle.md.
 
 const (
-	// defaultJobQueueDepth bounds accepted-but-unstarted work. A full queue
-	// refuses rather than growing without limit.
-	defaultJobQueueDepth = 64
-	// defaultJobTimeout bounds one execution. Jobs are long, not unbounded.
-	defaultJobTimeout = 30 * time.Minute
 	// cancelPollInterval is how often a running job learns it was cancelled.
 	cancelPollInterval = time.Second
 )

@@ -8,9 +8,6 @@ import (
 // See docs/sirens-echo-block-response.md.
 
 const (
-	// maxBlockReasonWords bounds the reason. Every volunteered justification is
-	// a handle to pull, and this reply only ever appears at a boundary.
-	maxBlockReasonWords = 20
 	// blockRedirect is the whole response for a sensitive class, and the
 	// fallback whenever a reason cannot be trusted.
 	blockRedirect = "That is outside what this service answers."

@@ -19,19 +19,9 @@ import (
 // job Workspace in workspace.go. See docs/sirens-echo-scratchpad.md.
 
 const (
-	// maxScratchFileBytes bounds one file. A Discord message can ask for an
-	// unbounded write and the volume is shared with the pod.
-	maxScratchFileBytes = 256 * 1024
 	// maxScratchPartitionBytes bounds one requester's footprint, so a single
 	// account cannot fill the volume for every other account on it.
 	maxScratchPartitionBytes = 4 * 1024 * 1024
-	// maxScratchEntries bounds a listing, keeping a result inside the turn
-	// budget rather than returning a directory of unknown size.
-	maxScratchEntries = 200
-	// maxScratchMatches bounds a search result for the same reason.
-	maxScratchMatches = 100
-	// maxScratchDepth bounds nesting so a walk stays cheap.
-	maxScratchDepth = 8
 	// scratchPermissions keep a partition readable only by this process, and
 	// deny the execute bit that text-only is enforced by rather than described.
 	scratchPermissions     = 0o700

@@ -62,25 +62,6 @@ type ToolProvider interface {
 	Open(ctx context.Context) (ToolSession, error)
 }
 
-const (
-	// defaultRosterRefresh bounds staleness for a transport that cannot push
-	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
-	defaultRosterRefresh = time.Hour
-	mcpConnectTimeout    = 10 * time.Second
-	mcpListTimeout       = 15 * time.Second
-	mcpBackoffMin        = 5 * time.Second
-	mcpBackoffMax        = 2 * time.Minute
-
-	// defaultCallTimeout keeps one tool call well inside the turn budget, so a
-	// server that never answers cannot spend the whole turn.
-	defaultCallTimeout = 45 * time.Second
-
-	// Grounding bounds. Reference material must not crowd out the turn it is
-	// meant to support.
-	maxGroundingBytes     = 8 * 1024
-	maxGroundingDocuments = 8
-)
-
 // MCPProvider supervises the configured MCP roster through the official Go SDK.
 // An empty roster is a valid no-tool capability boundary.
 type MCPProvider struct {

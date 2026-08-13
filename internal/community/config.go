@@ -27,12 +27,6 @@ const (
 
 // Admission defaults are sized for a guild the operator does not moderate.
 // See docs/sirens-echo-admission.md.
-const (
-	defaultRequestTimeout = 3 * time.Minute
-	// defaultQueueTimeout bounds the wait for the execution slot. A longer
-	// wait answers a conversation that has already moved on.
-	defaultQueueTimeout = 30 * time.Second
-)
 
 var defaultRateLimitPolicy = RateLimitPolicy{
 	PerUser:     RateLimit{Burst: 3, Every: 30 * time.Second},

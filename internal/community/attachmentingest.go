@@ -7,21 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
 // An uploaded file is a large prompt body the turn reads through a tool rather
 // than one spliced into the prompt. See docs/sirens-echo-attachments.md.
-
-const (
-	// maxAttachmentBytes stays under the scratchpad's per-file limit, so an
-	// oversized upload refuses here with a reason rather than there.
-	maxAttachmentBytes = 128 * 1024
-	// attachmentFetchTimeout bounds one download inside a turn that already
-	// owes the member an answer.
-	attachmentFetchTimeout = 10 * time.Second
-)
 
 // attachmentHosts is the whole egress surface. The URL arrives on the Gateway
 // payload rather than from message text, and this bounds it anyway.

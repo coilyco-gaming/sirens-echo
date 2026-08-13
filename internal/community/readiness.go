@@ -15,9 +15,8 @@ import (
 )
 
 const (
-	readyzPath              = "/readyz"
-	defaultReadinessTimeout = 5 * time.Second
-	maxReadinessBody        = 16 << 10
+	readyzPath       = "/readyz"
+	maxReadinessBody = 16 << 10
 )
 
 var logicalRouteSegmentPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
