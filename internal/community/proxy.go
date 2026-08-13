@@ -505,9 +505,15 @@ func (c ProxyClient) Complete(
 					slog.Int("reply_bytes", len(content)),
 				)
 				if content != "" {
+					// The tool-call path below carries this. Dropping it here sends a
+					// thinking model an assistant turn it refuses. See sirens-echo#678.
 					messages = append(
 						messages,
-						chatMessage{Role: "assistant", Content: content},
+						chatMessage{
+							Role:             "assistant",
+							Content:          content,
+							ReasoningContent: message.ReasoningContent,
+						},
 					)
 				}
 				messages = append(

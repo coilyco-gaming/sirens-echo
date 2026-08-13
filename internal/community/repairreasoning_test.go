@@ -11,7 +11,7 @@ import (
 )
 
 // The tool-call path is guarded. The repair path builds its own assistant
-// message, is not covered, and that is how sirens-echo#678 survived.
+// message, was not covered, and that is how sirens-echo#678 survived.
 
 // reasoningRepairServer replays a style violation carrying reasoning content,
 // then hands the repair round's assistant message back to the caller.
@@ -48,9 +48,9 @@ func reasoningRepairServer(t *testing.T, reasoning string, seen *string) *httpte
 	}))
 }
 
-// The repair path drops reasoning content, so a thinking-mode model is sent an
-// assistant message it will refuse. Asserted as it ships. See sirens-echo#678.
-func TestTheRepairPathDropsReasoningContent(t *testing.T) {
+// The repair path carries reasoning content, so a thinking-mode model is not
+// sent an assistant message it refuses. See sirens-echo#678.
+func TestTheRepairPathKeepsReasoningContent(t *testing.T) {
 	t.Parallel()
 	const reasoning = "The member greeted me, so a short greeting is enough."
 	seen := "not set"
@@ -76,14 +76,12 @@ func TestTheRepairPathDropsReasoningContent(t *testing.T) {
 		t.Fatalf("completion = %q", got.Content)
 	}
 
-	// The tool-call path carries this through. proxy.go:510 has no field for it
-	// at all, so the repair round can only ever send the zero value.
 	if seen == "not set" {
 		t.Fatal("the repair round never reached the assertion")
 	}
-	if seen != "" {
-		t.Errorf("the repair path now sends reasoning content %q. If "+
-			"sirens-echo#678 was fixed, change this test to require %q and "+
-			"delete this branch", seen, reasoning)
+	// Empty and absent are the same bytes under omitempty, so an assertion that
+	// the key is present cannot distinguish them. Compare the value.
+	if seen != reasoning {
+		t.Errorf("the repair round sent reasoning content %q, want %q", seen, reasoning)
 	}
 }
