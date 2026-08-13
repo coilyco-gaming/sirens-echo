@@ -113,3 +113,53 @@ func TestTheCauseAgreesWithTheNoticeAMemberReads(t *testing.T) {
 		}
 	}
 }
+
+// A budget this service chose is not Discord failing to answer, and reading a
+// run of them as an outage is the mistake the split prevents. See #648.
+func TestASendWeAbandonedIsNotASendDiscordIgnored(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name string
+		err  error
+	}{
+		{"the reply budget expired", context.DeadlineExceeded},
+		{"the turn was cancelled", context.Canceled},
+		{"wrapped, which is how it arrives", errors.Join(
+			errors.New("discord reply: "), context.DeadlineExceeded,
+		)},
+	} {
+		attrs := discordFailureAttrs(testCase.err)
+		failure, ok := attrValue(attrs, "discord_failure")
+		if !ok || failure.String() != "abandoned" {
+			t.Errorf("%s: failure = %v, want abandoned", testCase.name, failure)
+		}
+	}
+}
+
+// Everything Discord genuinely failed to answer keeps its label, so the split
+// costs the existing series nothing it should have kept.
+func TestATransportFailureIsStillNoResponse(t *testing.T) {
+	t.Parallel()
+	for _, err := range []error{
+		errors.New("websocket: close 1006"),
+		errors.New("dial tcp: connection refused"),
+	} {
+		failure, ok := attrValue(discordFailureAttrs(err), "discord_failure")
+		if !ok || failure.String() != "no_response" {
+			t.Errorf("%v: failure = %v, want no_response", err, failure)
+		}
+	}
+}
+
+// A rejection Discord did answer outranks nothing here, because a REST error
+// carrying a cancelled context is still Discord's verdict.
+func TestARestErrorIsStillClassifiedByItsStatus(t *testing.T) {
+	t.Parallel()
+	rest := &discordgo.RESTError{
+		Response: &http.Response{StatusCode: http.StatusForbidden},
+	}
+	failure, ok := attrValue(discordFailureAttrs(rest), "discord_failure")
+	if !ok || failure.String() != "rest_error" {
+		t.Errorf("failure = %v, want rest_error", failure)
+	}
+}
