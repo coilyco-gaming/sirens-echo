@@ -480,6 +480,14 @@ func (c ProxyClient) Complete(
 			}
 			if contractErr != nil {
 				if repairAttempts >= maxResponseRepairs {
+					// This ends the turn as a model failure and it is not one,
+					// so the reason is recorded here. See sirens-echo#651.
+					telemetry.Info(
+						ctx,
+						"model.response.refused",
+						slog.Int("attempts", repairAttempts),
+						slog.String("refused", contractErr.Error()),
+					)
 					return CompletionResult{}, fmt.Errorf(
 						"Agent Proxy returned invalid response after %d repair attempt: %w",
 						repairAttempts,
@@ -491,6 +499,10 @@ func (c ProxyClient) Complete(
 					ctx,
 					"model.response.repair",
 					slog.Int("attempt", repairAttempts),
+					// What was wrong, so a repair loop stops being a count of
+					// attempts with no reason attached. See sirens-echo#651.
+					slog.String("refused", contractErr.Error()),
+					slog.Int("reply_bytes", len(content)),
 				)
 				if content != "" {
 					messages = append(

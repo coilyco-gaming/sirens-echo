@@ -1096,37 +1096,27 @@ func (a *Agent) runTurn(
 	}
 
 	progress.Stage(turnCtx, stagePhraseChecking)
-	_, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
+	validateCtx, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
-	// Nothing else between the model and the member sees this, and a member
-	// reads it verbatim. See docs/sirens-echo-capability-limits.md.
+	refused := replyCheckParse
 	if err == nil {
-		err = ValidateNoToolCallMarkup(reply)
-	}
-	if err == nil {
-		err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
-	}
-	if err == nil {
-		err = ValidateSelfAttributedClaim(reply, a.cfg.Definition.Identity, result.ToolCalls...)
-	}
-	// Output values are enumerable where input framings are not, so this is the
-	// check that does not depend on anticipating the framing.
-	if err == nil {
-		err = a.identifiers.Validate(reply)
-	}
-	// Bound for every style. Not being mistaken for a human is a safety
-	// property, not a voice preference. See docs/sirens-echo-prompt.md.
-	if err == nil {
-		err = ValidateIdentityClaim(reply, a.cfg.Principal)
-	}
-	if err == nil {
-		err = ValidateResponseStyle(a.cfg.Definition.ResponseStyle, reply)
+		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
 	if err != nil {
+		// The check that refused, so a rejection stops being attributable to
+		// the model. See docs/sirens-echo-turn-stages.md.
+		validateSpan.SetAttributes(attribute.String("response.check", refused))
 		a.telemetry.MarkSpanError(validateSpan, exceptionResponseValidationFailed)
+		a.telemetry.Info(
+			validateCtx,
+			"response.check.refused",
+			slog.String("check", refused),
+			slog.Int("reply_bytes", len(reply)),
+		)
 		validateSpan.End()
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
+	validateSpan.SetAttributes(attribute.String("response.check", replyCheckNone))
 	validateSpan.End()
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it
@@ -1268,9 +1258,19 @@ func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) erro
 	if err != nil {
 		a.telemetry.RecordFailure(replyCtx, "reply")
 		a.telemetry.MarkSpanError(replySpan, exceptionReplyFailed)
+		replySpan.End()
+		return err
 	}
+	// Delivery is recorded rather than inferred from the absence of an error,
+	// so a reply that arrived can be counted. See sirens-echo#652.
+	a.telemetry.Info(
+		replyCtx,
+		"turn.reply.delivered",
+		slog.String("transport", turn.Transport()),
+		slog.Int("reply_bytes", len(content)),
+	)
 	replySpan.End()
-	return err
+	return nil
 }
 
 type discordMessageTurn struct {
