@@ -80,6 +80,7 @@ func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
+	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "1024000000000000001,1024000000000000002")
 	t.Setenv("DISCORD_GUILD_IDS", "2048000000000000001")
@@ -109,6 +110,7 @@ func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	t.Setenv("SIRENS_ECHO_PRINCIPAL_HANDLE", "example_handle")
 	t.Setenv("SIRENS_ECHO_PRINCIPAL_USER_ID", "")
@@ -146,6 +148,7 @@ func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
+	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
 	t.Setenv("DISCORD_CHANNEL_ID", "#bots")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
@@ -163,6 +166,7 @@ func TestLoadConfigAcceptsANonLoopbackListener(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
+	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	// The bind address no longer gates startup. Reachability is decided at the
 	// network layer, so the process does not reason about it.
