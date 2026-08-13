@@ -39,6 +39,14 @@ func LoadMCPRoster(path string) ([]MCPServerDefinition, error) {
 	if err := yaml.Unmarshal(raw, &file); err != nil {
 		return nil, fmt.Errorf("parse MCP roster: %w", err)
 	}
+	// A supplied path resolving to nothing is a mistake every time. The genuine
+	// no-tool case supplies no path at all. See sirens-echo#684.
+	if len(file.MCPServers) == 0 {
+		return nil, fmt.Errorf(
+			"MCP roster %s names no servers: check the file is the roster itself "+
+				"rather than the ConfigMap that carries it", path,
+		)
+	}
 	names := make([]string, 0, len(file.MCPServers))
 	for name := range file.MCPServers {
 		names = append(names, name)
