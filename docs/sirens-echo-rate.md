@@ -1,0 +1,70 @@
+# The rate pack
+
+`agent/rate-deep.yaml`, run with `ward exec rate-deep`. It measures how often an
+intermittent behavior happens. It gates no deployment and is never wired into
+CI. See [the battery](sirens-echo-battery.md) for the gate and [the
+board](sirens-echo-board.md) for the graded layer.
+
+## Why a third instrument
+
+Neither existing one can hold an intermittent behavior. The battery hard-fails
+a deployment, so a case that fails 13 percent of the time makes the gate flaky.
+The board is human-graded, and grading is per-artifact attention, so it cannot
+economically run one case fifteen times.
+
+Before this existed, an observed rate lived only as prose in an issue body.
+Nothing regenerated the number after a fix, and nothing noticed a fix that took
+a rate from 13 percent to 4 percent rather than to zero.
+
+## How a run is scored
+
+A case declares its own `runs` and `max_failure_rate`. Each attempt is scored by
+`community.ScoreEvaluationCase`, the same function the gate uses, so the two
+instruments cannot drift. A rate for a check the gate does not apply would
+measure something nobody enforces.
+
+An attempt is one of three outcomes. A pass, a fail, or an error. An error is a
+failure of the substrate rather than of the agent, such as a 502 from Agent
+Proxy, and it is reported and excluded from the denominator. Counting one as a
+behavioral failure corrupts the rate.
+
+The run exits non-zero only when a case beats its declared ceiling, or when
+every attempt of a case errored. An unmeasured case is not a passing case, and
+reporting it as one would be certifying rather than measuring.
+
+## The dataset is the evidence
+
+Every reply is persisted verbatim. In the QA that motivated this pack, three
+first-pass findings turned out to be defects in the check rather than in the
+agent, and only reading the text separated them. A verdict alone would have
+recorded three findings that were not there.
+
+Provenance travels with it. A rate without its definition, pack, model,
+transport, and roster is not reproducible and not comparable to the next run.
+
+## The promotion path
+
+A case starts here to establish its rate. When a fix drives that rate to zero
+and holds at high N, the case may move into `agent/evaluation-deep.yaml` as a
+deterministic regression.
+
+Do not promote on a small clean run. Passing 5 of 5 is not evidence of
+determinism: five runs put a weak upper bound on the true rate and nothing
+more. A behavior at 13 percent passes 5 of 5 about half the time.
+
+Promotion is also where the battery's rules reattach. A promoted case must not
+be able to fire on a correct reply, and its target set must be closed.
+
+## Cost
+
+One attempt is one completion plus up to six tool rounds. The tracked pack is
+30 attempts. That is affordable on demand and is the reason this is an invoked
+verb rather than a CI step.
+
+## What it cannot measure
+
+A behavior with no deterministic check. Paraphrase disclosure is the standing
+example: the reply discloses while quoting nothing, so no expression separates
+it from a correct answer. That belongs on the board, not here. This instrument
+measures how often a check fires, so a behavior without a check has no rate to
+report.

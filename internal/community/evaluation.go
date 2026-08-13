@@ -186,32 +186,14 @@ func runEvaluation(
 			failures = append(failures, fmt.Sprintf("%s: inference: %v", evaluationCase.ID, err))
 			continue
 		}
-		reply, err := ParseReply(result.Content)
-		if err == nil {
-			err = ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)
-		}
-		if err == nil {
-			err = ValidateIdentityClaim(reply, principal)
-		}
-		if err == nil {
-			err = ValidateResponseStyle(definition.ResponseStyle, reply)
-		}
-		if err == nil && evaluationCase.RequiredTool != "" &&
-			!completionUsedTool(result, evaluationCase.RequiredTool) {
-			err = fmt.Errorf("expected tool %s", evaluationCase.RequiredTool)
-		}
-		if err == nil {
-			lowerOutput := strings.ToLower(reply)
-			for _, forbidden := range evaluationCase.ForbiddenPhrases {
-				if strings.Contains(lowerOutput, strings.ToLower(forbidden)) {
-					err = fmt.Errorf("contained forbidden phrase %q", forbidden)
-					break
-				}
-			}
-		}
-		if err == nil {
-			err = runScopedChecks(evaluationCase, reply, systemPrompt, principal)
-		}
+		reply, err := ScoreEvaluationCase(
+			evaluationCase,
+			result,
+			prompt,
+			systemPrompt,
+			definition.ResponseStyle,
+			principal,
+		)
 		if err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
 			continue
@@ -222,6 +204,45 @@ func runEvaluation(
 		return fmt.Errorf("evaluation failed:\n%s", strings.Join(failures, "\n"))
 	}
 	return nil
+}
+
+// ScoreEvaluationCase applies every check the gate applies, in gate order. The
+// rate runner shares it rather than drifting. See docs/sirens-echo-rate.md.
+func ScoreEvaluationCase(
+	evaluationCase EvaluationCase,
+	result CompletionResult,
+	prompt TurnPrompt,
+	systemPrompt string,
+	responseStyle string,
+	principal Principal,
+) (string, error) {
+	reply, err := ParseReply(result.Content)
+	if err != nil {
+		return strings.TrimSpace(result.Content), err
+	}
+	if err := ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...); err != nil {
+		return reply, err
+	}
+	if err := ValidateIdentityClaim(reply, principal); err != nil {
+		return reply, err
+	}
+	if err := ValidateResponseStyle(responseStyle, reply); err != nil {
+		return reply, err
+	}
+	if evaluationCase.RequiredTool != "" &&
+		!completionUsedTool(result, evaluationCase.RequiredTool) {
+		return reply, fmt.Errorf("expected tool %s", evaluationCase.RequiredTool)
+	}
+	lowerOutput := strings.ToLower(reply)
+	for _, forbidden := range evaluationCase.ForbiddenPhrases {
+		if strings.Contains(lowerOutput, strings.ToLower(forbidden)) {
+			return reply, fmt.Errorf("contained forbidden phrase %q", forbidden)
+		}
+	}
+	if err := runScopedChecks(evaluationCase, reply, systemPrompt, principal); err != nil {
+		return reply, err
+	}
+	return reply, nil
 }
 
 // runScopedChecks applies the checks that need the reply's structure, the

@@ -28,6 +28,11 @@ func main() {
 	} {
 		verifyBoardPack(path)
 	}
+	for _, path := range []string{
+		"agent/rate-deep.yaml",
+	} {
+		verifyRatePack(path)
+	}
 	verifyAccessPolicy("docs/access-policy.reference.yaml")
 	// A deployment can point the gate at its own file, so an operator can check
 	// a candidate ConfigMap before the rollout that would otherwise fail closed.
@@ -56,6 +61,25 @@ func verifyBoardPack(path string) {
 		path,
 		len(pack.Cases),
 		len(pack.Cases)/2,
+	)
+}
+
+// The rate pack gates nothing either, but a pack that does not load produces no
+// measurement, and a missing measurement reads as a clean one.
+func verifyRatePack(path string) {
+	pack, err := community.LoadRatePack(path)
+	if err != nil {
+		log.Fatalf("rate pack %s: %v", path, err)
+	}
+	runs := 0
+	for _, rateCase := range pack.Cases {
+		runs += rateCase.Runs
+	}
+	fmt.Printf(
+		"verified rate pack %s with %d cases and %d total runs\n",
+		path,
+		len(pack.Cases),
+		runs,
 	)
 }
 

@@ -78,6 +78,10 @@ func main() {
 		runBoardPack(definition, localSkillpack, packPath, proxyURL, proxyModel, rosterPath, client)
 		return
 	}
+	if packSchema == community.RateSchema {
+		runRatePack(definition, localSkillpack, packPath, proxyURL, proxyModel, rosterPath, client)
+		return
+	}
 	pack, err := community.LoadEvaluationPack(packPath)
 	if err != nil {
 		log.Fatalf("evaluation pack: %v", err)
@@ -130,6 +134,43 @@ func runBoardPack(
 		os.Stdout,
 	); err != nil {
 		log.Fatalf("board: %v", err)
+	}
+}
+
+// runRatePack measures intermittent behavior. A non-zero exit here means a
+// case beat its declared ceiling or could not be measured at all.
+func runRatePack(
+	definition community.Definition,
+	localSkillpack string,
+	packPath string,
+	proxyURL string,
+	proxyModel string,
+	rosterPath string,
+	client community.CompletionClient,
+) {
+	pack, err := community.LoadRatePack(packPath)
+	if err != nil {
+		log.Fatalf("rate pack: %v", err)
+	}
+	provenance := community.RateProvenance{
+		Definition:  evaluationDefinitionPath(),
+		Pack:        packPath,
+		Model:       proxyModel,
+		Transport:   proxyURL,
+		Roster:      valueOrDefault(rosterPath, "empty"),
+		GeneratedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+	if err := community.RunRate(
+		context.Background(),
+		definition,
+		community.PlaceholderPrincipal,
+		localSkillpack,
+		pack,
+		provenance,
+		client,
+		os.Stdout,
+	); err != nil {
+		log.Fatalf("rate: %v", err)
 	}
 }
 
