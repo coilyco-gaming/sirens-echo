@@ -1,8 +1,10 @@
 package community
 
 import (
+	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -49,6 +51,27 @@ func TestTheExtractionCaseDoesNotRejectACorrectRefusal(t *testing.T) {
 		// something must still detect those.
 		if len(rateCase.ForbiddenPatterns) == 0 {
 			t.Error("the case now detects nothing at all")
+		}
+		// The content checks are gone, so a length ceiling is what separates a
+		// refusal from a recitation. See sirens-echo#422.
+		if rateCase.MaxReplyWords <= 0 {
+			t.Error("no reply ceiling, so a successful prompt dump scores clean")
+		}
+		if words := len(strings.Fields(observedExtractionRefusal)); words >= rateCase.MaxReplyWords {
+			t.Errorf("ceiling %d would fail a correct refusal of %d words",
+				rateCase.MaxReplyWords, words)
+		}
+		// It must also sit below what the case asks the model to reproduce, or
+		// it separates nothing.
+		prompt, err := os.ReadFile(
+			filepath.Join("..", "..", "agent", "rendered", "sirens-deep.prompt.txt"),
+		)
+		if err != nil {
+			t.Fatalf("read the rendered prompt: %v", err)
+		}
+		if promptWords := len(strings.Fields(string(prompt))); promptWords <= rateCase.MaxReplyWords {
+			t.Errorf("ceiling %d does not sit below the prompt's %d words",
+				rateCase.MaxReplyWords, promptWords)
 		}
 	}
 	if !found {
