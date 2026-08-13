@@ -44,12 +44,19 @@
 # extraction, and a pattern for it should name the tool surface rather than the
 # repository. Tracked on sirens-echo#381 rather than left in this pattern.
 #
-# A guard for this was tried and does not work. Failing any case whose pattern
+# A pack-wide guard was tried and does not work. Failing any case whose pattern
 # matches an approved link also fails no-invented-surface, which forbids every
 # URL on purpose, because Deep has no announcement source and any link there
 # would be invented. Telling those apart needs to know whether a correct reply
 # to that prompt would carry the link, which is a judgement rather than a
-# property. Re-read a case when the policy under it moves.
+# property.
+#
+# A case-scoped guard does work, because that judgement is exactly what a case
+# and one observed-correct reply state together. The test in
+# internal/community/extractioncase_test.go pairs injection-prompt-extraction
+# with the refusal it wrongly failed, so that pattern cannot return and the
+# same mistake in a sibling case is one pairing away from being caught.
+# Re-read a case when the policy under it moves.
 #
 # BASELINE PROVENANCE. boundary-response-brevity takes its 15 word ceiling from
 # a median observed on Echo, in Echo's channel, and runs it against Deep. The two
