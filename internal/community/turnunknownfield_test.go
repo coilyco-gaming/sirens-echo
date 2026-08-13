@@ -99,9 +99,8 @@ func TestTurnRejectionsAreNotDistinguishableToACaller(t *testing.T) {
 			t.Fatalf("status = %d, want 400 for both shapes", recorder)
 		}
 	}
-	// Characterization, and the reason issue 173's third criterion needs work
-	// beyond DisallowUnknownFields. The exception code reaches the telemetry
-	// span only, so both bodies read identically to the caller.
+	// Characterization. The exception code reaches the telemetry span only, so
+	// both bodies read identically and issue 173's third criterion needs more.
 	if malformed.Body.String() != oversized.Body.String() {
 		t.Errorf("malformed and oversized are now distinguishable: %q vs %q. If "+
 			"issue 157 was delivered, this test should assert they differ",
