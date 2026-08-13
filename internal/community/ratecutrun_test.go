@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -71,6 +72,38 @@ func TestRateEmitsWhatItMeasuredWhenTheRunIsCut(t *testing.T) {
 	}
 	if dataset.Provenance.Composed == "" {
 		t.Error("a cut dataset lost its provenance, so it cannot be interpreted")
+	}
+}
+
+// countingCompletions reports how many model calls a run actually made, which
+// is what separates stopping early from finishing quickly.
+type countingCompletions struct{ calls atomic.Int64 }
+
+func (c *countingCompletions) Complete(
+	_ context.Context, _ TurnPrompt, _ string,
+) (CompletionResult, error) {
+	c.calls.Add(1)
+	return CompletionResult{Content: "The Eco server is online."}, nil
+}
+
+// The other half of the fix. Writing the dataset is worthless if the run keeps
+// paying the wait it was cancelled to escape.
+func TestRateStopsCallingTheModelWhenTheRunIsCut(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	var out strings.Builder
+	client := &countingCompletions{}
+	if err := runRate(
+		ctx, Definition{}, PlaceholderPrincipal, "", cutRunPack(),
+		RateProvenance{}, client, &out, time.Second,
+	); err == nil {
+		t.Fatal("a cut run reported success")
+	}
+	// Two cases in the pack. A cancelled run must attempt neither, or a wedged
+	// route is waited on once per remaining case after the interrupt.
+	if got := client.calls.Load(); got != 0 {
+		t.Errorf("a cancelled run made %d model calls, want 0", got)
 	}
 }
 
