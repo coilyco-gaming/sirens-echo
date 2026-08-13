@@ -47,20 +47,9 @@ which rejected every reply that carried a link.
 
 ## Claiming a filing that did not happen
 
-The grounding check rejects an action claim the runtime did not perform, but its
-first-person matcher reads only `I filed` and its siblings. The neutral profile
-forbids all first-person voice, so for a neutral definition the two contracts
-never overlap, and `A correction has been filed` passed with no tool call behind
-it.
-
-The check also reads the passive form. It anchors on a tracker artifact noun,
-which keeps it away from correct passive prose about the game world such as
-`The trade was created by a player`.
-
-A passive claim counts as supported when the turn reached the tracker at all,
-read or write. Demanding the exact write tool would reject a correct report of
-an issue the runtime only looked up. Links are masked first, so the word
-`issues` inside a URL path cannot seed a claim.
+The grounding check also rejects a filing claim no tool supports, in the
+impersonal voice a neutral reply actually uses. See
+[grounding a filing claim](sirens-echo-grounding.md).
 
 ## When the write fails
 

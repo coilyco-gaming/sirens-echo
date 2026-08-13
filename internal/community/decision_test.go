@@ -208,27 +208,6 @@ func TestValidateGroundingStillRejectsInventedChannelBesideLink(t *testing.T) {
 	}
 }
 
-// The neutral profile forbids first person, so the first-person matcher can
-// never fire on an Echo reply. These are the forms Echo can actually emit.
-func TestValidateGroundingRejectsUngroundedPassiveClaim(t *testing.T) {
-	t.Parallel()
-	for _, reply := range []string{
-		"A correction has been filed for review.",
-		"A correction issue has been filed for review.",
-		"The issue was created for tracking.",
-		"A ticket has been opened for the missing recipe.",
-		"The correction is being tracked.",
-	} {
-		reply := reply
-		t.Run(reply, func(t *testing.T) {
-			t.Parallel()
-			if err := ValidateGrounding(reply, "The current channel is #bots."); err == nil {
-				t.Fatal("ValidateGrounding accepted an ungrounded tracker claim")
-			}
-		})
-	}
-}
-
 // A turn that reached the tracker may report what it found, including a status
 // that reads as passive voice.
 func TestValidateGroundingAllowsGroundedPassiveClaim(t *testing.T) {

@@ -30,12 +30,34 @@ func maskURLs(text string) string {
 const trackerArtifact = `(?:issues?|corrections?|tickets?|bug report|feature request)`
 
 // passiveActionClaim is the neutral profile's voice for the claim the
-// first-person matcher catches. See docs/sirens-echo-issues.md.
+// first-person matcher catches. See docs/sirens-echo-grounding.md.
 var passiveActionClaim = regexp.MustCompile(
-	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:has|have|had|was|were|is|are)\s+` +
-		`(?:been\s+|being\s+)?(?:sent|posted|opened|filed|created|escalated|closed|` +
+	`(?i)\b` + trackerArtifact + `\b[^.!?\n]{0,60}?\b(?:has|have)\s+been\s+` +
+		`(?:sent|posted|opened|filed|created|escalated|closed|` +
 		`commented|updated|labeled|logged|raised|submitted|tracked)\b`,
 )
+
+// notAClaim disqualifies a sentence that denies, hedges, supposes, asks, or
+// credits someone else. None of those assert that this turn did the thing.
+var notAClaim = regexp.MustCompile(
+	`(?i)(?:\bno\b|\bnot\b|\bnever\b|\bcannot\b|n['’]t\b|\bif\b|\bwhether\b|\bunless\b|` +
+		`\bonce\b|\bwhen\b|\bwould\b|\bcould\b|\bshould\b|\bmight\b|\bmay\b|\bby\b)`,
+)
+
+// sentenceBreak splits a reply into sentences. Polarity belongs to the clause
+// that carries it, so a denial two sentences later must not excuse a claim.
+var sentenceBreak = regexp.MustCompile(`[.!?]+`)
+
+// claimsCompletedTrackerAction reports an unattributed assertion that a tracker
+// write finished. See docs/sirens-echo-grounding.md for what each gate excludes.
+func claimsCompletedTrackerAction(reply string) bool {
+	for _, sentence := range sentenceBreak.Split(reply, -1) {
+		if passiveActionClaim.MatchString(sentence) && !notAClaim.MatchString(sentence) {
+			return true
+		}
+	}
+	return false
+}
 
 // ParseReply bounds the model's plain-text reply. Nothing unwraps a fence or
 // JSON: a fence is reply content now, and stripping it would corrupt an answer.
@@ -70,14 +92,14 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	}
 	// The neutral profile forbids first person, so the matcher above can never
 	// fire on an Echo reply. This is the same claim in the voice Echo can use.
-	if passiveActionClaim.MatchString(masked) && !trackerWasTouched(executed) {
+	if claimsCompletedTrackerAction(masked) && !trackerWasTouched(executed) {
 		return fmt.Errorf("model claimed a tracker action the runtime has not performed")
 	}
 	return nil
 }
 
 // trackerWasTouched asks only whether the turn reached the issue tracker at
-// all. See docs/sirens-echo-issues.md for why the exact write tool is wrong.
+// all. See docs/sirens-echo-grounding.md for why the exact write tool is wrong.
 func trackerWasTouched(executed []ExecutedTool) bool {
 	for _, tool := range executed {
 		if strings.Contains(strings.ToLower(tool.Name), "issue") {

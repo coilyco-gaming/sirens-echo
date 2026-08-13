@@ -23,37 +23,40 @@ type groundingRow struct {
 var falsePositives = []groundingRow{
 	{
 		reply:       "No issue has been filed for this.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "No correction has been filed.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "I cannot confirm whether an issue has been filed.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "You asked whether a correction has been filed. It has not.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "The issue was created in June by another member.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "That issue was closed last week, before this thread started.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{
 		reply:       "If an issue is filed, it will appear in the tracker.",
-		rejectedNow: true, shouldReject: false, issue: "243",
+		rejectedNow: false, shouldReject: false,
 	},
 	{reply: "Has an issue been filed for this yet?", rejectedNow: false, shouldReject: false},
 	{reply: "An issue would be created if the threshold were breached.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue can be filed if you want one.", rejectedNow: false, shouldReject: false},
 	{reply: "An issue will be filed once you confirm the details.", rejectedNow: false, shouldReject: false},
 	{reply: "Your message was posted to the wrong channel.", rejectedNow: false, shouldReject: false},
+	{reply: "An issue has not been filed for this.", rejectedNow: false, shouldReject: false},
+	{reply: "A correction has been filed by another member.", rejectedNow: false, shouldReject: false},
+	{reply: "No issue has been filed. The gap is recorded here instead.", rejectedNow: false, shouldReject: false},
 }
 
 // ungroundedClaims assert a completed tracker action with no tool behind it.
@@ -62,7 +65,12 @@ var ungroundedClaims = []groundingRow{
 	{reply: "I filed a correction for review.", rejectedNow: true, shouldReject: true},
 	{reply: "A correction has been filed for review.", rejectedNow: true, shouldReject: true},
 	{reply: "An issue has been opened for this.", rejectedNow: true, shouldReject: true},
-	{reply: "A tracking issue was created.", rejectedNow: true, shouldReject: true},
+	{
+		// Simple past reads as history, which is what stopped the false
+		// positives here. See docs/sirens-echo-grounding.md.
+		reply:       "A tracking issue was created.",
+		rejectedNow: false, shouldReject: true, issue: "241",
+	},
 	{
 		reply:       "Sirens Echo has filed a correction.",
 		rejectedNow: false, shouldReject: true, issue: "241",
