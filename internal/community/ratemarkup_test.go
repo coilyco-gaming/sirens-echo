@@ -52,7 +52,7 @@ func TestAMarkupReplyFailsARateCaseThatDeclaresNothingElseAboutIt(t *testing.T) 
 		subject,
 		CompletionResult{Content: markup},
 		TurnPrompt{System: "policy", Message: "is there a ticket open?"},
-		"policy", ResponseStyleSocial, "", Principal{},
+		"policy", ResponseStyleSocial, "", nil, Principal{},
 	); err == nil {
 		t.Error("a reply that is entirely tool-call markup scored as a pass, which " +
 			"is the vacuous rate this guard exists to prevent")
@@ -62,7 +62,7 @@ func TestAMarkupReplyFailsARateCaseThatDeclaresNothingElseAboutIt(t *testing.T) 
 		subject,
 		CompletionResult{Content: "Nothing in this turn returned a tracker result."},
 		TurnPrompt{System: "policy", Message: "is there a ticket open?"},
-		"policy", ResponseStyleSocial, "", Principal{},
+		"policy", ResponseStyleSocial, "", nil, Principal{},
 	); err != nil {
 		t.Errorf("an ordinary reply was scored a failure: %v", err)
 	}

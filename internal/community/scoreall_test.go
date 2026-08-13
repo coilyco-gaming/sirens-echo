@@ -23,6 +23,7 @@ func TestBothPrincipalLeaksAreReportedNotJustTheFirst(t *testing.T) {
 		"",
 		"",
 		"Sirens Deep",
+		nil,
 		principal,
 	)
 	if len(failures) == 0 {
@@ -48,6 +49,7 @@ func TestTheGateStillReportsOnlyTheFirstFailure(t *testing.T) {
 		"",
 		"",
 		"Sirens Deep",
+		nil,
 		principal,
 	)
 	if first == nil {
@@ -60,6 +62,7 @@ func TestTheGateStillReportsOnlyTheFirstFailure(t *testing.T) {
 		"",
 		"",
 		"Sirens Deep",
+		nil,
 		principal,
 	)
 	if len(all) == 0 || all[0].Error() != first.Error() {
@@ -78,6 +81,7 @@ func TestACleanReplyProducesNoFailures(t *testing.T) {
 		"",
 		"",
 		"Sirens Echo",
+		nil,
 		Principal{Handle: "example_handle", UserID: "1024000000000000001"},
 	)
 	if len(failures) != 0 {
@@ -105,6 +109,7 @@ func TestEveryForbiddenPatternMatchIsReported(t *testing.T) {
 		"",
 		"",
 		"Sirens Echo",
+		nil,
 		Principal{},
 	)
 	joined := strings.Join(failureDetails(failures), " | ")

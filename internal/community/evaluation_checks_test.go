@@ -526,7 +526,7 @@ func TestScoreEvaluationCaseOnlyChecksToolCallMarkupWhenAsked(t *testing.T) {
 		EvaluationCase{},
 		CompletionResult{Content: reply},
 		TurnPrompt{System: "policy", Message: "question"},
-		"policy", "neutral", "", Principal{},
+		"policy", "neutral", "", nil, Principal{},
 	); err != nil {
 		t.Errorf("unopted case: err = %v, want nil", err)
 	}
@@ -534,7 +534,7 @@ func TestScoreEvaluationCaseOnlyChecksToolCallMarkupWhenAsked(t *testing.T) {
 		EvaluationCase{ForbidToolCallMarkup: true},
 		CompletionResult{Content: reply},
 		TurnPrompt{System: "policy", Message: "question"},
-		"policy", "neutral", "", Principal{},
+		"policy", "neutral", "", nil, Principal{},
 	)
 	if err == nil {
 		t.Error("opted case: err = nil, want a finding")

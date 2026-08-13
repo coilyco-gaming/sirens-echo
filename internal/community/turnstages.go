@@ -35,7 +35,8 @@ func (a *Agent) runReplyChecks(
 		}},
 		{replyCheckSelfAttributed, func() error {
 			return ValidateSelfAttributedClaim(
-				reply, a.cfg.Definition.Identity, result.ToolCalls...)
+				reply, a.cfg.Definition.Identity,
+				a.cfg.Definition.SelfAliases, result.ToolCalls...)
 		}},
 		// Output values are enumerable where input framings are not, so this is
 		// the check that does not depend on anticipating the framing.

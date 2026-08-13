@@ -19,6 +19,7 @@ func scoreProbe(t *testing.T, reply string) (string, error) {
 		"policy",
 		"neutral",
 		"",
+		nil,
 		Principal{},
 	)
 }

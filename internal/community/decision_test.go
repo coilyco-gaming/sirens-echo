@@ -364,7 +364,7 @@ func TestANamedSelfClaimIsCaughtInTheSimplePast(t *testing.T) {
 		"Sirens Echo created a tracking issue.",
 		"Sirens Echo has filed a correction.",
 	} {
-		if ValidateSelfAttributedClaim(reply, identity) == nil {
+		if ValidateSelfAttributedClaim(reply, identity, nil) == nil {
 			t.Errorf("a named self-claim survived: %q", reply)
 		}
 	}
@@ -373,12 +373,12 @@ func TestANamedSelfClaimIsCaughtInTheSimplePast(t *testing.T) {
 		"Sirens Echo filed a correction.",
 		"Sirens Echo has filed a correction.",
 	} {
-		if ValidateSelfAttributedClaim(reply, identity, createIssueCall()) != nil {
+		if ValidateSelfAttributedClaim(reply, identity, nil, createIssueCall()) != nil {
 			t.Errorf("a claim the runtime performed was refused: %q", reply)
 		}
 	}
 	// Someone else named in the simple past is not this service claiming.
-	if ValidateSelfAttributedClaim("Kai filed a correction.", identity) != nil {
+	if ValidateSelfAttributedClaim("Kai filed a correction.", identity, nil) != nil {
 		t.Error("a member's own action was read as a self-claim")
 	}
 }
@@ -401,7 +401,7 @@ func TestTheTwoPinnedShapesAgainstTheWholeReplyPath(t *testing.T) {
 		t.Run(reply, func(t *testing.T) {
 			t.Parallel()
 			refused := ValidateGrounding(reply, "The current channel is #bots.") != nil ||
-				ValidateSelfAttributedClaim(reply, identity) != nil
+				ValidateSelfAttributedClaim(reply, identity, nil) != nil
 			if refused == expected {
 				t.Fatalf("reply survives=%v against expected %v; the pipeline "+
 					"changed, so update issue 241 rather than this assertion", !refused, expected)
@@ -422,13 +422,13 @@ func TestAGenericSelfNounIsStillThisService(t *testing.T) {
 		"The bot opened an issue for this.",
 		"The agent has closed that.",
 	} {
-		if ValidateSelfAttributedClaim(reply, identity) == nil {
+		if ValidateSelfAttributedClaim(reply, identity, nil) == nil {
 			t.Errorf("a generic self-claim survived: %q", reply)
 		}
 	}
 	// A write that did happen is a correct reply, however the runtime names it.
 	if ValidateSelfAttributedClaim(
-		"The service filed a correction.", identity, createIssueCall(),
+		"The service filed a correction.", identity, nil, createIssueCall(),
 	) != nil {
 		t.Error("a claim the runtime performed was refused")
 	}
@@ -437,7 +437,7 @@ func TestAGenericSelfNounIsStillThisService(t *testing.T) {
 		"Kai filed a correction.",
 		"The server owner opened an issue for this.",
 	} {
-		if ValidateSelfAttributedClaim(reply, identity) != nil {
+		if ValidateSelfAttributedClaim(reply, identity, nil) != nil {
 			t.Errorf("a member's own action was read as a self-claim: %q", reply)
 		}
 	}
@@ -448,7 +448,7 @@ func TestAGenericSelfNounIsStillThisService(t *testing.T) {
 func TestAShortFormOfTheIdentityIsNotDerived(t *testing.T) {
 	t.Parallel()
 	if ValidateSelfAttributedClaim(
-		"Coilyco filed a correction.", "Sirens Deep of Coilyco",
+		"Coilyco filed a correction.", "Sirens Deep of Coilyco", nil,
 	) != nil {
 		t.Error("the organisation was read as the service, which is the derivation " +
 			"this rule deliberately does not do")
