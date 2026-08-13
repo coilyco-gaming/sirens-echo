@@ -29,10 +29,9 @@ guilds:
 ```
 
 `channels` and `users` take the literal `all` or an ID list. `all` is spelled
-out rather than punctuated so it greps and cannot be reached by a typo, and a
-misspelling is a startup failure rather than a silent widening. `note` exists
-because a diff of 19-digit snowflakes is otherwise unreviewable, and the loader
-never matches on it.
+out rather than punctuated so it greps and cannot be reached by a typo. `note`
+exists because a diff of 19-digit snowflakes is otherwise unreviewable, and the
+loader never matches on it.
 
 ## Evaluation order
 
@@ -42,9 +41,8 @@ never matches on it.
 4. The member, as the union of `users` and `roles`.
 5. The channel, or its parent when the summon arrived in a thread.
 
-Steps one through four decide from the Gateway payload already in memory, so a
-guild, member, or channel outside the policy costs nothing. Only an unseen
-thread reaches a Discord lookup, and those are bounded separately.
+Steps one to four decide from the Gateway payload in memory, so anything
+outside the policy costs nothing. An unseen thread reaches a bounded lookup.
 
 ## Roles
 
@@ -52,7 +50,9 @@ thread reaches a Discord lookup, and those are bounded separately.
 Listing users makes every new person a config change plus a rollout, while a
 role grant covers members nobody enumerated, free, because
 `Message.Member.Roles` arrives on the Gateway payload. Users and roles are a
-union, so either alone is a complete grant.
+union, so either alone is a complete grant. `staff_roles` is a separate list
+that grants nothing: it marks holders for a relaxed content posture, the gate
+never reads it, and a guild listing only staff roles still allows no member.
 
 ## Failing closed
 

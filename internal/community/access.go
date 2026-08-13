@@ -82,6 +82,10 @@ type GuildAccess struct {
 	Roles    []string        `yaml:"roles"`
 	Rate     *GuildRateLimit `yaml:"rate_limit"`
 
+	// StaffRoles adjusts content posture and grants nothing. It is deliberately
+	// not Roles, so the two axes cannot be confused in a config diff.
+	StaffRoles []string `yaml:"staff_roles"`
+
 	// catchAll marks the entry synthesized from the legacy environment, which
 	// scoped by channel across every guild. No file can author one.
 	catchAll  bool
@@ -183,6 +187,7 @@ func (p *AccessPolicy) validate() error {
 
 func (g *GuildAccess) validate() error {
 	ids := append([]string{g.ID}, g.Roles...)
+	ids = append(ids, g.StaffRoles...)
 	if !g.Channels.All {
 		ids = append(ids, g.Channels.IDs...)
 	}
@@ -317,6 +322,28 @@ func (g *GuildAccess) permitsMember(userID string, roles []string) bool {
 	for _, granted := range g.Roles {
 		for _, held := range roles {
 			if granted == held {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// StaffPosture reports whether this turn's author holds a role the guild marks
+// as staff. Named for posture because it grants nothing. See issue 230.
+func (p *AccessPolicy) StaffPosture(guildID string, roles []string) bool {
+	if p == nil || len(roles) == 0 {
+		return false
+	}
+	// A guild's staff roles are that guild's. Resolving through the entry rather
+	// than a flat set is what stops one guild's ID granting posture in another.
+	guild := p.guild(guildID)
+	if guild == nil {
+		return false
+	}
+	for _, staff := range guild.StaffRoles {
+		for _, held := range roles {
+			if staff == held {
 				return true
 			}
 		}
