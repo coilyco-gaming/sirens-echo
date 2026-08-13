@@ -6,7 +6,7 @@ import (
 )
 
 // URLs and Discord markup are excluded from mention resolution. A backtick span
-// is neither, and the disclosure footer is made of them. See sirens-echo#486.
+// was neither, and the disclosure footer is made of them. See sirens-echo#486.
 
 // footerWithToolNames is the reply shape that reaches sendReply on any turn
 // that called a tool, which is where mention resolution runs.
@@ -16,27 +16,29 @@ func footerWithToolNames() string {
 		ExecutedTool{Name: "eco.find_trade", Outcome: ToolOutcomeEmpty})
 }
 
-// Characterization. The fix is a third span exclusion in one function, which is
-// worth one deliberate pass rather than a third patch.
-func TestAToolNamedMemberRewritesTheFooter(t *testing.T) {
+// Was characterization, now regression. A tool name in the receipt is a tool,
+// not a member who happens to share its first label.
+func TestAToolNamedMemberLeavesTheFooterAlone(t *testing.T) {
 	t.Parallel()
 	roster := mentionRoster{}
 	roster.add("eco", "999")
 	content := footerWithToolNames()
 	out, resolved := roster.resolveMentions(content)
-	if out == content && len(resolved) == 0 {
-		t.Fatal("a display name no longer rewrites a tool name in the receipt, so " +
-			"issue 486 is fixed and this test should go")
+	if out != content {
+		t.Errorf("the receipt was rewritten:\n  in =%q\n  out=%q", content, out)
 	}
-	// Once per person, so the first line is rewritten and the second is not,
-	// which leaves the receipt naming a person and a tool for the same call.
-	if strings.Count(out, "eco.") != 1 {
-		t.Errorf("expected one surviving tool name beside one rewritten, got:\n%s", out)
+	// Both tool names survive. One rewritten and one not was the defect, and it
+	// left the receipt naming a person and a tool for the same call.
+	if strings.Count(out, "eco.") != 2 {
+		t.Errorf("expected both tool names intact, got:\n%s", out)
+	}
+	if len(resolved) != 0 {
+		t.Errorf("resolved %v, so a receipt pinged someone", resolved)
 	}
 }
 
 // The same collision in an ordinary code span, which is the general form.
-func TestANameInsideACodeSpanIsRewritten(t *testing.T) {
+func TestANameInsideACodeSpanIsLeftAlone(t *testing.T) {
 	t.Parallel()
 	roster := mentionRoster{}
 	roster.add("eco", "999")
@@ -44,8 +46,12 @@ func TestANameInsideACodeSpanIsRewritten(t *testing.T) {
 		"run `eco status` to check",
 		"```\neco --version\n```",
 	} {
-		if out, _ := roster.resolveMentions(reply); out == reply {
-			t.Errorf("a code span is now left alone, so issue 486 is fixed for %q", reply)
+		out, resolved := roster.resolveMentions(reply)
+		if out != reply {
+			t.Errorf("a code span was rewritten:\n  in =%q\n  out=%q", reply, out)
+		}
+		if len(resolved) != 0 {
+			t.Errorf("%q pinged %v for a name inside code", reply, resolved)
 		}
 	}
 }
