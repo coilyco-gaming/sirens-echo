@@ -197,6 +197,11 @@ func ValidateNeutralStyle(reply string) error {
 		return fmt.Errorf("model reply used an exclamation mark")
 	}
 	for _, current := range reply {
+		// ASCII is never decorative. Sk covers the grave accent and the
+		// circumflex, so scanning it would ban code spans and exponents.
+		if current < 0x80 {
+			continue
+		}
 		if unicode.Is(unicode.So, current) || unicode.Is(unicode.Sk, current) ||
 			current == '\u200d' || current == '\ufe0f' {
 			return fmt.Errorf("model reply used an emoji or decorative symbol")

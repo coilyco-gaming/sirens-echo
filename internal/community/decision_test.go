@@ -282,3 +282,41 @@ func TestValidatorsAreEnglishOnly(t *testing.T) {
 		t.Fatalf("grounding reached a translated action claim, so issue 253 needs revisiting: %v", err)
 	}
 }
+
+// A code span is how a technical answer stays readable, and the grave accent is
+// ASCII Sk, so scanning that category banned it outright.
+func TestValidateNeutralStyleAllowsCodeSpansAndExponents(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"Run `ward exec test` to check.",
+		"The item key is `WoodenHullPlanksItem`.",
+		"The exponent is 2^8.",
+		"Set `max_context_messages` to 12.",
+	} {
+		reply := reply
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateNeutralStyle(reply); err != nil {
+				t.Fatalf("ValidateNeutralStyle rejected ordinary punctuation: %v", err)
+			}
+		})
+	}
+}
+
+// The emoji ban itself is unchanged.
+func TestValidateNeutralStyleStillRejectsEmoji(t *testing.T) {
+	t.Parallel()
+	for _, reply := range []string{
+		"The Eco server is online 🟢.",
+		"Wood 🪵 is listed at 3 Spectres.",
+		"Understood 🙂.",
+	} {
+		reply := reply
+		t.Run(reply, func(t *testing.T) {
+			t.Parallel()
+			if err := ValidateNeutralStyle(reply); err == nil {
+				t.Fatal("ValidateNeutralStyle accepted an emoji")
+			}
+		})
+	}
+}
