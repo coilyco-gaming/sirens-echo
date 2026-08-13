@@ -52,9 +52,9 @@ so a flood cannot expand metric cardinality.
 
 Gate evaluation decides from the Gateway payload where it can. Two gates can
 still need a Discord API call: an unseen thread whose parent is unknown, and a
-reply whose referenced message was not delivered. Those are bounded separately
-per context, so an unscoped channel cannot force an API call per message.
-Scope decisions are cached in both directions.
+reply whose referenced message was not delivered. Those are bounded per
+context, so an unscoped channel cannot force a call per message, and scope
+decisions are cached in both directions.
 
 ## Timeouts
 
@@ -63,10 +63,9 @@ Scope decisions are cached in both directions.
 * `SIRENS_ECHO_REQUEST_TIMEOUT` - `3m` - how long the turn itself may take.
 
 The request budget starts after the turn acquires the slot. A turn that started
-its budget on arrival would reach the model with only the remainder.
-
-The typing indicator starts when the turn starts running and refreshes until the
-reply is sent.
+its budget on arrival would reach the model with only the remainder. The typing
+indicator starts when the turn starts running and refreshes until the reply is
+sent.
 
 Tool results and the completion budget are bounded separately. See
 [the completion budget](sirens-echo-budget.md).
@@ -75,6 +74,7 @@ Tool results and the completion budget are bounded separately. See
 
 The defaults suit a guild the operator does not moderate. Raise them for a
 trusted guild, and prefer lowering the context tier over the user tier when the
-concern is aggregate spend. Admission bounds cost and is not a moderation
-surface. See [multiple Discord contexts](sirens-echo-contexts.md),
+concern is aggregate spend. Admission bounds cost, not moderation.
+See [the buckets](sirens-echo-admission-buckets.md),
+[multiple Discord contexts](sirens-echo-contexts.md),
 [the service](sirens-echo.md), and [configuration](sirens-echo-config.md).
