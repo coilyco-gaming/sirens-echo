@@ -154,6 +154,9 @@ type Config struct {
 	// FetchHosts is the allowlist the fetch tool may reach. Empty offers no
 	// tool. See docs/sirens-echo-fetch.md.
 	FetchHosts []string
+	// SandboxLabelID labels every issue this service files. Zero applies
+	// nothing. See docs/sirens-echo-sandbox-label.md.
+	SandboxLabelID int
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -239,6 +242,7 @@ func LoadConfig() (Config, error) {
 		ContentClassesPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
 		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
+		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		RequestTimeout:         requestTimeout,
