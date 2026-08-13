@@ -76,5 +76,5 @@ Response style validation binds model replies and not notices, since a notice
 never reaches the model or passes through `ParseReply`. The shape here is the
 equivalent guarantee for the strings the harness writes.
 
-See [the prompt](sirens-echo-prompt.md), [admission
-control](sirens-echo-admission.md), and [the service](sirens-echo.md).
+See [the prompt](sirens-echo-prompt.md), [admission](sirens-echo-admission.md),
+[the trace line](sirens-echo-notice-trace.md), and [the service](sirens-echo.md).
