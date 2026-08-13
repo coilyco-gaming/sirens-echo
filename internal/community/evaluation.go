@@ -172,6 +172,18 @@ func RunEvaluation(
 	)
 }
 
+// failedReply is what the case actually said. Scoring can fail before it has
+// a parsed reply, so the raw completion stands in rather than nothing.
+func failedReply(reply string, result CompletionResult) string {
+	if trimmed := strings.TrimSpace(reply); trimmed != "" {
+		return trimmed
+	}
+	if trimmed := strings.TrimSpace(result.Content); trimmed != "" {
+		return trimmed
+	}
+	return "(the model returned no content)"
+}
+
 func runEvaluation(
 	ctx context.Context,
 	definition Definition,
@@ -214,6 +226,8 @@ func runEvaluation(
 			// agent defect, so a failure prints it too. See sirens-echo#386.
 			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, reply)
 			failures = append(failures, fmt.Sprintf("%s: %v", evaluationCase.ID, err))
+			// The reply is the evidence. See sirens-echo#386.
+			fmt.Fprintf(output, "%s: fail\n%s\n\n", evaluationCase.ID, failedReply(reply, result))
 			continue
 		}
 		fmt.Fprintf(output, "%s: pass\n%s\n\n", evaluationCase.ID, reply)
