@@ -138,7 +138,7 @@ func hostAllowed(host, allowed string) bool {
 	// leaves the process, so it must not depend on where it is called from.
 	host = strings.ToLower(strings.TrimSpace(host))
 	allowed = strings.ToLower(strings.TrimSpace(allowed))
-	if allowed == "" {
+	if host == "" || allowed == "" {
 		return false
 	}
 	suffix, wildcard := strings.CutPrefix(allowed, "*.")
@@ -152,10 +152,14 @@ func hostAllowed(host, allowed string) bool {
 	}
 	// The dot is part of the comparison, so notmozilla.com cannot match
 	// *.mozilla.com and the apex is a separate entry.
-
-	// The length guard is the empty first label. ".mozilla.com" carries the
-	// suffix and names no host. See sirens-echo#668.
-	return len(host) > len(suffix)+1 && strings.HasSuffix(host, "."+suffix)
+	if !strings.HasSuffix(host, "."+suffix) {
+		return false
+	}
+	// Every label before the suffix has to be real. A length guard admits
+	// ..mozilla.com. See sirens-echo#674.
+	prefix := host[:len(host)-len(suffix)-1]
+	return prefix != "" && !strings.HasPrefix(prefix, ".") &&
+		!strings.Contains(prefix, "..")
 }
 
 // newFetchClient refuses a private destination at dial time. Checking the
