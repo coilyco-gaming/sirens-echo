@@ -96,3 +96,50 @@ func TestAnUnknownKeyIsRefused(t *testing.T) {
 		t.Errorf("the marker was returned to the caller: %q", got)
 	}
 }
+
+// The prompt half. It names the keys only when a registry is configured, so a
+// deployment that sets no path renders the prompt it renders today.
+func TestThePromptNamesTheKeysOnlyWhenConfigured(t *testing.T) {
+	t.Parallel()
+	const base = "You are Sirens Echo.\n"
+	if got := withPhrasePolicy(base, PhraseRegistry{}); got != base {
+		t.Errorf("an unconfigured registry changed the prompt:\n%q", got)
+	}
+
+	registry := PhraseRegistry{
+		Schema: PhraseSchema,
+		Phrases: []Phrase{
+			{Key: "no-tool", Text: "no tool for that is available here"},
+			{Key: "no-data", Text: "no data for that request"},
+		},
+	}
+	got := withPhrasePolicy(base, registry)
+	if !strings.HasPrefix(got, base) {
+		t.Error("the policy replaced the prompt rather than appending to it")
+	}
+	for _, key := range []string{"no-tool", "no-data"} {
+		if !strings.Contains(got, key) {
+			t.Errorf("the prompt does not name the key %q", key)
+		}
+	}
+	// The terminal rule is the one the model has to know, or it writes a phrase
+	// as a prefix and the reply is refused for a reason it cannot see.
+	if !strings.Contains(got, "whole reply") {
+		t.Errorf("the prompt does not state the terminal rule:\n%s", got)
+	}
+}
+
+// The keys are named, never the texts. A model given the text would compose
+// with it rather than invoke it, which is the behaviour the registry replaces.
+func TestThePromptNamesKeysNotTexts(t *testing.T) {
+	t.Parallel()
+	registry := PhraseRegistry{
+		Schema:  PhraseSchema,
+		Phrases: []Phrase{{Key: "no-tool", Text: "no tool for that is available here"}},
+	}
+	got := withPhrasePolicy("You are Sirens Echo.\n", registry)
+	if strings.Contains(got, "no tool for that is available here") {
+		t.Errorf("the prompt carries the phrase text, so the model can compose "+
+			"with it rather than invoke it:\n%s", got)
+	}
+}

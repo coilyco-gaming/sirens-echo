@@ -138,3 +138,18 @@ func (a *Agent) renderPhrases(reply string) (string, error) {
 	}
 	return a.phrases.RenderPhrases(reply)
 }
+
+// withPhrasePolicy names the keys a reply may invoke. A prompt with no registry
+// is returned unchanged, which is the deployment that renders nothing.
+func withPhrasePolicy(prompt string, registry PhraseRegistry) string {
+	if !registry.Configured() {
+		return prompt
+	}
+	return prompt + "\n" + fmt.Sprintf(
+		`Some answers are canonical phrases rather than prose. Invoke one by writing
+{{phrase:key}} and nothing else, because an invocation is the whole reply and a
+phrase beside other text is refused. Use one only when it answers exactly, and
+answer normally otherwise. Available keys: %s.`,
+		strings.Join(registry.Keys(), ", "),
+	) + "\n"
+}
