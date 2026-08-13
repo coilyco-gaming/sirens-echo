@@ -173,6 +173,13 @@ issue exits non-zero by design and the comment *is* still posted, so an exit
 status read without the note says a successful write failed. See
 [sirens-echo#693](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/693).
 
+**Name labels, never number them.** `issue-label add --labels 332` exits zero,
+prints a label object, and applies nothing: the flag is `[]string`, so an ID
+goes over as `"332"` and Forgejo reads a quoted numeral as a label name. Use
+`--labels consult`. `issue create --labels 332` is a different flag of a
+different type and does work, which is why this one is easy to trust. See
+[agentic-os#1047](https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os/issues/1047).
+
 Use neutral service nouns for Echo. She/her remains Kai's pronoun. No em dashes
 or semicolons in prose.
 
