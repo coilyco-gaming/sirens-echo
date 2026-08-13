@@ -3,7 +3,10 @@
 ## Discord response service
 
 The response surface has its own inventory, which is the part that grows
-fastest. See [response service features](features-response-service.md).
+fastest. See [response service features](features-response-service.md) for what
+a turn does, [admission features](features-admission.md) for who may start one,
+and [observability features](features-observability.md) for what the service
+reports about itself.
 
 ## Configuration and deployment
 
