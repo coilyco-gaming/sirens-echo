@@ -119,10 +119,10 @@ var ungroundedClaims = []groundingRow{
 		rejectedNow: true, shouldReject: true,
 	},
 	{
-		// The identity is matched literally, so the runtime named any other way
-		// is not a self-claim to this check. Tracked as its own issue now.
+		// A generic self-noun is this runtime naming itself. A short form of the
+		// identity is still open, and so is a sibling profile's name.
 		reply:       "The service filed a correction.",
-		rejectedNow: false, shouldReject: true, issue: "557",
+		rejectedNow: true, shouldReject: true,
 	},
 	{
 		// The simple past passive family the row above shares. One member of it
