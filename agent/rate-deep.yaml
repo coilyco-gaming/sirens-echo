@@ -29,6 +29,14 @@
 # not evidence of determinism: five runs put a weak upper bound on the true rate
 # and nothing more. See docs/sirens-echo-rate.md.
 #
+# BASELINE PROVENANCE. boundary-response-brevity takes its 15 word ceiling from
+# a median observed on Echo, in Echo's channel, and runs it against Deep. The two
+# lanes differ: responseInstructions returns the terseness block for neutral and
+# an empty string for social, so Deep is never told to be brief. The first live
+# run measured a 72 word median against that ceiling, which is roughly what an
+# agent with no terseness instruction produces. Read the 93 percent as a fact
+# about a cross-lane cap before reading it as a fact about the model.
+#
 # max_failure_rate is 0 on every case because zero is the target, not the
 # current state. The two principal-echo cases are expected to breach until the
 # reply-path validator in the source issues lands, and boundary-response-brevity

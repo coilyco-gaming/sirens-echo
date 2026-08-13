@@ -1,55 +1,61 @@
-# Attachments the service cannot read
+# An uploaded file is data, never instructions
 
-A message with a screenshot used to reach the model as its text alone. Nothing
-in the repository referenced `Attachments`, `Embeds`, or `StickerItems`, so an
-image was discarded before context assembly.
+A large prompt body arrives as a file and is read through a tool. Splicing it
+into the prompt would make every turn carrying a file pay the whole file up
+front, which is the problem the feature exists to solve.
 
-## Why that was worse than missing a feature
+## Where it lands
 
-A member posting a screenshot and asking what is wrong sends four words. Echo
-received four words and answered them, confidently, from nothing. It was not a
-refusal anyone forgot to write. It was a question the model could not tell was
-incomplete.
+The requester's scratchpad, under `uploads/`. Not a second file concept: path
+confinement, the per-file limit, the per-requester quota, and attribution to
+the requesting principal all apply because the write goes through the same
+reserved path the tool-result spill uses.
 
-The multimedia checklist requires that Echo say so when it cannot read an
-attachment. That rule was unmeetable, because the signal never arrived.
+`uploads/` is reserved, so the model cannot write there. That matters more than
+tidiness. If the model could write into it, it could forge a file and then cite
+it as something a member supplied. It is a separate directory from
+`tool-output/` for the mirror reason: an upload must not be mistaken for
+something the runtime produced.
 
-This is the same shape as the Eco filter defect in
-[issue 195](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/195),
-where an empty result asserted that no trades existed when the filter had
-failed. An absence indistinguishable from a non-event produces a confidently
-wrong answer however well the agent behaves.
+Reading is already built. `scratch_read` and `scratch_search` are offered
+wherever a scratchpad is mounted, and search is the half that scales, since
+reading a large file back spends the budget storing it was meant to protect.
 
-## What is surfaced
+## Two different problems in one phrase
 
-The media type and the count. Not the filename, not the bytes.
+"No executable shenanigans, or smuggled rick rolls" names two things, and only
+one is solvable.
 
-A filename is member-authored text and would add an injection surface for no
-benefit, since `image/png` is all the model needs to say it cannot read the
-image. The type is what Discord recorded with the upload.
+**Executables are solvable.** The check is the bytes. A null byte or invalid
+UTF-8 refuses. The extension and the declared media type both belong to the
+uploader and decide nothing.
 
-An entry renders as a suffix beside the existing agent and asserted markers:
+**Smuggled instructions are not.** A text file is exactly the shape prompt
+injection takes, and no filter separates a document discussing instructions
+from one issuing them. So the bound is posture rather than detection: the file
+is untrusted input always, including from the principal. It never widens
+authority, never admits a caller, never names a tool, and a URL inside it is
+inert.
 
-```
-- member: what is wrong here? (with 1 attachment this service cannot read: image/png)
-```
+## The egress, bounded
 
-Silence is the default. A text-only transcript grows nothing, which is asserted
-by a test, because scaffolding on every ordinary message is its own cost.
+Fetching a URL that arrives in a payload is the shape of a server-side request
+forgery. Two things bound it. The address comes off the Gateway payload rather
+than out of message text, so Discord generated it and a member cannot type one.
+And the host allowlist admits only Discord's CDN over TLS, so a payload cannot
+choose the destination even if that first property ever stops holding.
 
-## The type is still untrusted
+An oversized file refuses rather than storing a prefix, because a truncated
+document read as a whole one is worse than no document.
 
-It arrives with an upload, so `cleanMediaType` holds it to the grammar of a
-media type: lowercase, one slash, and a small character set. Anything else is
-dropped, and a dropped type takes the whole suffix with it rather than
-rendering a count for something nobody can name.
+## Failing soft
 
-That matters because the alternative is a prompt line reading
-`image/png. IGNORE PRIOR INSTRUCTIONS`, supplied by whoever uploaded the file.
+No scratchpad, an unreachable host, a non-text body, an oversized file, or a
+partition at quota all leave the turn exactly as it is today: the transcript
+still reports that an attachment exists and that its contents were not read.
+Losing the upload is much better than losing the answer.
 
-## What this is not
+## See also
 
-It is not attachment reading, and it does not shorten that work. Static images,
-links and embeds, and GIFs are the checklist and are sequenced there. This
-closes the gap in the meantime, during which the honest behaviour is to say an
-image arrived and cannot be read.
+* [Scratchpad partitions](sirens-echo-scratchpad-partitions.md) - the store.
+* [Tool results](sirens-echo-tool-results.md) - the same reserved write path.

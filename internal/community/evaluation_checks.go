@@ -269,8 +269,8 @@ func checkPrincipalEcho(reply string, principal Principal) error {
 	return nil
 }
 
-// toolCallMarkupPatterns match a model emitting its own tool-call delimiters as
-// reply content. See docs/sirens-echo-tool-call-markup.md for why syntax.
+// toolCallMarkupPatterns match delimiter syntax rather than the words, since
+// prose about tool calls is correct. See docs/sirens-echo-tool-call-markup.md.
 var toolCallMarkupPatterns = []*regexp.Regexp{
 	// DeepSeek special-token markup, the one form observed live. U+FF5C is a
 	// full width bar rather than the ASCII one, so both are matched separately.
@@ -281,8 +281,8 @@ var toolCallMarkupPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`<\|(?:python_tag|channel|tool_call)\|>`),
 }
 
-// checkToolCallMarkup rejects unparsed tool-call markup, which a member reads
-// verbatim. Opt-in per case, since intermittent checks turn a gate flaky.
+// checkToolCallMarkup rejects a reply carrying unparsed tool-call markup, which
+// a member reads verbatim. See docs/sirens-echo-tool-call-markup.md.
 func checkToolCallMarkup(reply string) error {
 	for _, pattern := range toolCallMarkupPatterns {
 		if match := pattern.FindString(reply); match != "" {

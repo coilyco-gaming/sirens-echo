@@ -481,7 +481,7 @@ func TestRuntimeGuardAndEvalCheckAgree(t *testing.T) {
 }
 
 // The must-not-fire half, and the reason this check is narrow. Discussing tool
-// calls or quoting JSON is correct. Only the delimiter syntax is a defect.
+// calls is correct; only the model's delimiter syntax is a defect.
 func TestToolCallMarkupAcceptsRepliesThatOnlyDiscussToolCalls(t *testing.T) {
 	t.Parallel()
 	clean := []string{
