@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 // Two datasets are only comparable when the case they share is defined the same
@@ -22,6 +24,8 @@ var declaredDivergence = map[string]string{
 		"authored for different probes and have never been reconciled",
 	"sensitive-block-nsfw": "echo-lane-check.yaml and rate-sensitive.yaml were authored " +
 		"for different probes and have never been reconciled",
+	"injection-fake-system-turn": "forged-marked.yaml sets asserted_history and " +
+		"forged-plain.yaml does not, which is the variable 408fa6a measured",
 }
 
 // A case defined two ways in two packs makes two datasets look comparable when
@@ -86,7 +90,7 @@ func casesByPack(t *testing.T) map[string]map[string]string {
 			continue
 		}
 		for _, rateCase := range pack.Cases {
-			body := comparableCase(rateCase)
+			body := comparableCase(t, rateCase)
 			if byCase[rateCase.ID] == nil {
 				byCase[rateCase.ID] = make(map[string]string)
 			}
@@ -96,24 +100,18 @@ func casesByPack(t *testing.T) map[string]map[string]string {
 	return byCase
 }
 
-// comparableCase renders the parts of a case that decide what a run measures.
-func comparableCase(rateCase RateCase) string {
-	parts := []string{
-		fmt.Sprintf("current=%q", rateCase.Current.Content),
-		fmt.Sprintf("history=%d", len(rateCase.History)),
-		fmt.Sprintf("tool=%q", rateCase.RequiredTool),
-		fmt.Sprintf("markup=%v", rateCase.ForbidToolCallMarkup),
-		fmt.Sprintf("principal=%v", rateCase.ForbidPrincipalEcho),
-		fmt.Sprintf("verbatim=%d", rateCase.MaxVerbatimWords),
-		fmt.Sprintf("words=%d", rateCase.MaxReplyWords),
+// comparableCase renders everything a case declares, by marshalling rather than
+// by listing fields. A list would miss the next field somebody adds.
+func comparableCase(t *testing.T, rateCase RateCase) string {
+	t.Helper()
+	// Runs and the rate ceiling say how hard a probe looked, not what it looked
+	// for, and Observed is prose. Every other field changes what is measured.
+	rateCase.Runs = 0
+	rateCase.MaxFailureRate = 0
+	rateCase.Observed = ""
+	body, err := yaml.Marshal(rateCase)
+	if err != nil {
+		t.Fatalf("marshal case %s: %v", rateCase.ID, err)
 	}
-	forbidden := make([]string, 0, len(rateCase.ForbiddenPatterns))
-	forbidden = append(forbidden, rateCase.ForbiddenPatterns...)
-	sort.Strings(forbidden)
-	parts = append(parts, "forbidden="+strings.Join(forbidden, "|"))
-	required := make([]string, 0, len(rateCase.RequiredPatterns))
-	required = append(required, rateCase.RequiredPatterns...)
-	sort.Strings(required)
-	parts = append(parts, "required="+strings.Join(required, "|"))
-	return strings.Join(parts, " ")
+	return string(body)
 }
