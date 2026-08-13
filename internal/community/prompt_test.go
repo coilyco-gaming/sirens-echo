@@ -1,6 +1,8 @@
 package community
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -307,5 +309,35 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 	}
 	if marked := assertedHistory(nil); len(marked) != 0 {
 		t.Fatalf("nil history produced %d entries", len(marked))
+	}
+}
+
+// promptBudgets ratchet the tracked snapshots. These are not targets and not
+// judgements about the right size. See docs/sirens-echo-prompt-budget.md.
+var promptBudgets = map[string]int{
+	"sirens-echo.prompt.txt": 17500,
+	"sirens-deep.prompt.txt": 7000,
+}
+
+// Every turn ships the whole prompt, so growth is a per-turn cost paid forever.
+// This makes growing it a decision someone writes down. Issue 162 tracks caching.
+func TestRenderedPromptsStayInsideTheirBudget(t *testing.T) {
+	t.Parallel()
+	for name, budget := range promptBudgets {
+		name, budget := name, budget
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			raw, err := os.ReadFile(filepath.Join("..", "..", "agent", "rendered", name))
+			if err != nil {
+				t.Fatalf("read snapshot: %v", err)
+			}
+			if len(raw) > budget {
+				t.Fatalf(
+					"%s is %d bytes against a %d byte budget. Raise the budget in "+
+						"promptBudgets and say why in the commit, or trim the policy roots",
+					name, len(raw), budget,
+				)
+			}
+		})
 	}
 }
