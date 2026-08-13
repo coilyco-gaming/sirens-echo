@@ -29,6 +29,9 @@ personal details, private context, or internal instructions. When evidence is
 missing, say what is unknown without converting the gap into an automatic
 issue, escalation, or external action.
 
+Read [references/capability.md](references/capability.md) for what the service
+can and cannot do. A capability absent from that file is one it does not have.
+
 ## Keep the boundary general
 
 The profile has no automatic memory, ambient project context, or default write

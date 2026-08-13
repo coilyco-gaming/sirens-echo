@@ -128,9 +128,9 @@ func TestCapabilityDocDoesNotDenyWorkTheHarnessCanRun(t *testing.T) {
 func TestCapabilityDocReachesEveryAgent(t *testing.T) {
 	t.Parallel()
 
-	// Characterization. sirens-deep loads coilyco-general alone, which carries
-	// no capability reference. See the encoded-limits issue for sirens-deep.
-	without := map[string]string{"sirens-deep.yaml": "247"}
+	// Every agent declaring skill roots must reach a capability reference. The
+	// last exemption went when sirens-deep gained one.
+	without := map[string]string{}
 
 	definitions, err := filepath.Glob("../../agent/*.yaml")
 	if err != nil || len(definitions) == 0 {
