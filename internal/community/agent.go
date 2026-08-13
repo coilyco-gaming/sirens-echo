@@ -49,6 +49,8 @@ type Agent struct {
 	beats     *heartbeat
 	// identifiers refuses a reply carrying a value this process holds.
 	identifiers *IdentifierGuard
+	// taxonomy is empty when the deployment configures no content gate.
+	taxonomy ContentTaxonomy
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -142,6 +144,13 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
+	}
+	if cfg.ContentClassesPath != "" {
+		taxonomy, err := LoadContentTaxonomy(cfg.ContentClassesPath)
+		if err != nil {
+			return nil, err
+		}
+		agent.taxonomy = taxonomy
 	}
 	agent.identifiers = NewIdentifierGuard(cfg, roster)
 	agent.ensureRuntimeDefaults()
@@ -939,6 +948,17 @@ func (a *Agent) runTurn(
 		attribute.Int("prompt.user.bytes", len(prompt.Message)),
 	)
 	contextSpan.End()
+
+	verdict, err := a.classifyTurn(turnCtx, current, turn.RequestID())
+	if err != nil {
+		// A broken gate is not a denial. See docs/sirens-echo-content-gate.md.
+		a.telemetry.Info(turnCtx, "content.gate.failed", slog.String("error", err.Error()))
+	}
+	recordContentVerdict(turnSpan, verdict)
+	if verdict.Blocked {
+		a.telemetry.Info(turnCtx, "content.blocked", slog.String("class", verdict.Class.ID))
+		return turn.Reply(turnCtx, BlockResponse(verdict.Class, "", a.cfg.Principal))
+	}
 
 	progress.Stage(turnCtx, stagePhraseThinking)
 	result, err := a.completions.Complete(turnCtx, prompt, turn.RequestID())
