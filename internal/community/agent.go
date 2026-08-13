@@ -968,9 +968,26 @@ func (a *Agent) runTurn(
 	progress.Settle(turnCtx)
 
 	if err := a.sendReply(turnCtx, turn, reply); err != nil {
-		return err
+		return errors.Join(err, a.reportUndelivered(turnCtx, turn))
 	}
 	return nil
+}
+
+// reportUndelivered tells a member the answer existed and did not arrive. One
+// attempt, never a retry. See docs/sirens-echo-delivery-failures.md.
+func (a *Agent) reportUndelivered(ctx context.Context, turn turnIO) error {
+	if target, ok := turn.(reactor); ok {
+		a.react(ctx, target, reactionFailed)
+	}
+	a.telemetry.Error(
+		ctx,
+		"turn.reply.undelivered",
+		slog.String("error_type", "reply_undelivered"),
+		slog.String("transport", turn.Transport()),
+	)
+	// A short notice survives the length refusal that is the likeliest cause,
+	// and costs one call when it does not.
+	return a.notifyFailure(ctx, turn, noticeUndelivered)
 }
 
 func (a *Agent) failTurn(
