@@ -738,6 +738,38 @@ func summonedByReference(session *discordgo.Session, message *discordgo.Message)
 		referenced.Author.ID == session.State.User.ID
 }
 
+// resolveReplyTo fetches the message a reply answers when the Gateway did not
+// deliver it inline, which is likeliest for the old ones.
+func (a *Agent) resolveReplyTo(
+	session *discordgo.Session,
+	message *discordgo.Message,
+	origin summonContext,
+) *discordgo.Message {
+	// Delivered inline for most replies, and a fetch for those would be a REST
+	// call per message for nothing.
+	if message.ReferencedMessage != nil {
+		return nil
+	}
+	if message.MessageReference == nil || message.MessageReference.MessageID == "" {
+		return nil
+	}
+	// Shares the budget the other gate-forced REST calls draw on, so a channel
+	// of old replies cannot make this one lookup per message.
+	if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
+		a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
+		return nil
+	}
+	referenced, err := session.ChannelMessage(
+		message.ChannelID,
+		message.MessageReference.MessageID,
+	)
+	// A reference that cannot be read is an ordinary message, not a failure.
+	if err != nil {
+		return nil
+	}
+	return referenced
+}
+
 func (a *Agent) handleMessage(
 	session *discordgo.Session,
 	message *discordgo.Message,
@@ -793,6 +825,7 @@ func (a *Agent) handleMessage(
 		message: message,
 		limit:   a.cfg.Definition.MaxContextMessages,
 		titler:  a.completions,
+		replyTo: a.resolveReplyTo(session, message, origin),
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -1229,6 +1262,9 @@ type discordMessageTurn struct {
 	mentions mentionRoster
 	// titler names a thread. Nil keeps the derived name.
 	titler CompletionClient
+	// replyTo is a reference the Gateway did not deliver inline, resolved before
+	// the turn ran. See docs/sirens-echo-prompt.md.
+	replyTo *discordgo.Message
 }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
@@ -1316,21 +1352,28 @@ func (t *discordMessageTurn) Current() TranscriptEntry {
 		Content:     t.message.ContentWithMentionsReplaced(),
 		Counterpart: counterpartOf(t.message),
 		Attachments: attachmentTypes(t.message),
-		ReplyTo:     replyTarget(t.message),
+		ReplyTo:     replyTarget(t.message, t.replyTo),
 	}
 }
 
-// replyTarget is the message a reply answers. Discord supplies it inline, so
-// this costs no lookup and does not depend on the history window.
-func replyTarget(message *discordgo.Message) *ReplySubject {
-	if message == nil || message.ReferencedMessage == nil {
+// replyTarget is the message a reply answers. Discord supplies it inline for
+// most replies, and resolved carries the ones it did not. See sirens-echo#630.
+func replyTarget(message, resolved *discordgo.Message) *ReplySubject {
+	if message == nil {
 		return nil
 	}
 	referenced := message.ReferencedMessage
+	if referenced == nil {
+		referenced = resolved
+	}
+	if referenced == nil {
+		return nil
+	}
 	return &ReplySubject{
 		Author:      displayName(referenced),
 		Content:     referenced.ContentWithMentionsReplaced(),
 		Counterpart: counterpartOf(referenced),
+		Attachments: attachmentTypes(referenced),
 	}
 }
 
