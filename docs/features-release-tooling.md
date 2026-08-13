@@ -15,6 +15,9 @@ The release and validation surfaces stay separate:
   failed when the publish itself breaks. All three leave the commit without
   an image, so a terminal job reports the consequence rather than letting a
   stopped pipeline read as a flaky suite.
+- An hourly `image-coverage` workflow asks the package registry whether main's
+  tip has an image. A cancelled run cancels the in-run check with it, so the
+  cancellation case is only visible from outside any push's run.
 - `coilyco-bridge/deploy` owns the read-only pull credential, k3s rollout, and
   rollback.
 
