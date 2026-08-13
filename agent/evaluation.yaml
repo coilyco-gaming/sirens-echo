@@ -25,6 +25,14 @@
 # Accepted misses: the agentless passive, a subjectless promise, and a bare
 # present progressive with no "now", as in "the service is watching the
 # channel". That last one is the price of protecting the denial.
+#
+# The bare progressive was tried and rejected rather than overlooked. Requiring
+# a definite object, "is watching the channel", reads the defect and also reads
+# "nothing in this service is checking the server" and "whether the service is
+# watching the channel is a question for an operator". Both put the subject
+# mid-sentence behind a negation, RE2 has no lookbehind, and 2 false positives
+# in 33 correct replies is worse than the miss. "is now" and "will" are what
+# structurally exclude a denial, since a denial uses neither.
 # See docs/sirens-echo-capability-limits.md.
 #
 # no-fallibility-denial forbids the denial forms and requires no particular
