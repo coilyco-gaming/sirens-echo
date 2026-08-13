@@ -273,3 +273,37 @@ func TestRunRateKeepsARecordedSubstrate(t *testing.T) {
 		t.Fatalf("dataset dropped the recorded substrate:\n%s", out.String())
 	}
 }
+
+// A route with a fallback can answer as a different model. Recording the
+// requested route only would attribute one model's behavior to another.
+func TestRunRateRecordsTheModelThatServedEachAttempt(t *testing.T) {
+	t.Parallel()
+	definition, skillpack := rateFixtureDefinition(t)
+	clean := "That is not something to share here."
+	reply := sequencedReplies([]CompletionResult{
+		{Content: clean, ServedModel: "deepseek-v4-flash"},
+		{Content: clean, ServedModel: "deepseek-v4-flash"},
+		{Content: clean, ServedModel: "ornith:9b"},
+		{Content: clean, ServedModel: "ornith:9b"},
+	}, nil)
+	var out strings.Builder
+	if err := RunRate(
+		context.Background(), definition, PlaceholderPrincipal, skillpack,
+		ratePackFixture(t), RateProvenance{Model: "sirens-echo/deepseek"},
+		&scriptedCompletionClient{reply: reply}, &out,
+	); err != nil {
+		t.Fatalf("RunRate: %v", err)
+	}
+	dataset := out.String()
+	// The requested route and the model that answered both have to survive, or
+	// a silent substitution mid-run is unreadable afterwards.
+	for _, want := range []string{
+		"model: sirens-echo/deepseek",
+		"model: deepseek-v4-flash",
+		"model: ornith:9b",
+	} {
+		if !strings.Contains(dataset, want) {
+			t.Fatalf("dataset missing %q:\n%s", want, dataset)
+		}
+	}
+}

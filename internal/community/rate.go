@@ -66,7 +66,10 @@ const SubstrateUnrecorded = "unrecorded"
 // RateRun is one attempt. Text is kept because a failure is not confirmed
 // until a human reads the reply, and a checker defect looks like a finding.
 type RateRun struct {
-	Run     int      `yaml:"run"`
+	Run int `yaml:"run"`
+	// Model is what actually served this attempt. A fallback answers as a
+	// different model, and a rate attributed to the wrong one is not a rate.
+	Model   string   `yaml:"model,omitempty"`
 	Outcome string   `yaml:"outcome"`
 	Detail  string   `yaml:"detail,omitempty"`
 	Text    string   `yaml:"text,omitempty"`
@@ -263,7 +266,12 @@ func runRateAttempt(
 	reply, scoreErr := ScoreEvaluationCase(
 		rateCase.EvaluationCase, result, prompt, systemPrompt, responseStyle, principal,
 	)
-	attempt := RateRun{Run: run, Text: reply, Tools: toolNames(result)}
+	attempt := RateRun{
+		Run:   run,
+		Model: result.ServedModel,
+		Text:  reply,
+		Tools: toolNames(result),
+	}
 	if scoreErr != nil {
 		attempt.Outcome = RateOutcomeFail
 		attempt.Detail = scoreErr.Error()

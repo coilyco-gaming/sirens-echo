@@ -56,6 +56,20 @@ neutral default: a dataset that does not know what host produced it should say
 so where a later reader cannot miss it. Treat `unrecorded` as unusable for any
 cross-tier comparison.
 
+## Recording the model that served
+
+Provenance records the route that was *requested*. A route carrying a fallback
+can answer as a different model, so each attempt also records the model that
+actually served it, taken from the response rather than from configuration.
+
+A cell whose attempts do not all name the same served model has silently
+changed its independent variable partway through. Treat it the same way as a
+cell run on a contended host: void it and re-run, rather than reasoning about
+the mixture.
+
+This records the outcome and does not prevent it. Whether fallbacks should be
+suppressed during a sweep is a routing decision owned elsewhere.
+
 ## Scope
 
 This governs sweeps and rate runs. The deterministic gate is unaffected: it runs

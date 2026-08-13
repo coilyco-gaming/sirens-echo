@@ -83,6 +83,9 @@ type ExecutedTool struct {
 type CompletionResult struct {
 	Content   string
 	ToolCalls []ExecutedTool
+	// ServedModel is what actually answered, which a fallback makes different
+	// from the route requested. See docs/sirens-echo-sweep.md.
+	ServedModel string
 }
 
 // CompletionClient is the inference boundary used by the Discord runtime.
@@ -160,6 +163,9 @@ type chatMetadata struct {
 }
 
 type chatResponse struct {
+	// Model names what served the request. A route with a fallback can answer
+	// as a different model, and a measurement that cannot see that is wrong.
+	Model   string `json:"model"`
 	Choices []struct {
 		Message      chatResponseMessage `json:"message"`
 		FinishReason string              `json:"finish_reason"`
@@ -171,6 +177,7 @@ type chatResponse struct {
 type chatChoice struct {
 	Message      chatResponseMessage
 	FinishReason string
+	ServedModel  string
 }
 
 // truncated reports a completion that ran out of budget with nothing to show
@@ -409,7 +416,12 @@ func (c ProxyClient) Complete(
 				)
 				continue
 			}
-			return CompletionResult{Content: content, ToolCalls: executed}, nil
+			return CompletionResult{
+					Content:     content,
+					ToolCalls:   executed,
+					ServedModel: choice.ServedModel,
+				},
+				nil
 		}
 		if toolRounds == maxToolRounds {
 			return CompletionResult{}, fmt.Errorf("Agent Proxy exceeded %d MCP tool rounds", maxToolRounds)
@@ -722,6 +734,7 @@ func (c ProxyClient) completeOnce(
 	telemetry.RecordModelCall(modelCtx, "ok")
 	modelSpan.End()
 	return chatChoice{
+		ServedModel:  completion.Model,
 		Message:      completion.Choices[0].Message,
 		FinishReason: completion.Choices[0].FinishReason,
 	}, nil
