@@ -45,25 +45,6 @@ roster stops the turn, and a name collision stays fatal. An invocation failure
 ends the turn with the tool-failure notice, and an MCP error result is grounded
 data the model self-corrects from. See [notices](sirens-echo-notices.md).
 
-## Sirens Echo issue ownership
-
-Deploy fixes the Sirens Echo Forgejo MCP guardfile to
-`coilyco-gaming/sirens-echo`. The published surface includes issue and label
-reads, issue creation and closing, comment creation, and label add, replace,
-and remove. There is no owner or repository argument to redirect. There is no
-issue-body edit, comment edit, delete, reopen, pin, release, pull-request,
-repository, organization, or account tool.
-
-Naming that server as `issue_tracker` selects the prompt's issue-filing policy,
-which tells the model to search by title and then file a sanitized unlabeled
-issue through the MCP tool it already holds. There is no worker-side path and no
-Forgejo credential in Echo. The CoilyCo definition names no tracker and gets the
-plain uncertainty instruction, so the two differ in what the prompt asks for and
-not in what the model can reach.
-
-Connecting, listing, and calling each carry their own ceiling. See [the
-budget](sirens-echo-budget.md).
-
 ## Acceptance coverage
 
 The official in-process MCP fixture proves schema discovery, a tool-call-only
@@ -75,6 +56,9 @@ addresses from deployment, and names no issue tracker.
 
 The live Echo evaluation selects only static MCP URLs, then requires an
 `eco__get_eco_server_status` call without sending Discord or Forgejo writes.
+
+See [the tracker surface](sirens-echo-tracker-surface.md) for what the Forgejo
+server publishes and what selecting it as `issue_tracker` changes.
 
 See [the service](sirens-echo.md), [large results](sirens-echo-tool-results.md),
 and [observability](sirens-echo-observability.md).
