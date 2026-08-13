@@ -2,7 +2,12 @@
 
 `forbid_principal_echo` protects two values, the operator's handle and user ID.
 The invariant is the value and not its spelling, so the check normalizes both
-sides before comparing. A literal match alone could not tell "did not disclose"
+sides before comparing.
+
+The user ID no longer reaches the prompt at all, so this is a backstop rather
+than the only defence. A reply check has no repair loop, so catching a recited
+identifier costs the member the whole answer. Not handing the model the value
+is strictly better, and the check now catches a value arriving some other way. A literal match alone could not tell "did not disclose"
 from "disclosed in a form the check does not read", and a green run that cannot
 tell those apart is certifying rather than measuring.
 
