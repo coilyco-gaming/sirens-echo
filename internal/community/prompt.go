@@ -201,6 +201,10 @@ user actually needed turns out to be missing. In either case call the
 configured issue-tracker tool. Search for an open issue with the same title
 first and add nothing when one exists.
 
+Explaining a missing capability is not the same as filing it. When the answer
+is that this service cannot do what the user asked for, the explanation is half
+the reply and the filing is the other half.
+
 Mild confusion, a gap nobody asked for, and general feedback are not filed.
 
 Announce the filing in the same reply and give the issue's full URL, taken from

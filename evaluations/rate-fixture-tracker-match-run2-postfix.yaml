@@ -1,0 +1,86 @@
+schema: sirens-discord-ops.rate-dataset.v1
+provenance:
+    definition: agent/sirens-echo.yaml
+    pack: agent/rate-fixture-tracker-match.yaml
+    model: evaluation/deepseek-v4-flash
+    transport: http://ser8:8080
+    roster: empty
+    fixture: agent/tool-fixture-tracker-match.yaml
+    substrate: ser8, idle, after the capability clause, see issue 235
+    runner: unrecorded
+    composed: not composed
+    image: unrecorded
+    generated_at: "2026-08-13T10:48:58Z"
+records:
+    - id: existing-issue-is-not-refiled
+      runs: 10
+      attempts: 10
+      passed: 10
+      failed: 0
+      errors: 0
+      failure_rate: 0
+      max_failure_rate: 0
+      observed: 0/10, search only and no create in every run, evaluations/rate-fixture-tracker-match-run1.yaml
+      breached: false
+      measured: true
+      responses:
+        - run: 1
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier 14:00 claim is unverified. The correction noting Saturday builds have started at 16:00 since the June schedule change is already tracked in an open issue, so no new filing was made: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 2
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. The correction is already tracked in an open issue: #388, https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388. Nothing new was filed.'
+          tools:
+            - forgejo__search_issue
+        - run: 3
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. The correction is already tracked in open issue #388: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 4
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction is already tracked in issue #388: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 5
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. An open issue already tracks this correction, so nothing new was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 6
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue with this title already exists, so nothing new was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 7
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction for the Saturday build start time is already tracked as issue #388 (https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388), so no new issue was filed.'
+          tools:
+            - forgejo__search_issue
+        - run: 8
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. The correction is already tracked in an open issue: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 9
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified. A correction issue already exists for this, so no new issue was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
+        - run: 10
+          model: evaluation/deepseek-v4-flash
+          outcome: pass
+          text: 'The earlier answer is unverified; the corrected start time is 16:00 server time since the June schedule change. A correction issue with this title is already open, so nothing new was filed: https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/388'
+          tools:
+            - forgejo__search_issue
