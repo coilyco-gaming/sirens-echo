@@ -24,6 +24,11 @@ cache not working. See [issue 520](https://forgejo.coilysiren.me/coilyco-gaming/
 reported as the production deployment. Error rate, latency, and token spend
 were all contaminated and all plausible. See [issue 533](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/533).
 
+That fix named the binary and left `defaultInstanceName = "sirens-echo"` in
+place, so the shape recurred: 891 spans carrying `agent.attribution` of the
+Deep profile still report as Echo. Fixing one caller does not retire a default
+that is also a live service. See [issue 542](https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/542).
+
 **A failure message that blamed the wrong party.** `expected tool X` was
 emitted whether the model declined a tool it had or the run offered no roster
 at all. Only the first sentence says anything about the agent.
