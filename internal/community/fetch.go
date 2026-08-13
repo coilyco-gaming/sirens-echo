@@ -155,11 +155,40 @@ func hostAllowed(host, allowed string) bool {
 	if !strings.HasSuffix(host, "."+suffix) {
 		return false
 	}
-	// Every label before the suffix has to be real. A length guard admits
-	// ..mozilla.com. See sirens-echo#674.
+	// Every label before the suffix has to be a label. Naming the bad shapes
+	// one at a time left nine standing. See sirens-echo#726.
 	prefix := host[:len(host)-len(suffix)-1]
-	return prefix != "" && !strings.HasPrefix(prefix, ".") &&
-		!strings.Contains(prefix, "..")
+	if prefix == "" {
+		return false
+	}
+	for _, label := range strings.Split(prefix, ".") {
+		if !validHostLabel(label) {
+			return false
+		}
+	}
+	return true
+}
+
+// validHostLabel accepts what a hostname label may be, rather than refusing
+// what it may not. See sirens-echo#726.
+func validHostLabel(label string) bool {
+	// 63 octets is the label limit, and an empty label is the doubled dot.
+	if len(label) == 0 || len(label) > 63 {
+		return false
+	}
+	// A hyphen may sit inside a label and at neither end.
+	if label[0] == '-' || label[len(label)-1] == '-' {
+		return false
+	}
+	for i := 0; i < len(label); i++ {
+		c := label[i]
+		// No uppercase arm: hostAllowed lowercases first. A test holds that
+		// ordering, because losing it would refuse every capitalised host.
+		if !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'z') && c != '-' {
+			return false
+		}
+	}
+	return true
 }
 
 // newFetchClient refuses a private destination at dial time. Checking the

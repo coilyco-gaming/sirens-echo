@@ -52,45 +52,45 @@ var mustRefuse = []labelRow{
 	{
 		// A hyphen cannot open or close a label. This is the shape the fourth
 		// acceptance row on 674 named and the merged guard still admits.
-		host: "-.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "a lone hyphen is not a label",
+		host: "-.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "a lone hyphen is not a label",
 	},
 	{
-		host: "-a.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "leading hyphen",
+		host: "-a.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "leading hyphen",
 	},
 	{
-		host: "a-.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "trailing hyphen",
+		host: "a-.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "trailing hyphen",
 	},
 	{
-		host: "_.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "underscore is not a hostname character",
+		host: "_.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "underscore is not a hostname character",
 	},
 	{
-		host: "a b.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "an interior space",
+		host: "a b.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "an interior space",
 	},
 	{
 		// hostAllowed is documented as a predicate that must not depend on its
 		// caller. A slash inside a host means the string is not a host.
-		host: "a/b.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "a path separator inside a host",
+		host: "a/b.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "a path separator inside a host",
 	},
 	{
-		host: "a:80.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "a port separator inside a host",
+		host: "a:80.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "a port separator inside a host",
 	},
 	{
 		// A pattern holding a star is refused as a typo. A host holding one is
 		// not, so the two ends disagree about what a star means.
-		host: "*.mozilla.com", allowedNow: true, shouldAllow: false,
-		issue: "726", why: "a star is not a label",
+		host: "*.mozilla.com", allowedNow: false, shouldAllow: false,
+		why: "a star is not a label",
 	},
 	{
 		host:       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.mozilla.com",
-		allowedNow: true, shouldAllow: false,
-		issue: "726", why: "64 octets, one over the limit",
+		allowedNow: false, shouldAllow: false,
+		why: "64 octets, one over the limit",
 	},
 }
 
@@ -124,6 +124,31 @@ func TestARealSubdomainKeepsMatching(t *testing.T) {
 func TestAnInvalidLabelShape(t *testing.T) {
 	t.Parallel()
 	runLabelRows(t, mustRefuse)
+}
+
+// validHostLabel carries no uppercase arm because hostAllowed lowercases
+// first. Reordering those two refuses every capitalised host, silently.
+func TestALabelCheckThatRunsAfterLowercasing(t *testing.T) {
+	t.Parallel()
+	// The guarantee, from the caller's side: a capitalised host still matches.
+	for _, host := range []string{
+		"WWW.MOZILLA.COM",
+		"Www.Mozilla.Com",
+		"XN--A.mozilla.com",
+	} {
+		if !hostAllowed(host, "*.mozilla.com") {
+			t.Errorf("%q was refused, so the label check now runs before "+
+				"lowercasing and every capitalised host is rejected", host)
+		}
+	}
+	// And the predicate underneath, so the failure names which half moved.
+	if validHostLabel("WWW") {
+		t.Error("validHostLabel gained an uppercase arm; the comment on it and " +
+			"the ordering it relies on both need revisiting")
+	}
+	if !validHostLabel("www") {
+		t.Error("validHostLabel stopped accepting a plain lowercase label")
+	}
 }
 
 // The open rows are reported as one summary so the count is visible without
