@@ -247,7 +247,7 @@ func (c ProxyClient) Complete(
 ) (CompletionResult, error) {
 	telemetry := telemetryOrNoop(c.Telemetry)
 	var toolSession ToolSession
-	var uploads []string
+	var uploads []storedUpload
 	var tools []chatTool
 	var unavailable []string
 	var groundingDocuments []GroundingDocument

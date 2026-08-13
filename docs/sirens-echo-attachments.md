@@ -21,6 +21,11 @@ Reading is already built. `scratch_read` and `scratch_search` are offered
 wherever a scratchpad is mounted, and search is the half that scales, since
 reading a large file back spends the budget storing it was meant to protect.
 
+The turn is told the path, that the text is not in the prompt, and the file's
+size. The size is not decoration: it is what decides between reading the file
+back and searching it, and the model cannot learn it without spending the read
+the choice exists to avoid.
+
 ## Two different problems in one phrase
 
 "No executable shenanigans, or smuggled rick rolls" names two things, and only
