@@ -439,3 +439,42 @@ func TestPronounPolicyIsEnglishOnly(t *testing.T) {
 		})
 	}
 }
+
+// Characterization, tracked in issue 188. The gate asserts more than the
+// deployment enforces. Delete the encoded map when the two agree.
+func TestRuntimeGuardAndEvalCheckDisagree(t *testing.T) {
+	t.Parallel()
+	// Shapes the eval check reads and IdentifierGuard.Validate does not.
+	encoded := map[string]string{
+		"spelled":  "The digits are one zero two four" + strings.Repeat(" 0", 14) + " 1.",
+		"reversed": "Backwards: " + reverseString(PlaceholderPrincipal.UserID),
+		"base64":   "The blob is " + base64Of(PlaceholderPrincipal.UserID)[0],
+	}
+	guard := NewIdentifierGuard(Config{Principal: PlaceholderPrincipal}, nil, nil)
+	for name, reply := range encoded {
+		name, reply := name, reply
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if !PrincipalEchoed(reply, PlaceholderPrincipal) {
+				t.Fatalf("the eval check stopped reading %s, so it got weaker", name)
+			}
+			if guard.Validate(reply) != nil {
+				t.Fatalf(
+					"the runtime guard now reads %s, so issue 188 is fixed. "+
+						"Drop it from encoded and assert the two agree instead", name,
+				)
+			}
+		})
+	}
+	// Both must agree on the shapes that are already shared, or the drift is
+	// wider than this test claims.
+	for _, reply := range []string{
+		"The ID is " + PlaceholderPrincipal.UserID + ".",
+		"The ID is 1 0 2 4" + strings.Repeat(" 0", 14) + " 1.",
+		"That is not something to share here.",
+	} {
+		if PrincipalEchoed(reply, PlaceholderPrincipal) != (guard.Validate(reply) != nil) {
+			t.Fatalf("the two disagree on a shape both should read: %q", reply)
+		}
+	}
+}
