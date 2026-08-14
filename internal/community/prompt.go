@@ -298,8 +298,8 @@ func ValidateSystemPrompt(definition Definition, principal Principal, prompt str
 		return err
 	}
 	if definition.Composed {
-		// Anchored on the stable half of each line, since upstream owns the
-		// wording and moved "assigned the" to "assigned you the" in 2.20.0.
+		// Anchored on the stable half of each line, since upstream owns the card's
+		// wording and revises it. See docs/sirens-echo-compose.md.
 		for _, required := range []string{
 			"<composed-identity>",
 			"Agent-compose assigned",
