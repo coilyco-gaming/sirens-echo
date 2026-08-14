@@ -75,14 +75,8 @@ func (s *MemoryJobStore) Submit(job Job) (Job, bool, error) {
 }
 
 func (s *MemoryJobStore) submitLocked(job Job) (Job, bool, error) {
-	if job.CreatedAt.IsZero() {
-		job.CreatedAt = s.now()
-	}
-	job.UpdatedAt = job.CreatedAt
-	if job.State == "" {
-		job.State = JobQueued
-	}
-	if err := job.Validate(); err != nil {
+	job, err := prepareSubmission(job, s.now())
+	if err != nil {
 		return Job{}, false, err
 	}
 	if existingID, seen := s.byKey[job.IdempotencyKey]; seen {
@@ -164,14 +158,7 @@ func (s *MemoryJobStore) updateLocked(id string, mutate func(*Job)) (Job, error)
 	if !ok {
 		return Job{}, fmt.Errorf("%w: %s", ErrJobNotFound, id)
 	}
-	if mutate != nil {
-		mutate(&job)
-	}
-	job.UpdatedAt = s.now()
-	if err := job.Validate(); err != nil {
-		return Job{}, err
-	}
-	return job, nil
+	return applyUpdate(job, mutate, s.now())
 }
 
 // transitionLocked applies the machine and the caller's mutation, leaving the
@@ -185,13 +172,48 @@ func (s *MemoryJobStore) transitionLocked(
 	if !ok {
 		return Job{}, fmt.Errorf("%w: %s", ErrJobNotFound, id)
 	}
+	return applyTransition(job, next, mutate, s.now())
+}
+
+// The apply* functions below hold the store's semantics and touch no storage,
+// so every backend runs one copy of them rather than its own.
+
+// prepareSubmission fills a new record's defaults and validates it.
+func prepareSubmission(job Job, moment time.Time) (Job, error) {
+	if job.CreatedAt.IsZero() {
+		job.CreatedAt = moment
+	}
+	job.UpdatedAt = job.CreatedAt
+	if job.State == "" {
+		job.State = JobQueued
+	}
+	if err := job.Validate(); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+// applyUpdate applies the caller's mutation without moving the state machine.
+func applyUpdate(job Job, mutate func(*Job), moment time.Time) (Job, error) {
+	if mutate != nil {
+		mutate(&job)
+	}
+	job.UpdatedAt = moment
+	if err := job.Validate(); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+// applyTransition runs the state machine and then the caller's mutation. A
+// refused move returns an error and the caller's record is left untouched.
+func applyTransition(job Job, next JobState, mutate func(*Job), moment time.Time) (Job, error) {
 	if !next.Valid() {
-		return Job{}, fmt.Errorf("job %s: unknown target state %q", id, next)
+		return Job{}, fmt.Errorf("job %s: unknown target state %q", job.ID, next)
 	}
 	if !job.State.CanTransitionTo(next) {
-		return Job{}, jobTransitionError{ID: id, From: job.State, To: next}
+		return Job{}, jobTransitionError{ID: job.ID, From: job.State, To: next}
 	}
-	moment := s.now()
 	if next == JobRunning && job.State != JobRunning {
 		job.StartedAt = moment
 		job.Attempts++

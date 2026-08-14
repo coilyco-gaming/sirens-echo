@@ -15,6 +15,7 @@ reports about itself.
 - Deployment-owned Forgejo MCP URL in Echo, repository-scoped token only in the
   MCP pod
 - ExternalSecret injection with no pod AWS permission
+- Deploy-selected job store: in-memory, a mounted directory, or Postgres
 - Existing SigNoZ collector for OTLP/HTTP traces and metrics
 - Singleton k3s Echo Deployment
 - Full-source-SHA Echo images published to Forgejo OCI

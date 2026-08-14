@@ -17,3 +17,21 @@ TestCapabilityDocIsRightThatTheBuildCarriesNoRevision
 # narrower question of whether roles.kdl still matches a real catalogue.
 # This entry is permanent while that question needs a checkout to answer.
 TestGraphPatternsNeverReachDeniedSources
+
+# The Postgres store's SQL, which needs a live database. There is no in-process
+# Postgres, so the choice is an env gate or no SQL coverage at all.
+#
+# These five skip under `ward exec test` and `test-skips` in every environment,
+# including CI, because SIRENS_ECHO_TEST_JOB_STORE_DSN is deliberately not set
+# job-wide. They are not unrun: the `job store SQL` CI step runs exactly this
+# set against a service container, scoping the DSN to that one step so the skip
+# accounting here stays true both locally and in CI.
+#
+# Disagree with this by pointing at a green run where the SQL never executed.
+# That is the failure these entries are shaped to make visible rather than
+# quiet, and the separate step is what keeps it from being one.
+TestThePostgresStoreSurvivesAReopen
+TestThePostgresStoreCollapsesARedeliveredSubmission
+TestThePostgresStoreLeavesARefusedMoveAlone
+TestThePostgresStoreFindsAJobReboundToAThread
+TestThePostgresStoreReportsAMissingJob

@@ -8,11 +8,12 @@ import (
 // A capability that was never switched on is indistinguishable from inside the
 // process from one that was never built. See docs/sirens-echo-capabilities.md.
 
-// jobStoreDurable and jobStoreMemory name the two stores, so a reader learns
-// which one is holding jobs rather than only that a store exists.
+// These name the stores, so a reader learns which one holds jobs. The durable
+// two stay distinct: file survives a restart, postgres survives the pod.
 const (
-	jobStoreDurable = "file"
-	jobStoreMemory  = "memory"
+	jobStorePostgres = "postgres"
+	jobStoreDurable  = "file"
+	jobStoreMemory   = "memory"
 )
 
 // logCapabilities states what this process can and cannot do, once, at boot.
@@ -39,10 +40,14 @@ func (a *Agent) logCapabilities(ctx context.Context) {
 // jobStoreKind reports which store is holding jobs, because the durable one and
 // the one that drops everything on a roll are the same field to a reader.
 func (a *Agent) jobStoreKind() string {
-	if a.cfg.JobStoreDir != "" {
+	switch {
+	case a.cfg.JobStoreDSN != "":
+		return jobStorePostgres
+	case a.cfg.JobStoreDir != "":
 		return jobStoreDurable
+	default:
+		return jobStoreMemory
 	}
-	return jobStoreMemory
 }
 
 func (a *Agent) rosterSize() int {

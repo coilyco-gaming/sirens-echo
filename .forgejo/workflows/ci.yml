@@ -1,3 +1,11 @@
+# THE JOB STORE SERVICE. `jobstore` is a scratch Postgres thrown away with the
+# job, never the deployed store: the test creates its table and drops it.
+# Without it the Postgres store's SQL has no coverage anywhere, which is the
+# silent-success shape docs/sirens-echo-test-skips.md exists to catch.
+#
+# Its DSN is scoped to the `job store SQL` step rather than the job, so the
+# suite above it still skips those tests and .ward/test-skips.allow stays true
+# locally and in CI alike. See docs/sirens-echo-jobs-store.md.
 name: ci
 
 on:
@@ -12,6 +20,13 @@ jobs:
   test:
     runs-on: docker
     container: forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
+    services:
+      jobstore:
+        image: postgres@sha256:a426e44bac0b759c95894d68e1a0ac03ecc20b619f498a91aae373bf06d8508d
+        env:
+          POSTGRES_DB: sirens_jobs
+          POSTGRES_USER: sirens
+          POSTGRES_PASSWORD: sirens
     steps:
       - uses: actions/checkout@v6
 
@@ -29,6 +44,11 @@ jobs:
 
       - name: reviewed skip set
         run: bash scripts/ci-command.sh ward exec test-skips
+
+      - name: job store SQL
+        env:
+          SIRENS_ECHO_TEST_JOB_STORE_DSN: host=jobstore port=5432 user=sirens password=sirens dbname=sirens_jobs sslmode=disable
+        run: bash scripts/ci-command.sh go test -count=1 -run TestThePostgresStore ./internal/community/
 
       - name: pre-commit
         run: bash scripts/ci-command.sh pre-commit run --all-files --show-diff-on-failure
