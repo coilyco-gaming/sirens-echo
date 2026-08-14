@@ -91,9 +91,6 @@ commands:
     run: pre-commit run --all-files
     description: Run the complete repository pre-commit suite.
 
-agent:
-  workflow: pull-request-and-merge
-
 catalog:
   description: "Sirens Echo Discord community agent and repo-local skillpack."
   dependsOn:
