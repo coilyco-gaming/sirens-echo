@@ -53,12 +53,29 @@ if [ -z "$roles" ]; then
 fi
 echo "stage-compose-sources: baking $(echo "$roles" | wc -w | tr -d ' ') roster roles"
 
+# Per-role seat names, because one request template bakes every roster role and
+# an identity in it would rename all of them. See docs/sirens-echo-role-and-voice.md.
+seat_identity() {
+    case "$1" in
+        ops) printf '    identity name="Echo" pronouns="it"\n' ;;
+        *) printf '' ;;
+    esac
+}
+
 for role in $roles; do
     "$generator" "${catalog_flags[@]}" --role "$role" --compose-dir "$compose_dir"
     out=$bundles/$role
     rm -rf "$out"
     mkdir -p "$out"
-    sed "s/^    role \".*\"$/    role \"$role\"/" "$compose_dir/request.kdl" > "$compose_dir/request.$role.kdl"
+    identity=$(seat_identity "$role")
+    awk -v role="$role" -v identity="$identity" '
+        /^    role "/ {
+            print "    role \"" role "\""
+            if (identity != "") { print identity }
+            next
+        }
+        { print }
+    ' "$compose_dir/request.kdl" > "$compose_dir/request.$role.kdl"
     ( cd "$compose_dir" && HOME=$scratch_home agent-compose compose "request.$role.kdl" --out "$out" >/dev/null )
     # The materializer names the tree by content hash; flatten it so the role
     # slug alone selects a bundle at runtime.

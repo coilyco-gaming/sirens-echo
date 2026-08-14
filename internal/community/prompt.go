@@ -298,11 +298,11 @@ func ValidateSystemPrompt(definition Definition, principal Principal, prompt str
 		return err
 	}
 	if definition.Composed {
-		// Anchored on strings a real bundle contains: the historical
-		// <aos-community-bundle> marker appears in none. See docs/sirens-echo-compose.md.
+		// Anchored on the stable half of each line, since upstream owns the
+		// wording and moved "assigned the" to "assigned you the" in 2.20.0.
 		for _, required := range []string{
 			"<composed-identity>",
-			"Agent-compose assigned the",
+			"Agent-compose assigned",
 			"## Personality meld",
 			"**Role skill //",
 		} {

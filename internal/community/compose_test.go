@@ -157,7 +157,7 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, composed, "general CoilyCo policy")
 	for _, expected := range []string{
 		"<composed-identity>",
-		"Agent-compose assigned the",
+		"Agent-compose assigned",
 		"## Personality meld",
 		"**Role skill //",
 		"CoilyCo house style",
@@ -273,7 +273,7 @@ func useFixtureBundles(t *testing.T, role string) {
 func fixtureCard(role string) string {
 	return fmt.Sprintf(`# Role instructions
 
-Agent-compose assigned the `+"`%s`"+` role from the caller's compose request.
+Agent-compose assigned you the `+"`%s`"+` role from the caller's compose request.
 
 **Role skill // `+"`role-%s`"+`**
 **Agent // Gem (they)**
