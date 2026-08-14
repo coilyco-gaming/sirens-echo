@@ -11,7 +11,7 @@ import (
 // hermetic and no bundle markdown lands in the tree. See #125.
 const fixtureInstructions = `# Role instructions
 
-Agent-compose assigned the ` + "`fixture`" + ` role from the caller's compose request.
+Agent-compose assigned you the ` + "`fixture`" + ` role from the caller's compose request.
 
 **Role skill // ` + "`role-fixture`" + `**
 **Agent // Fixture (they)**

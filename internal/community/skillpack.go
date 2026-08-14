@@ -66,7 +66,7 @@ func LoadSkillpack(roots []string) (string, error) {
 // check hermetic. It carries the surface the validator anchors on.
 const PlaceholderComposed = `# Role instructions
 
-Agent-compose assigned the ` + "`<role>`" + ` role from the caller's compose request.
+Agent-compose assigned you the ` + "`<role>`" + ` role from the caller's compose request.
 
 **Role skill // ` + "`role-<role>`" + `**
 **Agent // <seat>**
