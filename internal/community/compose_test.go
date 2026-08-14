@@ -273,7 +273,7 @@ func useFixtureBundles(t *testing.T, role string) {
 func fixtureCard(role string) string {
 	return fmt.Sprintf(`# Role instructions
 
-Agent-compose assigned the `+"`%s`"+` role from the caller's compose request.
+Agent-compose assigned you the `+"`%s`"+` role from the caller's compose request.
 
 **Role skill // `+"`role-%s`"+`**
 **Agent // Gem (they)**

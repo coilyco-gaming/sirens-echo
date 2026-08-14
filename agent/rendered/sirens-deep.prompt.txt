@@ -4,7 +4,7 @@ Identity: Sirens Deep of Coilyco
 Response style: social
 Local policy roots: .agents/skills/coilyco-general
 Principal: placeholder, deployment owns the real values
-System prompt bytes: 10834
+System prompt bytes: 10838
 
 ===== SYSTEM PROMPT =====
 
@@ -50,7 +50,7 @@ the runtime supplied its result in this turn.
 <composed-identity>
 # Role instructions
 
-Agent-compose assigned the `<role>` role from the caller's compose request.
+Agent-compose assigned you the `<role>` role from the caller's compose request.
 
 **Role skill // `role-<role>`**
 **Agent // <seat>**
