@@ -157,7 +157,7 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, composed, "general CoilyCo policy")
 	for _, expected := range []string{
 		"<composed-identity>",
-		"Agent-compose assigned the",
+		"Agent-compose assigned",
 		"## Personality meld",
 		"**Role skill //",
 		"CoilyCo house style",
