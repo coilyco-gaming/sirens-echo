@@ -1,3 +1,7 @@
+---
+ward:
+  workflow: pull-request-and-merge
+---
 # Agent instructions
 
 Workspace conventions load globally through `agentic-os-kai/AGENTS.md`. This file holds repo-local specifics.
