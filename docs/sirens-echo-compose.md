@@ -1,7 +1,8 @@
-# Composing the Sirens Deep identity
+# Composing a lane identity
 
-Sirens Deep composes an Agent Compose role bundle so it has a real identity.
-Sirens Echo composes nothing and stays void of personality.
+Both lanes compose an Agent Compose role bundle. Sirens Deep composes `creator`
+and takes its voice from it. Sirens Echo composes `ops` and does not. Why those
+come apart is [role and voice](sirens-echo-role-and-voice.md).
 
 ## The allowlist is a role graph
 
@@ -54,14 +55,14 @@ gets a tracked selection record. See [the role record](sirens-echo-role-record.m
 
 ## Runtime
 
-`composed: true` makes a bundle mandatory and `SIRENS_DEEP_ROLE` selects which
+`composed: true` makes a bundle mandatory and `SIRENS_ECHO_ROLE` selects which
 one loads, so flipping the role needs no rebuild. A missing or unreadable bundle
 stops the process: a profile that asks for an identity never answers without
 one.
 
-`ValidateSystemPrompt` inverts per profile: a composing profile must carry
-`<composed-identity>` and the bundle's surface, the neutral profile none of it.
-The anchors are strings a real bundle contains.
+`ValidateSystemPrompt` keys on the definition, not the voice, and a composing
+neutral profile carries an extra clause. See [role and
+voice](sirens-echo-role-and-voice.md). The anchors are strings a bundle contains.
 
 ## Enforcement
 

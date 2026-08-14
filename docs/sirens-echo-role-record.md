@@ -24,7 +24,7 @@ selection change stops the image rather than shipping.
 Loading the bundles renders and validates each role's prompt on the way, which
 is the other half. A bundle that failed to compose would otherwise ship as a
 quietly neutral agent, and a bundle filed under the wrong role slug would make
-`SIRENS_DEEP_ROLE` select the wrong identity with nothing downstream to catch
+`SIRENS_ECHO_ROLE` select the wrong identity with nothing downstream to catch
 it. Both fail the build.
 
 Prompt sizes are printed per role and never gated. That is the early warning

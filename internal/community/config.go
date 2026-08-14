@@ -24,7 +24,6 @@ const (
 	// itself rather than a filename that can be spelled anything. See #706.
 	defaultInstanceIdentity = "Sirens Echo"
 	defaultBundleDir        = "/app/agent/bundles"
-	defaultComposedRole     = "creator"
 
 	ResponseStyleNeutral = "neutral"
 	ResponseStyleSocial  = "social"
@@ -469,12 +468,15 @@ func validatePrincipal(principal Principal) error {
 	return nil
 }
 
-// resolveBundlePath selects the baked bundle for the deployment's role. The
-// image bakes one per role, so a role flip needs no rebuild.
+// resolveBundlePath selects the baked bundle for the deployment's role, with no
+// default now that two lanes compose. See docs/sirens-echo-config.md.
 func resolveBundlePath() (string, error) {
-	role := valueOrDefault(strings.TrimSpace(os.Getenv("SIRENS_DEEP_ROLE")), defaultComposedRole)
+	role := strings.TrimSpace(os.Getenv("SIRENS_ECHO_ROLE"))
+	if role == "" {
+		return "", fmt.Errorf("a composing definition requires SIRENS_ECHO_ROLE to name a role slug")
+	}
 	if !composedRolePattern.MatchString(role) {
-		return "", fmt.Errorf("SIRENS_DEEP_ROLE must be a lowercase role slug, got %q", role)
+		return "", fmt.Errorf("SIRENS_ECHO_ROLE must be a lowercase role slug, got %q", role)
 	}
 	dir := valueOrDefault(strings.TrimSpace(os.Getenv("SIRENS_ECHO_BUNDLE_DIR")), defaultBundleDir)
 	path := filepath.Join(dir, role)

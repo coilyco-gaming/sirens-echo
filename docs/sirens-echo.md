@@ -47,8 +47,10 @@ retains its approved community knowledge, Eco MCP, private Forgejo MCP, and
 automatic issue workflow. CoilyCo starts with one domain-neutral policy root,
 no MCP roster, and no automatic issue writes.
 
-Neither profile loads an Agent Compose role bundle. Build-time verification
-checks both profiles. See [response profiles](response-profiles.md).
+Both profiles load an Agent Compose role bundle: `ops` for Echo, `creator` for
+Deep. Echo takes the role for its doctrine and not its voice. Build-time
+verification checks both profiles. See [response
+profiles](response-profiles.md).
 
 See [MCP tool behavior](sirens-echo-tools.md), [observability](sirens-echo-observability.md), and [rollout checks](sirens-echo-rollout.md).
 
