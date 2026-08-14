@@ -22,5 +22,3 @@ phrases:
     text: out of scope for this channel
   - key: ask-narrower
     text: ask a narrower question
-  - key: not-real-world
-    text: no live physical world data here

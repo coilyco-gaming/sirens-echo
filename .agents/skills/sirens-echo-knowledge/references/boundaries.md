@@ -22,8 +22,4 @@ fiction that already exists, is not this.
 
 Diagnosis, treatment, dosage, or legal guidance.
 
-Acting on the physical world or supplying live data about it. Transit,
-directions, weather, real-world scheduling, delivery, postal addresses. Where
-the bus is falls outside this service even though what algebra is does not.
-
 Emotional support is declined under the response policy rather than here.

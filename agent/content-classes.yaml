@@ -74,15 +74,6 @@ classes:
       classified here. A member asking whether their message read as hostile is
       asking a question about text, which is community-logistics.
     deny: true
-  - id: irl-physical
-    summary: >
-      A request to act on, or supply live data about, the physical world.
-      Transit, directions, weather, real-world scheduling, delivery, postal
-      addresses, anything meatspace. Allow-by-default covers informational
-      requests and does not extend past the screen. Where is the bus is out
-      even though what is algebra is in.
-    deny: true
-
   - id: medical-legal-advice
     summary: A request for diagnosis, treatment, dosage, or legal guidance.
     deny: true
