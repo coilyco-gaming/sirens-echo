@@ -41,7 +41,7 @@ func TestSystemPromptNamesTheBuildRevisionWhenStamped(t *testing.T) {
 			t.Errorf("a stamped prompt is missing %q", expected)
 		}
 	}
-	if err := ValidateNeutralSystemPrompt(prompt); err != nil {
+	if err := ValidateNeutralSystemPrompt(false, prompt); err != nil {
 		t.Errorf("the revision section broke the neutral validator: %v", err)
 	}
 }

@@ -1,6 +1,7 @@
 package community
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -173,46 +174,115 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 	if err := ValidateSystemPrompt(definition, PlaceholderPrincipal, bare); err == nil {
 		t.Fatal("validator accepted a composing profile with no bundle")
 	}
-	// And the neutral profile must never carry one.
+	// A profile that selected no bundle must never carry one, whatever its voice.
+	// This is the leak check; the neutrality check moved to the test below.
 	neutral := Definition{Identity: "Sirens Echo", AuditRole: "community", ResponseStyle: ResponseStyleNeutral}
 	leaked := BuildSystemPrompt(neutral, PlaceholderPrincipal, composed, "approved Sirens facts")
 	if err := ValidateSystemPrompt(neutral, PlaceholderPrincipal, leaked); err == nil {
-		t.Fatal("validator accepted a bundle in the neutral profile")
+		t.Fatal("validator accepted a bundle in a profile that selected none")
 	}
 }
 
-// writeFixtureBundle builds a minimal materialized bundle. Generating beats
-// tracking: the tree is Markdown, which documentation-layout bounds to docs.
+// Echo composes ops and still answers neutrally, a pair the validator used to
+// make unsatisfiable. See docs/sirens-echo-role-and-voice.md.
+func TestNeutralProfileComposesARoleWithoutTakingItsVoice(t *testing.T) {
+	t.Parallel()
+	definition := Definition{
+		Identity:      "Sirens Echo",
+		AuditRole:     "community",
+		ResponseStyle: ResponseStyleNeutral,
+		Channel:       "#bots",
+		Composed:      true,
+	}
+	composed, err := LoadBundle(filepath.Join(writeFixtureBundle(t), "ops"))
+	if err != nil {
+		t.Fatalf("LoadBundle: %v", err)
+	}
+	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, composed, "approved Sirens facts")
+	// Both halves, in one prompt: the bundle the role selected and the voice
+	// rules the profile keeps.
+	for _, expected := range []string{
+		"<composed-identity>",
+		"## Personality meld",
+		"**Role skill //",
+		"Do not adopt or express a personality",
+		"Use neutral, concise, impersonal language",
+		"the response rules in this prompt",
+		"never spoken or written",
+	} {
+		if !strings.Contains(prompt, expected) {
+			t.Fatalf("composed neutral prompt missing %q", expected)
+		}
+	}
+	if err := ValidateSystemPrompt(definition, PlaceholderPrincipal, prompt); err != nil {
+		t.Fatalf("ValidateSystemPrompt: %v", err)
+	}
+	// The precedence clause is what makes the meld admissible, so a prompt that
+	// carries a bundle without it is the failure this replaced, not a pass.
+	stripped := strings.Replace(prompt, composedVoicePolicy, "", 1)
+	if err := ValidateSystemPrompt(definition, PlaceholderPrincipal, stripped); err == nil {
+		t.Fatal("validator accepted a composed neutral prompt with no stated precedence")
+	}
+	// A social profile takes its voice from the bundle, so it renders no clause
+	// and gains no neutral prohibition to reconcile.
+	social := definition
+	social.ResponseStyle = ResponseStyleSocial
+	if strings.Contains(
+		BuildSystemPrompt(social, PlaceholderPrincipal, composed, "general CoilyCo policy"),
+		composedVoicePolicy,
+	) {
+		t.Fatal("social prompt rendered the neutral precedence clause")
+	}
+}
+
+// writeFixtureBundle builds a minimal materialized bundle per baked role. The
+// tree is Markdown, which documentation-layout bounds to docs, so it generates.
 func writeFixtureBundle(t *testing.T) string {
 	t.Helper()
 	bundles := t.TempDir()
-	skill := filepath.Join(bundles, "creator", "content", "skills", "aos-public", "writing-kai-voice")
-	if err := os.MkdirAll(skill, 0o755); err != nil {
-		t.Fatalf("MkdirAll: %v", err)
-	}
-	for path, body := range map[string]string{
-		filepath.Join(bundles, "creator", "manifest.json"):              `{"format":"agent-compose.bundle.v0.1","role":"creator"}`,
-		filepath.Join(bundles, "creator", "content", "instructions.md"): fixtureCard,
-		filepath.Join(skill, "SKILL.md"):                                fixtureSkill,
-	} {
-		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-			t.Fatalf("WriteFile %s: %v", path, err)
+	for _, role := range fixtureRoles {
+		skill := filepath.Join(bundles, role, "content", "skills", "aos-public", "writing-kai-voice")
+		if err := os.MkdirAll(skill, 0o755); err != nil {
+			t.Fatalf("MkdirAll: %v", err)
+		}
+		for path, body := range map[string]string{
+			filepath.Join(bundles, role, "manifest.json"):              fmt.Sprintf(`{"format":"agent-compose.bundle.v0.1","role":%q}`, role),
+			filepath.Join(bundles, role, "content", "instructions.md"): fixtureCard(role),
+			filepath.Join(skill, "SKILL.md"):                           fixtureSkill,
+		} {
+			if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+				t.Fatalf("WriteFile %s: %v", path, err)
+			}
 		}
 	}
 	return bundles
 }
 
-const fixtureCard = `# Role instructions
+// Both lanes compose now, so the fixture bakes both roles rather than the one
+// role that used to be the only composing profile.
+var fixtureRoles = []string{"creator", "ops"}
 
-Agent-compose assigned the ` + "`creator`" + ` role from the caller's compose request.
+// useFixtureBundles points a deployment at the fixture tree and names its role.
+// Naming it is not optional in the runtime either: see resolveBundlePath.
+func useFixtureBundles(t *testing.T, role string) {
+	t.Helper()
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
+	t.Setenv("SIRENS_ECHO_ROLE", role)
+}
 
-**Role skill // ` + "`role-creator`" + `**
+func fixtureCard(role string) string {
+	return fmt.Sprintf(`# Role instructions
+
+Agent-compose assigned the `+"`%s`"+` role from the caller's compose request.
+
+**Role skill // `+"`role-%s`"+`**
 **Agent // Gem (they)**
 
 ## Personality meld
 
 Fixture meld for the offline harness.
-`
+`, role, role)
+}
 
 const fixtureSkill = `---
 name: writing-kai-voice

@@ -95,11 +95,6 @@ agent:
   workflow: pull-request-and-merge
 
 catalog:
-  kind: Component
-  type: tool
-  system: ops
-  owner: kai
-  lifecycle: production
   description: "Sirens Echo Discord community agent and repo-local skillpack."
   dependsOn:
     - forgejo.coilysiren.me/coilysiren/infrastructure

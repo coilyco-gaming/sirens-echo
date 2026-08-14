@@ -178,7 +178,7 @@ func TestLoadRoleBundlesRejectsABundleWithNoComposedSurface(t *testing.T) {
 	}
 }
 
-// A misfiled bundle would make SIRENS_DEEP_ROLE select the wrong identity, and
+// A misfiled bundle would make SIRENS_ECHO_ROLE select the wrong identity, and
 // nothing downstream would notice.
 func TestLoadRoleBundlesRejectsAMisfiledRole(t *testing.T) {
 	t.Parallel()

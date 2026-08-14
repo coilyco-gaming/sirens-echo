@@ -27,7 +27,7 @@ func TestEchoStillGetsItsNameFromNeitherVariable(t *testing.T) {
 // that structural, so it is asserted where paths enter: LoadConfig.
 func TestEchosDefinitionIsRecognisedByAnyPath(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
-	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
+	useFixtureBundles(t, "ops")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 	cfg, err := LoadConfig()
@@ -123,7 +123,7 @@ func TestAForeignDefinitionInAnEchoNamedFileIsRefused(t *testing.T) {
 	}
 
 	t.Setenv("SIRENS_ECHO_DEFINITION", decoy)
-	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", writeFixtureBundle(t))
+	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 
