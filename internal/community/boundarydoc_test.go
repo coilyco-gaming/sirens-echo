@@ -37,7 +37,6 @@ var deniedClassRules = map[string]string{
 	"minor-suspected":      "states or implies they are a child",
 	"creative-long-form":   "Extended original fiction",
 	"medical-legal-advice": "Diagnosis, treatment, dosage",
-	"irl-physical":         "Acting on the physical world",
 	"emotional-support":    "Emotional support is an ordinary decline",
 }
 

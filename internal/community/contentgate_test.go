@@ -34,7 +34,7 @@ func gateTaxonomy() ContentTaxonomy {
 		Classes: []ContentClass{
 			{ID: ContentClassOther, Summary: "anything else"},
 			{ID: "eco-server", Summary: "the Eco server"},
-			{ID: "irl-physical", Summary: "the physical world", Deny: true},
+			{ID: "medical-legal-advice", Summary: "diagnosis or legal guidance", Deny: true},
 			{ID: "self-harm", Summary: "harm", Deny: true, Sensitive: true},
 		},
 	}
@@ -43,18 +43,18 @@ func gateTaxonomy() ContentTaxonomy {
 func TestTheClassifierReplyIsReadLeniently(t *testing.T) {
 	t.Parallel()
 	for _, reply := range []string{
-		"irl-physical",
-		"irl-physical, other",
-		"`irl-physical`,other\n",
-		"IRL-PHYSICAL",
-		" irl-physical .",
+		"medical-legal-advice",
+		"medical-legal-advice, other",
+		"`medical-legal-advice`,other\n",
+		"MEDICAL-LEGAL-ADVICE",
+		" medical-legal-advice .",
 	} {
 		class, blocked, err := gateTaxonomy().Verdict(parseContentClasses(reply))
 		if err != nil {
 			t.Errorf("reply %q: %v", reply, err)
 			continue
 		}
-		if !blocked || class.ID != "irl-physical" {
+		if !blocked || class.ID != "medical-legal-advice" {
 			t.Errorf("reply %q gave class %q blocked=%v", reply, class.ID, blocked)
 		}
 	}
@@ -64,7 +64,7 @@ func TestTheClassifierReplyIsReadLeniently(t *testing.T) {
 // shape that names the ordinary category.
 func TestSensitiveWinsOverAnOrdinaryDenial(t *testing.T) {
 	t.Parallel()
-	class, blocked, err := gateTaxonomy().Verdict(parseContentClasses("irl-physical, self-harm"))
+	class, blocked, err := gateTaxonomy().Verdict(parseContentClasses("medical-legal-advice, self-harm"))
 	if err != nil || !blocked {
 		t.Fatalf("blocked=%v err=%v", blocked, err)
 	}
@@ -157,7 +157,7 @@ func (c refusingCompletions) Complete(
 func TestABlockedClassProducesAReadableRefusal(t *testing.T) {
 	t.Parallel()
 	rendered := BlockResponse(
-		ContentClass{ID: "irl-physical", Deny: true},
+		ContentClass{ID: "medical-legal-advice", Deny: true},
 		"",
 		PlaceholderPrincipal,
 	)
