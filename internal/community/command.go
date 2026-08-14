@@ -42,10 +42,13 @@ type CommandParameter struct {
 type CommandDefinition struct {
 	Name        string
 	Description string
-	// Kind is the job this command submits, or empty for a command that acts
-	// on an existing job rather than creating one.
+	// Kind is the job this command submits. Empty for a command that acts on an
+	// existing job, or reports the deployment rather than changing it.
 	Kind       string
 	Parameters []CommandParameter
+	// Ephemeral answers the caller alone, because introspection belongs to
+	// whoever asked rather than to the channel.
+	Ephemeral bool
 }
 
 // JobCommands is the closed command set. Adding one is a reviewed act in this
@@ -72,6 +75,11 @@ func JobCommands() []CommandDefinition {
 			Name:        "job-cancel",
 			Description: "Ask a job to stop. Defaults to the job this thread is bound to.",
 			Parameters:  []CommandParameter{jobIDParameter()},
+		},
+		{
+			Name:        "mcps",
+			Description: "List the MCP servers this deployment reaches, and their tools.",
+			Ephemeral:   true,
 		},
 	}
 }
