@@ -19,6 +19,11 @@ The neutral profile already had deterministic reply checks in
 profile had none: `ValidateResponseStyle` returned `nil` for it. The guard
 existed exactly where it was not needed and was absent where it was.
 
+Echo composes a bundle too now, which reads like the same risk reaching the
+neutral lane. The lanes compose for opposite reasons, and `ValidateNeutralStyle`
+still rejects the first person a seat name would travel through. See [role and
+voice](sirens-echo-role-and-voice.md).
+
 ## The two layers
 
 **The prompt.** `identityPolicy` joins the shared sections in `prompt.go`, so
@@ -32,9 +37,11 @@ only. The composed persona is deployment-owned, so the tracked snapshot renders
 bundle at build time. A change to a profile's role or personality meld therefore
 produces no diff in this repository. That persona is reviewed through the
 deploy-owned bundle artifact, `services/sirens-echo/rendered/sirens-deep-bundle.txt`
-in coilyco-bridge/deploy, gated by its compose review. Deep is the variant that
-carries public and livestream risk, and it carries it through exactly this
-block, so a reviewer looking only here would be looking in the wrong place.
+in coilyco-bridge/deploy, gated by its compose review. That artifact is named for
+Deep and covers every baked role, `ops` included, so the name is the stale part
+rather than the coverage. Deep still carries the public and livestream risk, and
+it carries it through exactly this block, so a reviewer looking only here would
+be looking in the wrong place.
 
 **The validator.** `ValidateIdentityClaim` runs on every reply for every style,
 beside grounding rather than inside `ValidateResponseStyle`, because this is a

@@ -25,8 +25,13 @@ root rather than a scaffolded paragraph, so a copy edit to voice is a skill
 diff. Both profiles share the framing in [the rendered
 prompt](sirens-echo-prompt.md).
 
-Neither profile loads an Agent Compose role, seat, personality meld, shared
-behavioral context, or lore source.
+Both profiles load an Agent Compose role bundle, and neither loads a shared
+behavioral context or lore source. Deep composes `creator` and takes its voice
+from it. Echo composes `ops` for the doctrine and keeps the neutral voice its
+own policy root defines, which the prompt states as precedence rather than
+leaving to section order. See [composition](sirens-echo-compose.md) for why
+those are separate axes and why `ops` is the operator role rather than the
+infrastructure one.
 
 ## Definition capabilities
 

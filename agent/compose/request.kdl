@@ -1,11 +1,15 @@
-// Sirens Deep's composed identity. `SIRENS_DEEP_ROLE` picks which role the
-// image bakes; this file is composed once per role at build time.
+// Both lanes' composed identity: Deep runs `creator` and Echo runs `ops`. The
+// role named below is the template's only, rewritten per role by
+// scripts/stage-compose-sources.sh, and `SIRENS_ECHO_ROLE` picks which baked
+// bundle a deployment loads. This file is composed once per role at build time.
 //
 // Every source uses `declaration=`, never `root=`. With `root=` the source
 // repository's own .agents/roles.kdl decides, and agentic-os-kai's roles
 // deliberately bind Kai's career, job-search, and LinkedIn context because
-// they serve Kai rather than a public Discord agent. A declaration enumerates
-// exactly what this repository admits. See docs/sirens-echo-compose.md.
+// they serve Kai rather than a public Discord agent. That binding is also what
+// makes `ops` safe here: agentic-os-kai binds infrastructure, deploy, and
+// hardware to that role, and a declaration admits none of it, so Echo composes
+// the operator charter without the estate. See docs/sirens-echo-compose.md.
 compose {
     role "creator"
     delivery "native-skills"

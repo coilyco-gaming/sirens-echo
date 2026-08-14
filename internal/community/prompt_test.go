@@ -119,7 +119,7 @@ func TestBuildSystemPromptBoundsToolActionsAndAutomaticFollowUp(t *testing.T) {
 			t.Errorf("system prompt missing %q", expected)
 		}
 	}
-	if err := ValidateNeutralSystemPrompt(prompt); err != nil {
+	if err := ValidateNeutralSystemPrompt(false, prompt); err != nil {
 		t.Fatalf("ValidateNeutralSystemPrompt: %v", err)
 	}
 	for _, forbidden := range []string{
@@ -319,10 +319,10 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 	}
 }
 
-// promptBudgets ratchet the tracked snapshots. These are not targets and not
-// judgements about the right size. See docs/sirens-echo-prompt-budget.md.
+// promptBudgets ratchet the tracked snapshots, and are not targets. Echo's rose
+// from 21459 on composing ops. See docs/sirens-echo-prompt-budget.md.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 21459,
+	"sirens-echo.prompt.txt": 22198,
 	"sirens-deep.prompt.txt": 11600,
 }
 
