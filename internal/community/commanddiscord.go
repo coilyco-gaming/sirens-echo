@@ -74,7 +74,7 @@ func (a *Agent) onInteraction(
 	data := event.ApplicationCommandData()
 	command, declared := LookupCommand(data.Name)
 	if !declared {
-		a.respondToCommand(session, event, harnessNotice("unknown command"))
+		a.respondToCommand(session, event, harnessNotice("unknown command"), false)
 		return
 	}
 	user := interactionUser(event)
@@ -87,7 +87,7 @@ func (a *Agent) onInteraction(
 	decision := a.access.Evaluate(origin, user.ID, interactionRoles(event), nil)
 	if !decision.allowed() {
 		a.telemetry.RecordAccess(ctx, string(decision.Reason))
-		a.respondToCommand(session, event, harnessNotice("not permitted here"))
+		a.respondToCommand(session, event, harnessNotice("not permitted here"), command.Ephemeral)
 		return
 	}
 	admission := a.limiter.Admit(admissionRequest{
@@ -97,7 +97,7 @@ func (a *Agent) onInteraction(
 	})
 	if admission.Outcome.denied() {
 		a.telemetry.RecordAdmission(ctx, string(admission.Outcome), transportDiscord)
-		a.respondToCommand(session, event, cooldownNotice(admission.RetryAfter))
+		a.respondToCommand(session, event, cooldownNotice(admission.RetryAfter), command.Ephemeral)
 		return
 	}
 	defer a.limiter.Release()
@@ -106,7 +106,7 @@ func (a *Agent) onInteraction(
 	if err != nil {
 		a.telemetry.Info(ctx, "command.arguments.refused",
 			slog.String("command", command.Name))
-		a.respondToCommand(session, event, harnessNotice("invalid command arguments"))
+		a.respondToCommand(session, event, harnessNotice("invalid command arguments"), command.Ephemeral)
 		return
 	}
 	notice := a.runCommand(ctx, commandRequest{
@@ -117,7 +117,7 @@ func (a *Agent) onInteraction(
 		InteractionID: event.ID,
 		ThreadID:      threadOrigin(session, origin),
 	})
-	a.respondToCommand(session, event, notice)
+	a.respondToCommand(session, event, notice, command.Ephemeral)
 }
 
 // commandRequest is one gated, bound invocation ready to act on.
@@ -149,6 +149,11 @@ func threadOrigin(session *discordgo.Session, origin summonContext) string {
 // with. Every path returns a notice, so a command never ends in silence.
 func (a *Agent) runCommand(ctx context.Context, request commandRequest) string {
 	command := request.Command
+	// Answered above the jobs guard: reporting the tool surface needs no job
+	// system, and a deployment running with jobs off still has one.
+	if command.Name == "mcps" {
+		return a.mcpRoster(ctx)
+	}
 	if a.jobs == nil {
 		return harnessNotice("jobs are not enabled")
 	}
@@ -209,6 +214,7 @@ func (a *Agent) respondToCommand(
 	session *discordgo.Session,
 	event *discordgo.InteractionCreate,
 	notice string,
+	ephemeral bool,
 ) {
 	if session == nil {
 		return
@@ -218,6 +224,7 @@ func (a *Agent) respondToCommand(
 		Data: &discordgo.InteractionResponseData{
 			Content:         truncateRunes(notice, 1990),
 			AllowedMentions: &discordgo.MessageAllowedMentions{},
+			Flags:           ephemeralFlag(ephemeral),
 		},
 	})
 	if err != nil {

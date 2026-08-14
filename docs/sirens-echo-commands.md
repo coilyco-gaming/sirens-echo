@@ -75,5 +75,5 @@ It does not carry per-requester authority. Every job runs under pod-level
 authority regardless of who asked, which is stated in #145 and remains true
 here. The principal is recorded, and recording is not granting.
 
-See [the lifecycle](sirens-echo-jobs-lifecycle.md) and
-[access](sirens-echo-access.md).
+See [the lifecycle](sirens-echo-jobs-lifecycle.md),
+[access](sirens-echo-access.md), and [/mcps](sirens-echo-mcps-command.md).
