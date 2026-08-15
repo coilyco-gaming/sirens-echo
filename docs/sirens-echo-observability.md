@@ -11,14 +11,14 @@ The runtime logs:
 - Transport and request correlation identifiers plus closed-set failure types
 - Body byte counts, model round, HTTP status, tool identity, outcome, and stage
 
-Every metadata log inside a trace carries `trace_id` and `span_id`. Member and
-history input, prompts, schemas, tool payloads, model bodies, and replies are
-never logged. Tokens, authorization headers, and SSM values also stay out.
+Every metadata log inside a trace carries `trace_id` and `span_id`. Tokens,
+authorization headers, and SSM values stay out. Member and history input,
+prompts, schemas, tool payloads, model bodies, and replies are never logged,
+but for the bounded token in [a refusal reason](sirens-echo-refusal-reason.md).
 
 Every handled runtime or traced `/v1/turn` failure records a closed-set
-OpenTelemetry `exception` event without dynamic content.
-
-The grouping and redaction contract lives in [the exception taxonomy](sirens-echo-exceptions.md).
+OpenTelemetry `exception` event without dynamic content. The grouping and
+redaction contract lives in [the exception taxonomy](sirens-echo-exceptions.md).
 
 DMs, other channels, bot messages, self messages, duplicates, and messages
 without a summon are rejected before turn logging.

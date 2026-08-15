@@ -25,13 +25,23 @@ absence of an attribute is not something a reader should have to interpret.
 The closed set, in the order they run:
 
 ```
-parse                  tool_call_markup       grounding
-self_attributed_claim  identifier_disclosure  identity_claim
-response_style
+parse                          tool_call_markup
+grounding.invented_channel     grounding.claimed_action
+grounding.tracker_action       grounding.continuing_work
+self_attributed_claim          identifier_disclosure
+identity_claim                 response_style
 ```
 
 Order is the contract, so the checks are a slice rather than a chain of
 conditions. The first to refuse is the one named.
+
+**Grounding is four rules, so it is four values.** `grounding` alone left all
+four to re-run by hand, and a refusal rate over the family could not separate a
+model inventing channels from one claiming actions it did not take. Those are
+different problems with different fixes. Every other check holds one rule.
+
+The span also carries `response.check.reason`, the sentence the validator wrote.
+See [why a check refused a reply](sirens-echo-refusal-reason.md).
 
 Before this, a rejected reply produced `turn.stage.failed` with
 `error_type: model_failed`, which reads as the backend failing. It was the

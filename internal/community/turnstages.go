@@ -1,5 +1,7 @@
 package community
 
+import "errors"
+
 // A rejected reply was attributable to the model rather than to the check that
 // refused it. See docs/sirens-echo-turn-stages.md.
 
@@ -15,6 +17,34 @@ const (
 	replyCheckIdentityClaim  = "identity_claim"
 	replyCheckResponseStyle  = "response_style"
 )
+
+// The grounding rules. The family covers four independent checks, so its slug
+// narrowed nothing. See docs/sirens-echo-grounding.md.
+const (
+	replyCheckInventedChannel = replyCheckGrounding + ".invented_channel"
+	replyCheckClaimedAction   = replyCheckGrounding + ".claimed_action"
+	replyCheckTrackerAction   = replyCheckGrounding + ".tracker_action"
+	replyCheckContinuingWork  = replyCheckGrounding + ".continuing_work"
+)
+
+// checkRefusal is a refusal that names the rule behind it. Ordinary errors stay
+// ordinary errors: a validator with one rule has nothing to add to its family.
+type checkRefusal struct {
+	rule   string
+	reason string
+}
+
+func (r checkRefusal) Error() string { return r.reason }
+
+// refusedBy resolves the attribute value for a refusal, falling back to the
+// family when the validator declares no rule of its own.
+func refusedBy(family string, err error) string {
+	var refusal checkRefusal
+	if errors.As(err, &refusal) && refusal.rule != "" {
+		return refusal.rule
+	}
+	return family
+}
 
 // runReplyChecks runs the checks in order and reports which one refused. The
 // order is the contract, so this is a slice rather than a chain of conditions.
@@ -52,7 +82,7 @@ func (a *Agent) runReplyChecks(
 	}
 	for _, check := range checks {
 		if err := check.run(); err != nil {
-			return reply, check.name, err
+			return reply, refusedBy(check.name, err), err
 		}
 	}
 	return reply, replyCheckNone, nil

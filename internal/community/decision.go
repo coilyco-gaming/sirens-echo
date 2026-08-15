@@ -129,6 +129,20 @@ func ValidateNoToolCallMarkup(reply string) error {
 	return nil
 }
 
+// inventedChannelRunes bounds the one piece of model-written text a refusal
+// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
+const inventedChannelRunes = 64
+
+// boundInvented truncates a matched token before it becomes a span attribute,
+// so one long hallucination cannot enlarge every refusal record.
+func boundInvented(token string) string {
+	runes := []rune(token)
+	if len(runes) <= inventedChannelRunes {
+		return token
+	}
+	return string(runes[:inventedChannelRunes]) + "..."
+}
+
 // ValidateGrounding rejects invented channel references and first-person
 // action claims that are not supported by a completed tool call.
 func ValidateGrounding(reply string, suppliedContext string, executed ...ExecutedTool) error {
@@ -139,23 +153,35 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	}
 	for _, channel := range channelPattern.FindAllString(masked, -1) {
 		if _, ok := allowedChannels[strings.ToLower(channel)]; !ok {
-			return fmt.Errorf("model invented channel %s", channel)
+			return checkRefusal{
+				rule:   replyCheckInventedChannel,
+				reason: fmt.Sprintf("model invented channel %s", boundInvented(channel)),
+			}
 		}
 	}
 	for _, match := range claimedAction.FindAllStringSubmatch(masked, -1) {
 		if len(match) == 2 && !actionClaimSupported(match[1], executed) {
-			return fmt.Errorf("model claimed an action the runtime has not performed")
+			return checkRefusal{
+				rule:   replyCheckClaimedAction,
+				reason: "model claimed an action the runtime has not performed",
+			}
 		}
 	}
 	// The neutral profile forbids first person, so the matcher above can never
 	// fire on an Echo reply. This is the same claim in the voice Echo can use.
 	if claimsCompletedTrackerAction(masked) && !trackerWasTouched(executed) {
-		return fmt.Errorf("model claimed a tracker action the runtime has not performed")
+		return checkRefusal{
+			rule:   replyCheckTrackerAction,
+			reason: "model claimed a tracker action the runtime has not performed",
+		}
 	}
 	// No tool call can support this one. A turn ends when the reply is sent, so
 	// work continuing past it is never something the runtime went on to do.
 	if continuingWorkClaim.MatchString(masked) {
-		return fmt.Errorf("model claimed work continuing past the end of this turn")
+		return checkRefusal{
+			rule:   replyCheckContinuingWork,
+			reason: "model claimed work continuing past the end of this turn",
+		}
 	}
 	return nil
 }

@@ -55,6 +55,16 @@ The clipped form `Filed a correction for review` is caught. It requires the
 sentence to open on the participle and name the artifact directly, so
 `Filed issues are listed in the tracker` stays silent.
 
+## Four rules, four names
+
+`ValidateGrounding` is one function and four independent rules, so a refusal
+reports the rule rather than the family: `grounding.invented_channel`,
+`grounding.claimed_action`, `grounding.tracker_action`, and
+`grounding.continuing_work`. Knowing only that grounding refused left all four
+to re-run by hand against the reply. See
+[turn stages](sirens-echo-turn-stages.md) for the closed set and the sentence
+each rule records alongside its name.
+
 ## See also
 
 * [Knowledge gaps and corrections](sirens-echo-issues.md) - what a filing is for.

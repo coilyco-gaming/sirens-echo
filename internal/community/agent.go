@@ -1105,14 +1105,18 @@ func (a *Agent) runTurn(
 		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
 	if err != nil {
-		// The check that refused, so a rejection stops being attributable to
-		// the model. See docs/sirens-echo-turn-stages.md.
-		validateSpan.SetAttributes(attribute.String("response.check", refused))
+		// The rule and its sentence. The catalog owns the exception fields, so
+		// the sentence stays beside them. See docs/sirens-echo-refusal-reason.md.
+		validateSpan.SetAttributes(
+			attribute.String("response.check", refused),
+			attribute.String("response.check.reason", err.Error()),
+		)
 		a.telemetry.MarkSpanError(validateSpan, exceptionResponseValidationFailed)
 		a.telemetry.Info(
 			validateCtx,
 			"response.check.refused",
 			slog.String("check", refused),
+			slog.String("refused", err.Error()),
 			slog.Int("reply_bytes", len(reply)),
 		)
 		validateSpan.End()
