@@ -192,9 +192,11 @@ type chatRequest struct {
 }
 
 type chatMessage struct {
-	Role             string         `json:"role"`
+	Role string `json:"role"`
+	// A pointer, so an empty string the model returned survives the encoding a
+	// plain omitempty erased. See docs/sirens-echo-reasoning-roundtrip.md.
 	Content          any            `json:"content"`
-	ReasoningContent string         `json:"reasoning_content,omitempty"`
+	ReasoningContent *string        `json:"reasoning_content,omitempty"`
 	ToolCalls        []chatToolCall `json:"tool_calls,omitempty"`
 	ToolCallID       string         `json:"tool_call_id,omitempty"`
 	Name             string         `json:"name,omitempty"`
@@ -278,9 +280,20 @@ func formatBudgetExhausted(tokens, raises, reasoningBytes int) error {
 }
 
 type chatResponseMessage struct {
-	Content          chatContent    `json:"content"`
-	ReasoningContent string         `json:"reasoning_content"`
+	Content chatContent `json:"content"`
+	// Nil when the provider never named the field, which is a different fact
+	// from an empty reasoning string and is echoed back differently.
+	ReasoningContent *string        `json:"reasoning_content"`
 	ToolCalls        []chatToolCall `json:"tool_calls"`
+}
+
+// reasoningText reads the reasoning a response carried, treating an unnamed
+// field and an empty one alike. Only the encoding needs to tell them apart.
+func reasoningText(reasoning *string) string {
+	if reasoning == nil {
+		return ""
+	}
+	return *reasoning
 }
 
 type chatContent struct {
@@ -472,7 +485,7 @@ func (c ProxyClient) Complete(
 		if choice.truncated() {
 			// A byte count, not the text. It separates a model that thought and
 			// ran out from one that produced nothing. See issue 325.
-			reasoningBytes := len(strings.TrimSpace(choice.Message.ReasoningContent))
+			reasoningBytes := len(strings.TrimSpace(reasoningText(choice.Message.ReasoningContent)))
 			raised, canRaise := nextCompletionBudget(completionTokens, budget.MaxCompletionTokens)
 			if budgetRaises >= budget.BudgetRaises || !canRaise {
 				return CompletionResult{}, formatBudgetExhausted(
