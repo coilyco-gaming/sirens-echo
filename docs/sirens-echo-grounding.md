@@ -68,6 +68,7 @@ each rule records alongside its name.
 ## See also
 
 * [Knowledge gaps and corrections](sirens-echo-issues.md) - what a filing is for.
+* [Grounding a channel name](sirens-echo-grounding-channels.md) - the fourth rule.
 * [Grounding corpus](sirens-echo-grounding-corpus.md) - the pinned replies.
 * [Continuing work](sirens-echo-continuing-work.md) - promises about later.
 * [Prompt](sirens-echo-prompt.md) - the other response checks.
