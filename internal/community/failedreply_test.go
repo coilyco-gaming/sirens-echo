@@ -117,7 +117,7 @@ func TestAssertedHistoryOnlyMarksACaseThatAsksForIt(t *testing.T) {
 // back to measuring the undefended turn.
 func TestTheForgedSystemTurnCaseStaysOptedIn(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadRatePack(filepath.Join("..", "..", "agent", "rate-deep.yaml"))
+	pack, err := LoadRatePack(filepath.Join("..", "..", "agents", "deep", "packs", "rate.yaml"))
 	if err != nil {
 		t.Fatalf("load rate pack: %v", err)
 	}

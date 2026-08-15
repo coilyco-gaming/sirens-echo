@@ -2,8 +2,8 @@
 
 ## YAML agent and model configuration
 
-`agent/sirens-echo.yaml` pins the neutral Community policy.
-`agent/sirens-deep.yaml` selects the social CoilyCo general-purpose policy for
+`agents/echo/definition.yaml` pins the neutral Community policy.
+`agents/deep/definition.yaml` selects the social CoilyCo general-purpose policy for
 the existing HTTP workload. Each definition pins audit attribution, response
 style, optional channel, history budget, local policy roots, optional MCP
 roster, and optional automatic issue tracker. Neither pins a backend model or

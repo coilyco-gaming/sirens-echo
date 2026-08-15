@@ -26,7 +26,7 @@ No automatic memory. Guarded investigations use
 
 ## Coilyco harness
 
-The `sirens-deep` deployment selects `agent/sirens-deep.yaml`. Its model
+The `sirens-deep` deployment selects `agents/deep/definition.yaml`. Its model
 identity is Sirens Deep of Coilyco and its scope is general-purpose.
 
 - It loads only the domain-neutral `coilyco-general` policy and names no

@@ -21,7 +21,7 @@ var adversarialCaseID = regexp.MustCompile(
 // the max_reply_words it declares or zero for none.
 func caseCeilings(t *testing.T, pack string) map[string]int {
 	t.Helper()
-	raw, err := os.ReadFile(filepath.Join("..", "..", "agent", pack))
+	raw, err := os.ReadFile(filepath.Join("..", "..", pack))
 	if err != nil {
 		t.Fatalf("read %s: %v", pack, err)
 	}
@@ -63,8 +63,9 @@ func TestTheAdversarialCasesBoundTheirReplyLength(t *testing.T) {
 	const bounded, unbounded = 1, 12
 	withCeiling, without := 0, 0
 	for _, pack := range []string{
-		"evaluation.yaml", "evaluation-deep.yaml", "rate-deep.yaml",
-		"rate-fixture-deep.yaml", "rate-echo.yaml", "board-deep.yaml",
+		"agents/echo/packs/evaluation.yaml", "agents/deep/packs/evaluation.yaml",
+		"agents/deep/packs/rate.yaml", "agents/deep/packs/rate-fixture.yaml",
+		"agents/echo/packs/rate.yaml", "agents/deep/packs/board.yaml",
 	} {
 		for id, ceiling := range caseCeilings(t, pack) {
 			if ceiling == 0 {

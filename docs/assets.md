@@ -18,7 +18,7 @@ Canonical mark for the `sirens-deep` deployment. `sirens-deep.svg` is the source
 
 A sibling of the coilyco org marks. The ring and the ink / mint / lilac palette are measured from those avatars rather than approximated, so the geometry matches: mint ring r 165.5 w 12, lilac ring r 153 w 13. The whale carries the emblem alone, with no S, which is what makes this the canonical form rather than the lockup below.
 
-The whale nods at DeepSeek, which `agent/sirens-deep.yaml` selects. It is not a trace of their mark. Theirs is a soft organic silhouette; this one is redrawn as a stepped, blocked polygon in the coilyco idiom, and only the gesture is shared - mass low and left, fluke thrown up and right, a single eye dot. Every edge is horizontal or vertical apart from the two running from the fluke down to the belly. The DeepSeek name and logo are property of DeepSeek.
+The whale nods at DeepSeek, which `agents/deep/definition.yaml` selects. It is not a trace of their mark. Theirs is a soft organic silhouette; this one is redrawn as a stepped, blocked polygon in the coilyco idiom, and only the gesture is shared - mass low and left, fluke thrown up and right, a single eye dot. Every edge is horizontal or vertical apart from the two running from the fluke down to the belly. The DeepSeek name and logo are property of DeepSeek.
 
 **The water inset is load bearing.** The lilac sea is clipped to a disc of r 132, not to the ring interior at r 146.5. That gap keeps the water off the lilac ring band. Filling to the ring interior makes the two lilacs merge and the lower half of the ring stops reading as a ring. Keep the whale off that boundary too, currently by 22px, or it hugs the water's curved edge.
 

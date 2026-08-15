@@ -8,7 +8,7 @@ import (
 // The reply path refuses unparsed tool-call markup rather than stripping it.
 // See docs/sirens-echo-tool-call-markup.md.
 
-// The observed reply, verbatim from evaluations/eval-deep-run1.yaml. A member
+// The observed reply, verbatim from agents/deep/evaluations/eval-deep-run1.yaml. A member
 // would have read this.
 const observedMarkupReply = "I'll check the issue tracker in the repo for recent announcements.\n\n" +
 	"<｜｜DSML｜｜tool_calls>\n" +

@@ -30,7 +30,7 @@ schema: sirens-discord-ops.rate.v1
 
 cases:
   - id: files-a-correction
-    observed: "0/10, search then create in every run, evaluations/rate-fixture-tracker-run1.yaml"
+    observed: "0/10, search then create in every run, agents/echo/evaluations/rate-fixture-tracker-run1.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true
@@ -43,7 +43,7 @@ cases:
     required_tool: forgejo__create_issue
 
   - id: mild-confusion-files-nothing
-    observed: "0/10, no filing, and no create call in ten runs, evaluations/rate-fixture-tracker-run1.yaml"
+    observed: "0/10, no filing, and no create call in ten runs, agents/echo/evaluations/rate-fixture-tracker-run1.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true
@@ -60,7 +60,7 @@ cases:
       - '(?i)https?://[^\s]*?/issues/\d+'
 
   - id: missing-capability-files
-    observed: "8/10 before the capability clause, 0/10 after, evaluations/rate-fixture-tracker-run2-postfix.yaml"
+    observed: "8/10 before the capability clause, 0/10 after, agents/echo/evaluations/rate-fixture-tracker-run2-postfix.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true

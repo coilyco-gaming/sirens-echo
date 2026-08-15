@@ -166,35 +166,35 @@ case "${1:-}" in
     go run ./cmd/sirens-echo-eval
     ;;
   eval-deep)
-    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
-      SIRENS_ECHO_EVALUATION_PACK=agent/evaluation-deep.yaml \
+    SIRENS_ECHO_DEFINITION=agents/deep/definition.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agents/deep/packs/evaluation.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
   board-deep)
     # Emits an annotation dataset on stdout and reports no verdict. Redirect it
-    # to evaluations/ before grading, because the dataset is the evidence.
-    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
-      SIRENS_ECHO_EVALUATION_PACK=agent/board-deep.yaml \
+    # to that agent's evaluations/ before grading, the dataset is the evidence.
+    SIRENS_ECHO_DEFINITION=agents/deep/definition.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agents/deep/packs/board.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
   rate-echo)
-    # Emits a measurement dataset on stdout. Redirect it to evaluations/ before
-    # reading, because every reply in it is the evidence a failure was real.
-    SIRENS_ECHO_EVALUATION_PACK=agent/rate-echo.yaml \
+    # Emits a measurement dataset on stdout. Redirect it to that agent's
+    # evaluations/ before reading, every reply in it is the evidence.
+    SIRENS_ECHO_EVALUATION_PACK=agents/echo/packs/rate.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
   rate-deep)
-    # Emits a measurement dataset on stdout. Redirect it to evaluations/ before
-    # reading, because every reply in it is the evidence a failure was real.
-    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
-      SIRENS_ECHO_EVALUATION_PACK=agent/rate-deep.yaml \
+    # Emits a measurement dataset on stdout. Redirect it to that agent's
+    # evaluations/ before reading, every reply in it is the evidence.
+    SIRENS_ECHO_DEFINITION=agents/deep/definition.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agents/deep/packs/rate.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
   rate-fixture-deep)
     # The data-borne injection pack. SIRENS_ECHO_TOOL_FIXTURE is exclusive with
     # the MCP roster, so this runs separately from rate-deep.
-    SIRENS_ECHO_DEFINITION=agent/sirens-deep.yaml \
-      SIRENS_ECHO_EVALUATION_PACK=agent/rate-fixture-deep.yaml \
+    SIRENS_ECHO_DEFINITION=agents/deep/definition.yaml \
+      SIRENS_ECHO_EVALUATION_PACK=agents/deep/packs/rate-fixture.yaml \
       SIRENS_ECHO_TOOL_FIXTURE=agent/tool-fixture-injection.yaml \
       go run ./cmd/sirens-echo-eval
     ;;

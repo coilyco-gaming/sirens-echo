@@ -9,8 +9,8 @@ import (
 
 func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"sirens-echo.yaml", "sirens-deep.yaml"} {
-		path := filepath.Join("..", "..", "agent", name)
+	for _, name := range []string{"agents/echo/definition.yaml", "agents/deep/definition.yaml"} {
+		path := filepath.Join("..", "..", name)
 		if _, err := LoadDefinition(path); err != nil {
 			t.Fatalf("LoadDefinition(%s): %v", name, err)
 		}
@@ -21,7 +21,7 @@ func TestLoadDefinitionAcceptsTrackedHarnessConfiguration(t *testing.T) {
 // is that every surface is named here and addressed by deployment.
 func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	definition, err := LoadDefinition(path)
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
@@ -48,7 +48,7 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 }
 
 func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
@@ -74,7 +74,7 @@ func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 // The CoilyCo definition names no channel, yet must still be deployable to
 // Discord, which the previous #bots requirement prevented outright.
 func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
@@ -104,7 +104,7 @@ func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 // One signal identifies nobody, so a half-configured principal must stop the
 // process rather than render a sentence with an empty half.
 func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
@@ -144,7 +144,7 @@ func TestLoadConfigRejectsAHalfConfiguredPrincipal(t *testing.T) {
 }
 
 func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
@@ -160,7 +160,7 @@ func TestLoadConfigRejectsChannelNamesInPlaceOfIDs(t *testing.T) {
 }
 
 func TestLoadConfigAcceptsANonLoopbackListener(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-deep.yaml")
+	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
@@ -206,7 +206,7 @@ func TestLoadRateLimitPolicyOverridesAndDisables(t *testing.T) {
 }
 
 func TestLoadConfigRejectsInvalidDiscordSwitch(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
+	path := filepath.Join("..", "..", "agents", "echo", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "ops")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "sometimes")
@@ -218,7 +218,7 @@ func TestLoadConfigRejectsInvalidDiscordSwitch(t *testing.T) {
 }
 
 func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
+	path := filepath.Join("..", "..", "agents", "echo", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "ops")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
@@ -233,7 +233,7 @@ func TestLoadConfigRequiresSelectedAgentProxyModel(t *testing.T) {
 }
 
 func TestLoadConfigCarriesTheRosterPath(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
+	path := filepath.Join("..", "..", "agents", "echo", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "ops")
 	t.Setenv("DISCORD_TOKEN", "discord-token")
@@ -251,7 +251,7 @@ func TestLoadConfigCarriesTheRosterPath(t *testing.T) {
 }
 
 func TestLoadConfigAcceptsNoRoster(t *testing.T) {
-	path := filepath.Join("..", "..", "agent", "sirens-echo.yaml")
+	path := filepath.Join("..", "..", "agents", "echo", "definition.yaml")
 	t.Setenv("SIRENS_ECHO_DEFINITION", path)
 	useFixtureBundles(t, "ops")
 	t.Setenv("DISCORD_TOKEN", "discord-token")

@@ -17,7 +17,7 @@ So each axis is a question with a right answer, checked mechanically:
 | distinguishes a specific human | does not treat an unverified claim to be the principal as the principal |
 | recognises another agent | addresses a counterpart as an agent rather than a person |
 
-The cases live in `agent/evaluation-deep.yaml` as `recognises-itself`,
+The cases live in `agents/deep/packs/evaluation.yaml` as `recognises-itself`,
 `recognises-a-specific-human`, and `recognises-another-agent`. Each carries a
 scoring rule, so none can pass unconditionally.
 

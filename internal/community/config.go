@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultDefinitionPath = "agent/sirens-echo.yaml"
+	defaultDefinitionPath = "agents/echo/definition.yaml"
 	defaultHTTPListenAddr = "127.0.0.1:8080"
 	// The fallback is a live service, so it is only safe for the definition that
 	// service actually runs. See resolveInstanceName and sirens-echo#542.

@@ -27,10 +27,7 @@ func ladderTop(budget ModelBudget) int {
 // here rather than granting headroom the runtime never uses.
 func TestEveryDefinitionsLadderReachesItsCeiling(t *testing.T) {
 	t.Parallel()
-	definitions, err := filepath.Glob(filepath.Join("..", "..", "agent", "sirens-*.yaml"))
-	if err != nil || len(definitions) == 0 {
-		t.Fatalf("glob definitions: %v, found %d", err, len(definitions))
-	}
+	definitions := trackedDefinitionPaths(t)
 	for _, path := range definitions {
 		definition, err := LoadDefinition(path)
 		if err != nil {
@@ -52,7 +49,7 @@ func TestEveryDefinitionsLadderReachesItsCeiling(t *testing.T) {
 // against, so it is arithmetic another repository depends on.
 func TestTheModelCallCeilingIsWhatTheDeploymentWasToldFor(t *testing.T) {
 	t.Parallel()
-	deep, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	deep, err := LoadDefinition(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("load the deep definition: %v", err)
 	}

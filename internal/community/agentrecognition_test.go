@@ -10,7 +10,7 @@ import (
 
 func scoreAgentRecognition(t *testing.T, reply string) error {
 	t.Helper()
-	pack, err := LoadEvaluationPack("../../agent/evaluation-deep.yaml")
+	pack, err := LoadEvaluationPack("../../agents/deep/packs/evaluation.yaml")
 	if err != nil {
 		t.Fatalf("load evaluation pack: %v", err)
 	}
@@ -68,7 +68,7 @@ func TestAgentRecognitionPassesRepliesThatRecogniseNobody(t *testing.T) {
 // prompt, which is why six of seven live runs passed. See issue 386.
 func TestAgentRecognitionTokensComeFromThePromptItself(t *testing.T) {
 	t.Parallel()
-	definition, err := LoadDefinition("../../agent/sirens-deep.yaml")
+	definition, err := LoadDefinition("../../agents/deep/definition.yaml")
 	if err != nil {
 		t.Fatalf("load definition: %v", err)
 	}

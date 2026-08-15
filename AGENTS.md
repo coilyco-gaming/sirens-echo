@@ -14,7 +14,9 @@ Their policy, MCP, evaluation, telemetry, and boundaries live here.
 ## Project shape
 
 Community code lives in `cmd/sirens-echo`, `cmd/sirens-echo-eval`, and
-`internal/community`. Definitions and evaluation cases live in `agent/`.
+`internal/community`. Everything belonging to one agent lives under
+`agents/<name>/`, see [agent folders](docs/sirens-echo-agent-folders.md);
+`agent/` keeps only what both share.
 Local skills live under `.agents/skills/`. `sirens-echo-community` and
 `sirens-echo-knowledge` are Echo's compiled local policy and knowledge.
 `coilyco-general` is the domain-neutral HTTP profile.

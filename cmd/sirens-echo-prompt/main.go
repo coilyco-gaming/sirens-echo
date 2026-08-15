@@ -14,11 +14,11 @@ import (
 
 // The rendered prompt is the model's whole instruction surface, and it is
 // assembled from several files. See docs/sirens-echo-prompt.md.
-const renderedDir = "agent/rendered"
+const renderedName = "rendered/prompt.txt"
 
 var trackedDefinitions = []string{
-	"agent/sirens-echo.yaml",
-	"agent/sirens-deep.yaml",
+	"agents/echo/definition.yaml",
+	"agents/deep/definition.yaml",
 }
 
 // sampleHistory and sampleRequest keep the user-prompt section deterministic,
@@ -38,7 +38,7 @@ var sampleRequest = community.TranscriptEntry{
 const roleSnapshotDir = "agent/rendered/roles"
 
 // composedDefinition is the profile the baked bundles belong to.
-const composedDefinition = "agent/sirens-deep.yaml"
+const composedDefinition = "agents/deep/definition.yaml"
 
 func main() {
 	check := flag.Bool("check", false, "fail on a stale snapshot instead of rewriting it")
@@ -54,8 +54,9 @@ func main() {
 
 	stale := make([]string, 0, len(trackedDefinitions))
 	for _, path := range trackedDefinitions {
-		name := strings.TrimSuffix(filepath.Base(path), ".yaml")
-		target := filepath.Join(renderedDir, name+".prompt.txt")
+		// Beside its own definition, since every agent's file is now named
+		// definition.yaml and a shared directory would collide. See #816.
+		target := filepath.Join(filepath.Dir(path), renderedName)
 		rendered, err := render(path)
 		if err != nil {
 			log.Fatalf("render %s: %v", path, err)
@@ -69,8 +70,8 @@ func main() {
 			stale = append(stale, target)
 			continue
 		}
-		if err := os.MkdirAll(renderedDir, 0o755); err != nil {
-			log.Fatalf("create %s: %v", renderedDir, err)
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+			log.Fatalf("create %s: %v", filepath.Dir(target), err)
 		}
 		if err := os.WriteFile(target, []byte(rendered), 0o644); err != nil {
 			log.Fatalf("write %s: %v", target, err)

@@ -16,10 +16,7 @@ var unverifiedPacks = map[string]string{}
 
 func TestEveryTrackedPackReachesPolicyCheck(t *testing.T) {
 	t.Parallel()
-	paths, err := filepath.Glob(filepath.Join("..", "..", "agent", "*.yaml"))
-	if err != nil || len(paths) == 0 {
-		t.Fatalf("glob agent packs: %v, found %d", err, len(paths))
-	}
+	paths := trackedPackPaths(t)
 	source, err := os.ReadFile(filepath.Join(
 		"..", "..", "cmd", "sirens-echo-policy-check", "main.go",
 	))
@@ -29,7 +26,7 @@ func TestEveryTrackedPackReachesPolicyCheck(t *testing.T) {
 	body := string(source)
 
 	for _, path := range paths {
-		relative := "agent/" + filepath.Base(path)
+		relative := filepath.ToSlash(strings.TrimPrefix(path, filepath.Join("..", "..")+string(filepath.Separator)))
 		reason, exempt := unverifiedPacks[relative]
 		verified := strings.Contains(body, `"`+relative+`"`)
 		switch {
@@ -47,10 +44,7 @@ func TestEveryTrackedPackReachesPolicyCheck(t *testing.T) {
 // so the schema line is what makes the file self-describing.
 func TestEveryTrackedPackDeclaresItsSchema(t *testing.T) {
 	t.Parallel()
-	paths, err := filepath.Glob(filepath.Join("..", "..", "agent", "*.yaml"))
-	if err != nil || len(paths) == 0 {
-		t.Fatalf("glob agent packs: %v, found %d", err, len(paths))
-	}
+	paths := trackedPackPaths(t)
 	for _, path := range paths {
 		body, err := os.ReadFile(path)
 		if err != nil {

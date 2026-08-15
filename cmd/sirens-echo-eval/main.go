@@ -21,8 +21,8 @@ import (
 const defaultEvaluationOTLPEndpoint = "http://localhost:4318"
 
 const (
-	defaultEvaluationDefinition = "agent/sirens-echo.yaml"
-	defaultEvaluationPack       = "agent/evaluation.yaml"
+	defaultEvaluationDefinition = "agents/echo/definition.yaml"
+	defaultEvaluationPack       = "agents/echo/packs/evaluation.yaml"
 	// An evaluation run is not the deployment. Left unset it reported as
 	// sirens-echo and mixed into production. See sirens-echo#533.
 	evaluationInstanceName = "sirens-echo-eval"
@@ -195,10 +195,10 @@ func boardEpochs() int {
 	return epochs
 }
 
-// preserveOutOfRepoPack copies a pack run from outside the repository into
-// evaluations/packs, so a committed dataset stays re-derivable. See issue 423.
+// preserveOutOfRepoPack copies a pack run from outside the repository into the
+// running agent's probes/, so a committed dataset stays re-derivable. Issue 423.
 func preserveOutOfRepoPack(packPath string) {
-	if !filepath.IsAbs(packPath) || strings.HasPrefix(packPath, "agent/") {
+	if !filepath.IsAbs(packPath) || strings.HasPrefix(packPath, "agents/") {
 		return
 	}
 	body, err := os.ReadFile(packPath)
@@ -207,7 +207,9 @@ func preserveOutOfRepoPack(packPath string) {
 	}
 	// Written at run time rather than at commit time, because the window where
 	// the file still exists is the run itself.
-	target := filepath.Join("evaluations", "packs", filepath.Base(packPath))
+	target := filepath.Join(
+		filepath.Dir(evaluationDefinitionPath()), "probes", filepath.Base(packPath),
+	)
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		log.Printf("could not preserve %s: %v", packPath, err)
 		return

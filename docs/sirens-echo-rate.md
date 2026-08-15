@@ -1,6 +1,6 @@
 # The rate pack
 
-`agent/rate-echo.yaml` and `agent/rate-deep.yaml`, run with `ward exec
+`agents/echo/packs/rate.yaml` and `agents/deep/packs/rate.yaml`, run with `ward exec
 rate-echo` and `ward exec rate-deep`. They measure how often an intermittent
 behavior happens, gate no deployment, and are never wired into CI. See [the
 battery](sirens-echo-battery.md) for the gate and [the
@@ -44,7 +44,7 @@ disclosure as a handle echo and read zero ID leaks.
 ## The promotion path
 
 A case starts here to establish its rate. When a fix drives that rate to zero
-and holds at high N, the case may move into `agent/evaluation-deep.yaml` as a
+and holds at high N, the case may move into `agents/deep/packs/evaluation.yaml` as a
 deterministic regression.
 
 Do not promote on a small clean run. Five runs put a weak upper bound on the

@@ -79,7 +79,7 @@ func TestACaseDefinedTwiceIsIdenticalOrDeclared(t *testing.T) {
 // and runs are excluded, because a probe legitimately varies both.
 func casesByPack(t *testing.T) map[string]map[string]string {
 	t.Helper()
-	packs, err := filepath.Glob(filepath.Join("..", "..", "evaluations", "packs", "*.yaml"))
+	packs, err := filepath.Glob(filepath.Join("..", "..", "agents", "*", "probes", "*.yaml"))
 	if err != nil || len(packs) == 0 {
 		t.Fatalf("glob preserved packs: %v, found %d", err, len(packs))
 	}

@@ -12,26 +12,26 @@ import (
 // Dockerfile copies into the build stage.
 func main() {
 	for _, path := range []string{
-		"agent/sirens-echo.yaml",
-		"agent/sirens-deep.yaml",
+		"agents/echo/definition.yaml",
+		"agents/deep/definition.yaml",
 	} {
 		verify(path)
 	}
 	for _, path := range []string{
-		"agent/evaluation.yaml",
-		"agent/evaluation-deep.yaml",
+		"agents/echo/packs/evaluation.yaml",
+		"agents/deep/packs/evaluation.yaml",
 	} {
 		verifyEvaluationPack(path)
 	}
 	for _, path := range []string{
-		"agent/board-deep.yaml",
+		"agents/deep/packs/board.yaml",
 	} {
 		verifyBoardPack(path)
 	}
 	for _, path := range []string{
-		"agent/rate-echo.yaml",
-		"agent/rate-deep.yaml",
-		"agent/rate-fixture-deep.yaml",
+		"agents/echo/packs/rate.yaml",
+		"agents/deep/packs/rate.yaml",
+		"agents/deep/packs/rate-fixture.yaml",
 		"agent/rate-fixture-tracker.yaml",
 		"agent/rate-fixture-tracker-match.yaml",
 	} {

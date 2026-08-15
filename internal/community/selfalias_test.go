@@ -63,7 +63,7 @@ func TestABlankAliasIsNotAnAlias(t *testing.T) {
 // The corpus scores against a copy of Echo's aliases, and a copy drifts.
 func TestTheCorpusAliasesMatchEchosDefinition(t *testing.T) {
 	t.Parallel()
-	raw, err := os.ReadFile(filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
+	raw, err := os.ReadFile(filepath.Join("..", "..", "agents", "echo", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("read Echo's definition: %v", err)
 	}

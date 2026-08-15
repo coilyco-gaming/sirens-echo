@@ -229,7 +229,7 @@ func validEvaluationResponses() map[string]CompletionResult {
 
 func loadEvaluationFixture(t *testing.T) (Definition, string, EvaluationPack) {
 	t.Helper()
-	definition, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
+	definition, err := LoadDefinition(filepath.Join("..", "..", "agents", "echo", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}
@@ -238,7 +238,7 @@ func loadEvaluationFixture(t *testing.T) (Definition, string, EvaluationPack) {
 	if err != nil {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agents", "echo", "packs", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}

@@ -19,7 +19,7 @@ func TestTheRunnerPreservesAPackItRanFromOutsideTheRepo(t *testing.T) {
 	body := string(source)
 	for _, want := range []struct{ fragment, why string }{
 		{"preserveOutOfRepoPack(packPath)", "the runner no longer preserves an out-of-repo pack, so a dataset committed from a scratch run cannot be re-derived"},
-		{"evaluations\", \"packs\"", "the copy no longer lands where the preservation guard resolves it"},
+		{"\"probes\"", "the copy no longer lands where the preservation guard resolves it"},
 	} {
 		if !strings.Contains(body, want.fragment) {
 			t.Error(want.why)

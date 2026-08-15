@@ -107,7 +107,7 @@ func TestCapabilityDocStatesTheRealContextWindow(t *testing.T) {
 	t.Parallel()
 	docs := capabilityDocs(t)
 	words := map[string]string{"10": "ten", "11": "eleven", "12": "twelve", "13": "thirteen"}
-	definitions, err := filepath.Glob("../../agent/*.yaml")
+	definitions, err := filepath.Glob("../../agents/*/definition.yaml")
 	if err != nil || len(definitions) == 0 {
 		t.Fatalf("glob agent definitions: %v, found %d", err, len(definitions))
 	}
@@ -175,7 +175,7 @@ func TestCapabilityDocReachesEveryAgent(t *testing.T) {
 	// last exemption went when sirens-deep gained one.
 	without := map[string]string{}
 
-	definitions, err := filepath.Glob("../../agent/*.yaml")
+	definitions, err := filepath.Glob("../../agents/*/definition.yaml")
 	if err != nil || len(definitions) == 0 {
 		t.Fatalf("glob agent definitions: %v, found %d", err, len(definitions))
 	}

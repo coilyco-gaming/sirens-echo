@@ -137,7 +137,7 @@ func TestNoEchoGatePatternRejectsACorrectReply(t *testing.T) {
 	t.Parallel()
 	// Echo only. Deep forbids every URL, right for a lane with no registry and
 	// wrong against a corpus whose replies carry approved links.
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agents", "echo", "packs", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("load the Echo evaluation pack: %v", err)
 	}

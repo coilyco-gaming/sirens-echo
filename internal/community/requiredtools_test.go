@@ -10,7 +10,7 @@ import (
 
 func TestTheGateNamesWhichCasesNeedATool(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agents", "echo", "packs", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("load the gate: %v", err)
 	}

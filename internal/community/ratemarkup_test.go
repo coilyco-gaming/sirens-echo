@@ -12,10 +12,10 @@ import (
 // reason does not reach it. See docs/sirens-echo-tool-call-markup.md.
 func TestEveryRateCaseChecksToolCallMarkup(t *testing.T) {
 	t.Parallel()
-	packs, err := filepath.Glob(filepath.Join("..", "..", "agent", "rate-*.yaml"))
-	if err != nil || len(packs) == 0 {
-		t.Fatalf("glob rate packs: %v, found %d", err, len(packs))
-	}
+	packs := globAll(t,
+		[]string{"..", "..", "agent", "rate-*.yaml"},
+		[]string{"..", "..", "agents", "*", "packs", "rate*.yaml"},
+	)
 	for _, path := range packs {
 		pack, err := LoadRatePack(path)
 		if err != nil {

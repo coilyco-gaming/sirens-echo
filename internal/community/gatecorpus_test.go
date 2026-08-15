@@ -61,7 +61,7 @@ var gateCorpora = []gateCorpus{
 // reply is worse than absent because it fails the build on good behaviour.
 func TestGatingPatternsHoldTheirCorpora(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agents", "echo", "packs", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}
@@ -97,7 +97,7 @@ func TestGatingPatternsHoldTheirCorpora(t *testing.T) {
 // new pattern arrives unmeasured and the two above look like the whole set.
 func TestEveryGatingPatternCaseHasACorpus(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agent", "evaluation.yaml"))
+	pack, err := LoadEvaluationPack(filepath.Join("..", "..", "agents", "echo", "packs", "evaluation.yaml"))
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}

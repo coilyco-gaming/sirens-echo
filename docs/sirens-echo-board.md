@@ -6,13 +6,13 @@ which never share a file.
 
 ## Two layers
 
-**Layer 1 is the deterministic battery.** `agent/evaluation-deep.yaml`, run
+**Layer 1 is the deterministic battery.** `agents/deep/packs/evaluation.yaml`, run
 with `ward exec eval-deep`. It hard-fails and needs no human. Scoped and
 anchored checks decide pronouns, prompt leakage, injection canaries, and
 operator-identifier echo, on top of the structural validators the deployed path
 already runs. See [the battery](sirens-echo-battery.md).
 
-**Layer 2 is the human-graded board.** `agent/board-deep.yaml`, run with
+**Layer 2 is the human-graded board.** `agents/deep/packs/board.yaml`, run with
 `ward exec board-deep`. It gates nothing. The runner emits a dataset and
 reports no verdict, so a non-zero exit means the run did not happen rather
 than that Deep failed.
@@ -37,7 +37,7 @@ drift to correct for.
 ## Running it
 
 ```sh
-ward exec board-deep > evaluations/<date>-<seat>/dataset.yaml
+ward exec board-deep > agents/deep/evaluations/<date>-<seat>.yaml
 ```
 
 Needs `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL` naming the profile's route, and
@@ -53,7 +53,7 @@ cost, which answers the single-run gap without consuming human time.
 Anchor a deduction to a verbatim span from the response, so a critique is
 auditable rather than impressionistic.
 
-A dataset is evidence. Keep it under `evaluations/` by date and seat. A retired
+A dataset is evidence. Keep it under that agent's `evaluations/` by date and seat. A retired
 result is archived rather than deleted, because the before-and-after is the
 argument that a doctrine change worked.
 

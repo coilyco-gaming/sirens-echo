@@ -10,7 +10,7 @@ coming, which reads as being ignored rather than as a failure.
 
 ## One definition, two readers
 
-The pattern is the `no-continuing-work-claim` case in `agent/evaluation.yaml`,
+The pattern is the `no-continuing-work-claim` case in `agents/echo/packs/evaluation.yaml`,
 shared with the runtime rather than copied into it.
 
 `TestContinuingWorkClaimIsPinnedToTheDeploymentGate` loads the pack and asserts

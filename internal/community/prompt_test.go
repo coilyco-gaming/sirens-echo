@@ -322,8 +322,8 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 // promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
 // is recorded in docs/sirens-echo-prompt-budget.md with its cause.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 21976,
-	"sirens-deep.prompt.txt": 12260,
+	"agents/echo/rendered/prompt.txt": 21981,
+	"agents/deep/rendered/prompt.txt": 12265,
 }
 
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.
@@ -334,7 +334,7 @@ func TestRenderedPromptsStayInsideTheirBudget(t *testing.T) {
 		name, budget := name, budget
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			raw, err := os.ReadFile(filepath.Join("..", "..", "agent", "rendered", name))
+			raw, err := os.ReadFile(filepath.Join("..", "..", name))
 			if err != nil {
 				t.Fatalf("read snapshot: %v", err)
 			}
@@ -353,8 +353,8 @@ func TestRenderedPromptsStayInsideTheirBudget(t *testing.T) {
 // not to rely on it, and Deep recited it. See issue 166.
 func TestThePrincipalUserIDNeverReachesThePrompt(t *testing.T) {
 	t.Parallel()
-	for _, path := range []string{"sirens-echo.yaml", "sirens-deep.yaml"} {
-		definition, err := LoadDefinition(filepath.Join("..", "..", "agent", path))
+	for _, path := range []string{"agents/echo/definition.yaml", "agents/deep/definition.yaml"} {
+		definition, err := LoadDefinition(filepath.Join("..", "..", path))
 		if err != nil {
 			t.Fatalf("load %s: %v", path, err)
 		}
