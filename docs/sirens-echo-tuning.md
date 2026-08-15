@@ -16,6 +16,8 @@ constants whose relationship existed only in whoever remembered it.
 Moving constants between files inside one Go package changes nothing at
 compile time, so the whole move is verified by the gate rather than by care.
 
+`TestEveryTuningNumberLivesInTuningGo` now holds the arrangement, which seven numbers had drifted out of, and a knob-shaped number that is not one takes a named exemption. See sirens-echo#829.
+
 ## What lives here and what does not
 
 Here: a number that tunes behaviour. A timeout, a cap, a bound, a retry count,

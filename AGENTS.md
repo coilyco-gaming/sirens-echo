@@ -22,6 +22,20 @@ Local skills live under `.agents/skills/`. `sirens-echo-community` and
 the runtime skill roots. The Dockerfile packages Echo on the full AOS release
 image.
 
+## Where numbers live
+
+Every number has one of two homes, and a test fails if one drifts out.
+`internal/community/config.go` reads what the deployment supplies through the
+environment. `internal/community/tuning.go` holds every tuning number the
+service ships: a timeout, a cap, a bound, a retry count, a size limit. Eight of
+those take an environment override, listed in
+[tuning a deployment](docs/sirens-echo-tuning-overrides.md). Do not add a knob
+to the file that uses it.
+
+A number that is part of an algorithm, a data structure, or a security floor is
+not a knob and stays where it is used. `TestEveryTuningNumberLivesInTuningGo`
+holds the line and takes a named exemption with a reason.
+
 ## Repo boundaries
 
 This service owns its model policies, integration, and local skill roots. Its

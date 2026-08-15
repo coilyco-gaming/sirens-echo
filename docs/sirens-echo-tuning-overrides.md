@@ -1,11 +1,12 @@
 # Tuning a deployment
 
-Seven timeouts and one cadence read an environment variable. Everything else in
+Eight timeouts and one cadence read an environment variable. Everything else in
 [tuning](sirens-echo-tuning.md) is a constant on purpose.
 
 ```
 SIRENS_ECHO_REQUEST_TIMEOUT   the whole turn
 SIRENS_ECHO_QUEUE_TIMEOUT     the wait for an execution slot
+SIRENS_ECHO_SHUTDOWN_GRACE    how long turns in flight get on restart
 SIRENS_ECHO_PROGRESS_AFTER    how long before a turn narrates
 SIRENS_ECHO_ROSTER_REFRESH    MCP staleness bound
 SIRENS_ECHO_MCP_CONNECT       one MCP handshake
@@ -15,11 +16,18 @@ SIRENS_ECHO_TOOL_CALL         one tool call
 
 Each takes a Go duration: `90s`, `3m`, `1h`.
 
-## A bad value keeps the default
+## A bad value keeps the default, except on three
 
 Unparsable, zero, or negative applies nothing. A typo therefore leaves the
 service on its default rather than on a number nobody chose, which is the
 direction that fails safe when a values file is edited under time pressure.
+
+`SIRENS_ECHO_REQUEST_TIMEOUT`, `SIRENS_ECHO_QUEUE_TIMEOUT`, and
+`SIRENS_ECHO_SHUTDOWN_GRACE` are the exception, because `LoadConfig` reads them
+a second time to fill a `Config` field and refuses a value it cannot parse. The
+table applies them silently and the load then fails, so a typo on those three
+stops the service rather than being ignored. That is the louder direction and
+worth knowing, since the two halves disagree about it.
 
 ## The derived pair is recomputed
 

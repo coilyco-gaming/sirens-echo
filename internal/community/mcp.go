@@ -20,8 +20,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const maxProxyToolNameBytes = 64
-
 var invalidProxyToolName = regexp.MustCompile(`[^A-Za-z0-9_-]`)
 
 // ToolDefinition is one MCP tool translated to Agent Proxy's function schema.

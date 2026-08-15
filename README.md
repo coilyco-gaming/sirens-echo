@@ -42,9 +42,17 @@ with their own permission boundary.
 
 ## Configuration
 
+Every number has one of two homes. `internal/community/config.go` reads what the
+deployment supplies through the environment, and
+`internal/community/tuning.go` holds every tuning number the service ships,
+eight of which take an environment override. Nothing numeric is meant to live
+anywhere else, and a test fails if one drifts out.
+
 Deploy selects the tracked YAML definition, Agent Proxy route, Discord switch,
 channel and guild scope, admission limits, and instance name. Reachability of
 `POST /v1/turn` is decided at the network layer by the deployment. See
+[tuning](docs/sirens-echo-tuning.md),
+[tuning a deployment](docs/sirens-echo-tuning-overrides.md),
 [response profiles](docs/response-profiles.md),
 [admission control](docs/sirens-echo-admission.md), and
 [deployment](docs/deploy.md).

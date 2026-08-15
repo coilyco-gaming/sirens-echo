@@ -18,14 +18,6 @@ type JobContentReporter interface {
 	EmitJobContent(ctx context.Context, job Job, content string) error
 }
 
-// maxJobContentMessages bounds one job's answer. The ceiling Kai decided on
-// sirens-echo#236 is ten, and threading it is a separate change.
-const maxJobContentMessages = 10
-
-// maxJobContentWindow is the other half of the ceiling. Ten messages or ten
-// minutes, whichever comes first. See sirens-echo#236.
-const maxJobContentWindow = 10 * time.Minute
-
 // ErrJobContentExhausted ends a job that has said its ten messages, so the
 // bound is a refusal the executor sees rather than a silent drop.
 var ErrJobContentExhausted = fmt.Errorf("job reached its %d message limit", maxJobContentMessages)

@@ -198,6 +198,31 @@ const (
 	threadTitleRunes = 50
 )
 
+// Job content ceiling, the pair Kai decided on sirens-echo#236: ten messages
+// or ten minutes, whichever comes first.
+const (
+	maxJobContentMessages = 10
+	maxJobContentWindow   = 10 * time.Minute
+)
+
+// Reply rendering bounds
+const (
+	// maxProgressWaitLines bounds the column a stuck turn can grow. The turn
+	// ceiling over the beat is the natural count. See sirens-echo#370.
+	maxProgressWaitLines = 12
+	// maxProxyToolNameBytes bounds one served tool name.
+	maxProxyToolNameBytes = 64
+	// maxWorklogRows bounds the embed. A forty-call turn must not render forty
+	// rows, and the earliest are the least interesting once later ones resolved.
+	maxWorklogRows = 6
+	// maxRedactedBlocks bounds the removal. Past it this is no longer a message
+	// with a bad block in it, and the member is better served by the refusal.
+	maxRedactedBlocks = 2
+	// inventedChannelRunes bounds the one piece of model-written text a refusal
+	// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
+	inventedChannelRunes = 64
+)
+
 // Block responses
 const (
 	// maxBlockReasonWords bounds the reason. Every volunteered justification is
@@ -263,6 +288,7 @@ func tuningOverrides() map[string]*time.Duration {
 	return map[string]*time.Duration{
 		"SIRENS_ECHO_REQUEST_TIMEOUT": &defaultRequestTimeout,
 		"SIRENS_ECHO_QUEUE_TIMEOUT":   &defaultQueueTimeout,
+		"SIRENS_ECHO_SHUTDOWN_GRACE":  &defaultShutdownGrace,
 		"SIRENS_ECHO_PROGRESS_AFTER":  &turnProgressAfter,
 		"SIRENS_ECHO_ROSTER_REFRESH":  &defaultRosterRefresh,
 		"SIRENS_ECHO_MCP_CONNECT":     &mcpConnectTimeout,
@@ -271,8 +297,8 @@ func tuningOverrides() map[string]*time.Duration {
 	}
 }
 
-// applyTuningOverrides reads the table and recomputes what derives from it. A
-// bad value keeps the default. See docs/sirens-echo-tuning-overrides.md.
+// applyTuningOverrides reads the table and recomputes what derives from it.
+// Bad values: see docs/sirens-echo-tuning-overrides.md, three of them fail.
 func applyTuningOverrides(lookup func(string) string) []string {
 	applied := make([]string, 0)
 	for name, target := range tuningOverrides() {
