@@ -153,6 +153,22 @@ type ProxyClient struct {
 	Telemetry  *Telemetry
 	// Budget is the definition's ceilings. Zero means the packaged defaults.
 	Budget ModelBudget
+	// ValidateReply offers the harness checks to the repair loop. Advisory, so a
+	// nil hook changes no verdict. See docs/sirens-echo-reply-repair.md.
+	ValidateReply func(reply string, prompt TurnPrompt, executed []ExecutedTool) error
+}
+
+// harnessRefusal asks the injected checks, if any. Kept separate from the
+// contract so exhausting repair on one cannot end the turn on the other.
+func (c ProxyClient) harnessRefusal(
+	reply string,
+	prompt TurnPrompt,
+	executed []ExecutedTool,
+) error {
+	if c.ValidateReply == nil {
+		return nil
+	}
+	return c.ValidateReply(reply, prompt, executed)
 }
 
 // budget resolves the ceilings once per use, so a ProxyClient built without one
@@ -481,6 +497,11 @@ func (c ProxyClient) Complete(
 			reply, contractErr := ParseReply(content)
 			if contractErr == nil {
 				contractErr = ValidateResponseStyle(c.ResponseStyle, reply)
+			}
+			// Advisory, and out of the way once the budget is spent, so the run
+			// after Complete still refuses. See docs/sirens-echo-reply-repair.md.
+			if contractErr == nil && repairAttempts < maxResponseRepairs {
+				contractErr = c.harnessRefusal(reply, prompt, executed)
 			}
 			if contractErr != nil {
 				if repairAttempts >= maxResponseRepairs {

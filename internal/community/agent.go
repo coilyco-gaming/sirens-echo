@@ -153,22 +153,23 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(extras) > 1 {
 		modelTools = &CompositeProvider{Providers: extras}
 	}
+	proxy := ProxyClient{
+		BaseURL:       cfg.AgentProxyURL,
+		Model:         cfg.AgentProxyModel,
+		AuditRole:     cfg.Definition.AuditRole,
+		Attribution:   cfg.Definition.Identity,
+		ResponseStyle: cfg.Definition.ResponseStyle,
+		Harness:       deploymentHarness(cfg),
+		HTTPClient:    httpClient,
+		Tools:         modelTools,
+		Telemetry:     telemetry,
+		Budget:        cfg.Definition.ModelBudget,
+	}
 	agent := &Agent{
-		cfg:     cfg,
-		session: session,
-		tools:   tools,
-		completions: ProxyClient{
-			BaseURL:       cfg.AgentProxyURL,
-			Model:         cfg.AgentProxyModel,
-			AuditRole:     cfg.Definition.AuditRole,
-			Attribution:   cfg.Definition.Identity,
-			ResponseStyle: cfg.Definition.ResponseStyle,
-			Harness:       deploymentHarness(cfg),
-			HTTPClient:    httpClient,
-			Tools:         modelTools,
-			Telemetry:     telemetry,
-			Budget:        cfg.Definition.ModelBudget,
-		},
+		cfg:               cfg,
+		session:           session,
+		tools:             tools,
+		completions:       proxy,
 		systemPrompt:      systemPrompt,
 		phrases:           phrases,
 		telemetry:         telemetry,
@@ -189,6 +190,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		agent.taxonomy = taxonomy
 	}
 	agent.identifiers = NewIdentifierGuard(cfg, roster)
+	// Offered to the repair loop only after the guard exists, because the checks
+	// read it. See docs/sirens-echo-reply-repair.md.
+	proxy.ValidateReply = agent.repairableReplyChecks
+	agent.completions = proxy
 	agent.ensureRuntimeDefaults()
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err

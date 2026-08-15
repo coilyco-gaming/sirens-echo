@@ -49,11 +49,14 @@ harness refusing the model's output, and nothing said which rule did it. See
 sirens-echo#651, where two correct answers were discarded and reported as a
 backend outage.
 
-The completion layer has its own contract check, which runs before any of
-these and refuses on parse or response style. `model.response.repair` records
-what it refused rather than only that it happened, and `model.response.refused`
-records the reason a turn gave up. That path reports `stage=model`, which is
-true about the code and false about the world.
+The completion layer runs these checks too, before the authoritative pass, so a
+refusal reaches the model that can still fix the clause. `model.response.repair`
+records what it refused rather than only that it happened, and
+`model.response.refused` records the reason a turn gave up. That path reports
+`stage=model`, which is true about the code and false about the world, and it is
+why a reply the repair budget could not fix is handed back to the pass above
+rather than failed there. See [repairing a refused
+reply](sirens-echo-reply-repair.md).
 
 **Naming a check does not change any verdict.** Whether a rule is right, and
 whether exhausting the repair path should report an outage, are decisions on
