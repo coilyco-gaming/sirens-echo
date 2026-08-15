@@ -38,8 +38,8 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
 - Replies over the Discord send budget attached whole as a file, with the
   message naming it and its size. See
   [reply overflow](sirens-echo-reply-overflow.md)
-- Whole-thread prefill inside a thread, per parent channel and off by default,
-  dropping oldest first with the loss stated in the reply. See [thread
+- Whole-thread prefill for every turn inside a thread, dropping oldest first
+  with the loss stated in the reply. See [thread
   prefill](sirens-echo-thread-prefill.md)
 - Soft-reference replies with every Discord mention disabled
 - One assembly step for every service-authored suffix, shortening the answer so

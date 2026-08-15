@@ -4,20 +4,14 @@ A turn inside a thread got the same partial window a channel turn gets, so a
 thread longer than that window was answered from its own tail. The earlier half
 of the conversation was not in the prompt and nothing said so.
 
-## The toggle is per channel and ships off
+## Every thread, with nothing to switch on
 
-`SIRENS_ECHO_THREAD_PREFILL_CHANNELS` lists the parent channels that opt in.
-Empty is the shipped default and reads as off for every channel, so this lands
-without waiting on the question of where to enable it.
+Being in a thread is the condition. There is no toggle and no opt-in list.
 
-It keys on the **parent** channel rather than the thread, because a thread is
-created and abandoned constantly and nobody would maintain a list of them. One
-entry covers every thread under that channel.
-
-A parent channel the deployment does not admit fails at boot rather than being
-ignored, so a typo is a startup error instead of a feature believed to be on.
-The count of opted-in channels is stated on `discord.ready` beside the count of
-configured ones, which makes default-off observable rather than assumed.
+A per-channel gate was specified and Kai removed it: a thread is a bounded
+conversation someone deliberately opened, so reading it whole is what the
+feature means everywhere rather than a per-channel preference. The context
+budget and the walk bound below are what hold the cost down, not a switch.
 
 ## Overflow drops the oldest first
 
@@ -52,9 +46,9 @@ the same as having read the whole thread.
 ## What it costs
 
 A whole-thread read is one Discord call per hundred messages instead of one
-call. That is the reason the toggle exists and the reason it is off. Read
-`history.thread.read` and `history.thread.dropped` on the `community.history`
-span to see what a real thread produces before enabling it anywhere.
+call, and it applies to every threaded turn. `history.thread.read` and
+`history.thread.dropped` land on the `community.history` span, so what real
+threads produce is readable from the first day this runs rather than estimated.
 
 sirens-echo#750 makes Echo-owned threads permanently summonable, which raises
 the number of turns taken inside threads and therefore the cost of this. Land
@@ -62,9 +56,9 @@ them in either order and measure prefill size after both.
 
 ## What does not change
 
-Outside a thread, and inside a thread on a channel that has not opted in, the
-prefill is the same partial window read the same way. A turn that drops nothing
-adds nothing to the reply.
+Outside a thread the prefill is the same partial window, read the same way and
+bounded by the same `max_context_messages`. A turn that drops nothing adds
+nothing to the reply.
 
 ## See also
 

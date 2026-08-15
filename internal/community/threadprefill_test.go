@@ -2,7 +2,6 @@ package community
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -179,31 +178,6 @@ func TestNoTruncationAddsNothingToTheReply(t *testing.T) {
 	}
 }
 
-// Off is the shipped default, and an empty list must read as off rather than
-// as unset-means-on.
-func TestTheToggleIsOffForEveryChannelByDefault(t *testing.T) {
-	t.Parallel()
-	configured := []string{"111111111111111111", "222222222222222222"}
-	for _, id := range configured {
-		if threadPrefillOn(nil, id) {
-			t.Errorf("channel %s defaulted to on", id)
-		}
-		if threadPrefillOn([]string{}, id) {
-			t.Errorf("channel %s read an empty list as on", id)
-		}
-	}
-	if !threadPrefillOn(configured, configured[1]) {
-		t.Error("an opted-in channel read as off")
-	}
-	if threadPrefillOn(configured, "333333333333333333") {
-		t.Error("a channel outside the list read as on")
-	}
-	// A turn outside a thread has no parent to key on and must never opt in.
-	if threadPrefillOn(configured, "") {
-		t.Error("an empty channel id read as on")
-	}
-}
-
 // Outside a thread nothing changes, which is the ordinary window read in the
 // ordinary order.
 func TestOutsideAThreadTheWindowIsUnchanged(t *testing.T) {
@@ -253,66 +227,6 @@ func (failingReader) ChannelMessages(
 	return nil, fmt.Errorf("discord refused")
 }
 
-// discordEnv sets the minimum a Discord deployment needs to load, so a thread
-// prefill test states only what it is about.
-func discordEnv(t *testing.T, channels string) {
-	t.Helper()
-	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
-	useFixtureBundles(t, "creator")
-	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
-	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
-	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
-	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
-	t.Setenv("DISCORD_TOKEN", "discord-token")
-	t.Setenv("DISCORD_CHANNEL_ID", channels)
-	t.Setenv("AGENT_PROXY_MODEL", "model")
-}
-
-// The acceptance asks for default-off verified at boot rather than assumed, so
-// this reads the resolved state for every configured channel.
-func TestEveryConfiguredChannelLoadsWithThreadPrefillOff(t *testing.T) {
-	discordEnv(t, "1024000000000000001,1024000000000000002")
-	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
-	}
-	if len(cfg.ThreadPrefillChannelIDs) != 0 {
-		t.Fatalf("an unset toggle resolved to %#v", cfg.ThreadPrefillChannelIDs)
-	}
-	for _, id := range cfg.DiscordChannelIDs {
-		if threadPrefillOn(cfg.ThreadPrefillChannelIDs, id) {
-			t.Errorf("configured channel %s shipped with whole-thread prefill on", id)
-		}
-	}
-}
-
-// A toggle naming a channel that can never summon is dead config, and silence
-// about it is how a flag ends up believed to be on when it is not.
-func TestAToggleForAnUnadmittedChannelFailsAtBoot(t *testing.T) {
-	discordEnv(t, "1024000000000000001")
-	t.Setenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS", "1024000000000000009")
-	if _, err := LoadConfig(); err == nil ||
-		!strings.Contains(err.Error(), "does not admit") {
-		t.Errorf("an unadmitted channel loaded: %v", err)
-	}
-}
-
-// The opt-in itself has to work, or the whole feature is unreachable.
-func TestAnAdmittedChannelOptsIn(t *testing.T) {
-	discordEnv(t, "1024000000000000001,1024000000000000002")
-	t.Setenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS", "1024000000000000002")
-	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
-	}
-	if !threadPrefillOn(cfg.ThreadPrefillChannelIDs, "1024000000000000002") {
-		t.Error("the opted-in channel resolved off")
-	}
-	if threadPrefillOn(cfg.ThreadPrefillChannelIDs, "1024000000000000001") {
-		t.Error("opting one channel in opted its sibling in too")
-	}
-}
-
 // A thread whose newest messages all fit the budget is still incomplete when
 // the walk never reached its start, and that has to be said too.
 func TestACappedWalkIsAnnotatedEvenWhenNothingWentOverBudget(t *testing.T) {
@@ -327,5 +241,35 @@ func TestACappedWalkIsAnnotatedEvenWhenNothingWentOverBudget(t *testing.T) {
 	}
 	if strings.Contains(rendered, "dropped to fit") {
 		t.Errorf("the annotation blamed the budget for a walk bound: %q", rendered)
+	}
+}
+
+// A thread is the whole conversation, so every turn inside one reads it whole
+// with nothing to opt into. Kai removed the per-channel gate on issue 769.
+func TestEveryThreadTurnReadsTheWholeThread(t *testing.T) {
+	t.Parallel()
+	session := statefulSession(t)
+	thread := &discordgo.Channel{
+		ID:       "1390000000000000009",
+		ParentID: "1390000000000000003",
+		Type:     discordgo.ChannelTypeGuildPublicThread,
+		GuildID:  "1390000000000000002",
+	}
+	if err := session.State.ChannelAdd(thread); err != nil {
+		t.Fatalf("seed channel state: %v", err)
+	}
+	message := &discordgo.Message{
+		ID: "1401110000000000001", GuildID: thread.GuildID, ChannelID: thread.ID,
+	}
+	if at := discordLocationFor(session, message); at.ThreadID == "" {
+		t.Fatal("a thread turn did not resolve a thread id, so it would read the window")
+	}
+	// The channel the thread hangs under is an ordinary channel, and a turn
+	// there keeps the window.
+	inChannel := &discordgo.Message{
+		ID: "1401110000000000002", GuildID: thread.GuildID, ChannelID: thread.ParentID,
+	}
+	if at := discordLocationFor(session, inChannel); at.ThreadID != "" {
+		t.Errorf("a channel turn resolved thread id %q", at.ThreadID)
 	}
 }
