@@ -243,9 +243,6 @@ type Config struct {
 	// DiscordChannelIDs are the channels that may summon this deployment, plus
 	// their threads. Channel IDs are globally unique, so the list spans guilds.
 	DiscordChannelIDs []string
-	// ThreadPrefillChannelIDs opt a parent channel into whole-thread prefill.
-	// Empty is the shipped default and reads as off everywhere.
-	ThreadPrefillChannelIDs []string
 	// DiscordGuildIDs optionally restricts which guilds may summon at all.
 	// Empty means every guild the bot joined, still bounded by the channels.
 	DiscordGuildIDs []string
@@ -387,12 +384,9 @@ func LoadConfig() (Config, error) {
 			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
 			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
 		},
-		DiscordEnabled:    discordEnabled,
-		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
-		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
-		ThreadPrefillChannelIDs: splitList(
-			os.Getenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS"),
-		),
+		DiscordEnabled:         discordEnabled,
+		DiscordToken:           strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
+		DiscordChannelIDs:      splitList(os.Getenv("DISCORD_CHANNEL_ID")),
 		DiscordGuildIDs:        splitList(os.Getenv("DISCORD_GUILD_IDS")),
 		DiscordDMEnabled:       dmEnabled,
 		DiscordCommandsEnabled: commandsEnabled,
@@ -432,21 +426,9 @@ func LoadConfig() (Config, error) {
 	}
 	snowflakes := append([]string{}, cfg.DiscordChannelIDs...)
 	snowflakes = append(snowflakes, cfg.DiscordGuildIDs...)
-	for _, id := range append(snowflakes, cfg.ThreadPrefillChannelIDs...) {
+	for _, id := range snowflakes {
 		if !discordSnowflake.MatchString(id) {
 			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
-		}
-	}
-	// Dead config fails at boot rather than by silence. Skipped when the access
-	// policy supplies scope. See docs/sirens-echo-thread-prefill.md.
-	if len(cfg.DiscordChannelIDs) > 0 && cfg.AccessPolicyPath == "" {
-		for _, id := range cfg.ThreadPrefillChannelIDs {
-			if !threadPrefillOn(cfg.DiscordChannelIDs, id) {
-				return Config{}, fmt.Errorf(
-					"SIRENS_ECHO_THREAD_PREFILL_CHANNELS names %q, which DISCORD_CHANNEL_ID does not admit",
-					id,
-				)
-			}
 		}
 	}
 	missing := make([]string, 0, 5)
