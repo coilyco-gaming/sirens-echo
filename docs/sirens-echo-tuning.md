@@ -1,8 +1,8 @@
 # Tuning numbers
 
-Every tuning number this package has lives in `internal/community/tuning.go`.
-Thirty-four of them, previously spread across thirteen files. This document
-says why they are in one place and what to do when one needs to change.
+Every tuning number this package has lives in `internal/community/config.go`,
+beside what the deployment supplies. This document says why they are in one
+place and what to do when one needs to change.
 
 ## Why one file
 
@@ -13,10 +13,9 @@ everything. Two numbers that must agree could sit in different files with
 nothing connecting them, which is how the progress cadence came to be three
 constants whose relationship existed only in whoever remembered it.
 
-Moving constants between files inside one Go package changes nothing at
-compile time, so the whole move is verified by the gate rather than by care.
-
-`TestEveryTuningNumberLivesInTuningGo` now holds the arrangement, which seven numbers had drifted out of, and a knob-shaped number that is not one takes a named exemption. See sirens-echo#829.
+`TestEveryTuningNumberLivesInConfigGo` holds the arrangement, which seven
+numbers had drifted out of, and a knob-shaped number that is not one takes a
+named exemption. See sirens-echo#829.
 
 ## What lives here and what does not
 
@@ -24,15 +23,16 @@ Here: a number that tunes behaviour. A timeout, a cap, a bound, a retry count,
 a size limit.
 
 Not here: a number that is part of a data structure or an algorithm, a cache
-capacity chosen at a call site, a test fixture, or a value the deployment
-supplies through configuration. Those are not knobs, and moving them would
-make this file a junk drawer rather than a control panel.
+capacity chosen at a call site, or a test fixture. Those are not knobs.
+
+Every one that is here goes through one helper and takes one environment name,
+so there is no second tier of numbers a deployment cannot reach. See [tuning a
+deployment](sirens-echo-tuning-overrides.md).
 
 ## Changing one
 
-Change it here. The grouping is by concern rather than by the file it came
-from, so read the neighbours first: a number in a group usually has a
-relationship to the others in it, and the relationship is the thing most
+Change it here, and read the neighbours first: a number in a group usually has
+a relationship to the others in it, and that relationship is the thing most
 likely to break.
 
 Where a relationship exists, prefer writing it down over restating a value.
@@ -48,12 +48,12 @@ because the two profiles do not share a substrate: Echo's route resolves to a
 cheap on Deep is minutes of tower time on Echo.
 
 So a definition may name a `model_budget`. Each field it leaves out takes the
-value in `tuning.go`, so a definition names only what it changes and a
-definition naming none behaves exactly as the constants did. Echo names none.
+value in `config.go`, so a definition names only what it changes and a
+definition naming none behaves exactly as the defaults did. Echo names none.
 See sirens-echo#467.
 
-The constants stay the defaults rather than becoming dead, which keeps this
-file the answer to "what does this service do if nobody says otherwise".
+The declared values stay the defaults rather than becoming dead, which keeps
+this file the answer to "what does this service do if nobody says otherwise".
 
 A budget is validated at load. Every field is a ceiling, so none may be
 negative. A ceiling below the floor is refused, and so is one the rungs stop

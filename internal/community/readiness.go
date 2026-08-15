@@ -94,7 +94,7 @@ func (a *Agent) checkRouteReadiness(ctx context.Context) readinessOutcome {
 		return readinessDependencyError
 	}
 	defer response.Body.Close()
-	raw, err := io.ReadAll(io.LimitReader(response.Body, maxReadinessBody+1))
+	raw, err := io.ReadAll(io.LimitReader(response.Body, int64(maxReadinessBody)+1))
 	if err != nil || len(raw) > maxReadinessBody {
 		return readinessInvalidResponse
 	}

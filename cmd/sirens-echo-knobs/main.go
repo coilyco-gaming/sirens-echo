@@ -1,0 +1,36 @@
+// Command sirens-echo-knobs writes the generated reference of every number a
+// deployment may set. See docs/sirens-echo-tuning-overrides.md.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+
+	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
+)
+
+const referencePath = "docs/sirens-echo-knobs.md"
+
+func main() {
+	check := flag.Bool("check", false, "fail when the tracked reference is stale")
+	flag.Parse()
+	rendered := community.RenderKnobReference()
+	if *check {
+		tracked, err := os.ReadFile(referencePath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "read %s: %v\n", referencePath, err)
+			os.Exit(1)
+		}
+		if string(tracked) != rendered {
+			fmt.Fprintf(os.Stderr,
+				"%s is stale. Run `ward exec knobs`.\n", referencePath)
+			os.Exit(1)
+		}
+		return
+	}
+	if err := os.WriteFile(referencePath, []byte(rendered), 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "write %s: %v\n", referencePath, err)
+		os.Exit(1)
+	}
+}

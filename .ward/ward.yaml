@@ -42,6 +42,12 @@ commands:
   guardfile-skill-check:
     run: go run ./cmd/sirens-echo-guardfile --check --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl
     description: Fail when the own-authority skill is stale against the deployed guardfile.
+  knobs:
+    run: go run ./cmd/sirens-echo-knobs
+    description: Rewrite the tracked reference of every number a deployment may set.
+  knobs-check:
+    run: go run ./cmd/sirens-echo-knobs --check
+    description: Fail when the tracked knob reference no longer matches the table.
   role-snapshot:
     run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles
     description: Rewrite the tracked per-role selection record from baked bundles.
