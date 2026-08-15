@@ -47,6 +47,17 @@ type TurnProgressSink interface {
 	Delete(ctx context.Context, messageID string) error
 }
 
+// worklogSink renders the richer surface. Every way it can be unavailable
+// falls back to the notice lines. See docs/sirens-echo-worklog.md.
+type worklogSink interface {
+	WorklogAllowed(ctx context.Context) bool
+	PostWorklog(ctx context.Context, view progressView) (string, error)
+	EditWorklog(ctx context.Context, messageID string, view progressView) error
+	// WorklogRefused reports an error that means the surface is unavailable
+	// rather than that this one call failed.
+	WorklogRefused(err error) bool
+}
+
 // turnProgress reports a long turn's stage. Every method is safe before the
 // threshold, which is what keeps the fast path free of special cases.
 type turnProgress struct {
@@ -66,6 +77,15 @@ type turnProgress struct {
 	// waits is the elapsed seconds of each line appended while one stage runs.
 	// Reset on a stage change, because the new line restarts the narration.
 	waits []int
+	// rows is the worklog, one entry per tool call, kept whole so the cap is a
+	// rendering decision rather than a lossy one.
+	rows []progressRow
+	// stopped marks a turn that ended on something other than an answer, so the
+	// element resolves rather than being deleted mid-narration.
+	stopped bool
+	// degraded latches the fallback once the richer surface is refused, so one
+	// refusal does not become a refusal per edit.
+	degraded bool
 }
 
 // progressWaitIcons are the twelve clock faces in order, so the hour hand
@@ -100,6 +120,128 @@ func progressBody(phrase string, waits []int) string {
 		)
 	}
 	return body
+}
+
+// richSink is the worklog surface when this turn may use it. The permission
+// read happens at most once, because a refusal latches.
+func (p *turnProgress) richSink(ctx context.Context) worklogSink {
+	p.mu.Lock()
+	degraded := p.degraded
+	p.mu.Unlock()
+	if degraded {
+		return nil
+	}
+	sink, ok := p.sink.(worklogSink)
+	if !ok || !sink.WorklogAllowed(ctx) {
+		p.degrade()
+		return nil
+	}
+	return sink
+}
+
+// degrade drops to the notice lines for the rest of the turn. Never fails the
+// turn: a missing permission is a presentation fact. See sirens-echo#111.
+func (p *turnProgress) degrade() {
+	p.mu.Lock()
+	p.degraded = true
+	p.mu.Unlock()
+}
+
+// view is the worklog as the sink renders it. Called with the lock held.
+func (p *turnProgress) view() progressView {
+	title := worklogTitle
+	if p.stopped {
+		title = worklogStopped
+	}
+	return progressView{
+		Title:    title,
+		Rows:     worklogRows(p.rows),
+		Elapsed:  p.now().Sub(p.start),
+		Tools:    len(p.rows),
+		Resolved: p.stopped,
+	}
+}
+
+// postProgress posts on whichever surface this channel allows, falling back
+// rather than failing when the richer one is refused.
+func (p *turnProgress) postProgress(
+	ctx context.Context, view progressView, notice string,
+) (string, error) {
+	if sink := p.richSink(ctx); sink != nil {
+		posted, err := sink.PostWorklog(ctx, view)
+		if err == nil {
+			return posted, nil
+		}
+		if !sink.WorklogRefused(err) {
+			return "", err
+		}
+		p.degrade()
+	}
+	return p.sink.Post(ctx, notice)
+}
+
+// editProgress is postProgress for a message that already exists.
+func (p *turnProgress) editProgress(
+	ctx context.Context, messageID string, view progressView, notice string,
+) error {
+	if sink := p.richSink(ctx); sink != nil {
+		err := sink.EditWorklog(ctx, messageID, view)
+		if err == nil || !sink.WorklogRefused(err) {
+			return err
+		}
+		p.degrade()
+	}
+	return p.sink.Edit(ctx, messageID, notice)
+}
+
+// ToolStarted opens a worklog row. The row resolves in place rather than being
+// replaced, which is what lets a member see progress rather than motion.
+func (p *turnProgress) ToolStarted(server, tool string) {
+	if p == nil || p.sink == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.finished {
+		return
+	}
+	p.rows = append(p.rows, progressRow{server: server, tool: tool})
+}
+
+// ToolFinished resolves the most recent unresolved row for that tool.
+func (p *turnProgress) ToolFinished(server, tool string, outcome ToolOutcome) {
+	if p == nil || p.sink == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	for index := len(p.rows) - 1; index >= 0; index-- {
+		row := &p.rows[index]
+		if row.done || row.server != server || row.tool != tool {
+			continue
+		}
+		row.outcome = outcome
+		row.done = true
+		return
+	}
+}
+
+// Stop marks a turn ending on something other than an answer, so Finish
+// resolves the element rather than deleting it. See docs/sirens-echo-worklog.md.
+func (p *turnProgress) Stop() {
+	if p == nil || p.sink == nil {
+		return
+	}
+	p.mu.Lock()
+	p.stopped = true
+	p.mu.Unlock()
+}
+
+// stopFromContext resolves the element from a layer holding no reference, the
+// same route the stage narration takes.
+func stopFromContext(ctx context.Context) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.Stop()
 }
 
 func newTurnProgress(sink TurnProgressSink, now func() time.Time) *turnProgress {
@@ -163,11 +305,12 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 	p.lastEdit = moment
 	// A new stage restarts the narration, so the previous stage's waits go.
 	p.waits = nil
+	view := p.view()
 	p.mu.Unlock()
 
 	notice := progressBody(phrase, nil)
 	if existing == "" {
-		posted, err := p.sink.Post(ctx, notice)
+		posted, err := p.postProgress(ctx, view, notice)
 		p.record(ctx, "post", err)
 		if err != nil {
 			return
@@ -184,7 +327,7 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 		}
 		return
 	}
-	p.record(ctx, "edit", p.sink.Edit(ctx, existing, notice))
+	p.record(ctx, "edit", p.editProgress(ctx, existing, view, notice))
 }
 
 // Watch narrates a turn that is waiting rather than changing stage. Stage alone
@@ -232,9 +375,10 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	}
 	phrase := p.lastStage
 	p.lastEdit = moment
+	view := p.view()
 	p.mu.Unlock()
 
-	posted, err := p.sink.Post(ctx, stageLine(phrase))
+	posted, err := p.postProgress(ctx, view, stageLine(phrase))
 	p.record(ctx, "post", err)
 	if err != nil {
 		return
@@ -290,6 +434,18 @@ func WithTurnProgress(ctx context.Context, progress *turnProgress) context.Conte
 func reportStage(ctx context.Context, phrase string) {
 	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
 	progress.Stage(ctx, phrase)
+}
+
+// reportToolStarted and reportToolFinished open and resolve one worklog row
+// from the completion layer, which holds no progress reference.
+func reportToolStarted(ctx context.Context, server, tool string) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.ToolStarted(server, tool)
+}
+
+func reportToolFinished(ctx context.Context, server, tool string, outcome ToolOutcome) {
+	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
+	progress.ToolFinished(server, tool, outcome)
 }
 
 // settleDelay is how long until the next beat of the grid the line started. A
@@ -385,6 +541,8 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	p.finished = true
 	messageID := p.messageID
 	carried := p.carried
+	stopped := p.stopped
+	view := p.view()
 	p.messageID = ""
 	p.mu.Unlock()
 	// A line carrying the notice is the answer. Deleting it here would remove
@@ -392,9 +550,19 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	if carried {
 		return
 	}
-	if messageID != "" {
-		p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
+	if messageID == "" {
+		return
 	}
+	// A turn that stopped resolves the element rather than deleting it. An
+	// element that merely vanishes is the #137 silence again. See #111.
+	if stopped {
+		p.record(ctx, "resolve", p.editProgress(
+			ctx, messageID, view, harnessNotice(worklogStopped)))
+		return
+	}
+	// A delivered answer is its own resolution, and the disclosure footer under
+	// it already names the tools. Two lists of them is the thing #385 avoided.
+	p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
 }
 
 // narrateWait appends one elapsed line to the posted stage line. Called with
@@ -414,7 +582,8 @@ func (p *turnProgress) narrateWait(ctx context.Context) {
 	p.lastEdit = moment
 	existing, phrase := p.messageID, p.lastStage
 	waits := append([]int{}, p.waits...)
+	view := p.view()
 	p.mu.Unlock()
 
-	p.record(ctx, "edit", p.sink.Edit(ctx, existing, progressBody(phrase, waits)))
+	p.record(ctx, "edit", p.editProgress(ctx, existing, view, progressBody(phrase, waits)))
 }

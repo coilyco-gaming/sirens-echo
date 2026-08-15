@@ -25,9 +25,9 @@ A notice is not a sentence. `http 500 internal server error` is a notice. "the
 http server had an internal server error" is prose, which is what a model reply
 sounds like, which is the confusion the format exists to prevent.
 
-The alphabet is lowercase letters, digits, spaces, and `, . / -`. Anything else
-is stripped before rendering, so no phrase can close the code span early,
-inject markdown, or span two lines.
+The alphabet is lowercase letters, digits, spaces, and `, . / - _`. Anything
+else is stripped, so no phrase can close the code span early or span two lines.
+The underscore is for tool names. See [the worklog](sirens-echo-worklog.md).
 
 ## Where they live
 

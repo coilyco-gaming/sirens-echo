@@ -2,7 +2,9 @@ package community
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/bwmarrin/discordgo"
@@ -188,4 +190,76 @@ func (p discordTurnProgress) Delete(_ context.Context, messageID string) error {
 		return fmt.Errorf("no Discord session")
 	}
 	return p.session.ChannelMessageDelete(p.channel, messageID)
+}
+
+// WorklogAllowed reports the embed permission, which was missing from every
+// install link this estate published. See docs/sirens-echo-worklog.md.
+func (p discordTurnProgress) WorklogAllowed(context.Context) bool {
+	if p.session == nil || p.session.State == nil || p.session.State.User == nil {
+		return false
+	}
+	permissions, err := p.session.State.UserChannelPermissions(
+		p.session.State.User.ID, p.channel)
+	// Unknown rather than absent, which a direct message always is. A wrong yes
+	// is caught by the refusal below; a wrong no degrades the turn for nothing.
+	if err != nil {
+		return true
+	}
+	return permissions&discordgo.PermissionEmbedLinks != 0
+}
+
+func (p discordTurnProgress) PostWorklog(
+	_ context.Context, view progressView,
+) (string, error) {
+	if p.session == nil {
+		return "", fmt.Errorf("no Discord session")
+	}
+	sent, err := p.session.ChannelMessageSendComplex(p.channel, &discordgo.MessageSend{
+		Embeds:    []*discordgo.MessageEmbed{worklogEmbed(view)},
+		Reference: p.reference(),
+		AllowedMentions: &discordgo.MessageAllowedMentions{
+			Parse:       []discordgo.AllowedMentionType{},
+			RepliedUser: false,
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	return sent.ID, nil
+}
+
+func (p discordTurnProgress) EditWorklog(
+	_ context.Context, messageID string, view progressView,
+) error {
+	if p.session == nil {
+		return fmt.Errorf("no Discord session")
+	}
+	_, err := p.session.ChannelMessageEditComplex(&discordgo.MessageEdit{
+		Channel:         p.channel,
+		ID:              messageID,
+		Embeds:          &[]*discordgo.MessageEmbed{worklogEmbed(view)},
+		AllowedMentions: &discordgo.MessageAllowedMentions{Parse: []discordgo.AllowedMentionType{}},
+	})
+	return err
+}
+
+// WorklogRefused separates a channel that will never take an embed from a call
+// that happened to fail, so one timeout does not degrade the whole turn.
+func (p discordTurnProgress) WorklogRefused(err error) bool {
+	var rest *discordgo.RESTError
+	if !errors.As(err, &rest) || rest.Message == nil {
+		return false
+	}
+	return rest.Message.Code == discordgo.ErrCodeMissingPermissions ||
+		rest.Message.Code == discordgo.ErrCodeMissingAccess
+}
+
+// worklogEmbed renders the view. The rows are already notice-shaped, so the
+// embed is a container around the text contract. See sirens-echo#111.
+func worklogEmbed(view progressView) *discordgo.MessageEmbed {
+	return &discordgo.MessageEmbed{
+		Title:       view.Title,
+		Description: strings.Join(view.Rows, "\n"),
+		Footer:      &discordgo.MessageEmbedFooter{Text: worklogFooter(view)},
+	}
 }
