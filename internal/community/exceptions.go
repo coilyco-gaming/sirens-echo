@@ -41,6 +41,8 @@ const (
 	exceptionJobRejected
 	exceptionJobNotFound
 	exceptionJobQueueFull
+	exceptionContentGateModelFailed
+	exceptionContentGateUnknownClass
 	exceptionCodeCount
 )
 
@@ -290,6 +292,22 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The job queue is full.",
 		stage:    "jobs",
 		outcome:  "queue_full",
+		fault:    faultService,
+	},
+	// Both gate failures are the service's, including the unknown class: the
+	// model answering off its own closed list is not something a member did.
+	exceptionContentGateModelFailed: {
+		typeName: "sirens_echo.content_gate.model_failed",
+		message:  "The content classifier call failed.",
+		stage:    "content_gate",
+		outcome:  "model_failed",
+		fault:    faultService,
+	},
+	exceptionContentGateUnknownClass: {
+		typeName: "sirens_echo.content_gate.unknown_class",
+		message:  "The content classifier answered outside its closed class list.",
+		stage:    "content_gate",
+		outcome:  "unknown_class",
 		fault:    faultService,
 	},
 }

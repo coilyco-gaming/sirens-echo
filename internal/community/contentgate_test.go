@@ -2,8 +2,12 @@ package community
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // recordedTags runs record against a real span and returns what it set.
@@ -134,12 +138,15 @@ func TestAnUnclassifiedTurnCarriesNoClass(t *testing.T) {
 func TestNoTaxonomyRunsNoClassifier(t *testing.T) {
 	t.Parallel()
 	agent := &Agent{completions: refusingCompletions{t: t}}
-	verdict, err := agent.classifyTurn(t.Context(), TranscriptEntry{Content: "where is the bus"}, "req-1")
+	verdict, failure, err := agent.classifyTurn(t.Context(), TranscriptEntry{Content: "where is the bus"}, "req-1")
 	if err != nil {
 		t.Fatalf("classifyTurn: %v", err)
 	}
 	if verdict.Classified || verdict.Blocked {
 		t.Errorf("an unconfigured gate produced a verdict: %+v", verdict)
+	}
+	if failure != contentGateHealthy {
+		t.Errorf("an unconfigured gate reported failure %q, want none", failure)
 	}
 }
 
@@ -163,5 +170,122 @@ func TestABlockedClassProducesAReadableRefusal(t *testing.T) {
 	)
 	if strings.TrimSpace(rendered) == "" {
 		t.Fatal("a blocked turn produced an empty reply")
+	}
+}
+
+// failingCompletions makes the classifier call fail.
+type failingCompletions struct{ err error }
+
+func (c failingCompletions) Complete(
+	_ context.Context, _ TurnPrompt, _ string,
+) (CompletionResult, error) {
+	return CompletionResult{}, c.err
+}
+
+// answeringCompletions replies with whatever the test wants classified.
+type answeringCompletions struct{ reply string }
+
+func (c answeringCompletions) Complete(
+	_ context.Context, _ TurnPrompt, _ string,
+) (CompletionResult, error) {
+	return CompletionResult{Content: c.reply}, nil
+}
+
+// gateFailureSpan runs one failing classification and returns the span the
+// failure emitted, plus the log line beside it.
+func gateFailureSpan(t *testing.T, completions CompletionClient) (sdktrace.ReadOnlySpan, string) {
+	t.Helper()
+	telemetry, recorder, logs := jobTelemetry(t)
+	agent := &Agent{telemetry: telemetry, completions: completions, taxonomy: gateTaxonomy()}
+	verdict, failure, err := agent.classifyTurn(
+		t.Context(), TranscriptEntry{Content: "where is the bus"}, "req-1",
+	)
+	if err == nil {
+		t.Fatal("the classifier did not fail")
+	}
+	if verdict.Classified || verdict.Blocked {
+		// The property the whole gate rests on, asserted where it can break.
+		t.Fatalf("a broken gate produced a verdict: %+v", verdict)
+	}
+	agent.recordContentGateFailure(t.Context(), failure, err)
+	ended := recorder.Ended()
+	if len(ended) != 1 {
+		t.Fatalf("recorded %d spans, want 1", len(ended))
+	}
+	return ended[0], logs.String()
+}
+
+// The ask: the slug alone says which way the gate broke, so a dead classifier
+// and one answering off its list are separable without opening a span.
+func TestAGateFailureNamesItsKindInTheSlug(t *testing.T) {
+	t.Parallel()
+	for _, testCase := range []struct {
+		name        string
+		completions CompletionClient
+		want        string
+		outcome     string
+	}{
+		{
+			name:        "the model call fails",
+			completions: failingCompletions{err: errors.New("upstream refused")},
+			want:        "content.gate.failed.model",
+			outcome:     "model_failed",
+		},
+		{
+			name:        "the model answers off its list",
+			completions: answeringCompletions{reply: "bus-timetable"},
+			want:        "content.gate.failed.unknown_class",
+			outcome:     "unknown_class",
+		},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+			span, _ := gateFailureSpan(t, testCase.completions)
+			if got := span.Name(); got != testCase.want {
+				t.Errorf("span name = %q, want %q", got, testCase.want)
+			}
+			if got := span.Status().Code; got != codes.Error {
+				t.Errorf("status = %v, want an error", got)
+			}
+			attributes := stringAttributes(span.Attributes())
+			if got := attributes["error.outcome"]; got != testCase.outcome {
+				t.Errorf("error.outcome = %q, want %q", got, testCase.outcome)
+			}
+			if got := attributes["error.stage"]; got != "content_gate" {
+				t.Errorf("error.stage = %q, want content_gate", got)
+			}
+		})
+	}
+}
+
+// The slug is a closed vocabulary, so the class the model invented reaches the
+// log and never the span. A name carrying model output is unbounded.
+func TestAGateFailureSpanCarriesNoModelOutput(t *testing.T) {
+	t.Parallel()
+	span, logged := gateFailureSpan(t, answeringCompletions{reply: "bus-timetable"})
+	if strings.Contains(span.Name(), "bus-timetable") {
+		t.Errorf("span name %q carries the invented class", span.Name())
+	}
+	for _, pair := range span.Attributes() {
+		if strings.Contains(pair.Value.Emit(), "bus-timetable") {
+			t.Errorf("span attribute %s carries the invented class", pair.Key)
+		}
+	}
+	if !strings.Contains(logged, "bus-timetable") {
+		t.Error("the invented class reached neither the span nor the log, so it is unrecoverable")
+	}
+}
+
+// Every failure kind has a cataloged exception. A kind added without one would
+// report as unclassified while still looking specific in the slug.
+func TestEveryGateFailureKindIsCataloged(t *testing.T) {
+	t.Parallel()
+	for _, failure := range []contentGateFailure{contentGateFailedModel, contentGateFailedUnknownClass} {
+		if failure.exception() == exceptionUnclassified {
+			t.Errorf("failure %q maps to the unclassified exception", failure)
+		}
+		if got := exceptionFor(failure.exception()).stage; got != "content_gate" {
+			t.Errorf("failure %q has stage %q, want content_gate", failure, got)
+		}
 	}
 }

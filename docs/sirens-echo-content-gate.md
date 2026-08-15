@@ -33,6 +33,11 @@ This is the most important property here. The alternative — treating a
 classifier failure as a refusal — turns one broken dependency into a service
 that refuses everything, and it would do so while looking like policy working.
 
+## The failure carries its kind in the slug
+
+A failed gate emits its own span under the turn, named for how it broke. See
+[gate failures](sirens-echo-content-gate-failures.md).
+
 ## The four tags
 
 - `content.classified` - whether the gate ran at all
@@ -58,4 +63,5 @@ what was asked for is the thing being classified.
 ## See also
 
 - [content classes](sirens-echo-content-classes.md) - the taxonomy itself.
+- [gate failures](sirens-echo-content-gate-failures.md) - the failure spans.
 - [notices](sirens-echo-notices.md) - why a block is not a notice.

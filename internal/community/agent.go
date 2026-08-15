@@ -1076,10 +1076,10 @@ func (a *Agent) runTurn(
 	)
 	contextSpan.End()
 
-	verdict, err := a.classifyTurn(turnCtx, current, turn.RequestID())
+	verdict, gateFailure, err := a.classifyTurn(turnCtx, current, turn.RequestID())
 	if err != nil {
 		// A broken gate is not a denial. See docs/sirens-echo-content-gate.md.
-		a.telemetry.Info(turnCtx, "content.gate.failed", slog.String("error", err.Error()))
+		a.recordContentGateFailure(turnCtx, gateFailure, err)
 	}
 	recordContentVerdict(turnSpan, verdict)
 	if verdict.Blocked {
