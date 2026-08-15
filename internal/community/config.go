@@ -354,24 +354,15 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_COMMANDS: %w", err)
 	}
-	requestTimeout, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_REQUEST_TIMEOUT"),
-		defaultRequestTimeout,
-	)
+	requestTimeout, err := durationOrDefault(os.Getenv("SIRENS_ECHO_REQUEST_TIMEOUT"), defaultRequestTimeout)
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_REQUEST_TIMEOUT: %w", err)
 	}
-	queueTimeout, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_QUEUE_TIMEOUT"),
-		defaultQueueTimeout,
-	)
+	queueTimeout, err := durationOrDefault(os.Getenv("SIRENS_ECHO_QUEUE_TIMEOUT"), defaultQueueTimeout)
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_QUEUE_TIMEOUT: %w", err)
 	}
-	shutdownGrace, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_SHUTDOWN_GRACE"),
-		defaultShutdownGrace,
-	)
+	shutdownGrace, err := durationOrDefault(os.Getenv("SIRENS_ECHO_SHUTDOWN_GRACE"), defaultShutdownGrace)
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_SHUTDOWN_GRACE: %w", err)
 	}
@@ -659,10 +650,7 @@ func loadRateLimitPolicy() (RateLimitPolicy, error) {
 		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_MAX_PENDING: %w", err)
 	}
 	policy.MaxPending = pending
-	notify, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_RATE_NOTIFY_EVERY"),
-		policy.NotifyEvery,
-	)
+	notify, err := durationOrDefault(os.Getenv("SIRENS_ECHO_RATE_NOTIFY_EVERY"), policy.NotifyEvery)
 	if err != nil {
 		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_RATE_NOTIFY_EVERY: %w", err)
 	}

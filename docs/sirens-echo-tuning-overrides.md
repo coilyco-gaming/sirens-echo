@@ -16,6 +16,17 @@ SIRENS_ECHO_TOOL_CALL         one tool call
 
 Each takes a Go duration: `90s`, `3m`, `1h`.
 
+Every one of them is declared with its name and its default on the same line,
+where the value lives:
+
+```go
+defaultQueueTimeout = overridable("SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second)
+```
+
+So the answer to "what does this fall back to" is on the line that names it,
+and two tests pin the declaration, the write-through table, and this page
+against each other.
+
 ## A bad value keeps the default, except on three
 
 Unparsable, zero, or negative applies nothing. A typo therefore leaves the

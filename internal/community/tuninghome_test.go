@@ -78,6 +78,39 @@ func TestEveryTuningNumberLivesInTuningGo(t *testing.T) {
 	}
 }
 
+// The declaration names the variable a deployment sets and the table names the
+// pointer it writes through. Both lists, so both are pinned against each other.
+func TestEveryDeclaredOverrideIsWiredToItsVariable(t *testing.T) {
+	t.Parallel()
+	for env := range overridableDefaults {
+		if _, ok := tuningOverrides()[env]; !ok {
+			t.Errorf("%s is declared with a default and the table never writes it, "+
+				"so setting it does nothing", env)
+		}
+	}
+	for env := range tuningOverrides() {
+		if _, ok := overridableDefaults[env]; !ok {
+			t.Errorf("%s is in the table and no declaration names it, so its default "+
+				"is not written down beside it", env)
+		}
+	}
+}
+
+// A declared default must be the value the variable actually starts on, or the
+// line reads as documentation of something that is not true.
+func TestADeclaredDefaultIsTheValueTheVariableHolds(t *testing.T) {
+	t.Parallel()
+	for env, target := range tuningOverrides() {
+		declared, ok := overridableDefaults[env]
+		if !ok {
+			continue
+		}
+		if *target != declared {
+			t.Errorf("%s declares %v and its variable holds %v", env, declared, *target)
+		}
+	}
+}
+
 // The doc said seven while the table held eight, which is the failure mode of
 // a list maintained in two places. See sirens-echo#829.
 func TestTheOverrideDocNamesEveryOverridableNumber(t *testing.T) {

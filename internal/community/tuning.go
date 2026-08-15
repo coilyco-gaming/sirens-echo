@@ -9,6 +9,17 @@ import (
 // Every tuning number this package has, in one file. See
 // docs/sirens-echo-tuning.md for why they are here and how to change one.
 
+// overridableDefaults records what each name falls back to, so a knob's
+// environment variable and its default sit on one line. See sirens-echo#829.
+var overridableDefaults = map[string]time.Duration{}
+
+// overridable declares a knob a deployment may set. It returns the default, so
+// the declaration stays the one home of the value.
+func overridable(env string, fallback time.Duration) time.Duration {
+	overridableDefaults[env] = fallback
+	return fallback
+}
+
 // Model calls: rounds, repairs, and the completion budget ladder
 const (
 	maxToolRounds      = 6
@@ -43,14 +54,14 @@ const (
 var (
 	// defaultRosterRefresh bounds staleness for a transport that cannot push
 	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
-	defaultRosterRefresh = time.Hour
-	mcpConnectTimeout    = 10 * time.Second
-	mcpListTimeout       = 15 * time.Second
+	defaultRosterRefresh = overridable("SIRENS_ECHO_ROSTER_REFRESH", time.Hour)
+	mcpConnectTimeout    = overridable("SIRENS_ECHO_MCP_CONNECT", 10*time.Second)
+	mcpListTimeout       = overridable("SIRENS_ECHO_MCP_LIST", 15*time.Second)
 	mcpBackoffMin        = 5 * time.Second
 	mcpBackoffMax        = 2 * time.Minute //nolint:unused // read via the override table
 	// defaultCallTimeout keeps one tool call well inside the turn budget, so a
 	// server that never answers cannot spend the whole turn.
-	defaultCallTimeout = 45 * time.Second
+	defaultCallTimeout = overridable("SIRENS_ECHO_TOOL_CALL", 45*time.Second)
 	// Grounding bounds. Reference material must not crowd out the turn it is
 	// meant to support.
 	maxGroundingBytes     = 8 * 1024
@@ -62,7 +73,7 @@ var (
 var (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
-	turnProgressAfter = 5 * time.Second
+	turnProgressAfter = overridable("SIRENS_ECHO_PROGRESS_AFTER", 5*time.Second)
 	// turnProgressEvery is the grid every later message releases on, so an edit,
 	// a reply, and a failure notice all land on the same beat.
 	turnProgressEvery = turnProgressAfter * 2
@@ -96,13 +107,13 @@ const (
 // Turn timeouts. Overridable, because these are what a deployment tunes.
 // See docs/sirens-echo-tuning-overrides.md.
 var (
-	defaultRequestTimeout = 3 * time.Minute
+	defaultRequestTimeout = overridable("SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute)
 	// defaultQueueTimeout bounds the wait for the execution slot. A longer
 	// wait answers a conversation that has already moved on.
-	defaultQueueTimeout = 30 * time.Second
+	defaultQueueTimeout = overridable("SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second)
 	// defaultShutdownGrace lets the turns in flight answer before a restart
 	// takes them. It fits inside Kubernetes' 30s default kill window.
-	defaultShutdownGrace = 15 * time.Second
+	defaultShutdownGrace = overridable("SIRENS_ECHO_SHUTDOWN_GRACE", 15*time.Second)
 	// shutdownNoticeGrace is the moment a cancelled turn gets to say why it
 	// ended, after which the gateway closes and it could not say anything.
 	shutdownNoticeGrace = 3 * time.Second
