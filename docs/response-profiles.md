@@ -11,6 +11,10 @@ selects the exact `#bots` boundary, approved Sirens policy and knowledge, the
 public Eco MCP, the private repository-fixed Forgejo MCP, and that Forgejo
 server as its automatic issue tracker.
 
+The neutral voice admits an object emoji for legibility and still refuses tone
+and status indicators, bounded at three per reply. See
+[object emoji](sirens-echo-object-emoji.md).
+
 `agent/sirens-deep.yaml` is the social CoilyCo general-purpose profile. The
 filename remains the stable deployment selection used by the existing
 `sirens-deep` workload. Its identity is Sirens Deep of Coilyco, its audit role

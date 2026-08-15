@@ -11,7 +11,7 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
 - Definition-selected history budget, skill roots, MCP roster, issue tracker
 - Serialized turns with bounded Discord-history continuity
 - Agent Proxy loop for MCP schemas, tool calls, results, and continuation
-- Impersonal response contract rejecting greetings, emojis, banter, sign-offs,
+- Impersonal response contract rejecting greetings, emotive emoji, banter, sign-offs,
   and open-ended offers
 - Public Eco MCP for current game information
 - Private Forgejo MCP fixed to this repository with issue create, close,
