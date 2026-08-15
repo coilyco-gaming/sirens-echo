@@ -1,11 +1,15 @@
 package community
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"gopkg.in/yaml.v3"
 )
 
@@ -99,6 +103,17 @@ func (r PhraseRegistry) Configured() bool { return len(r.Phrases) > 0 }
 // path can leave an ordinary reply untouched.
 func Invoked(reply string) bool { return phraseInvocation.MatchString(reply) }
 
+// InvokedKeys names the keys a reply invoked, in order. The registry authors
+// these, so a caller may use one as a metric label. See sirens-echo#176.
+func InvokedKeys(reply string) []string {
+	matches := phraseInvocation.FindAllStringSubmatch(reply, -1)
+	keys := make([]string, 0, len(matches))
+	for _, match := range matches {
+		keys = append(keys, strings.TrimSpace(match[1]))
+	}
+	return keys
+}
+
 // Terminal reports whether one invocation is the whole reply. A prefix returns
 // every padding problem the registry exists to prevent. See sirens-echo#176.
 func Terminal(reply string) bool {
@@ -131,7 +146,7 @@ func (r PhraseRegistry) RenderPhrases(reply string) (string, error) {
 
 // renderPhrases resolves an invocation the model wrote. A reply carrying none
 // is returned untouched, which is every reply until the prompt names the keys.
-func (a *Agent) renderPhrases(reply string) (string, error) {
+func (a *Agent) renderPhrases(ctx context.Context, reply string) (string, error) {
 	if !Invoked(reply) {
 		return reply, nil
 	}
@@ -141,7 +156,45 @@ func (a *Agent) renderPhrases(reply string) (string, error) {
 	if !Terminal(reply) {
 		return "", fmt.Errorf("reply invokes a phrase alongside other text")
 	}
-	return a.phrases.RenderPhrases(reply)
+	rendered, err := a.phrases.RenderPhrases(reply)
+	if err != nil {
+		return "", err
+	}
+	// Counted per key, which is the signal sirens-echo#176 asked for: which
+	// boundaries members actually probe, and how often.
+	for _, key := range InvokedKeys(reply) {
+		a.telemetry.RecordPhrase(ctx, key)
+		a.telemetry.Info(ctx, "response.phrase.invoked", slog.String("phrase.key", key))
+		trace.SpanFromContext(ctx).SetAttributes(attribute.String("response.phrase", key))
+	}
+	return rendered, nil
+}
+
+// evaluationPhrases loads the registry from the same variable a deployment
+// reads, so an eval measures the prompt the service runs. See #176.
+func evaluationPhrases() (PhraseRegistry, error) {
+	path := strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES"))
+	if path == "" {
+		return PhraseRegistry{}, nil
+	}
+	return LoadPhraseRegistry(path)
+}
+
+// evaluationSystemPrompt is the deployed prompt, phrase policy included. The
+// eval paths built it without one, so they scored a prompt nothing renders.
+func evaluationSystemPrompt(
+	definition Definition,
+	principal Principal,
+	composed, localSkillpack string,
+) (string, error) {
+	phrases, err := evaluationPhrases()
+	if err != nil {
+		return "", err
+	}
+	return withPhrasePolicy(
+		BuildSystemPrompt(definition, principal, composed, localSkillpack),
+		phrases,
+	), nil
 }
 
 // withPhrasePolicy names the keys a reply may invoke. A prompt with no registry

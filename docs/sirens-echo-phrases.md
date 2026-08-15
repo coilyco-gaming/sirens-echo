@@ -74,6 +74,7 @@ has a job: telling the model which keys are available and when they fit.
 
 ## See also
 
+- [counting and scoring a phrase](sirens-echo-phrase-scoring.md) - metric and eval.
 - [notices](sirens-echo-notices.md) - the form these render in.
 - [the content gate](sirens-echo-content-gate.md) - the same
   harness-over-prompt reasoning applied to refusals.

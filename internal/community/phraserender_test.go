@@ -1,6 +1,7 @@
 package community
 
 import (
+	"context"
 	"strings"
 	"testing"
 )
@@ -25,7 +26,7 @@ func TestAReplyWithNoInvocationIsUntouched(t *testing.T) {
 	t.Parallel()
 	const reply = "Copper is 2.4c at Kai's Emporium."
 	for _, agent := range []*Agent{phraseAgent(t), {telemetry: telemetryOrNoop(nil)}} {
-		got, err := agent.renderPhrases(reply)
+		got, err := agent.renderPhrases(context.Background(), reply)
 		if err != nil {
 			t.Errorf("an ordinary reply was refused: %v", err)
 		}
@@ -40,7 +41,7 @@ func TestAReplyWithNoInvocationIsUntouched(t *testing.T) {
 func TestAnInvocationWithNoRegistryIsRefused(t *testing.T) {
 	t.Parallel()
 	agent := &Agent{telemetry: telemetryOrNoop(nil)}
-	got, err := agent.renderPhrases("{{phrase:no-tool}}")
+	got, err := agent.renderPhrases(context.Background(), "{{phrase:no-tool}}")
 	if err == nil {
 		t.Fatalf("a marker survived with no registry: %q", got)
 	}
@@ -59,12 +60,12 @@ func TestAnInvocationMustBeTheWholeReply(t *testing.T) {
 		"{{phrase:no-tool}} but I could look it up another way.",
 		"{{phrase:no-tool}} {{phrase:no-tool}} extra",
 	} {
-		if _, err := agent.renderPhrases(reply); err == nil {
+		if _, err := agent.renderPhrases(context.Background(), reply); err == nil {
 			t.Errorf("a phrase was accepted beside other text: %q", reply)
 		}
 	}
 	// Surrounding whitespace is not other text.
-	if _, err := agent.renderPhrases("  {{phrase:no-tool}}\n"); err != nil {
+	if _, err := agent.renderPhrases(context.Background(), "  {{phrase:no-tool}}\n"); err != nil {
 		t.Errorf("whitespace around an invocation was read as prose: %v", err)
 	}
 }
@@ -72,7 +73,7 @@ func TestAnInvocationMustBeTheWholeReply(t *testing.T) {
 // A key that resolves renders the canonical text in the harness form.
 func TestAKnownKeyRendersItsPhrase(t *testing.T) {
 	t.Parallel()
-	got, err := phraseAgent(t).renderPhrases("{{phrase:no-tool}}")
+	got, err := phraseAgent(t).renderPhrases(context.Background(), "{{phrase:no-tool}}")
 	if err != nil {
 		t.Fatalf("a known key was refused: %v", err)
 	}
@@ -88,7 +89,7 @@ func TestAKnownKeyRendersItsPhrase(t *testing.T) {
 // rather than as model prose. See sirens-echo#176.
 func TestAnUnknownKeyIsRefused(t *testing.T) {
 	t.Parallel()
-	got, err := phraseAgent(t).renderPhrases("{{phrase:invented}}")
+	got, err := phraseAgent(t).renderPhrases(context.Background(), "{{phrase:invented}}")
 	if err == nil {
 		t.Fatalf("an unknown key rendered: %q", got)
 	}

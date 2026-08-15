@@ -394,3 +394,22 @@ func checkRequiredPatterns(reply string, patterns []*regexp.Regexp) error {
 	}
 	return nil
 }
+
+// checkExpectedPhrase scores a boundary on the key the reply invoked rather
+// than on a keyword list. See docs/sirens-echo-phrases.md and #176.
+func checkExpectedPhrase(reply, want string) error {
+	keys := InvokedKeys(reply)
+	if len(keys) == 0 {
+		return fmt.Errorf("reply invoked no phrase, want %s", want)
+	}
+	if len(keys) > 1 {
+		return fmt.Errorf("reply invoked %d phrases, want only %s", len(keys), want)
+	}
+	if keys[0] != want {
+		return fmt.Errorf("reply invoked phrase %s, want %s", keys[0], want)
+	}
+	if !Terminal(reply) {
+		return fmt.Errorf("reply invoked %s beside other text", want)
+	}
+	return nil
+}

@@ -42,6 +42,7 @@ type Telemetry struct {
 	toolCalls            metric.Int64Counter
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
+	phraseInvocations    metric.Int64Counter
 	failures             metric.Int64Counter
 	jobs                 metric.Int64Counter
 	healthRequests       metric.Int64Counter
@@ -213,6 +214,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	phraseInvocations, err := meter.Int64Counter("sirens_echo.phrase.invocations")
+	if err != nil {
+		return nil, err
+	}
 	accessChecks, err := meter.Int64Counter("sirens_echo.access.checks")
 	if err != nil {
 		return nil, err
@@ -259,6 +264,7 @@ func newTelemetry(
 		toolCalls:            toolCalls,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
+		phraseInvocations:    phraseInvocations,
 		failures:             failures,
 		jobs:                 jobs,
 		healthRequests:       healthRequests,
@@ -410,6 +416,16 @@ func (t *Telemetry) RecordAdmission(ctx context.Context, outcome, transport stri
 // no guild, channel, or member identifier reaches a metric label.
 func (t *Telemetry) RecordAccess(ctx context.Context, reason string) {
 	t.accessChecks.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
+}
+
+// RecordPhrase records one canonical phrase a reply invoked. The key comes
+// from the tracked registry, so no member value reaches a metric label.
+func (t *Telemetry) RecordPhrase(ctx context.Context, key string) {
+	t.phraseInvocations.Add(
+		ctx,
+		1,
+		metric.WithAttributes(attribute.String("phrase.key", key)),
+	)
 }
 
 // RecordFailure records the stage where an accepted turn failed.
