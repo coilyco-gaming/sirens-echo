@@ -69,6 +69,7 @@ var (
 	noticeModelFailed   = harnessNotice("model backend unavailable, retry shortly")
 	noticeToolFailed    = harnessNotice("tool call failed")
 	noticeRoundsSpent   = harnessNotice("ran out of steps, ask for something narrower")
+	noticeBudgetSpent   = harnessNotice("ran out of room to answer, ask for something narrower")
 	noticeReplyBlocked  = harnessNotice("reply blocked by response check, rephrase")
 	noticeTurnCrashed   = harnessNotice("turn crashed")
 	// The answer existed and the send failed. A member reading silence cannot
@@ -99,7 +100,10 @@ const (
 	// Named for what happened rather than where, because the stage is model
 	// and the model is not what failed. See sirens-echo#651.
 	causeReplyRefused = "reply_refused"
-	causeStage        = "stage_failed"
+	// The model deliberated past the ceiling and emitted nothing. Separate from
+	// rounds_spent because the ceiling that bound it is a different number.
+	causeBudgetSpent = "budget_spent"
+	causeStage       = "stage_failed"
 	// causeShutdown is the service ending the turn, not the turn failing. It
 	// reads as a deploy in the failure series rather than as a defect.
 	causeShutdown = "shutdown"
@@ -123,6 +127,10 @@ func failureCause(cause error) string {
 	// is acceptance criterion 3 of sirens-echo#651.
 	case errors.Is(cause, ErrResponseRepairExhausted):
 		return causeReplyRefused
+	// The model thought past its ceiling. Collapsed into stage_failed, a turn
+	// the ceiling bound was unalertable. See sirens-echo#549.
+	case errors.Is(cause, ErrBudgetExhausted):
+		return causeBudgetSpent
 	}
 	return causeStage
 }
@@ -146,6 +154,10 @@ func turnFailureNotice(stage string, cause error) string {
 	// member is told what to do about it rather than that we are down. See #651.
 	case errors.Is(cause, ErrResponseRepairExhausted):
 		return noticeReplyBlocked
+	// The backend answered and the model thought until it had no room to speak.
+	// Narrowing the question is the move that works. See sirens-echo#549.
+	case errors.Is(cause, ErrBudgetExhausted):
+		return noticeBudgetSpent
 	}
 	switch stage {
 	case stageHistory:

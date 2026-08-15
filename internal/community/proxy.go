@@ -55,6 +55,10 @@ var ErrToolRoundsExhausted = errors.New("tool rounds exhausted")
 // backend failed. Every model call returned 200. See sirens-echo#651.
 var ErrResponseRepairExhausted = errors.New("response repair exhausted")
 
+// ErrBudgetExhausted marks a turn whose model deliberated past the completion
+// ceiling and emitted nothing. See docs/sirens-echo-budget-exhaustion.md.
+var ErrBudgetExhausted = errors.New("completion budget exhausted")
+
 // isToolFailure reports a cause that reached the turn from an MCP surface.
 func isToolFailure(cause error) bool {
 	var failure ToolFailure
@@ -252,8 +256,8 @@ func nextCompletionBudget(current, ceiling int) (int, bool) {
 func formatBudgetExhausted(tokens, raises, reasoningBytes int) error {
 	return fmt.Errorf(
 		"Agent Proxy truncated the completion at %d tokens with empty content "+
-			"after %d raises, %d bytes of reasoning",
-		tokens, raises, reasoningBytes,
+			"after %d raises, %d bytes of reasoning: %w",
+		tokens, raises, reasoningBytes, ErrBudgetExhausted,
 	)
 }
 

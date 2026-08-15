@@ -40,8 +40,9 @@ countable through the notice string, which is prose rather than a label, so
 they could be counted after the fact and never alerted on.
 
 `failure_cause` is a closed set: `shutdown`, `timeout`, `tool_failed`,
-`rounds_spent`, `stage_failed`. It is derived in the same order the notice is
-chosen, so the label and the phrase a member reads cannot disagree.
+`rounds_spent`, `reply_refused`, `budget_spent`, `stage_failed`, derived in the
+same order the notice is chosen so the label and the phrase a member reads
+cannot disagree. See [budget exhaustion](sirens-echo-budget-exhaustion.md).
 
 ## The member is told, once
 
