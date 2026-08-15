@@ -137,6 +137,9 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 	for _, channel := range channelPattern.FindAllString(maskURLs(suppliedContext), -1) {
 		allowedChannels[strings.ToLower(channel)] = struct{}{}
 	}
+	for _, channel := range channelsReachedByTool(executed) {
+		allowedChannels[channel] = struct{}{}
+	}
 	for _, channel := range channelPattern.FindAllString(masked, -1) {
 		if _, ok := allowedChannels[strings.ToLower(channel)]; !ok {
 			return fmt.Errorf("model invented channel %s", channel)
@@ -158,6 +161,28 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 		return fmt.Errorf("model claimed work continuing past the end of this turn")
 	}
 	return nil
+}
+
+// channelToolName captures the channel a guardfile fixed into one message
+// tool, the eco-chat of discord__list_eco-chat-message.
+var channelToolName = regexp.MustCompile(`^[a-z]+_([a-z_][a-z0-9_-]*)-messages?$`)
+
+// channelsReachedByTool reads tool names only, never tool results. See
+// docs/sirens-echo-grounding-channels.md for why that asymmetry is the fix.
+func channelsReachedByTool(executed []ExecutedTool) []string {
+	channels := make([]string, 0, len(executed))
+	for _, tool := range executed {
+		name := strings.ToLower(strings.TrimSpace(tool.Name))
+		// A server name carries its own separators, so only the bare half of
+		// the proxy's server__tool name can be read for a channel.
+		if _, bare, found := strings.Cut(name, "__"); found {
+			name = bare
+		}
+		if match := channelToolName.FindStringSubmatch(name); match != nil {
+			channels = append(channels, "#"+match[1])
+		}
+	}
+	return channels
 }
 
 // selfClaimVerbs are the writes this runtime can perform, in the active voice a
