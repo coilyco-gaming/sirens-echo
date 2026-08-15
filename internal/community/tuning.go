@@ -177,6 +177,14 @@ const (
 	maxCommandOptions = 25
 	// defaultParameterMaxLength bounds a declared string argument.
 	defaultParameterMaxLength = 200
+	// threadPrefillBytes is the context budget for a whole-thread prefill.
+	// Oldest messages drop until the transcript fits. See sirens-echo#769.
+	threadPrefillBytes = 32 * 1024
+	// threadPrefillPage is Discord's own ceiling on one history call.
+	threadPrefillPage = 100
+	// threadPrefillReads bounds the walk, so a pathological thread costs a
+	// known number of calls rather than an unknown one.
+	threadPrefillReads = 10
 	// discordReplyLimit is the send budget for one message. It sits under
 	// Discord's own 2000 so a reply the harness extended still arrives whole.
 	discordReplyLimit = 1990

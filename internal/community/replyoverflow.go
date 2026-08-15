@@ -38,9 +38,9 @@ func deliverWithOverflow(ctx context.Context, turn turnIO, content, whole string
 // fitWithOverflow returns the message to send and the whole reply that message
 // is a prefix of. The second return is empty when nothing was cut.
 func fitWithOverflow(
-	answer string, limit int, executed []ExecutedTool,
+	answer string, limit int, facts serviceFacts,
 ) (content, whole string) {
-	whole = AssembleReply(answer, unboundedReply, executed...)
+	whole = assembleReplyFacts(answer, unboundedReply, facts)
 	if limit <= 0 || runeLen(whole) <= limit {
 		return whole, nothingWithheld
 	}
@@ -49,7 +49,7 @@ func fitWithOverflow(
 	// Too large to attach, or too small a budget to say so. Both fall back to
 	// the previous behaviour rather than failing the turn.
 	if len(whole) > replyAttachmentBytes || room <= 0 {
-		return AssembleReply(answer, limit, executed...), nothingWithheld
+		return assembleReplyFacts(answer, limit, facts), nothingWithheld
 	}
-	return AssembleReply(answer, room, executed...) + notice, whole
+	return assembleReplyFacts(answer, room, facts) + notice, whole
 }

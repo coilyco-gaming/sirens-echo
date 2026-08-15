@@ -121,7 +121,7 @@ func TestAssemblyAtItsPassBoundStillFits(t *testing.T) {
 	for _, passes := range []int{0, 1, 2, maxAssemblyPasses} {
 		sent := assembleReplyWithin(
 			answer, discordReplyLimit, passes,
-			[]ExecutedTool{observedIssueCall()},
+			serviceFacts{executed: []ExecutedTool{observedIssueCall()}},
 		)
 		if got := runeLen(sent); got > discordReplyLimit {
 			t.Errorf("passes=%d: %d runes, over the %d budget",
@@ -184,12 +184,23 @@ func TestAnUnboundedTransportKeepsEverySuffix(t *testing.T) {
 // between the two that exist.
 func TestTheSuffixOrderIsThePreferenceOrder(t *testing.T) {
 	t.Parallel()
-	order := serviceSuffixOrder()
-	if len(order) != 2 {
-		t.Fatalf("expected two suffixes, got %d", len(order))
+	at := map[string]int{}
+	for index, suffix := range serviceSuffixOrder() {
+		at[suffix.name] = index
 	}
-	if order[0].name != "issue references" || order[1].name != "tool disclosure" {
-		t.Errorf("order is %q then %q, and the link must precede the receipt",
-			order[0].name, order[1].name)
+	for _, want := range []string{
+		"issue references", "prefill truncation", "tool disclosure",
+	} {
+		if _, present := at[want]; !present {
+			t.Fatalf("the order lost %q: %v", want, at)
+		}
+	}
+	if at["issue references"] > at["tool disclosure"] {
+		t.Error("the link must precede the receipt")
+	}
+	// The last entry is cut first, so a note about missing context outranks the
+	// receipt. See sirens-echo#769.
+	if at["prefill truncation"] > at["tool disclosure"] {
+		t.Error("the truncation note must outrank the receipt")
 	}
 }
