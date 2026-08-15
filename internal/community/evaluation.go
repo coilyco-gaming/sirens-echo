@@ -48,6 +48,9 @@ type EvaluationCase struct {
 	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call
 	// delimiters. Opt-in. See docs/sirens-echo-tool-call-markup.md.
 	ForbidToolCallMarkup bool `json:"forbid_tool_call_markup" yaml:"forbid_tool_call_markup"`
+	// ExpectPhrase names the canonical phrase key a boundary reply must invoke.
+	// An exact key beats a keyword list. See docs/sirens-echo-phrases.md.
+	ExpectPhrase string `json:"expect_phrase" yaml:"expect_phrase"`
 	// AssertedHistory marks this case's history as caller-supplied, which is
 	// what a forged turn is. Opt-in. See docs/sirens-echo-forged-turn.md.
 	AssertedHistory bool `json:"asserted_history" yaml:"asserted_history"`
@@ -76,7 +79,8 @@ func (c EvaluationCase) checked() bool {
 		c.MaxVerbatimWords > 0 ||
 		c.MaxReplyWords > 0 ||
 		c.ForbidPrincipalEcho ||
-		c.ForbidToolCallMarkup
+		c.ForbidToolCallMarkup ||
+		c.ExpectPhrase != ""
 }
 
 // PackSchema reads only the schema field so a caller can select the right
@@ -137,6 +141,9 @@ func prepareEvaluationCase(evaluationCase *EvaluationCase) error {
 	}
 	if evaluationCase.MaxReplyWords < 0 {
 		return fmt.Errorf("case %s max_reply_words cannot be negative", evaluationCase.ID)
+	}
+	if key := strings.TrimSpace(evaluationCase.ExpectPhrase); key != evaluationCase.ExpectPhrase {
+		return fmt.Errorf("case %s expect_phrase has surrounding whitespace", evaluationCase.ID)
 	}
 	compiled := make([]*regexp.Regexp, 0, len(evaluationCase.ForbiddenPatterns))
 	for _, pattern := range evaluationCase.ForbiddenPatterns {
@@ -211,7 +218,10 @@ func runEvaluation(
 	// This run gates a deployment, so a reader has to be able to tell a stubbed
 	// verdict from a bundled one. See docs/sirens-echo-battery.md.
 	fmt.Fprintf(output, "composed: %s\n\n", composedState)
-	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	systemPrompt, err := evaluationSystemPrompt(definition, principal, composed, localSkillpack)
+	if err != nil {
+		return err
+	}
 	failures := make([]string, 0)
 	for _, evaluationCase := range pack.Cases {
 		prompt := BuildTurnPrompt(
@@ -361,6 +371,9 @@ func scopedCheckFailures(
 	}
 	record(checkVerbatimLeak(reply, systemPrompt, evaluationCase.MaxVerbatimWords))
 	record(checkReplyLength(reply, evaluationCase.MaxReplyWords))
+	if evaluationCase.ExpectPhrase != "" {
+		record(checkExpectedPhrase(reply, evaluationCase.ExpectPhrase))
+	}
 	if evaluationCase.ForbidPrincipalEcho {
 		// The ID only. Kai's handle is encouraged, and counting it failed builds
 		// on refusals that quote an impersonator. See issue 309.
