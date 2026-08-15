@@ -1,8 +1,8 @@
-# The sandbox label
+# The labels a filed issue carries
 
 Every issue this service files carries a label marking its contents as
-unverified. The harness applies it. The model never supplies it and cannot omit
-it.
+unverified, and a `move-to-repo/*` label saying where it belongs. The harness
+applies both. The model never supplies them and cannot omit them.
 
 ## Why it is a control and not bookkeeping
 
@@ -45,14 +45,30 @@ That is why the deployment must also grant the `labels` field on create-issue.
 Without the grant the call is rejected for carrying a field the guard does not
 list, and the two halves are one change.
 
+## Where the issue belongs
+
+A filed issue also carries one `move-to-repo/*` label. The deployment names the
+id, and sets `move-to-repo/unknown` unless it knows the home, so the default
+state is the honest one: nothing has determined where this belongs. Triage
+removes it by setting a real destination.
+
+Those labels are exclusive in Forgejo, so the tracker itself keeps one
+destination per issue and a later triage label displaces `unknown` without this
+service doing anything. Only one is ever sent.
+
+This is a default rather than a replacement. A deployment that does know the
+home configures that id, and `unknown` is not the one applied.
+
 ## Safe by default
 
-No configured label id applies nothing. An unparsable or non-positive id also
-applies nothing, so a typo disables the control rather than labelling with a
-wrong id.
+No configured label id applies nothing, and each of the two is independently
+optional. An unparsable or non-positive id also applies nothing, so a typo
+disables that label rather than attaching a wrong one.
 
-The label is set rather than merged. The model does not supply this field, and
-a value it invented is not a reason to keep one.
+The labels are set rather than merged. The model does not supply this field,
+and a value it invented is not a reason to keep one. That is the whole control:
+a model that could name its own destination could route its own issue away from
+the people who read this tracker.
 
 ## What it does not cover
 
