@@ -6,6 +6,23 @@
 # skill points at ~/projects/coilyco-gaming/. Needs agentic-os >= v0.18.0.
 org = "coilyco-gaming"
 
+# agent/bundles/ is `ward exec compose-bundles` output. It is gitignored, but
+# these two hooks walk the filesystem rather than git's file list, so they read
+# a bake of upstream agent-compose skills as this repository's own content: 75
+# layout violations and 8 dead links on a clean main. Neither is fixable here.
+# The real fix landed upstream (agentic-os#1062 tracks the rest), and these two
+# entries carry the repo until the pinned aos-precommit rev moves past it.
+# Drop both then. See sirens-echo#800.
+[tool.agentic-os.documentation-layout]
+excludes = [
+    "agent/bundles/**",
+]
+
+[tool.agentic-os.dead-cross-links]
+excludes = [
+    "agent/bundles/**",
+]
+
 [tool.agentic-os.code-comments]
 # Not a grandfathered violation: all three flagged comments are emitted by
 # apply-agentic-os-hooks.py at fixed positions inside its managed block, so no
