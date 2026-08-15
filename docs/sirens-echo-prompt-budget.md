@@ -63,6 +63,13 @@ argued in the diff.
   new rule. The raise is identical on both profiles, which is the shared block
   showing up as arithmetic.
 
+- **Echo, to 23826**, from 22291, on 2026-08-15. Object emoji, sirens-echo#203.
+  The whole 1535 bytes is `references/object-emoji.md` plus its pointer, and
+  most of that is the five rules rather than a lookup table. A per-item table
+  was drafted and cut to one example line, because the model already knows that
+  wood is 🪵 and the rules are the part it cannot infer. Deep is unchanged: the
+  neutral style check is Echo's, and the social profile never banned emoji.
+
 Deep's two profiles are not converging by accident. Deep now carries the same
 filing instructions as Echo because it does the same filing, and the budget gap
 between the two remains the local policy roots rather than the tracker. Kai

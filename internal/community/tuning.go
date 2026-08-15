@@ -198,6 +198,13 @@ const (
 	threadTitleRunes = 50
 )
 
+// Object emoji in a neutral reply
+const (
+	// maxObjectEmoji bounds the legibility emoji a neutral reply may carry.
+	// Kai set it on sirens-echo#203 after declining every earlier bound.
+	maxObjectEmoji = 3
+)
+
 // Block responses
 const (
 	// maxBlockReasonWords bounds the reason. Every volunteered justification is

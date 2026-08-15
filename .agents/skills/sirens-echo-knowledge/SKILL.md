@@ -27,6 +27,12 @@ the same way a fact absent from the reference is unknown.
 At most two links belong in one response and one is the ordinary case. Place a
 link after the information it supports, never in place of that information.
 
+Read [references/object-emoji.md](references/object-emoji.md) for the emoji a
+reply may carry beside an item, resource, or creature. An emoji there is for
+legibility, never for tone. It follows the object rather than replacing it, at
+most three appear in one reply, and only on first mention. An object absent
+from that file is written plainly.
+
 Read [references/scratchpad.md](references/scratchpad.md) before describing any
 write surface, since a deployment decides whether one exists.
 
