@@ -225,7 +225,7 @@ func TestAWaitingStagePostsWithoutAStageChange(t *testing.T) {
 	if posts != 1 {
 		t.Fatalf("a waiting stage posted %d lines, want 1", posts)
 	}
-	if got := sink.lastNotice(); got != stageNotice(stageIcons[stagePhraseThinking], stagePhraseThinking) {
+	if got := sink.lastNotice(); got != stageLine(stagePhraseThinking) {
 		t.Fatalf("notice = %q, want the stage the turn is actually in", got)
 	}
 
@@ -287,7 +287,7 @@ func TestReportStageNarratesThroughTheContext(t *testing.T) {
 	advance(turnProgressAfter + time.Second)
 	reportStage(ctx, stagePhraseTool)
 
-	if got := sink.lastNotice(); got != stageNotice(stageIcons[stagePhraseTool], stagePhraseTool) {
+	if got := sink.lastNotice(); got != stageLine(stagePhraseTool) {
 		t.Fatalf("notice = %q, want the tool stage", got)
 	}
 	// A context carrying no progress must be inert rather than panic.

@@ -65,8 +65,51 @@ func TestAWaitingTurnSaysHowLong(t *testing.T) {
 	if !strings.Contains(body, "still "+stagePhraseThinking) {
 		t.Errorf("no wait line was appended: %q", body)
 	}
-	if !strings.Contains(body, progressWaitIcon) {
+	if !strings.Contains(body, progressWaitIcon(0)) {
 		t.Errorf("the wait line carries no clock: %q", body)
+	}
+}
+
+// The hour hand advances as the lines pile up, which is what Kai asked for
+// once she turned "if we wanna" into a decision. See sirens-echo#370.
+func TestTheClockAdvancesDownTheColumn(t *testing.T) {
+	t.Parallel()
+	lines := strings.Split(progressBody(stagePhraseThinking, []int{9, 19, 29}), "\n")
+
+	if len(lines) != 4 {
+		t.Fatalf("body has %d lines, want the stage line and three waits", len(lines))
+	}
+	for index, want := range []string{"\U0001F550", "\U0001F551", "\U0001F552"} {
+		if !strings.Contains(lines[index+1], want) {
+			t.Errorf("wait line %d = %q, want the %d o'clock face",
+				index, lines[index+1], index+1)
+		}
+	}
+}
+
+// Twelve faces against a cap of twelve lines means the wrap never fires today.
+// It is here so the two can move independently of each other.
+func TestTheRotationWraps(t *testing.T) {
+	t.Parallel()
+	if got := progressWaitIcon(len(progressWaitIcons)); got != progressWaitIcons[0] {
+		t.Errorf("icon after a full turn = %q, want %q", got, progressWaitIcons[0])
+	}
+	if len(progressWaitIcons) != 12 {
+		t.Errorf("the rotation has %d faces, want twelve", len(progressWaitIcons))
+	}
+}
+
+// Only thinking and the clock lines are terminated, which is Kai's answer to
+// the ellipsis having been applied to all four stages.
+func TestOnlyThinkingAndTheClockAreTerminated(t *testing.T) {
+	t.Parallel()
+	for _, line := range strings.Split(progressBody(stagePhraseChecking, []int{9}), "\n") {
+		terminated := strings.Contains(line, "...")
+		clock := strings.Contains(line, "still ")
+		if terminated != clock {
+			t.Errorf("line %q: terminated=%v, want that only on the clock line",
+				line, terminated)
+		}
 	}
 }
 

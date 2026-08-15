@@ -10,11 +10,17 @@ format that edits in place as the turn moves:
 
 > `reading recent messages`
 
-> `thinking`
+> 🤔 `thinking...`
 
 > `calling a tool`
 
 > `checking the reply`
+
+A turn that sits in one stage grows a clock line per beat, hour hand advancing:
+
+> 🤔 `thinking...`
+> 🕐 `still thinking 9 seconds...`
+> 🕑 `still thinking 19 seconds...`
 
 The line is removed when the reply lands. The reply, or the failure notice, is
 the turn's real answer, so the narration does not outlive it.
