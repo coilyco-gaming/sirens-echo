@@ -11,6 +11,10 @@
 # because go test prints ok for a skip: a service that never came up would
 # otherwise leave the one step whose job is to run that SQL green having run
 # none of it.
+#
+# ROLE SELECTION DRIFT runs here as well as at Dockerfile step 26. The image
+# build is what stops a bad image; this step is what says so in seconds rather
+# than two thirds of the way through a build. See docs/sirens-echo-role-record.md.
 name: ci
 
 on:
@@ -49,6 +53,9 @@ jobs:
 
       - name: reviewed skip set
         run: bash scripts/ci-command.sh ward exec test-skips
+
+      - name: role selection drift
+        run: bash scripts/ci-command.sh ward exec role-drift-check
 
       - name: job store SQL
         env:
