@@ -51,7 +51,8 @@ were checked afterwards for the same shape, a success that means nothing ran.
   loaders each fail on zero cases, and the fixture pack fails on zero tools, so
   none can report a green load having checked nothing.
 - **Shell scripts** all set `-euo pipefail` except `ci-docker-probe.sh`, which
-  documents that it never fails because the caller wants the report.
+  documents that it never fails because the caller wants the report, and
+  `lib/docker-host.sh`, which is sourced and inherits its caller's options.
 - **`policy-check` named its inputs by hand.** Every tracked pack was listed at
   the time of checking, so nothing was unverified, but a pack added later would
   have been verified by nothing while the output stayed green. That one is now

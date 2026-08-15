@@ -21,6 +21,10 @@ the remote manifest exists.
 This application repository publishes an artifact only. It holds no cluster
 credential and never reaches into the deployment layer.
 
+A pull request builds the same Dockerfile without publishing, so a build-context
+fault fails the review rather than the merge. See
+[Building the image on a pull request](sirens-echo-image-build.md).
+
 ## Sirens Echo k3s lifecycle
 
 `coilyco-bridge/deploy/services/sirens-echo/` owns:
