@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -87,6 +88,16 @@ func main() {
 // roleSnapshots records what each baked role selected. Loading validates every
 // role's prompt on the way, so a bundle that failed to compose stops the build.
 func roleSnapshots(bundleDir string, check bool) error {
+	// Bundles are build output, so an ordinary checkout has none and the bare
+	// loader error names a path rather than the step that creates it.
+	if _, err := os.Stat(bundleDir); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf(
+			"no baked bundles at %s\n"+
+				"  bake them first with `ward exec compose-bundles`, or run\n"+
+				"  `ward exec role-drift-check`, which bakes and checks in one step",
+			bundleDir,
+		)
+	}
 	definition, err := community.LoadDefinition(composedDefinition)
 	if err != nil {
 		return err
@@ -129,8 +140,15 @@ func roleSnapshots(bundleDir string, check bool) error {
 		fmt.Printf("wrote %s\n", target)
 	}
 	if len(stale) > 0 {
+		// Every instance of this so far was a branch cut before a composed-sources
+		// change on main, so the merge is named before the rebake. See #788.
 		return fmt.Errorf(
-			"a role's selection changed: %s\nrun `ward exec role-snapshot` against baked bundles and commit the result",
+			"a role's selection changed: %s\n"+
+				"  if this branch predates a composed-sources change, merge main first:\n"+
+				"  the record it wants is already committed there\n"+
+				"  if the change is yours, rebake and record it:\n"+
+				"    ward exec compose-bundles\n"+
+				"    ward exec role-snapshot",
 			strings.Join(stale, ", "),
 		)
 	}

@@ -18,8 +18,14 @@ change that should be reviewed. Widening the surface stays a visible diff.
 
 ## The gate
 
-The image build regenerates every record and fails on a difference, so a silent
-selection change stops the image rather than shipping.
+CI bakes the bundles in the `test` job and fails on a difference there, and the
+image build checks the same thing again over the bundles it actually ships. The
+second is what stops a bad image; the first is what tells you in seconds rather
+than two thirds of the way through a build. See sirens-echo#788.
+
+A record drifts most often because the branch was cut before a composed-sources
+change landed on `main`, not because anything on the branch moved. The merge is
+the remedy in that case, and the failure names it first.
 
 Loading the bundles renders and validates each role's prompt on the way, which
 is the other half. A bundle that failed to compose would otherwise ship as a
@@ -34,13 +40,20 @@ produce against a floating catalogue.
 ## Commands
 
 ```sh
+ward exec role-drift-check     # bake and check in one step, the gate CI runs
 ward exec compose-bundles      # bake into agent/bundles, needs AOS_CATALOG
 ward exec role-snapshot        # rewrite the records from those bundles
-ward exec role-snapshot-check  # fail on drift
+ward exec role-snapshot-check  # fail on drift, over bundles already baked
 ```
 
-Both record commands need baked bundles, so pre-commit runs neither and stays
-hermetic on a machine with no catalogue checkout. The tracked prompt snapshots
+`role-drift-check` clones the catalogue at `AOS_CATALOG_REF` when `AOS_CATALOG`
+names no checkout, which is how it runs in CI. It bakes to a scratch directory
+and removes it, because pre-commit walks the filesystem and a baked bundle is a
+tree of skill files those hooks then read as this repository's own.
+
+`role-snapshot` and `role-snapshot-check` need bundles already baked, so
+pre-commit runs neither and stays hermetic on a machine with no catalogue
+checkout. The tracked prompt snapshots
 under `agent/rendered/` keep rendering the placeholder for the same reason.
 
 ## Reviewing a change

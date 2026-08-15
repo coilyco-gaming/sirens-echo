@@ -99,6 +99,21 @@ case "${1:-}" in
     fi
     bash scripts/stage-compose-sources.sh agent/bundles "$catalog"
     ;;
+  role-drift-check)
+    # The drift the image build used to reach at Dockerfile step 26. Out of tree
+    # because pre-commit walks the filesystem and a bundle is a skill tree.
+    scratch=$(mktemp -d)
+    trap 'rm -rf "$scratch"' EXIT
+    catalog=${AOS_CATALOG:-$HOME/projects/coilyco-flight-deck/agentic-os}
+    if [ ! -d "$catalog/.agents/composed" ]; then
+      # No checkout here, so clone the catalogue the image build would clone.
+      catalog=$scratch/aos-catalog
+      git clone --depth 1 --branch "${AOS_CATALOG_REF:-main}" \
+        https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git "$catalog"
+    fi
+    bash scripts/stage-compose-sources.sh "$scratch/bundles" "$catalog"
+    go run ./cmd/sirens-echo-prompt --bundles "$scratch/bundles" --check
+    ;;
   vet)
     go vet ./...
     ;;

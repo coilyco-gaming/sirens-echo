@@ -47,7 +47,10 @@ commands:
     description: Rewrite the tracked per-role selection record from baked bundles.
   role-snapshot-check:
     run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles --check
-    description: Fail when a baked role selects something its tracked record does not.
+    description: Fail when a baked role selects something its tracked record does not. Needs bundles already baked.
+  role-drift-check:
+    run: bash scripts/ward-command.sh role-drift-check
+    description: Bake the bundles and fail on record drift in one step. The gate CI runs, and the one to run from a checkout with no baked bundles.
   vet:
     run: bash scripts/ward-command.sh vet
     description: go vet across the tree. Routed through the script so a hookless checkout installs the commit gate on the way past.
