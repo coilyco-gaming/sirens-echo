@@ -268,6 +268,9 @@ type Config struct {
 	// SandboxLabelID labels every issue this service files. Zero applies
 	// nothing. See docs/sirens-echo-sandbox-label.md.
 	SandboxLabelID int
+	// DestinationLabelID is the move-to-repo label a filed issue carries. The
+	// deployment sets the unknown one unless it knows the home. See #756.
+	DestinationLabelID int
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -400,6 +403,7 @@ func LoadConfig() (Config, error) {
 		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
+		DestinationLabelID:     positiveInt(os.Getenv("SIRENS_ECHO_DESTINATION_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		JobStoreDSN:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE_DSN")),
 		RepoInventoryURL:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_URL")),
@@ -424,7 +428,9 @@ func LoadConfig() (Config, error) {
 		}
 		cfg.BundlePath = path
 	}
-	for _, id := range append(append([]string{}, cfg.DiscordChannelIDs...), cfg.DiscordGuildIDs...) {
+	snowflakes := append([]string{}, cfg.DiscordChannelIDs...)
+	snowflakes = append(snowflakes, cfg.DiscordGuildIDs...)
+	for _, id := range snowflakes {
 		if !discordSnowflake.MatchString(id) {
 			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
 		}

@@ -4,14 +4,20 @@ A turn inside a thread got the same partial window a channel turn gets, so a
 thread longer than that window was answered from its own tail. The earlier half
 of the conversation was not in the prompt and nothing said so.
 
-## Every thread, with nothing to switch on
+## Every thread, with nothing to configure
 
-Being in a thread is the condition. There is no toggle and no opt-in list.
+The design pass specified a per-channel toggle defaulting off, and Kai removed
+it on sirens-echo#769: this is not a per-channel thing. So a turn inside a
+thread reads the whole thread, everywhere, with no way to opt a channel in or
+out.
 
-A per-channel gate was specified and Kai removed it: a thread is a bounded
-conversation someone deliberately opened, so reading it whole is what the
-feature means everywhere rather than a per-channel preference. The context
-budget and the walk bound below are what hold the cost down, not a switch.
+`SIRENS_ECHO_THREAD_PREFILL_CHANNELS` is retired. A deployment still carrying
+it is inert rather than a boot failure, so a stale value cannot take the
+service down.
+
+Removing the toggle also removed the staged rollout the spec assumed. Nothing
+gates this on one channel first, so the bounds below carry the whole context
+risk on their own.
 
 ## Overflow drops the oldest first
 
@@ -46,9 +52,9 @@ the same as having read the whole thread.
 ## What it costs
 
 A whole-thread read is one Discord call per hundred messages instead of one
-call, and it applies to every threaded turn. `history.thread.read` and
-`history.thread.dropped` land on the `community.history` span, so what real
-threads produce is readable from the first day this runs rather than estimated.
+call, on every thread turn rather than on an opted-in few. Read
+`history.thread.read` and `history.thread.dropped` on the `community.history`
+span to see what real threads produce.
 
 sirens-echo#750 makes Echo-owned threads permanently summonable, which raises
 the number of turns taken inside threads and therefore the cost of this. Land
@@ -56,9 +62,8 @@ them in either order and measure prefill size after both.
 
 ## What does not change
 
-Outside a thread the prefill is the same partial window, read the same way and
-bounded by the same `max_context_messages`. A turn that drops nothing adds
-nothing to the reply.
+Outside a thread the prefill is the same partial window read the same way. A
+turn that drops nothing adds nothing to the reply.
 
 ## See also
 

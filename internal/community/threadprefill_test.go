@@ -2,6 +2,7 @@ package community
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -227,6 +228,61 @@ func (failingReader) ChannelMessages(
 	return nil, fmt.Errorf("discord refused")
 }
 
+// discordEnv sets the minimum a Discord deployment needs to load, so a thread
+// prefill test states only what it is about.
+func discordEnv(t *testing.T, channels string) {
+	t.Helper()
+	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	useFixtureBundles(t, "creator")
+	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
+	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
+	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "true")
+	t.Setenv("SIRENS_ECHO_INSTANCE", "sirens-deep")
+	t.Setenv("DISCORD_TOKEN", "discord-token")
+	t.Setenv("DISCORD_CHANNEL_ID", channels)
+	t.Setenv("AGENT_PROXY_MODEL", "model")
+}
+
+// Every thread reads whole, with nothing to configure. The per-channel toggle
+// was removed on sirens-echo#769: this is not a per-channel thing.
+func TestEveryThreadReadsWholeWithNothingConfigured(t *testing.T) {
+	t.Parallel()
+	reader := threadOf(250, "hello")
+	inside := &discordMessageTurn{
+		message:     &discordgo.Message{ID: "999999", ChannelID: "thread-1"},
+		limit:       3,
+		wholeThread: true,
+	}
+
+	messages, capped, err := readTurnHistory(
+		reader, inside.wholeThread,
+		inside.message.ChannelID, inside.message.ID, inside.limit,
+	)
+
+	if err != nil {
+		t.Fatalf("readTurnHistory: %v", err)
+	}
+	if capped {
+		t.Error("a 250-message thread reported capped")
+	}
+	// The window limit of 3 must not bound a thread read, which is the whole
+	// point of the feature.
+	if len(messages) != 250 {
+		t.Errorf("read %d messages, want the whole thread", len(messages))
+	}
+}
+
+// A deployment may still carry the retired env var. It is inert now, and a
+// stale value must not fail boot for a service that no longer reads it.
+func TestTheRetiredToggleEnvVarIsInert(t *testing.T) {
+	discordEnv(t, "1024000000000000001")
+	t.Setenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS", "1024000000000000009")
+
+	if _, err := LoadConfig(); err != nil {
+		t.Errorf("a stale thread-prefill toggle failed boot: %v", err)
+	}
+}
+
 // A thread whose newest messages all fit the budget is still incomplete when
 // the walk never reached its start, and that has to be said too.
 func TestACappedWalkIsAnnotatedEvenWhenNothingWentOverBudget(t *testing.T) {
@@ -241,35 +297,5 @@ func TestACappedWalkIsAnnotatedEvenWhenNothingWentOverBudget(t *testing.T) {
 	}
 	if strings.Contains(rendered, "dropped to fit") {
 		t.Errorf("the annotation blamed the budget for a walk bound: %q", rendered)
-	}
-}
-
-// A thread is the whole conversation, so every turn inside one reads it whole
-// with nothing to opt into. Kai removed the per-channel gate on issue 769.
-func TestEveryThreadTurnReadsTheWholeThread(t *testing.T) {
-	t.Parallel()
-	session := statefulSession(t)
-	thread := &discordgo.Channel{
-		ID:       "1390000000000000009",
-		ParentID: "1390000000000000003",
-		Type:     discordgo.ChannelTypeGuildPublicThread,
-		GuildID:  "1390000000000000002",
-	}
-	if err := session.State.ChannelAdd(thread); err != nil {
-		t.Fatalf("seed channel state: %v", err)
-	}
-	message := &discordgo.Message{
-		ID: "1401110000000000001", GuildID: thread.GuildID, ChannelID: thread.ID,
-	}
-	if at := discordLocationFor(session, message); at.ThreadID == "" {
-		t.Fatal("a thread turn did not resolve a thread id, so it would read the window")
-	}
-	// The channel the thread hangs under is an ordinary channel, and a turn
-	// there keeps the window.
-	inChannel := &discordgo.Message{
-		ID: "1401110000000000002", GuildID: thread.GuildID, ChannelID: thread.ParentID,
-	}
-	if at := discordLocationFor(session, inChannel); at.ThreadID != "" {
-		t.Errorf("a channel turn resolved thread id %q", at.ThreadID)
 	}
 }

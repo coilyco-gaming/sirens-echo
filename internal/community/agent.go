@@ -129,9 +129,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Servers:    roster,
 		HTTPClient: sessionHTTPClient(telemetry),
 		Telemetry:  telemetry,
-		Sandbox: sandboxLabelPolicy{
-			Tracker: cfg.Definition.IssueTracker,
-			LabelID: cfg.SandboxLabelID,
+		Labels: issueLabelPolicy{
+			Tracker:       cfg.Definition.IssueTracker,
+			SandboxID:     cfg.SandboxLabelID,
+			DestinationID: cfg.DestinationLabelID,
 		},
 	}
 	// The roster handle stays concrete because the agent closes it and serves
@@ -418,6 +419,8 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
 		// The count, never the values. See docs/sirens-echo-identifiers.md.
 		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
+		// Stated at boot rather than assumed, so default-off is observable.
+		slog.Int("configured_channels", len(a.cfg.DiscordChannelIDs)),
 		// Empty when the build carried no revision, which is the honest answer.
 		slog.String("build_revision", BuildRevision()),
 	)
@@ -836,8 +839,8 @@ func (a *Agent) handleMessage(
 		titler:    a.completions,
 		replyTo:   a.resolveReplyTo(session, message, origin),
 		telemetry: a.telemetry,
-		// A thread is the whole conversation, so it is prefilled whole. See
-		// docs/sirens-echo-thread-prefill.md.
+		// Every thread, because a thread is the conversation rather than a
+		// window into one. See docs/sirens-echo-thread-prefill.md.
 		wholeThread: at.ThreadID != "",
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
@@ -1388,8 +1391,8 @@ type discordMessageTurn struct {
 	// telemetry records a thread title that had to be trimmed, so a generator
 	// that keeps overrunning is visible. See sirens-echo#753.
 	telemetry *Telemetry
-	// wholeThread marks a turn inside a thread, which reads the thread rather
-	// than the partial window. See sirens-echo#769.
+	// wholeThread opts this turn into reading its whole thread rather than the
+	// partial window. Off is the shipped default. See sirens-echo#769.
 	wholeThread bool
 	prefill     prefillNote
 }
