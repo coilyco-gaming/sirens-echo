@@ -834,6 +834,8 @@ func (a *Agent) handleMessage(
 		limit:   a.cfg.Definition.MaxContextMessages,
 		titler:  a.completions,
 		replyTo: a.resolveReplyTo(session, message, origin),
+
+		telemetry: a.telemetry,
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -1353,6 +1355,9 @@ type discordMessageTurn struct {
 	// replyTo is a reference the Gateway did not deliver inline, resolved before
 	// the turn ran. See docs/sirens-echo-prompt.md.
 	replyTo *discordgo.Message
+	// telemetry records a thread title that had to be trimmed, so a generator
+	// that keeps overrunning is visible. See sirens-echo#753.
+	telemetry *Telemetry
 }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
@@ -1566,7 +1571,7 @@ func (t *discordMessageTurn) send(
 	// A thread hangs off the member's message, so a reference inside it would
 	// point at its own parent. See docs/sirens-echo-threads.md.
 	if turnLongReply(ctx) {
-		title := threadTitle(ctx, t.titler, t.message, t.RequestID())
+		title := threadTitle(ctx, t.titler, t.message, t.RequestID(), t.telemetry)
 		if threadID, threaded := threadForReply(t.session, t.message, title); threaded {
 			target, reference = threadID, nil
 			span.SetAttributes(attribute.String("discord.thread.id", threadID))

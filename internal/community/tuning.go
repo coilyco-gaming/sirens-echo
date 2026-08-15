@@ -185,6 +185,9 @@ const (
 	replyAttachmentBytes = maxScratchFileBytes
 	// threadNameRunes is Discord's cap. A longer name is refused outright.
 	threadNameRunes = 100
+	// threadTitleRunes is what reads whole in a thread list, which is a tighter
+	// bound than Discord's. See docs/sirens-echo-thread-title-length.md.
+	threadTitleRunes = 50
 )
 
 // Block responses

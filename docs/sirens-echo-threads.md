@@ -31,7 +31,8 @@ the channel-side artifact was never the answer.
 ## The name says what the thread is for
 
 The title summarises the member's intent: *how much does it cost to build a log
-house* becomes something like *log house pricing*.
+house* becomes something like *log house pricing*. It is bounded at 50
+characters by [thread title length](sirens-echo-thread-title-length.md).
 
 An earlier version refused to summarise, on the grounds that summarising is
 writing a member a title. That was overruled deliberately in issue 461, and the
@@ -75,6 +76,5 @@ See [commands](sirens-echo-commands.md).
 
 ## See also
 
-- [progress cadence](sirens-echo-progress-cadence.md) - where the window comes
-  from.
+- [progress cadence](sirens-echo-progress-cadence.md) - where the window is from.
 - [tuning numbers](sirens-echo-tuning.md) - the window itself.
