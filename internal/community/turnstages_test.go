@@ -83,6 +83,107 @@ func TestARefusedReplyNamesTheCheckThatRefusedIt(t *testing.T) {
 	}
 }
 
+// The headline for sirens-echo#795. The sentence the validator wrote was
+// generated and then discarded, so a diagnosis had to re-run the rules by hand.
+func TestARefusedReplyCarriesTheReasonItWasRefused(t *testing.T) {
+	t.Parallel()
+	spans, _ := recordedTurn(t, "The roster is posted in #invented-room each cycle.")
+
+	validate := endedSpan(spans, "response.validate")
+	if validate == nil {
+		t.Fatal("no response.validate span, so this test asserts nothing")
+	}
+	if got := recordedAttribute(validate, "response.check"); got != replyCheckInventedChannel {
+		t.Errorf("response.check = %q, want the rule %q", got, replyCheckInventedChannel)
+	}
+	// The channel name was the whole answer on sirens-echo#794, and reading it
+	// off the span is the step that replaces opening the source.
+	reason := recordedAttribute(validate, "response.check.reason")
+	if !strings.Contains(reason, "#invented-room") {
+		t.Errorf("response.check.reason = %q, which does not name the invented channel", reason)
+	}
+}
+
+// The exception fields are the catalog's, and a refusal reason is runtime data.
+// Recording the reason must not have routed it through them. See #795.
+func TestARefusalReasonStaysOutOfTheExceptionFields(t *testing.T) {
+	t.Parallel()
+	spans, _ := recordedTurn(t, "The roster is posted in #invented-room each cycle.")
+
+	validate := endedSpan(spans, "response.validate")
+	if validate == nil {
+		t.Fatal("no response.validate span, so this test asserts nothing")
+	}
+	for _, key := range []string{"error.type", "error.stage", "error.outcome"} {
+		if got := recordedAttribute(validate, key); strings.Contains(got, "invented-room") {
+			t.Errorf("%s = %q, so runtime data reached a cataloged field", key, got)
+		}
+	}
+	marked := false
+	for _, event := range validate.Events() {
+		marked = marked || event.Name == "exception"
+		for _, attr := range event.Attributes {
+			if strings.Contains(attr.Value.Emit(), "invented-room") {
+				t.Errorf("the %s event carries %s = %q, so runtime data reached the "+
+					"exception event", event.Name, attr.Key, attr.Value.Emit())
+			}
+		}
+	}
+	// Without the event there is nothing above for runtime data to reach, and
+	// the scan would pass on a span that recorded no exception at all.
+	if !marked {
+		t.Error("the refusal recorded no exception event, so this test asserts nothing")
+	}
+}
+
+// Each grounding rule is its own attribute value. The family covered four
+// independent rules, so a refusal rate over it could not say which fired.
+func TestEachGroundingRuleNamesItself(t *testing.T) {
+	t.Parallel()
+	agent := &Agent{
+		cfg:         Config{Definition: Definition{Identity: "Sirens Echo of Coilyco"}},
+		telemetry:   telemetryOrNoop(nil),
+		identifiers: NewIdentifierGuard(Config{}, nil),
+	}
+	for _, probe := range []struct {
+		reply string
+		want  string
+	}{
+		{"The roster is posted in #invented-room each cycle.", replyCheckInventedChannel},
+		{"I filed a correction for review.", replyCheckClaimedAction},
+		{"A correction has been filed for review.", replyCheckTrackerAction},
+		{"The service is now monitoring the queue.", replyCheckContinuingWork},
+	} {
+		t.Run(probe.want, func(t *testing.T) {
+			t.Parallel()
+			_, refused, err := agent.runReplyChecks(probe.reply, TurnPrompt{}, CompletionResult{})
+			if err == nil {
+				t.Fatalf("%q was accepted, so this row proves nothing", probe.reply)
+			}
+			if refused != probe.want {
+				t.Errorf("refused = %q, want %q", refused, probe.want)
+			}
+		})
+	}
+}
+
+// The invented channel is the model's own text. A hallucinated token has no
+// length a configured channel would, and every refusal record pays for it.
+func TestAnInventedChannelIsBoundedBeforeItIsRecorded(t *testing.T) {
+	t.Parallel()
+	invented := "#" + strings.Repeat("a", 4000)
+
+	err := ValidateGrounding("Ask in "+invented+" for the next step.", "")
+
+	if err == nil {
+		t.Fatal("an invented channel was accepted, so this test asserts nothing")
+	}
+	if len([]rune(err.Error())) > inventedChannelRunes+64 {
+		t.Errorf("the refusal is %d runes, so the token reached telemetry unbounded",
+			len([]rune(err.Error())))
+	}
+}
+
 // A reply that passes says so, so a reader never has to read absence as
 // success. Every turn carries the attribute.
 func TestAnAcceptedReplyNamesNoCheck(t *testing.T) {
