@@ -43,27 +43,7 @@ func AppendToolDisclosure(reply string, executed ...ExecutedTool) string {
 func AppendToolDisclosureWithin(
 	reply string, limit int, executed ...ExecutedTool,
 ) string {
-	footer := toolDisclosure(executed)
-	if footer == "" {
-		return reply
-	}
-	trimmed := strings.TrimRight(reply, "\n")
-	if trimmed == "" {
-		return footer
-	}
-	// The receipt is short and bounded and the answer is neither, so the answer
-	// yields. A receipt that vanishes under load reads as no tools ran.
-	if limit > 0 {
-		room := limit - len([]rune(footer)) - 2
-		if room < 0 {
-			room = 0
-		}
-		trimmed = strings.TrimRight(truncateRunes(trimmed, room), "\n")
-	}
-	if trimmed == "" {
-		return footer
-	}
-	return trimmed + "\n\n" + footer
+	return appendServiceLine(reply, limit, toolDisclosure(executed))
 }
 
 // toolDisclosure renders one line per call, or per consecutive run of the same

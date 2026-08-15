@@ -75,5 +75,6 @@ correct while the send is not, which is what happened to the first repair here.
 
 ## See also
 
-See [tool call disclosure](sirens-echo-tool-disclosure.md) and [knowledge gaps
-and corrections](sirens-echo-issues.md) for the two suffixes this assembles.
+See [tool call disclosure](sirens-echo-tool-disclosure.md), [knowledge gaps and
+corrections](sirens-echo-issues.md), and [thread
+prefill](sirens-echo-thread-prefill.md) for the suffixes this assembles.
