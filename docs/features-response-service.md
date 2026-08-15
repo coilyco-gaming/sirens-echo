@@ -32,6 +32,9 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
   applied before the model call and unable to fail a turn
 - Oversized tool results saved to the requester's scratchpad instead of being
   truncated away, with every failure falling back to truncation
+- Replies over the Discord send budget attached whole as a file, with the
+  message naming it and its size. See
+  [reply overflow](sirens-echo-reply-overflow.md)
 - Soft-reference replies with every Discord mention disabled
 - One assembly step for every service-authored suffix, shortening the answer so
   no suffix is budgeted against another. See

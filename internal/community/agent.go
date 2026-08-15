@@ -1133,13 +1133,13 @@ func (a *Agent) runTurn(
 
 	// Service-authored, so it runs after the checks rather than through them.
 	// One step, one budget. See docs/sirens-echo-issues.md and sirens-echo#413.
-	reply = AssembleReply(reply, replyLimitOf(turn), result.ToolCalls...)
+	reply, whole := fitWithOverflow(reply, replyLimitOf(turn), result.ToolCalls)
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
 	a.settleWithSpan(turnCtx, progress.settleDelay(), progress.Settle)
 
-	if err := a.deliverOrReport(turnCtx, turn, reply); err != nil {
+	if err := a.deliverOrReport(turnCtx, turn, reply, whole); err != nil {
 		return err
 	}
 	// The answer is the outcome, so nothing is left to describe work in flight.
@@ -1150,8 +1150,8 @@ func (a *Agent) runTurn(
 
 // deliverOrReport sends the reply and, when that fails, records the notice
 // outcome separately. The turn's verdict is the send. See sirens-echo#675.
-func (a *Agent) deliverOrReport(ctx context.Context, turn turnIO, reply string) error {
-	err := a.sendReply(ctx, turn, reply)
+func (a *Agent) deliverOrReport(ctx context.Context, turn turnIO, reply, whole string) error {
+	err := a.sendReply(ctx, turn, reply, whole)
 	if err == nil {
 		return nil
 	}
@@ -1229,7 +1229,9 @@ func (a *Agent) notifyFailure(ctx context.Context, turn turnIO, notice string) e
 		failureNoticeTimeout,
 	)
 	defer cancel()
-	return a.sendReply(withoutThreading(noticeCtx), turn, noticeWithTrace(ctx, notice))
+	return a.sendReply(
+		withoutThreading(noticeCtx), turn, noticeWithTrace(ctx, notice), nothingWithheld,
+	)
 }
 
 // settleWithSpan names the deliberate hold before a reply lands. Without it the
@@ -1255,18 +1257,22 @@ func withoutThreading(ctx context.Context) context.Context {
 	return context.WithValue(ctx, turnProgressKey{}, (*turnProgress)(nil))
 }
 
-func (a *Agent) sendReply(ctx context.Context, turn turnIO, content string) error {
+// sendReply delivers one message. whole is the complete reply when the
+// transport's budget cut it. See docs/sirens-echo-reply-overflow.md.
+func (a *Agent) sendReply(ctx context.Context, turn turnIO, content, whole string) error {
 	replyCtx, replySpan := a.telemetry.StartSpan(ctx, "community.reply")
 	a.telemetry.Info(
 		replyCtx,
 		"turn.reply.ready",
 		slog.String("transport", turn.Transport()),
 		slog.Int("reply_bytes", len(content)),
+		// Zero rather than absent, so no attachment and an old pod stay apart.
+		slog.Int("attached_bytes", len(whole)),
 	)
 	var err error
 	if turn.Transport() == transportDiscord {
 		discordCtx, discordSpan := a.telemetry.StartSpan(replyCtx, "discord.reply")
-		err = turn.Reply(discordCtx, content)
+		err = deliverWithOverflow(discordCtx, turn, content, whole)
 		if err != nil {
 			a.telemetry.MarkSpanError(discordSpan, exceptionDiscordReplyFailed)
 			// The reply was composed and paid for, so why it did not land is the
@@ -1493,6 +1499,22 @@ func (t *discordMessageTurn) Unreact(_ context.Context, emoji string) error {
 }
 
 func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
+	return t.send(ctx, content, nil)
+}
+
+// ReplyWithOverflow sends the message with the whole reply beside it. See
+// docs/sirens-echo-reply-overflow.md.
+func (t *discordMessageTurn) ReplyWithOverflow(ctx context.Context, content, whole string) error {
+	return t.send(ctx, content, []*discordgo.File{{
+		Name:        overflowFileName,
+		ContentType: "text/plain; charset=utf-8",
+		Reader:      strings.NewReader(whole),
+	}})
+}
+
+func (t *discordMessageTurn) send(
+	ctx context.Context, content string, files []*discordgo.File,
+) error {
 	span := trace.SpanFromContext(ctx)
 	span.SetAttributes(discordMessageSpanAttributes(
 		"send",
@@ -1515,6 +1537,7 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 	}
 	reply, err := t.session.ChannelMessageSendComplex(target, &discordgo.MessageSend{
 		Content:   truncateRunes(content, discordReplyLimit),
+		Files:     files,
 		Reference: reference,
 		AllowedMentions: &discordgo.MessageAllowedMentions{
 			Parse:       []discordgo.AllowedMentionType{},

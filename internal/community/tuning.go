@@ -180,6 +180,9 @@ const (
 	// discordReplyLimit is the send budget for one message. It sits under
 	// Discord's own 2000 so a reply the harness extended still arrives whole.
 	discordReplyLimit = 1990
+	// replyAttachmentBytes bounds the file an overflowing reply is sent as,
+	// matching what the scratchpad stores and well under Discord's own floor.
+	replyAttachmentBytes = maxScratchFileBytes
 	// threadNameRunes is Discord's cap. A longer name is refused outright.
 	threadNameRunes = 100
 )
