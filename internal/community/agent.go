@@ -153,22 +153,23 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(extras) > 1 {
 		modelTools = &CompositeProvider{Providers: extras}
 	}
+	proxy := ProxyClient{
+		BaseURL:       cfg.AgentProxyURL,
+		Model:         cfg.AgentProxyModel,
+		AuditRole:     cfg.Definition.AuditRole,
+		Attribution:   cfg.Definition.Identity,
+		ResponseStyle: cfg.Definition.ResponseStyle,
+		Harness:       deploymentHarness(cfg),
+		HTTPClient:    httpClient,
+		Tools:         modelTools,
+		Telemetry:     telemetry,
+		Budget:        cfg.Definition.ModelBudget,
+	}
 	agent := &Agent{
-		cfg:     cfg,
-		session: session,
-		tools:   tools,
-		completions: ProxyClient{
-			BaseURL:       cfg.AgentProxyURL,
-			Model:         cfg.AgentProxyModel,
-			AuditRole:     cfg.Definition.AuditRole,
-			Attribution:   cfg.Definition.Identity,
-			ResponseStyle: cfg.Definition.ResponseStyle,
-			Harness:       deploymentHarness(cfg),
-			HTTPClient:    httpClient,
-			Tools:         modelTools,
-			Telemetry:     telemetry,
-			Budget:        cfg.Definition.ModelBudget,
-		},
+		cfg:               cfg,
+		session:           session,
+		tools:             tools,
+		completions:       proxy,
 		systemPrompt:      systemPrompt,
 		phrases:           phrases,
 		telemetry:         telemetry,
@@ -189,6 +190,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		agent.taxonomy = taxonomy
 	}
 	agent.identifiers = NewIdentifierGuard(cfg, roster)
+	// Offered to the repair loop only after the guard exists, because the checks
+	// read it. See docs/sirens-echo-reply-repair.md.
+	proxy.ValidateReply = agent.repairableReplyChecks
+	agent.completions = proxy
 	agent.ensureRuntimeDefaults()
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err
@@ -1104,6 +1109,21 @@ func (a *Agent) runTurn(
 	if err == nil {
 		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
+	redacted := 0
+	if err != nil {
+		// The last rung: repair could not fix the block, so the block goes and
+		// the rest is delivered. See docs/sirens-echo-reply-redaction.md.
+		if kept, blocks, ok := a.redactRefusedBlocks(reply, refused, prompt, result); ok {
+			a.telemetry.Info(
+				validateCtx,
+				"response.check.redacted",
+				slog.String("check", refused),
+				slog.String("refused", err.Error()),
+				slog.Int("blocks", blocks),
+			)
+			reply, redacted, err = kept, blocks, nil
+		}
+	}
 	if err != nil {
 		// The rule and its sentence. The catalog owns the exception fields, so
 		// the sentence stays beside them. See docs/sirens-echo-refusal-reason.md.
@@ -1122,7 +1142,16 @@ func (a *Agent) runTurn(
 		validateSpan.End()
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
-	validateSpan.SetAttributes(attribute.String("response.check", replyCheckNone))
+	// A redacted reply names the rule it lost a block to. Absence of the count
+	// is not something a reader should have to interpret, so it is always set.
+	passed := replyCheckNone
+	if redacted > 0 {
+		passed = refused
+	}
+	validateSpan.SetAttributes(
+		attribute.String("response.check", passed),
+		attribute.Int("response.redacted.blocks", redacted),
+	)
 	validateSpan.End()
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it

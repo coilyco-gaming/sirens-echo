@@ -43,17 +43,24 @@ different problems with different fixes. Every other check holds one rule.
 The span also carries `response.check.reason`, the sentence the validator wrote.
 See [why a check refused a reply](sirens-echo-refusal-reason.md).
 
+**A named check no longer always means a discarded turn.** A non-zero
+`response.redacted.blocks`, present on every turn, is a reply that was cut and
+sent rather than thrown away. See [redaction](sirens-echo-reply-redaction.md).
+
 Before this, a rejected reply produced `turn.stage.failed` with
 `error_type: model_failed`, which reads as the backend failing. It was the
 harness refusing the model's output, and nothing said which rule did it. See
 sirens-echo#651, where two correct answers were discarded and reported as a
 backend outage.
 
-The completion layer has its own contract check, which runs before any of
-these and refuses on parse or response style. `model.response.repair` records
-what it refused rather than only that it happened, and `model.response.refused`
-records the reason a turn gave up. That path reports `stage=model`, which is
-true about the code and false about the world.
+The completion layer runs these checks too, before the authoritative pass, so a
+refusal reaches the model that can still fix the clause. `model.response.repair`
+records what it refused rather than only that it happened, and
+`model.response.refused` records the reason a turn gave up. That path reports
+`stage=model`, which is true about the code and false about the world, and it is
+why a reply the repair budget could not fix is handed back to the pass above
+rather than failed there. See [repairing a refused
+reply](sirens-echo-reply-repair.md).
 
 **Naming a check does not change any verdict.** Whether a rule is right, and
 whether exhausting the repair path should report an outage, are decisions on

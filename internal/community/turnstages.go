@@ -46,6 +46,17 @@ func refusedBy(family string, err error) string {
 	return family
 }
 
+// repairableReplyChecks is runReplyChecks as the completion layer's repair loop
+// consumes it. The error alone, because a refusal already carries its rule.
+func (a *Agent) repairableReplyChecks(
+	reply string,
+	prompt TurnPrompt,
+	executed []ExecutedTool,
+) error {
+	_, _, err := a.runReplyChecks(reply, prompt, CompletionResult{ToolCalls: executed})
+	return err
+}
+
 // runReplyChecks runs the checks in order and reports which one refused. The
 // order is the contract, so this is a slice rather than a chain of conditions.
 func (a *Agent) runReplyChecks(
