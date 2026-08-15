@@ -319,11 +319,11 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 	}
 }
 
-// promptBudgets ratchet the tracked snapshots, and are not targets. Echo's rose
-// from 21459 on composing ops. See docs/sirens-echo-prompt-budget.md.
+// promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
+// is recorded in docs/sirens-echo-prompt-budget.md with its cause.
 var promptBudgets = map[string]int{
 	"sirens-echo.prompt.txt": 21976,
-	"sirens-deep.prompt.txt": 11600,
+	"sirens-deep.prompt.txt": 12260,
 }
 
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.

@@ -43,3 +43,19 @@ It also does not judge content. A registry of complete URLs is larger than a
 template the model fills in, and it is larger on purpose, because a model with
 no closed list invents addresses. That trade was made deliberately and the
 budget is where it stays visible.
+
+## Raises, and what caused each
+
+Every entry in `promptBudgets` is a ratchet on an observed size. A raise is only
+correct when the growth was intended, so each one is recorded here rather than
+argued in the diff.
+
+- **Echo, to 21976**, from 21459. Composing the ops role.
+- **Deep, to 12260**, from 11600, on 2026-08-15. Deep gained
+  `issue_tracker: forgejo`, and naming a tracker renders the filing
+  instructions Echo already carried. The whole 863 bytes is that block. No
+  policy root was added, and no content was authored for Deep specifically.
+
+Deep's two profiles are not converging by accident. Deep now carries the same
+filing instructions as Echo because it does the same filing, and the budget gap
+between the two remains the local policy roots rather than the tracker.

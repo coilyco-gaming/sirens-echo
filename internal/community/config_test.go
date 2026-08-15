@@ -36,9 +36,9 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 	if definition.Channel != "" {
 		t.Fatalf("channel = %q", definition.Channel)
 	}
-	// Forgejo carries bounded writes, so the automatic tracker stays absent.
-	// See docs/sirens-echo-tools.md.
-	if definition.IssueTracker != "" {
+	// Deep ends a turn by writing, same as Echo. Asserted empty until Kai
+	// reversed it on 2026-08-15; the guardfile bound is what keeps it safe.
+	if definition.IssueTracker != "forgejo" {
 		t.Fatalf("issue tracker = %q", definition.IssueTracker)
 	}
 	if len(definition.LocalSkillRoots) != 1 ||
