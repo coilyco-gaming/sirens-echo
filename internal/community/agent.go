@@ -303,18 +303,12 @@ func loadRoster(cfg Config) ([]MCPServerDefinition, error) {
 	return nil, fmt.Errorf("issue_tracker %q names no server in the MCP roster", tracker)
 }
 
-// buildJobRunner wires durable work when the deployment asked for it. An empty
-// store directory keeps jobs in memory. See docs/sirens-echo-jobs.md.
+// buildJobRunner wires durable work when the deployment asked for it. See
+// docs/sirens-echo-jobs-store.md for which variable selects which store.
 func (a *Agent) buildJobRunner() error {
-	var store JobStore
-	if a.cfg.JobStoreDir == "" {
-		store = NewMemoryJobStore(nil)
-	} else {
-		opened, err := OpenFileJobStore(a.cfg.JobStoreDir, nil)
-		if err != nil {
-			return err
-		}
-		store = opened
+	store, err := openJobStore(a.cfg)
+	if err != nil {
+		return err
 	}
 	executors, err := buildExecutingKinds(a.cfg, a.access)
 	if err != nil {
