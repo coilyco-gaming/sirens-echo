@@ -38,6 +38,9 @@ type RateCase struct {
 	MaxFailureRate float64 `yaml:"max_failure_rate"`
 	// Observed records the rate that motivated the case, for the reader.
 	Observed string `yaml:"observed,omitempty"`
+	// Shape classifies the case for the relative brevity comparison, by what a
+	// correct reply looks like. See docs/sirens-echo-brevity.md.
+	Shape string `yaml:"shape,omitempty"`
 }
 
 // RatePack is the source-controlled measurement pack. It gates no deployment.
@@ -138,6 +141,8 @@ type RateDataset struct {
 	Schema     string         `yaml:"schema"`
 	Provenance RateProvenance `yaml:"provenance"`
 	Records    []RateRecord   `yaml:"records"`
+	// Brevity is the cross-case comparison, which no per-reply check can make.
+	Brevity RateBrevity `yaml:"brevity"`
 }
 
 // LoadRatePack reads and validates the measurement pack.
@@ -177,6 +182,12 @@ func prepareRateCase(rateCase *RateCase) error {
 		return fmt.Errorf(
 			"rate case %s max_failure_rate must be a fraction between 0 and 1, got %v",
 			rateCase.ID, rateCase.MaxFailureRate,
+		)
+	}
+	if !validShape(rateCase.Shape) {
+		return fmt.Errorf(
+			"rate case %s shape must be %q, %q, or unset, got %q",
+			rateCase.ID, ShapeBoundary, ShapeConversational, rateCase.Shape,
 		)
 	}
 	return nil
@@ -253,6 +264,7 @@ func runRate(
 		dataset.Records = append(dataset.Records, record)
 	}
 	cutShort := ctx.Err()
+	dataset.Brevity = measureRateBrevity(pack, dataset.Records)
 	encoded, err := yaml.Marshal(dataset)
 	if err != nil {
 		return fmt.Errorf("encode rate dataset: %w", err)
@@ -266,7 +278,7 @@ func runRate(
 			len(dataset.Records), len(pack.Cases), cutShort,
 		)
 	}
-	return rateVerdict(dataset.Records)
+	return rateVerdict(dataset.Records, dataset.Brevity)
 }
 
 func measureRateCase(
@@ -379,7 +391,7 @@ func toolNames(result CompletionResult) []string {
 
 // rateVerdict fails on a breached threshold and on a case with no attempts.
 // An unmeasured case is not a pass. See docs/sirens-echo-rate.md.
-func rateVerdict(records []RateRecord) error {
+func rateVerdict(records []RateRecord, brevity RateBrevity) error {
 	problems := make([]string, 0)
 	for _, record := range records {
 		if !record.Measured {
@@ -397,6 +409,9 @@ func rateVerdict(records []RateRecord) error {
 				record.Errors, record.Runs,
 			))
 		}
+	}
+	if problem := brevityProblem(brevity); problem != "" {
+		problems = append(problems, problem)
 	}
 	if len(problems) > 0 {
 		return fmt.Errorf("rate run:\n%s", strings.Join(problems, "\n"))
