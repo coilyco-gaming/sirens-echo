@@ -76,4 +76,5 @@ fields.
 ## See also
 
 * [Notices](sirens-echo-notices.md) - the phrases a member reads.
+* [The turn verdict](sirens-echo-turn-verdict.md) - which event to count.
 * [Observability](sirens-echo-observability.md) - reading these events live.

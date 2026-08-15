@@ -11,6 +11,26 @@ import (
 // A delivery failure used to record that it happened and discard why. See
 // docs/sirens-echo-delivery-failures.md.
 
+// undeliveredReply marks a turn error as the reply send itself failing. See
+// docs/sirens-echo-turn-verdict.md and #292.
+type undeliveredReply struct{ err error }
+
+func (u *undeliveredReply) Error() string { return u.err.Error() }
+
+func (u *undeliveredReply) Unwrap() error { return u.err }
+
+// turnFailureAttrs classifies a turn error, which is a Discord verdict only
+// when the reply send is what failed.
+func turnFailureAttrs(err error) []slog.Attr {
+	var undelivered *undeliveredReply
+	if !errors.As(err, &undelivered) {
+		// A distinct state rather than a plausible one: the turn ended for a
+		// reason Discord was never asked about.
+		return []slog.Attr{slog.String("discord_failure", "not_attempted")}
+	}
+	return discordFailureAttrs(undelivered.Unwrap())
+}
+
 // discordFailureAttrs describes a failed send in closed-set terms. Status and
 // code separate rate limiting, length, permissions, and a dropped gateway.
 func discordFailureAttrs(err error) []slog.Attr {

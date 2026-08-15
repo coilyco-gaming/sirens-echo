@@ -201,6 +201,71 @@ func TestARejectionKeepsItsVerdictBesideAContextError(t *testing.T) {
 	}
 }
 
+// Thirteen of fourteen classified turn failures were stage failures wearing a
+// Discord verdict, which is why every sample read no_response. See #292.
+func TestATurnThatNeverSentIsNotADiscordVerdict(t *testing.T) {
+	t.Parallel()
+	for name, err := range map[string]error{
+		"the model stage failed":     errors.New("proxy returned 503"),
+		"the turn ran out of budget": context.DeadlineExceeded,
+		"the queue gave up first":    errors.New("turn waited longer than 30s for the execution slot"),
+		"a stage failure joined its notice": errors.Join(
+			context.DeadlineExceeded, errors.New("still refused"),
+		),
+	} {
+		failure, ok := attrValue(turnFailureAttrs(err), "discord_failure")
+		if !ok || failure.String() != "not_attempted" {
+			t.Errorf("%s: failure = %v, want not_attempted", name, failure)
+		}
+	}
+}
+
+// Driven through the seam rather than asserted about the marker, so classifying
+// the turn error directly again fails here.
+func TestASendThatFailedKeepsItsVerdictAtTheTurn(t *testing.T) {
+	t.Parallel()
+	agent := &Agent{telemetry: telemetryOrNoop(nil)}
+	turn := &rejectingTurn{code: 50013, status: http.StatusForbidden}
+	err := agent.deliverOrReport(context.Background(), turn, "the answer")
+	if err == nil {
+		t.Fatal("a failed send reported success")
+	}
+	attrs := turnFailureAttrs(err)
+	failure, ok := attrValue(attrs, "discord_failure")
+	if !ok || failure.String() != "rest_error" {
+		t.Fatalf("failure = %v, want rest_error", failure)
+	}
+	status, ok := attrValue(attrs, "discord_status")
+	if !ok || status.String() != "403" {
+		t.Errorf("discord_status = %v, want 403", status)
+	}
+	code, ok := attrValue(attrs, "discord_code")
+	if !ok || code.String() != "50013" {
+		t.Errorf("discord_code = %v, want 50013", code)
+	}
+}
+
+// rejectingTurn answers every send with the rejection Discord would.
+type rejectingTurn struct {
+	code   int
+	status int
+}
+
+func (t *rejectingTurn) RequestID() string        { return "rejected" }
+func (t *rejectingTurn) Requester() string        { return "318190481467244544" }
+func (t *rejectingTurn) Transport() string        { return transportDiscord }
+func (t *rejectingTurn) Current() TranscriptEntry { return TranscriptEntry{} }
+func (t *rejectingTurn) History(context.Context) ([]TranscriptEntry, error) {
+	return nil, nil
+}
+
+func (t *rejectingTurn) Reply(context.Context, string) error {
+	return &discordgo.RESTError{
+		Response: &http.Response{StatusCode: t.status},
+		Message:  &discordgo.APIErrorMessage{Code: t.code},
+	}
+}
+
 // A rejection carrying no response still names its class, so the reordering
 // trades a wrong label for a correct one rather than for a missing one.
 func TestABareRejectionStillClassifiesWithoutInventingAStatus(t *testing.T) {

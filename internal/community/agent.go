@@ -834,7 +834,7 @@ func (a *Agent) handleMessage(
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
 		a.telemetry.Error(receiveCtx, "discord.turn.failed", append(
 			[]slog.Attr{slog.String("error_type", "turn_failed")},
-			discordFailureAttrs(err)...,
+			turnFailureAttrs(err)...,
 		)...)
 	}
 }
@@ -1158,7 +1158,9 @@ func (a *Agent) deliverOrReport(ctx context.Context, turn turnIO, reply, whole s
 	// Recorded, not joined. One verdict cannot say whether the member got
 	// nothing or got the answer and no apology.
 	_ = a.reportUndelivered(ctx, turn)
-	return err
+	// Marked as the send, so the turn event classifies a Discord verdict only
+	// where one exists. See #292.
+	return &undeliveredReply{err: err}
 }
 
 // reportUndelivered tells a member the answer existed and did not arrive. One
