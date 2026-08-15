@@ -1109,6 +1109,21 @@ func (a *Agent) runTurn(
 	if err == nil {
 		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
+	redacted := 0
+	if err != nil {
+		// The last rung: repair could not fix the block, so the block goes and
+		// the rest is delivered. See docs/sirens-echo-reply-redaction.md.
+		if kept, blocks, ok := a.redactRefusedBlocks(reply, refused, prompt, result); ok {
+			a.telemetry.Info(
+				validateCtx,
+				"response.check.redacted",
+				slog.String("check", refused),
+				slog.String("refused", err.Error()),
+				slog.Int("blocks", blocks),
+			)
+			reply, redacted, err = kept, blocks, nil
+		}
+	}
 	if err != nil {
 		// The rule and its sentence. The catalog owns the exception fields, so
 		// the sentence stays beside them. See docs/sirens-echo-refusal-reason.md.
@@ -1127,7 +1142,16 @@ func (a *Agent) runTurn(
 		validateSpan.End()
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
-	validateSpan.SetAttributes(attribute.String("response.check", replyCheckNone))
+	// A redacted reply names the rule it lost a block to. Absence of the count
+	// is not something a reader should have to interpret, so it is always set.
+	passed := replyCheckNone
+	if redacted > 0 {
+		passed = refused
+	}
+	validateSpan.SetAttributes(
+		attribute.String("response.check", passed),
+		attribute.Int("response.redacted.blocks", redacted),
+	)
 	validateSpan.End()
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it

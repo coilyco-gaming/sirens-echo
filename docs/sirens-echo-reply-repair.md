@@ -47,13 +47,17 @@ checks. A contract refusal that spends it leaves nothing for a harness refusal
 in the same turn, which resolves conservatively: the reply is handed back and
 refused.
 
-## What this does not do
+## When repair is not enough
 
-The member still sees a whole reply or none of it. Partial delivery, and
-preserving a refused reply where an operator can read it, were the other two
-options weighed on sirens-echo#796 and neither is implemented here. Preserving
-the text in particular is not free: a reply refused by `identifier_disclosure`
-carries the value that check exists to keep out of logs.
+A model that will not fix the block hands the reply to
+[redaction](sirens-echo-reply-redaction.md), which removes the block and
+delivers the rest under a mark. Repair runs first because a fixed reply beats a
+holed one, and it is the rung that costs the member nothing to read.
+
+Preserving a refused reply where an operator can read it was the third option
+weighed on sirens-echo#796 and is not implemented. It is not free: a reply
+refused by `identifier_disclosure` carries the value that check exists to keep
+out of logs.
 
 ## Measurement is deliberately unhooked
 

@@ -43,6 +43,10 @@ different problems with different fixes. Every other check holds one rule.
 The span also carries `response.check.reason`, the sentence the validator wrote.
 See [why a check refused a reply](sirens-echo-refusal-reason.md).
 
+**A named check no longer always means a discarded turn.** A non-zero
+`response.redacted.blocks`, present on every turn, is a reply that was cut and
+sent rather than thrown away. See [redaction](sirens-echo-reply-redaction.md).
+
 Before this, a rejected reply produced `turn.stage.failed` with
 `error_type: model_failed`, which reads as the backend failing. It was the
 harness refusing the model's output, and nothing said which rule did it. See
