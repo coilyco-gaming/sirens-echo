@@ -215,7 +215,7 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 		case 2:
 			if len(body.Messages) != 4 {
 				t.Errorf("messages = %#v", body.Messages)
-			} else if got := body.Messages[2].ReasoningContent; got != reasoning {
+			} else if got := reasoningText(body.Messages[2].ReasoningContent); got != reasoning {
 				t.Errorf("reasoning content = %q, want %q", got, reasoning)
 			}
 			_, _ = writer.Write([]byte(
