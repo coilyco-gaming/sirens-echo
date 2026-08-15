@@ -27,9 +27,9 @@ An attempt passes, fails, or errors. An error is a failure of the substrate
 rather than of the agent, such as a 502 from Agent Proxy, and is excluded from
 the denominator. Counting one as a behavioral failure corrupts the rate.
 
-The run exits non-zero only when a case beats its declared ceiling, or when
-every attempt of a case errored. An unmeasured case is not a passing case, and
-reporting it as one would be certifying rather than measuring.
+The run exits non-zero when a case beats its declared ceiling, when every
+attempt of a case errored, or when the boundary median is not below the
+conversational one. An unmeasured case or comparison is not a passing one.
 
 ## The dataset is the evidence
 
