@@ -238,7 +238,7 @@ func TestADeliveredReplyIsRecordedAsDelivered(t *testing.T) {
 	agent.ensureRuntimeDefaults()
 	turn := &httpTurn{requestID: "delivered-turn"}
 
-	if err := agent.sendReply(context.Background(), turn, "Twelve rows."); err != nil {
+	if err := agent.sendReply(context.Background(), turn, "Twelve rows.", nothingWithheld); err != nil {
 		t.Fatalf("sendReply: %v", err)
 	}
 
@@ -262,7 +262,7 @@ func TestAnUndeliveredReplyIsNotRecordedAsDelivered(t *testing.T) {
 	agent := &Agent{telemetry: telemetry}
 	agent.ensureRuntimeDefaults()
 
-	err = agent.sendReply(context.Background(), &undeliverableTurn{}, "Twelve rows.")
+	err = agent.sendReply(context.Background(), &undeliverableTurn{}, "Twelve rows.", nothingWithheld)
 
 	if err == nil {
 		t.Fatal("a refusing transport reported success")

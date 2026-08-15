@@ -108,7 +108,7 @@ func TestTheTurnVerdictDescribesTheSend(t *testing.T) {
 	t.Parallel()
 	agent := &Agent{telemetry: telemetryOrNoop(nil)}
 	turn := &alwaysRefusingTurn{}
-	err := agent.deliverOrReport(context.Background(), turn, "the answer")
+	err := agent.deliverOrReport(context.Background(), turn, "the answer", nothingWithheld)
 	if err == nil {
 		t.Fatal("a failed send reported success")
 	}

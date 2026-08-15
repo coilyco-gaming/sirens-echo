@@ -71,6 +71,7 @@ that every turn finishes.
 ## See also
 
 * [Scratchpad](sirens-echo-scratchpad.md) - the filesystem the remainder lands in.
+* [Reply overflow](sirens-echo-reply-overflow.md) - the outbound half.
 * [Tools](sirens-echo-tools.md) - how a tool surface reaches the model.
 * [Observability](sirens-echo-observability.md) - `mcp.tool.result.bounded` carries
   the saved path.
