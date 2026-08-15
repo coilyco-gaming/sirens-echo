@@ -21,10 +21,23 @@ const (
 	stagePhraseChecking = "checking the reply"
 )
 
-// stageIcons decorate a progress line. Only thinking is specified so far, and
-// an unlisted stage renders plain. See sirens-echo#370.
-var stageIcons = map[string]string{
-	stagePhraseThinking: "\U0001F914",
+// stageDecoration is what a stage line wears. The icon and the ellipsis are
+// separate fields because Kai named them separately. See sirens-echo#370.
+type stageDecoration struct {
+	icon     string
+	trailing bool
+}
+
+// stageDecorations holds the stages Kai has named. An unlisted stage renders
+// plain and unterminated, which is the standing answer for the other three.
+var stageDecorations = map[string]stageDecoration{
+	stagePhraseThinking: {icon: "\U0001F914", trailing: true},
+}
+
+// stageLine renders one stage in whatever it wears.
+func stageLine(phrase string) string {
+	decoration := stageDecorations[phrase]
+	return stageNotice(decoration.icon, phrase, decoration.trailing)
 }
 
 // TurnProgressSink posts and edits one progress line for a turn.
@@ -55,9 +68,19 @@ type turnProgress struct {
 	waits []int
 }
 
-// progressWaitIcon leads a line that says only that time passed. One clock,
-// not a rotation: Kai wrote "if we wanna" for that, which is not a spec.
-const progressWaitIcon = "\U0001F550"
+// progressWaitIcons are the twelve clock faces in order, so the hour hand
+// advances as the lines pile up. Kai asked for the rotation on sirens-echo#370.
+var progressWaitIcons = []string{
+	"\U0001F550", "\U0001F551", "\U0001F552", "\U0001F553",
+	"\U0001F554", "\U0001F555", "\U0001F556", "\U0001F557",
+	"\U0001F558", "\U0001F559", "\U0001F55A", "\U0001F55B",
+}
+
+// progressWaitIcon is the face for the nth elapsed line. It wraps, so the line
+// cap and the length of the rotation stay independent of each other.
+func progressWaitIcon(line int) string {
+	return progressWaitIcons[line%len(progressWaitIcons)]
+}
 
 // maxProgressWaitLines bounds the column a stuck turn can grow. The turn
 // ceiling over the beat is the natural count. See sirens-echo#370.
@@ -66,10 +89,15 @@ const maxProgressWaitLines = 12
 // progressBody renders the stage line plus one line per beat waited, which is
 // the shape Kai drew on sirens-echo#370.
 func progressBody(phrase string, waits []int) string {
-	body := stageNotice(stageIcons[phrase], phrase)
-	for _, seconds := range waits {
+	body := stageLine(phrase)
+	for index, seconds := range waits {
+		// The clock line is the other one Kai terminated, whatever stage it
+		// happens to be narrating. See sirens-echo#370.
 		body += "\n" + stageNotice(
-			progressWaitIcon, fmt.Sprintf("still %s %d seconds", phrase, seconds))
+			progressWaitIcon(index),
+			fmt.Sprintf("still %s %d seconds", phrase, seconds),
+			true,
+		)
 	}
 	return body
 }
@@ -206,7 +234,7 @@ func (p *turnProgress) refresh(ctx context.Context) {
 	p.lastEdit = moment
 	p.mu.Unlock()
 
-	posted, err := p.sink.Post(ctx, stageNotice(stageIcons[phrase], phrase))
+	posted, err := p.sink.Post(ctx, stageLine(phrase))
 	p.record(ctx, "post", err)
 	if err != nil {
 		return

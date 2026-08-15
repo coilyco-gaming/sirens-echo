@@ -11,21 +11,36 @@ import (
 func TestTheThinkingLineIsWhatWasAskedFor(t *testing.T) {
 	t.Parallel()
 	want := "> \U0001F914 `thinking...`"
-	if got := stageNotice(stageIcons[stagePhraseThinking], stagePhraseThinking); got != want {
+	if got := stageLine(stagePhraseThinking); got != want {
 		t.Errorf("thinking notice = %q, want %q", got, want)
 	}
 }
 
-// A stage with no icon renders the plain shape, so the three stages nobody has
-// chosen an icon for are unchanged apart from the ellipsis.
-func TestAnUndecoratedStageKeepsThePlainShape(t *testing.T) {
+// Only thinking and the clock lines are terminated. Kai settled that on
+// sirens-echo#370 after the ellipsis had been applied to all four stages.
+func TestOnlyThinkingCarriesTheEllipsis(t *testing.T) {
 	t.Parallel()
-	got := stageNotice(stageIcons[stagePhraseHistory], stagePhraseHistory)
-	if got != "> `reading recent messages...`" {
-		t.Errorf("history notice = %q", got)
+	for phrase, want := range map[string]string{
+		stagePhraseHistory:  "> `reading recent messages`",
+		stagePhraseTool:     "> `calling a tool`",
+		stagePhraseChecking: "> `checking the reply`",
+	} {
+		if got := stageLine(phrase); got != want {
+			t.Errorf("stage %q = %q, want %q", phrase, got, want)
+		}
 	}
-	if strings.Contains(got, "  ") {
+	if got := stageLine(stagePhraseHistory); strings.Contains(got, "  ") {
 		t.Error("an empty icon left a double space")
+	}
+}
+
+// An icon named later must not bring an ellipsis nobody asked for, which is
+// why the two are separate fields rather than one implying the other.
+func TestAnIconDoesNotImplyAnEllipsis(t *testing.T) {
+	t.Parallel()
+	got := stageNotice("\U0001F528", stagePhraseTool, false)
+	if got != "> \U0001F528 `calling a tool`" {
+		t.Errorf("decorated tool notice = %q", got)
 	}
 }
 
@@ -34,7 +49,7 @@ func TestEveryStageStillMatchesTheNoticeShape(t *testing.T) {
 	for _, phrase := range []string{
 		stagePhraseHistory, stagePhraseThinking, stagePhraseTool, stagePhraseChecking,
 	} {
-		notice := stageNotice(stageIcons[phrase], phrase)
+		notice := stageLine(phrase)
 		if !noticeShape.MatchString(notice) {
 			t.Errorf("stage %q renders outside the notice shape: %q", phrase, notice)
 		}
@@ -67,7 +82,7 @@ func TestOnlyANonASCIIIconCanLeadANotice(t *testing.T) {
 // license anything inside the phrase.
 func TestTheDecoratedBodyIsStillSanitized(t *testing.T) {
 	t.Parallel()
-	got := stageNotice("\U0001F914", "Thinking: about <@123> & things!")
+	got := stageNotice("\U0001F914", "Thinking: about <@123> & things!", true)
 	if !noticeShape.MatchString(got) {
 		t.Fatalf("sanitized notice escapes the shape: %q", got)
 	}

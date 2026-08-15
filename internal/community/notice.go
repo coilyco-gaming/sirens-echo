@@ -48,10 +48,13 @@ func noticeBody(phrase string) string {
 	return clean
 }
 
-// stageNotice says what is happening and that it is still happening. An empty
-// icon renders the plain shape, so an undecorated stage is unchanged.
-func stageNotice(icon, phrase string) string {
-	body := noticeBody(phrase) + "..."
+// stageNotice says what is happening, and with trailing set that it is still
+// happening. An empty icon renders the plain shape.
+func stageNotice(icon, phrase string, trailing bool) string {
+	body := noticeBody(phrase)
+	if trailing {
+		body += "..."
+	}
 	if strings.TrimSpace(icon) == "" {
 		return noticeOpen + body + noticeClose
 	}
