@@ -55,20 +55,6 @@ func appendPrefillNoteWithin(reply string, limit int, note prefillNote) string {
 	return appendServiceLine(reply, limit, rendered)
 }
 
-// threadPrefillOn reports whether this parent channel opted in. An empty list
-// is the shipped default and reads as off for every channel.
-func threadPrefillOn(opted []string, parentChannelID string) bool {
-	if parentChannelID == "" {
-		return false
-	}
-	for _, id := range opted {
-		if id == parentChannelID {
-			return true
-		}
-	}
-	return false
-}
-
 // messageReader is the half of a Discord session a thread read needs, so the
 // walk is testable without one.
 type messageReader interface {

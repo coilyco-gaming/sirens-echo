@@ -179,31 +179,6 @@ func TestNoTruncationAddsNothingToTheReply(t *testing.T) {
 	}
 }
 
-// Off is the shipped default, and an empty list must read as off rather than
-// as unset-means-on.
-func TestTheToggleIsOffForEveryChannelByDefault(t *testing.T) {
-	t.Parallel()
-	configured := []string{"111111111111111111", "222222222222222222"}
-	for _, id := range configured {
-		if threadPrefillOn(nil, id) {
-			t.Errorf("channel %s defaulted to on", id)
-		}
-		if threadPrefillOn([]string{}, id) {
-			t.Errorf("channel %s read an empty list as on", id)
-		}
-	}
-	if !threadPrefillOn(configured, configured[1]) {
-		t.Error("an opted-in channel read as off")
-	}
-	if threadPrefillOn(configured, "333333333333333333") {
-		t.Error("a channel outside the list read as on")
-	}
-	// A turn outside a thread has no parent to key on and must never opt in.
-	if threadPrefillOn(configured, "") {
-		t.Error("an empty channel id read as on")
-	}
-}
-
 // Outside a thread nothing changes, which is the ordinary window read in the
 // ordinary order.
 func TestOutsideAThreadTheWindowIsUnchanged(t *testing.T) {
@@ -268,48 +243,43 @@ func discordEnv(t *testing.T, channels string) {
 	t.Setenv("AGENT_PROXY_MODEL", "model")
 }
 
-// The acceptance asks for default-off verified at boot rather than assumed, so
-// this reads the resolved state for every configured channel.
-func TestEveryConfiguredChannelLoadsWithThreadPrefillOff(t *testing.T) {
-	discordEnv(t, "1024000000000000001,1024000000000000002")
-	cfg, err := LoadConfig()
+// Every thread reads whole, with nothing to configure. The per-channel toggle
+// was removed on sirens-echo#769: this is not a per-channel thing.
+func TestEveryThreadReadsWholeWithNothingConfigured(t *testing.T) {
+	t.Parallel()
+	reader := threadOf(250, "hello")
+	inside := &discordMessageTurn{
+		message:     &discordgo.Message{ID: "999999", ChannelID: "thread-1"},
+		limit:       3,
+		wholeThread: true,
+	}
+
+	messages, capped, err := readTurnHistory(
+		reader, inside.wholeThread,
+		inside.message.ChannelID, inside.message.ID, inside.limit,
+	)
+
 	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
+		t.Fatalf("readTurnHistory: %v", err)
 	}
-	if len(cfg.ThreadPrefillChannelIDs) != 0 {
-		t.Fatalf("an unset toggle resolved to %#v", cfg.ThreadPrefillChannelIDs)
+	if capped {
+		t.Error("a 250-message thread reported capped")
 	}
-	for _, id := range cfg.DiscordChannelIDs {
-		if threadPrefillOn(cfg.ThreadPrefillChannelIDs, id) {
-			t.Errorf("configured channel %s shipped with whole-thread prefill on", id)
-		}
+	// The window limit of 3 must not bound a thread read, which is the whole
+	// point of the feature.
+	if len(messages) != 250 {
+		t.Errorf("read %d messages, want the whole thread", len(messages))
 	}
 }
 
-// A toggle naming a channel that can never summon is dead config, and silence
-// about it is how a flag ends up believed to be on when it is not.
-func TestAToggleForAnUnadmittedChannelFailsAtBoot(t *testing.T) {
+// A deployment may still carry the retired env var. It is inert now, and a
+// stale value must not fail boot for a service that no longer reads it.
+func TestTheRetiredToggleEnvVarIsInert(t *testing.T) {
 	discordEnv(t, "1024000000000000001")
 	t.Setenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS", "1024000000000000009")
-	if _, err := LoadConfig(); err == nil ||
-		!strings.Contains(err.Error(), "does not admit") {
-		t.Errorf("an unadmitted channel loaded: %v", err)
-	}
-}
 
-// The opt-in itself has to work, or the whole feature is unreachable.
-func TestAnAdmittedChannelOptsIn(t *testing.T) {
-	discordEnv(t, "1024000000000000001,1024000000000000002")
-	t.Setenv("SIRENS_ECHO_THREAD_PREFILL_CHANNELS", "1024000000000000002")
-	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("LoadConfig: %v", err)
-	}
-	if !threadPrefillOn(cfg.ThreadPrefillChannelIDs, "1024000000000000002") {
-		t.Error("the opted-in channel resolved off")
-	}
-	if threadPrefillOn(cfg.ThreadPrefillChannelIDs, "1024000000000000001") {
-		t.Error("opting one channel in opted its sibling in too")
+	if _, err := LoadConfig(); err != nil {
+		t.Errorf("a stale thread-prefill toggle failed boot: %v", err)
 	}
 }
 
