@@ -1,8 +1,8 @@
 # Sirens Echo observability
 
 Accepted `#bots` and private HTTP turns are observable without copying content
-into telemetry. Kubernetes stdout carries JSON metadata logs to the SigNoZ
-stack that also receives OTLP/HTTP traces and metrics.
+into telemetry. Logs, traces, and metrics all reach SigNoZ over OTLP/HTTP, and
+logs stay on stdout too. See [log export](sirens-echo-log-export.md).
 
 ## Metadata logs
 

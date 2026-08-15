@@ -5,6 +5,8 @@ answered stays in [response service features](features-response-service.md).
 
 - Transport-aware OpenTelemetry ingress and joined turn traces end to end
 - Trace-correlated metadata logs with byte counts and no member or model text
+- Logs exported over OTLP beside traces and metrics, sharing one `service.name`,
+  and kept on stdout so `kubectl logs` survives a SigNoZ outage
 - Turn, latency, model-call, tool-call, admission, and failure metrics, plus a
   build-time closed exception catalog tagged by stage, outcome, and fault
 - Caller and service faults split on every exception, declared per code so a new
