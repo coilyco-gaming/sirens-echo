@@ -227,10 +227,7 @@ cases:
 // must fail here rather than at the end of a live run.
 func TestTheTrackedPacksClassifyBothSides(t *testing.T) {
 	t.Parallel()
-	for _, path := range []string{
-		"../../agent/rate-deep.yaml",
-		"../../agent/rate-echo.yaml",
-	} {
+	for _, path := range trackedRatePackPaths(t) {
 		pack, err := LoadRatePack(path)
 		if err != nil {
 			t.Fatalf("LoadRatePack %s: %v", path, err)

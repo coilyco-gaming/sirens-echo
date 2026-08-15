@@ -40,3 +40,16 @@ func trackedDefinitionPaths(t *testing.T) []string {
 	t.Helper()
 	return globAll(t, []string{"..", "..", "agents", "*", "definition.yaml"})
 }
+
+// trackedRatePackPaths is each agent's rate pack, the only packs carrying the
+// shape a comparison reads.
+func trackedRatePackPaths(t *testing.T) []string {
+	t.Helper()
+	return globAll(t, []string{"..", "..", "agents", "*", "packs", "rate.yaml"})
+}
+
+// agentOf names the agent a tracked path belongs to, so a failure names it
+// rather than printing a path the reader has to parse.
+func agentOf(path string) string {
+	return filepath.Base(filepath.Dir(filepath.Dir(path)))
+}
