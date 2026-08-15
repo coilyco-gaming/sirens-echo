@@ -108,8 +108,10 @@ func TestBuildSystemPromptBoundsToolActionsAndAutomaticFollowUp(t *testing.T) {
 		"is not this and is answered normally",
 		"approved Sirens facts",
 		"Use an available MCP tool",
-		"call the configured issue-tracker tool",
-		"Search for an open issue with the same title first",
+		"configured issue-tracker tool",
+		// The dedupe requirement, matched on the obligation rather than on the
+		// sentence carrying it. See filingtrigger_test.go for the rule itself.
+		"Search first",
 		"Announce the filing in the same reply",
 		"never attach labels",
 		"only when the tool result in this turn confirms it",
@@ -322,8 +324,8 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 // promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
 // is recorded in docs/sirens-echo-prompt-budget.md with its cause.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 21976,
-	"sirens-deep.prompt.txt": 12260,
+	"sirens-echo.prompt.txt": 22291,
+	"sirens-deep.prompt.txt": 12575,
 }
 
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.

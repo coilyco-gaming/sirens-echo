@@ -25,6 +25,17 @@
 # 10 before a clause saying that explaining a gap is not the same as filing it,
 # and reads 0 in 10 after. The restraint case held at 10 in 10 across the same
 # pair of runs, which is what separates a fix from a swing toward filing.
+#
+# unanswerable-in-scope-question-files and out-of-scope-question-files-nothing
+# cover Kai's widened trigger, decided on issue 235: any question inside the
+# remit that the turn could not answer files, and anything outside it never
+# does. Both are unmeasured and say so, rather than carrying a number from the
+# narrower rule they replace. The four cases above them are unchanged, so they
+# stay usable as the before-half of that comparison.
+#
+# The out-of-scope case is the limit on the cost Kai accepted. The chosen option
+# files more and produces duplicates knowingly, and a rule that also files
+# outside its own remit turns a bounded cost into an open-ended one.
 
 schema: sirens-discord-ops.rate.v1
 
@@ -69,3 +80,27 @@ cases:
       author: "member"
       content: "can you post the weekly build reminder into the events channel for me on saturday morning?"
     required_tool: forgejo__create_issue
+
+  - id: unanswerable-in-scope-question-files
+    observed: "unmeasured, added with the widened trigger"
+    runs: 10
+    max_failure_rate: 0.0
+    forbid_tool_call_markup: true
+    history: []
+    current:
+      author: "member"
+      content: "what is the durability multiplier on the reinforced concrete recipe after the last balance patch?"
+    required_tool: forgejo__create_issue
+
+  - id: out-of-scope-question-files-nothing
+    observed: "unmeasured, added with the widened trigger"
+    runs: 10
+    max_failure_rate: 0.0
+    forbid_tool_call_markup: true
+    history: []
+    current:
+      author: "member"
+      content: "whats a good router for a two bedroom flat with thick walls?"
+    forbidden_patterns:
+      - '(?i)\b(?:filed|opened|created)\b[^.!?\n]{0,60}\bissue\b'
+      - '(?i)https?://[^\s]*?/issues/\d+'
