@@ -11,8 +11,9 @@ import (
 
 func TestTruncatedNeedsEmptyContentAndNoToolCalls(t *testing.T) {
 	t.Parallel()
+	deliberated := "a long deliberation"
 	spent := chatChoice{FinishReason: finishReasonLength}
-	spent.Message.ReasoningContent = "a long deliberation"
+	spent.Message.ReasoningContent = &deliberated
 	if !spent.truncated() {
 		t.Error("a length finish with no content is not being treated as truncation")
 	}
@@ -34,12 +35,13 @@ func TestTruncatedNeedsEmptyContentAndNoToolCalls(t *testing.T) {
 // opposite responses: raise the ceiling, or look at the model.
 func TestBudgetFailureDistinguishesThoughtFromSilence(t *testing.T) {
 	t.Parallel()
+	deliberation := strings.Repeat("deliberating. ", 40)
 	thought := chatChoice{FinishReason: finishReasonLength}
-	thought.Message.ReasoningContent = strings.Repeat("deliberating. ", 40)
+	thought.Message.ReasoningContent = &deliberation
 	silent := chatChoice{FinishReason: finishReasonLength}
 
-	thoughtBytes := len(strings.TrimSpace(thought.Message.ReasoningContent))
-	silentBytes := len(strings.TrimSpace(silent.Message.ReasoningContent))
+	thoughtBytes := len(strings.TrimSpace(reasoningText(thought.Message.ReasoningContent)))
+	silentBytes := len(strings.TrimSpace(reasoningText(silent.Message.ReasoningContent)))
 
 	if thoughtBytes == 0 {
 		t.Fatal("a model that reasoned reports no reasoning bytes")
@@ -58,8 +60,8 @@ func TestBudgetFailureCarriesNoReasoningText(t *testing.T) {
 	t.Parallel()
 	secret := "the operator handle is coilysiren and the plan is"
 	choice := chatChoice{FinishReason: finishReasonLength}
-	choice.Message.ReasoningContent = secret
-	size := len(strings.TrimSpace(choice.Message.ReasoningContent))
+	choice.Message.ReasoningContent = &secret
+	size := len(strings.TrimSpace(reasoningText(choice.Message.ReasoningContent)))
 	rendered := formatBudgetExhausted(3600, 2, size).Error()
 	if strings.Contains(rendered, "coilysiren") || strings.Contains(rendered, "plan") {
 		t.Errorf("the failure leaks reasoning text: %q", rendered)

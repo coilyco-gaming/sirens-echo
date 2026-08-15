@@ -368,7 +368,7 @@ func TestRateVerdictNamesTheErrorsItExcluded(t *testing.T) {
 	err := rateVerdict([]RateRecord{{
 		ID: "decimated", Runs: 5, Attempts: 2, Failed: 1, Errors: 3,
 		FailureRate: 0.5, MaxFailureRate: 0, Breached: true, Measured: true,
-	}})
+	}}, RateBrevity{})
 	if err == nil {
 		t.Fatal("expected a breach")
 	}
@@ -380,7 +380,7 @@ func TestRateVerdictNamesTheErrorsItExcluded(t *testing.T) {
 // An all-errored case was already reported, and stays reported.
 func TestRateVerdictStillFailsAnUnmeasuredCase(t *testing.T) {
 	t.Parallel()
-	err := rateVerdict([]RateRecord{{ID: "gone", Runs: 4, Errors: 4, Measured: false}})
+	err := rateVerdict([]RateRecord{{ID: "gone", Runs: 4, Errors: 4, Measured: false}}, RateBrevity{})
 	if err == nil || !strings.Contains(err.Error(), "not measured") {
 		t.Errorf("unmeasured case not reported: %v", err)
 	}

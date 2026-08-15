@@ -27,7 +27,10 @@ func TestHarnessNoticeSanitizesThePhrase(t *testing.T) {
 		{"uppercase", "HTTP 404 Not Found", "> `http 404 not found`"},
 		{"backtick", "eco tool `not` available", "> `eco tool not available`"},
 		{"newline", "rate limit\nexceeded", "> `rate limit exceeded`"},
-		{"markdown", "**model** _failed_", "> `model failed`"},
+		// The underscore survives, for tool names. Anything markdown could do
+		// with it has to escape the code span first, and the backtick cannot.
+		{"markdown", "**model** _failed_", "> `model _failed_`"},
+		{"tool name", "eco.get_market", "> `eco.get_market`"},
 		{"padding", "  turn failed.  ", "> `turn failed`"},
 		{"empty", "", "> `" + noticeFallback + "`"},
 		{"symbols only", "!!! ***", "> `" + noticeFallback + "`"},

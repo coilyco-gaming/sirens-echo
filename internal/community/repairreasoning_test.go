@@ -37,7 +37,7 @@ func reasoningRepairServer(t *testing.T, reasoning string, seen *string) *httpte
 			if len(body.Messages) != 4 || body.Messages[2].Role != "assistant" {
 				t.Errorf("repair messages = %#v", body.Messages)
 			} else {
-				*seen = body.Messages[2].ReasoningContent
+				*seen = reasoningText(body.Messages[2].ReasoningContent)
 			}
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":"repaired"}}]}`,

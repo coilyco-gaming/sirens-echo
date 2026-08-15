@@ -19,13 +19,13 @@ const (
 	noticeClose = "`"
 )
 
-// noticeAllowed is the phrase alphabet. Backticks, newlines, and markdown
-// cannot survive it, so a notice always renders as one code span.
-var noticeAllowed = regexp.MustCompile(`[^a-z0-9 ,./-]+`)
+// noticeAllowed is the phrase alphabet, underscore included for tool names.
+// See docs/sirens-echo-notices.md and docs/sirens-echo-worklog.md.
+var noticeAllowed = regexp.MustCompile(`[^a-z0-9 ,./_-]+`)
 
 // noticeShape is what every rendered notice matches. A non-ASCII icon may
 // lead it, so model prose still cannot pose as one. See sirens-echo-notices.
-var noticeShape = regexp.MustCompile("^> (?:[^\\x00-\\x7F]+ )?`[a-z0-9][a-z0-9 ,./-]*`$")
+var noticeShape = regexp.MustCompile("^> (?:[^\\x00-\\x7F]+ )?`[a-z0-9][a-z0-9 ,./_-]*`$")
 
 // noticeFallback stands in for a phrase that sanitizes down to nothing, so a
 // caller bug still reaches the member as a notice rather than an empty line.
@@ -48,10 +48,13 @@ func noticeBody(phrase string) string {
 	return clean
 }
 
-// stageNotice says what is happening and that it is still happening. An empty
-// icon renders the plain shape, so an undecorated stage is unchanged.
-func stageNotice(icon, phrase string) string {
-	body := noticeBody(phrase) + "..."
+// stageNotice says what is happening, and with trailing set that it is still
+// happening. An empty icon renders the plain shape.
+func stageNotice(icon, phrase string, trailing bool) string {
+	body := noticeBody(phrase)
+	if trailing {
+		body += "..."
+	}
 	if strings.TrimSpace(icon) == "" {
 		return noticeOpen + body + noticeClose
 	}
