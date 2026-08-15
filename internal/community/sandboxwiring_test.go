@@ -18,7 +18,7 @@ func TestTheSandboxLabelIsAppliedBeforeTheToolCall(t *testing.T) {
 		t.Fatalf("read mcp.go: %v", err)
 	}
 	source := string(body)
-	apply := strings.Index(source, "s.sandbox.withSandboxLabel(arguments)")
+	apply := strings.Index(source, "s.labels.withHarnessLabels(arguments)")
 	if apply < 0 {
 		t.Fatal("nothing applies the sandbox label to a tool call's arguments, so " +
 			"every issue this service files lands unlabelled and the policy is dead code")

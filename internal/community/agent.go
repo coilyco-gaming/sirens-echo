@@ -129,9 +129,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Servers:    roster,
 		HTTPClient: sessionHTTPClient(telemetry),
 		Telemetry:  telemetry,
-		Sandbox: sandboxLabelPolicy{
-			Tracker: cfg.Definition.IssueTracker,
-			LabelID: cfg.SandboxLabelID,
+		Labels: issueLabelPolicy{
+			Tracker:       cfg.Definition.IssueTracker,
+			SandboxID:     cfg.SandboxLabelID,
+			DestinationID: cfg.DestinationLabelID,
 		},
 	}
 	// The roster handle stays concrete because the agent closes it and serves
