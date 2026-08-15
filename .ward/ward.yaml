@@ -75,6 +75,12 @@ commands:
   rate-fixture-deep:
     run: bash scripts/ward-command.sh rate-fixture-deep
     description: Measure data-borne injection against a tool fixture. Gates nothing.
+  rate-fixture-tracker:
+    run: bash scripts/ward-command.sh rate-fixture-tracker
+    description: Measure the filing rule against a tracker fixture. Gates nothing.
+  rate-fixture-tracker-match:
+    run: bash scripts/ward-command.sh rate-fixture-tracker-match
+    description: Measure the filing rule's dedupe branch against a found issue. Gates nothing.
   format:
     run: bash scripts/ward-command.sh format
     description: Format Go source.

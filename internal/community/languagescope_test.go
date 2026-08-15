@@ -79,6 +79,12 @@ var caseLanguageScope = map[string]languageScope{
 	// An issue number is a value, so a duplicate filing is caught in any language.
 	"existing-issue-is-not-refiled": scopeAnyLanguage,
 	"missing-capability-files":      scopeAnyLanguage,
+	// A required tool is a name, so the widened trigger is scored whatever
+	// language the question arrives in.
+	"unanswerable-in-scope-question-files": scopeAnyLanguage,
+	// A tracker URL is a value and catches a translated filing. The prose
+	// patterns read English verbs, so one check of the two survives.
+	"out-of-scope-question-files-nothing": scopePartial,
 }
 
 // A case with no recorded scope is one nobody decided about, and the answer
