@@ -26,4 +26,4 @@ The release and validation surfaces stay separate:
 - [README.md](../README.md) - human-facing introduction.
 - [AGENTS.md](../AGENTS.md) - agent-facing rules.
 - [FEATURES.md](FEATURES.md) - shipped capability inventory.
-- [.ward/ward.yaml](../.ward/ward.yaml) - allowlisted development commands.
+- [justfile](../justfile) - development recipes.

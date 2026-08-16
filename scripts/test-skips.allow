@@ -5,7 +5,7 @@
 # Removing a test from this list is required the moment it stops skipping,
 # because a stale entry reads as a known exception forever.
 #
-# Checked by `ward exec test-skips`. See docs/sirens-echo-test-skips.md
+# Checked by `just test-skips`. See docs/sirens-echo-test-skips.md
 # and https://forgejo.coilysiren.me/coilyco-gaming/sirens-echo/issues/291.
 
 # Retires itself. It checks a claim capability.md no longer makes, which is a
@@ -21,7 +21,7 @@ TestGraphPatternsNeverReachDeniedSources
 # The Postgres store's SQL, which needs a live database. There is no in-process
 # Postgres, so the choice is an env gate or no SQL coverage at all.
 #
-# These five skip under `ward exec test` and `test-skips` in every environment,
+# These five skip under `just test` and `test-skips` in every environment,
 # including CI, because SIRENS_ECHO_TEST_JOB_STORE_DSN is deliberately not set
 # job-wide. They are not unrun: the `job store SQL` CI step runs exactly this
 # set against a service container, scoping the DSN to that one step so the skip

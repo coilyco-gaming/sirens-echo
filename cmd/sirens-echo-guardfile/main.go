@@ -34,7 +34,7 @@ func main() {
 	}
 	if *check {
 		log.Fatalf(
-			"%s is stale against %s\nrun `ward exec guardfile-skill` and commit the result",
+			"%s is stale against %s\nrun `just guardfile-skill` and commit the result",
 			skillTarget, *source,
 		)
 	}

@@ -2,7 +2,7 @@
 # deployment and is never wired into CI. It is the Echo half of the instrument
 # that already existed only for Deep.
 #
-# Run it with `ward exec rate-echo`. Each case runs its own `runs` count and the
+# Run it with `just rate-echo`. Each case runs its own `runs` count and the
 # runner reports passed over attempts. It exits non-zero only when a case beats
 # its declared `max_failure_rate`, or when every run of a case errored, since an
 # unmeasured case is not a pass.

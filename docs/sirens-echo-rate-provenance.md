@@ -30,7 +30,7 @@ pair to read is `roster` and `fixture` together. Getting this wrong turns a
 meaningful result into a vacuous one: the data-borne injection cases only mean
 something if the payload actually arrived in a tool result.
 
-`runner` is filled automatically by `scripts/ward-command.sh` from the current
+`runner` is filled automatically by `scripts/task.sh` from the current
 checkout, so it is present without anyone remembering it. `SIRENS_ECHO_RUNNER`
 overrides it, and a build carrying a `-X` revision stamp takes precedence over
 both. Provenance that depends on a human remembering is provenance that goes

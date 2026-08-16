@@ -4,7 +4,7 @@
 # silent-success shape docs/sirens-echo-test-skips.md exists to catch.
 #
 # Its DSN is scoped to the `job store SQL` step rather than the job, so the
-# suite above it still skips those tests and .ward/test-skips.allow stays true
+# suite above it still skips those tests and scripts/test-skips.allow stays true
 # locally and in CI alike. See docs/sirens-echo-jobs-store.md.
 #
 # That step runs through ci-job-store-sql.sh rather than a bare `go test`,
@@ -40,22 +40,22 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: build
-        run: bash scripts/ci-command.sh ward exec build
+        run: bash scripts/ci-command.sh just build
 
       - name: Neutral response policy
-        run: bash scripts/ci-command.sh ward exec policy-check
+        run: bash scripts/ci-command.sh just policy-check
 
       - name: vet
-        run: bash scripts/ci-command.sh ward exec vet
+        run: bash scripts/ci-command.sh just vet
 
       - name: test
-        run: bash scripts/ci-command.sh ward exec test
+        run: bash scripts/ci-command.sh just test
 
       - name: reviewed skip set
-        run: bash scripts/ci-command.sh ward exec test-skips
+        run: bash scripts/ci-command.sh just test-skips
 
       - name: role selection drift
-        run: bash scripts/ci-command.sh ward exec role-drift-check
+        run: bash scripts/ci-command.sh just role-drift-check
 
       - name: job store SQL
         env:

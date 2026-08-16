@@ -38,7 +38,7 @@ The reference board has three boundaries across its roles. This repository has
 tens: 13 content classes, 9 reply validators, and prose clauses across five
 policy skill roots. So the case list cannot be hand-maintained, and the bot
 dimension has to collapse or the count multiplies past what a human can grade.
-Boundaries are declared once in `boundaries.yaml` and the board is **derived**
+Boundaries are declared once in `eval/boundaries.yaml`, and the board is **derived**
 from it, so adding a boundary moves the case list on its own.
 
 ## Pairing is the scoring unit
@@ -71,10 +71,10 @@ board is what makes that visible.
 
 ## Commands
 
-Recipes are `just`. This board introduces no `ward` verb, and the existing
-`.ward` command core is being retired in favour of `just`.
+Recipes are `just`. The `.ward` command core was retired in favour of a
+repo-root justfile, and `.ward/ward.yaml` carries catalog metadata only.
 
 ## Open
 
 * Naming. These docs carry a `sirens-echo-` prefix that is a bot name. #836 child 6 owns it.
-* The prose clauses in the five policy skill roots have no machine-readable form, so `boundaries.yaml` cannot be fully derived from source on day one.
+* Six clauses are prose with no machine-readable source, so `just boundaries-check` reports them as undriftable rather than hiding it.

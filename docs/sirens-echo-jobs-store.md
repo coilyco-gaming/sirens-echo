@@ -56,8 +56,8 @@ that tracked inserts alone would answer `ListByThread` from a stale value.
 read and the write are two statements, and the lock is what keeps a refused
 move from leaving a partly-applied record.
 
-Its SQL is covered by the tests named in `.ward/test-skips.allow`, which need a
-live database and therefore skip under `ward exec test`. The `job store SQL` CI
+Its SQL is covered by the tests named in `scripts/test-skips.allow`, which need a
+live database and therefore skip under `just test`. The `job store SQL` CI
 step runs exactly that set against a scratch service container, which is what
 keeps them from being an allowlist entry that never runs anywhere. See
 [every skip is a reviewed line](sirens-echo-test-skips.md).

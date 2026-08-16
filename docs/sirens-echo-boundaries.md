@@ -1,56 +1,71 @@
-# Declined requests, and why this is prose
+# The boundaries declaration
 
-`agent/content-classes.yaml` names six denied classes. Nothing reads it. The
-classifier that would enforce them is still a design decision, so until it
-lands the only thing that can carry these rules is the policy root the model
-reads. That is what `references/boundaries.md` is.
+[`eval/boundaries.yaml`](../eval/boundaries.yaml) declares every boundary this
+deployment holds, once. The evaluation board derives from it rather than being
+maintained beside it, so adding a boundary moves the case list on its own. The
+board's method is [the evaluation board](sirens-echo-eval-board.md).
 
-## What was actually enforcing them before
+## Nothing here names a bot
 
-Nothing in this repository. Two searches settle it: `ContentClassifierPrompt`
-and `Verdict` are defined and never called outside tests, `LoadContentTaxonomy`
-is called only by `policy-check`, and no class id appears in either rendered
-prompt.
+Identity is a deployment concern (aos#778), and naming a bot would violate
+#836's acceptance test. It is also a feasibility constraint. Paired, these
+boundaries are already about as many cases as a human grades in one sitting,
+and a bot dimension would multiply that.
 
-The base model's own alignment was the whole control. That is real, and it is
-also not deployment-specific, not measurable from here, and not something this
-repository can claim. For explicit content it is probably adequate. For a
-suspected minor it is not, because the requirement is a particular refusal
-shape rather than a decline.
+## Fields
 
-## The refusal shape is part of the rule
+* `id` - stable, and what a case is reported under.
+* `origin` - where the boundary actually lives, as `path` or `path#fragment`.
+* `derived` - whether the entry was read out of that source.
+* `rule` - the boundary in one sentence.
+* `inside` - the arm where the agent must act.
+* `outside` - the arm where it must decline, or must not fire.
+* `seed` - an existing breaching record and its issue, where #846 absorbs one.
 
-A sensitive decline names no category and gives no reason. Saying which rule was
-hit tells the next person exactly what to avoid saying, which defeats the rule.
-That is why `ContentClass.Sensitive` changes the refusal shape rather than the
-verdict, and the prose has to carry the same distinction or the two disagree the
-day the classifier lands.
+## The pair is the scoring unit
 
-An ordinary decline may name itself, because a member who can see the boundary
-can work with it instead of spending another message discovering it.
+Every boundary produces exactly two cases and they score together. Without the
+outside arm a degenerate always-decline policy scores perfect conformance,
+which is the defect the reference board added pairing to catch. A boundary
+missing either arm is a failure, not a partial entry, so
+`just boundaries-check` rejects it.
 
-## Where each rule lives
+## Derived against prose
 
-Five classes live in `references/boundaries.md`. Emotional support lives in the
-response policy instead, beside the wider prohibition on entering emotional
-territory at all, because that rule is about more than declining a request. It
-is deliberately not repeated, since two copies of one rule drift apart.
+`derived: true` means the fragment was read out of the named source and
+`just boundaries-check` confirms it is still there. Those come from two
+machine-readable places:
 
-## This is not a filter
+* `agent/content-classes.yaml` - the closed content taxonomy.
+* `internal/community/turnstages.go` - the reply-check constants, with
+  grounding expanded to its four distinct refusal reasons.
 
-Nothing inspects a request before the model sees it. Every line in that file is
-a rule the model may read and still break, which is the same weakness as every
-other prose rule in this repository and the reason the classifier issue stays
-open. The gap worth acting on was between no control and a weak one, not
-between a weak control and a good one.
+`derived: false` means the boundary is prose in a policy skill and the entry
+was written by hand. **The checker cannot tell when one of those clauses
+moves**, so it reports the count as undriftable rather than passing silently.
+Closing that gap means giving the prose clauses a declaration, and it is the
+reason the board is not fully derived on day one.
 
-Cost: Echo's prompt grows about 1500 bytes, paid on every turn forever. That is
-the largest single increase tonight and it buys the only statement of these
-boundaries that exists.
+## Commands
 
-## What replaces this
+```
+just boundaries         # print the paired case list
+just boundaries-check   # fail when a declaration no longer resolves
+```
 
-When the classifier lands, these rules move behind it and this file shrinks to
-whatever the model still needs to know about refusal shape. Nothing here
-forecloses where the classifier runs, whether it is a second model call, or
-whether it is opt-in.
+`boundaries-check` verifies that every `origin` path exists, that every
+`derived` fragment is still present in it, that no `id` repeats, and that no
+boundary is missing an arm. It does not check wording, and it does not run a
+model.
+
+## What it does not do
+
+It holds no questions and no grades. A generator seat reads the pairs and
+writes the questions, the commodity subject answers them, and a human grades.
+Keeping the questions out of this file is what lets the declaration stay the
+thing that derives, rather than becoming a second case list to maintain.
+
+## Related
+
+* [The evaluation board](sirens-echo-eval-board.md) - the method and the triple.
+* [The rate pack](sirens-echo-rate.md) - the instrument the board absorbs.

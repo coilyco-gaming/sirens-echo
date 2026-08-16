@@ -50,7 +50,7 @@ explicit:
   profile without it must return `issue: null` and cannot trigger automatic
   issue follow-up.
 
-`ward exec policy-check` renders and verifies both profiles. Agent Proxy gets
+`just policy-check` renders and verifies both profiles. Agent Proxy gets
 one same-conversation, style-aware repair with tools disabled. JSON structure,
 reply bounds, privacy, action grounding, and invented-channel checks remain
 shared.
