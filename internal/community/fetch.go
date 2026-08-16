@@ -49,6 +49,8 @@ func (s *fetchSession) Close() error { return nil }
 // reference material the way a server's resources do.
 func (s *fetchSession) Grounding() []GroundingDocument { return nil }
 
+func (s *fetchSession) Guidance() []ServerGuidance { return nil }
+
 func (s *fetchSession) Unavailable() []string { return nil }
 
 func (s *fetchSession) Tools() []ToolDefinition {

@@ -119,8 +119,11 @@ var (
 	defaultCallTimeout time.Duration
 	// Grounding bounds. Reference material must not crowd out the turn it is
 	// meant to support.
-	maxGroundingBytes     int
-	maxGroundingDocuments int
+	maxGroundingBytes int
+	// maxServerGuidanceBytes bounds one server's own instructions, which the
+	// server writes and this prompt carries. See sirens-echo#647.
+	maxServerGuidanceBytes int
+	maxGroundingDocuments  int
 )
 
 // Turn progress cadence. Only the wait is a knob. The pair below it is derived,
@@ -354,6 +357,7 @@ func knobs() []knob {
 		overridable(&mcpBackoffMax, "SIRENS_ECHO_MCP_BACKOFF_MAX", 2*time.Minute),
 		overridable(&defaultCallTimeout, "SIRENS_ECHO_TOOL_CALL", 45*time.Second),
 		overridable(&maxGroundingBytes, "SIRENS_ECHO_GROUNDING_BYTES", 8*1024),
+		overridable(&maxServerGuidanceBytes, "SIRENS_ECHO_SERVER_GUIDANCE_BYTES", 2*1024),
 		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
 
 		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 5*time.Second),

@@ -344,6 +344,7 @@ func (s *unnamedToolSession) Tools() []ToolDefinition {
 }
 
 func (s *unnamedToolSession) Grounding() []GroundingDocument { return nil }
+func (s *unnamedToolSession) Guidance() []ServerGuidance     { return nil }
 
 func (s *unnamedToolSession) Unavailable() []string { return nil }
 
