@@ -47,10 +47,18 @@ type GroundingDocument struct {
 	Text   string
 }
 
+// ServerGuidance is one server's own statement of what it is for, taken from
+// the MCP handshake. See docs/sirens-echo-server-guidance.md.
+type ServerGuidance struct {
+	Server string
+	Text   string
+}
+
 // ToolSession is the per-turn MCP capability available to Agent Proxy.
 type ToolSession interface {
 	Tools() []ToolDefinition
 	Grounding() []GroundingDocument
+	Guidance() []ServerGuidance
 	Unavailable() []string
 	Call(ctx context.Context, name string, arguments map[string]any) (ToolResult, error)
 	Close() error
@@ -139,6 +147,7 @@ type registeredMCPTool struct {
 type mcpToolSession struct {
 	tools       []ToolDefinition
 	grounding   []GroundingDocument
+	guidance    []ServerGuidance
 	registered  map[string]registeredMCPTool
 	sessions    []*mcp.ClientSession
 	unavailable []string
@@ -183,6 +192,9 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 			return nil, err
 		}
 		opened.grounding = append(opened.grounding, p.readGrounding(p.turnTraced(ctx), entry)...)
+		if guidance, ok := serverGuidance(entry.definition.Name, entry.session); ok {
+			opened.guidance = append(opened.guidance, guidance)
+		}
 	}
 	// Stated rather than inferred from the span's duration. See
 	// docs/sirens-echo-tool-discovery-telemetry.md.
@@ -603,6 +615,37 @@ func resourcePriority(resource *mcp.Resource) float64 {
 	return resource.Annotations.Priority
 }
 
+// serverGuidance reads the server's own instructions off the handshake.
+// See docs/sirens-echo-server-guidance.md.
+func serverGuidance(name string, session *mcp.ClientSession) (ServerGuidance, bool) {
+	if session == nil {
+		return ServerGuidance{}, false
+	}
+	result := session.InitializeResult()
+	if result == nil {
+		return ServerGuidance{}, false
+	}
+	text, ok := boundGuidanceText(result.Instructions)
+	if !ok {
+		return ServerGuidance{}, false
+	}
+	return ServerGuidance{Server: name, Text: text}, true
+}
+
+// boundGuidanceText trims and bounds a server's instructions. A blank one is
+// absent rather than a named empty section.
+func boundGuidanceText(raw string) (string, bool) {
+	text := strings.TrimSpace(raw)
+	if text == "" {
+		return "", false
+	}
+	// truncateRunes marks the cut with an ellipsis, the existing convention.
+	for len(text) > maxServerGuidanceBytes {
+		text = truncateRunes(text, len([]rune(text))-1)
+	}
+	return text, true
+}
+
 // readGrounding reads the marked resources in priority order, stopping at the
 // document and byte bounds so a large catalogue cannot crowd out the turn.
 func (p *MCPProvider) readGrounding(
@@ -707,6 +750,11 @@ func (s *mcpToolSession) Tools() []ToolDefinition {
 
 func (s *mcpToolSession) Grounding() []GroundingDocument {
 	return append([]GroundingDocument(nil), s.grounding...)
+}
+
+// Guidance is what each reachable server said it is for. See sirens-echo#647.
+func (s *mcpToolSession) Guidance() []ServerGuidance {
+	return append([]ServerGuidance(nil), s.guidance...)
 }
 
 // Unavailable names the configured servers that did not answer this turn.

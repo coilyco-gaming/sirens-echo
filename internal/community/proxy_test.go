@@ -752,6 +752,7 @@ type alwaysOneTool struct{}
 
 func (alwaysOneTool) Open(context.Context) (ToolSession, error) { return alwaysOneTool{}, nil }
 func (alwaysOneTool) Grounding() []GroundingDocument            { return nil }
+func (alwaysOneTool) Guidance() []ServerGuidance                { return nil }
 func (alwaysOneTool) Unavailable() []string                     { return nil }
 func (alwaysOneTool) Close() error                              { return nil }
 

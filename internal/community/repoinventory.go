@@ -55,7 +55,9 @@ type repoInventorySession struct {
 
 func (s *repoInventorySession) Close() error                   { return nil }
 func (s *repoInventorySession) Grounding() []GroundingDocument { return nil }
-func (s *repoInventorySession) Unavailable() []string          { return nil }
+
+func (s *repoInventorySession) Guidance() []ServerGuidance { return nil }
+func (s *repoInventorySession) Unavailable() []string      { return nil }
 
 func (s *repoInventorySession) Tools() []ToolDefinition {
 	if s.org == "" {

@@ -82,6 +82,14 @@ func (s *compositeSession) Grounding() []GroundingDocument {
 	return grounding
 }
 
+func (s *compositeSession) Guidance() []ServerGuidance {
+	var guidance []ServerGuidance
+	for _, session := range s.sessions {
+		guidance = append(guidance, session.Guidance()...)
+	}
+	return guidance
+}
+
 func (s *compositeSession) Unavailable() []string {
 	var unavailable []string
 	for _, session := range s.sessions {

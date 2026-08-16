@@ -120,6 +120,8 @@ type scratchSession struct {
 
 func (s *scratchSession) Grounding() []GroundingDocument { return nil }
 
+func (s *scratchSession) Guidance() []ServerGuidance { return nil }
+
 func (s *scratchSession) Unavailable() []string { return nil }
 
 func (s *scratchSession) Close() error { return nil }
