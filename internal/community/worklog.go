@@ -17,10 +17,6 @@ const (
 	worklogStopped = "Did not finish"
 )
 
-// maxWorklogRows bounds the embed. A forty-call turn must not render forty
-// rows, and the earliest are the least interesting once later ones resolved.
-const maxWorklogRows = 6
-
 // progressRow is one tool call. Outcome is meaningless until done, which is
 // what separates a call in flight from one that returned nothing.
 type progressRow struct {

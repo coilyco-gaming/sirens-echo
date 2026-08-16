@@ -2,7 +2,7 @@
 #
 # Each case scores an end state rather than a trajectory: the reply must call
 # required_tool, must match every required_patterns expression, and must contain
-# none of forbidden_phrases. Run them with `ward exec eval-echo`.
+# none of forbidden_phrases. Run them with `just eval-echo`.
 #
 # A check that could fire on a correct reply is worse than no check, so a
 # required pattern accepts every link the response policy would call correct.

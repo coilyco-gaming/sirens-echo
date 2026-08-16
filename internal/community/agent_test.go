@@ -541,6 +541,8 @@ func (fixtureToolSession) Grounding() []GroundingDocument {
 	return nil
 }
 
+func (fixtureToolSession) Guidance() []ServerGuidance { return nil }
+
 func (fixtureToolSession) Unavailable() []string {
 	return nil
 }

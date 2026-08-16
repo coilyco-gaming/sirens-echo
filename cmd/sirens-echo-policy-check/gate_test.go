@@ -26,9 +26,9 @@ func gateVerbs(t *testing.T, script string) string {
 // is a check a push can miss while the gate reports ready. See issue 305.
 func TestTheGateCoversEveryCheckCIRuns(t *testing.T) {
 	t.Parallel()
-	gate, err := os.ReadFile("../../scripts/ward-command.sh")
+	gate, err := os.ReadFile("../../scripts/task.sh")
 	if err != nil {
-		t.Fatalf("read the ward command script: %v", err)
+		t.Fatalf("read the gate script: %v", err)
 	}
 	workflow, err := os.ReadFile("../../.forgejo/workflows/ci.yml")
 	if err != nil {
@@ -39,7 +39,7 @@ func TestTheGateCoversEveryCheckCIRuns(t *testing.T) {
 		if !strings.Contains(verbs, " "+verb+" ") {
 			t.Errorf("the gate omits %q, which CI runs", verb)
 		}
-		if !strings.Contains(string(workflow), "ward exec "+verb) {
+		if !strings.Contains(string(workflow), "just "+verb) {
 			t.Errorf("CI no longer runs %q; drop it from the gate or restore it", verb)
 		}
 	}
@@ -52,9 +52,9 @@ func TestTheGateCoversEveryCheckCIRuns(t *testing.T) {
 // it, so an agent could push to main with every check green. See issue 329.
 func TestTheGateReadsTheDeclaredWorkflow(t *testing.T) {
 	t.Parallel()
-	gate, err := os.ReadFile("../../scripts/ward-command.sh")
+	gate, err := os.ReadFile("../../scripts/task.sh")
 	if err != nil {
-		t.Fatalf("read the ward command script: %v", err)
+		t.Fatalf("read the gate script: %v", err)
 	}
 	agents, err := os.ReadFile("../../AGENTS.md")
 	if err != nil {

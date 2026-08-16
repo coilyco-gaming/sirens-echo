@@ -40,10 +40,10 @@ produce against a floating catalogue.
 ## Commands
 
 ```sh
-ward exec role-drift-check     # bake and check in one step, the gate CI runs
-ward exec compose-bundles      # bake into agent/bundles, needs AOS_CATALOG
-ward exec role-snapshot        # rewrite the records from those bundles
-ward exec role-snapshot-check  # fail on drift, over bundles already baked
+just role-drift-check     # bake and check in one step, the gate CI runs
+just compose-bundles      # bake into agent/bundles, needs AOS_CATALOG
+just role-snapshot        # rewrite the records from those bundles
+just role-snapshot-check  # fail on drift, over bundles already baked
 ```
 
 `role-drift-check` clones the catalogue at `AOS_CATALOG_REF` when `AOS_CATALOG`

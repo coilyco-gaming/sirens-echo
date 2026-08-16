@@ -1,7 +1,7 @@
 # Filing-rule measurement for Sirens Echo, run against the tracker fixture
 # rather than the live roster. Non-gating and never wired into CI.
 #
-# Run it with `ward exec rate-fixture-tracker`. SIRENS_ECHO_TOOL_FIXTURE is
+# Run it with `just rate-fixture-tracker`. SIRENS_ECHO_TOOL_FIXTURE is
 # exclusive with the MCP roster, so this pack is separate from rate-echo.yaml
 # rather than appended to it.
 #

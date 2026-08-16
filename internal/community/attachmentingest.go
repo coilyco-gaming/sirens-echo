@@ -96,7 +96,7 @@ func fetchAttachment(ctx context.Context, client *http.Client, source string) ([
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("attachment fetch returned %d", response.StatusCode)
 	}
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxAttachmentBytes+1))
+	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxAttachmentBytes)+1))
 	if err != nil {
 		return nil, err
 	}

@@ -64,8 +64,7 @@ erases it. Its worst case is a requester filling their own 4 MB and being told
 so.
 
 The line it stays behind is a **writable path into a repository working tree**,
-which is item 3. This is deliberately not that, and adding a checkout to it
-would be a different decision needing its own.
+item 3. This is deliberately not that, and a checkout needs its own decision.
 
 ## Tools
 
@@ -76,5 +75,6 @@ would be a different decision needing its own.
 
 ## See also
 
+* [The session workspace](sirens-echo-session-workspace.md) - a shared thread.
 * [Partitions](sirens-echo-scratchpad-partitions.md) - keeping requesters apart.
 * [Executing jobs](sirens-echo-execution.md) - the other, unrelated workspace.

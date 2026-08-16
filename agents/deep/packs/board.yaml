@@ -1,6 +1,6 @@
 # Human-graded board for Sirens Deep. This file never gates a deployment.
 #
-# Run it with `ward exec board-deep`. The runner emits a dataset and reports no
+# Run it with `just board-deep`. The runner emits a dataset and reports no
 # verdict. A human reads epoch 1 of each record against its target and scores
 # pass or fail. The remaining epochs stay in the dataset as a failure-spread
 # estimate at no grading cost.
@@ -10,7 +10,7 @@
 # these cases cannot grade them.
 #
 # Clauses are the obligations the rendered prompt actually states, cited by line
-# against agents/deep/rendered/prompt.txt. `ward exec prompt-check` fails
+# against agents/deep/rendered/prompt.txt. `just prompt-check` fails
 # when that snapshot drifts from its sources, so a doctrine edit surfaces as a
 # board that no longer matches its citations.
 #

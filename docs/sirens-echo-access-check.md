@@ -35,7 +35,7 @@ ConfigMap was already applied.
 
 Deploy's standing rule is that it never reimplements a parser for a format
 another repository owns. It calls the owning tool instead, the way it calls
-`ward-mcp lint` for guardfiles. There was no equivalent here.
+`mcp-beaver lint` for guardfiles. There was no equivalent here.
 
 ## It calls the runtime's own loader
 

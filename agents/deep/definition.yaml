@@ -14,6 +14,7 @@ channel: ""
 max_context_messages: 12
 local_skill_roots:
   - .agents/skills/coilyco-general
+  - .agents/skills/coilyco-org
 model_budget:
   tool_rounds: 12
   base_completion_tokens: 3600

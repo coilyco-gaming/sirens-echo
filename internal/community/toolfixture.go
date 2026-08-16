@@ -94,6 +94,8 @@ func (s fixtureSession) Tools() []ToolDefinition {
 // document is a different surface with its own case shape.
 func (s fixtureSession) Grounding() []GroundingDocument { return nil }
 
+func (s fixtureSession) Guidance() []ServerGuidance { return nil }
+
 // Unavailable is empty. A declared tool is always available, so an absent
 // result is a fixture authoring error rather than a degraded roster.
 func (s fixtureSession) Unavailable() []string { return nil }

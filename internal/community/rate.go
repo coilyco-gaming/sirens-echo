@@ -229,7 +229,10 @@ func runRate(
 		return err
 	}
 	provenance.Composed = composedState
-	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	systemPrompt, err := evaluationSystemPrompt(definition, principal, composed, localSkillpack)
+	if err != nil {
+		return err
+	}
 	if strings.TrimSpace(provenance.Substrate) == "" {
 		provenance.Substrate = SubstrateUnrecorded
 	}

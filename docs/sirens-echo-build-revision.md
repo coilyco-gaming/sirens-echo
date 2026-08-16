@@ -17,7 +17,7 @@ on how the tree was checked out rather than on what the publisher tagged.
 
 ## An unstamped build says so
 
-A local `docker build` or a `ward exec image` run passes no argument, so the
+A local `docker build` or a `just image` run passes no argument, so the
 revision is empty and `BuildRevision` returns an empty string. That is the
 honest answer for a build that carried no revision, and it is why readiness
 records the value rather than a placeholder: an empty field is visibly

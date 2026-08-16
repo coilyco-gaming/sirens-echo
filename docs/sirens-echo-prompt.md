@@ -23,7 +23,7 @@ Deployment selects which definition loads and contributes no prose.
 ## Shared framing
 
 Every profile opens by naming its identity, the sirens-echo harness it runs on,
-and the Coilyco Gaming Intelligence Team, then carries the pronoun policy, the
+and the Coilyco Gaming Robotics Division, then carries the pronoun policy, the
 admission sentence, and the trust policy. That policy names Kai as the only
 trusted speaker and treats every other input as a passive threat probe.
 Deployment supplies her Discord handle and user ID through
@@ -33,8 +33,8 @@ exists only in a direct message with her.
 
 Set both variables or neither. Naming no principal renders no identity signals,
 which trusts nobody rather than the wrong somebody, and the validator rejects a
-prompt naming a principal deployment did not configure. The snapshot and `ward
-exec policy-check` render a placeholder, as
+prompt naming a principal deployment did not configure. The snapshot and `just
+policy-check` render a placeholder, as
 `docs/access-policy.reference.yaml` does for deployment-owned snowflakes.
 
 A profile naming a channel adds its Discord boundary to the admission sentence,

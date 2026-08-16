@@ -22,7 +22,7 @@ var correctReplies = map[string][]string{
 	// 2ef1c16. The style check read the ASCII grave accent as a decorative
 	// symbol, so a technical answer could not be written at all.
 	"code spans": {
-		"Run `ward exec test` before committing.",
+		"Run `just test` before committing.",
 		"The item key is `WoodenHullPlanksItem` and the display name is Wooden Hull Planks.",
 		"Set `max_context_messages` to 12.",
 		"The exponent is 2^8.",

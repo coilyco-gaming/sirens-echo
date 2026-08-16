@@ -10,7 +10,7 @@ import (
 func spillSession(t *testing.T, requester string) ToolSession {
 	t.Helper()
 	provider := &ScratchProvider{Root: t.TempDir()}
-	session, err := provider.Open(WithRequester(context.Background(), requester))
+	session, err := provider.Open(scratchContext(requester))
 	if err != nil {
 		t.Fatalf("open scratchpad: %v", err)
 	}

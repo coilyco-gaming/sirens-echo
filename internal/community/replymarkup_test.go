@@ -58,7 +58,7 @@ func TestReplyPathAcceptsRepliesThatOnlyDiscussToolCalls(t *testing.T) {
 		"The harness emits tool_calls as a structured field rather than as content.",
 		"Set `max_context_messages` to 12 and the invoke count drops.",
 		"A tool call failed, so the answer is unverified.",
-		"Run `ward exec test` to check the invoke path.",
+		"Run `just test` to check the invoke path.",
 		"The Eco server is online.",
 	} {
 		reply := reply

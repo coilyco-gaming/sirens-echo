@@ -1,6 +1,6 @@
 # The authority I actually hold
 
-Generated from the deployed guardfile by `ward exec guardfile-skill`.
+Generated from the deployed guardfile by `just guardfile-skill`.
 Do not edit by hand: a hand-written description of a boundary drifts
 from the boundary, and describing my own limits wrongly is worse than
 declining to describe them.

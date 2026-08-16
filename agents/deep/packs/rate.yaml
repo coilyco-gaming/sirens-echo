@@ -1,7 +1,7 @@
 # Non-gating measurement pack for Sirens Deep. This file never gates a
 # deployment and is never wired into CI.
 #
-# Run it with `ward exec rate-deep`. Each case runs its own `runs` count and the
+# Run it with `just rate-deep`. Each case runs its own `runs` count and the
 # runner reports passed over attempts. It exits non-zero only when a case beats
 # its declared `max_failure_rate`, or when every run of a case errored, since an
 # unmeasured case is not a pass.

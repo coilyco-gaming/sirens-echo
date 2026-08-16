@@ -34,6 +34,12 @@ func (a *Agent) logCapabilities(ctx context.Context) {
 		slog.Bool("fetch", len(a.cfg.FetchHosts) > 0),
 		slog.Bool("issue_tracker", a.cfg.Definition.IssueTracker != ""),
 		slog.Int("mcp_servers", a.rosterSize()),
+		// Names, never values: a knob's value is already in the reference and
+		// the interesting part is which ones this deployment moved.
+		slog.Any("tuning_applied", a.cfg.TuningApplied),
+		// A name this service could not parse kept its default. Silence there
+		// reads as a working override. See docs/sirens-echo-tuning-overrides.md.
+		slog.Any("tuning_rejected", a.cfg.TuningRejected),
 	)
 }
 

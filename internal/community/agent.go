@@ -129,9 +129,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Servers:    roster,
 		HTTPClient: sessionHTTPClient(telemetry),
 		Telemetry:  telemetry,
-		Sandbox: sandboxLabelPolicy{
-			Tracker: cfg.Definition.IssueTracker,
-			LabelID: cfg.SandboxLabelID,
+		Labels: issueLabelPolicy{
+			Tracker:       cfg.Definition.IssueTracker,
+			SandboxID:     cfg.SandboxLabelID,
+			DestinationID: cfg.DestinationLabelID,
 		},
 	}
 	// The roster handle stays concrete because the agent closes it and serves
@@ -387,6 +388,9 @@ func (a *Agent) Run(ctx context.Context) error {
 		// thing that closes them and stops any stdio child.
 		defer func() { _ = a.tools.Close() }()
 	}
+	// A retention policy that is configured and never fires is no policy, so
+	// the sweeper starts with the service. See sirens-echo#156.
+	defer a.sweepSessions(ctx)()
 	httpServer := &http.Server{
 		Addr:              a.cfg.HTTPListenAddr,
 		Handler:           a.HTTPHandler(),
@@ -418,6 +422,9 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
 		// The count, never the values. See docs/sirens-echo-identifiers.md.
 		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
+		// The admission allowlist, sized at boot. It outlived the thread-prefill
+		// toggle it was added for, which no longer has a default to observe.
+		slog.Int("configured_channels", len(a.cfg.DiscordChannelIDs)),
 		// Empty when the build carried no revision, which is the honest answer.
 		slog.String("build_revision", BuildRevision()),
 	)
@@ -828,14 +835,17 @@ func (a *Agent) handleMessage(
 		)...,
 	)
 	defer receiveSpan.End()
+	at := discordLocationFor(session, message)
 	turn := &discordMessageTurn{
-		session: session,
-		message: message,
-		limit:   a.cfg.Definition.MaxContextMessages,
-		titler:  a.completions,
-		replyTo: a.resolveReplyTo(session, message, origin),
-
+		session:   session,
+		message:   message,
+		limit:     a.cfg.Definition.MaxContextMessages,
+		titler:    a.completions,
+		replyTo:   a.resolveReplyTo(session, message, origin),
 		telemetry: a.telemetry,
+		// Every thread, because a thread is the conversation rather than a
+		// window into one. See docs/sirens-echo-thread-prefill.md.
+		wholeThread: at.ThreadID != "",
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -974,6 +984,21 @@ func replyLimitOf(turn turnIO) int {
 	return 0
 }
 
+// prefillReporter is an optional turn capability: a transport that read a whole
+// thread reports what the context budget made it drop.
+type prefillReporter interface {
+	PrefillNote() prefillNote
+}
+
+// prefillNoteOf returns the zero note for a transport that reads no thread,
+// which renders nothing.
+func prefillNoteOf(turn turnIO) prefillNote {
+	if reporter, ok := turn.(prefillReporter); ok {
+		return reporter.PrefillNote()
+	}
+	return prefillNote{}
+}
+
 // spanTagger is an optional turn capability, asserted like the reactor is: a
 // transport with identifiers of its own contributes them to the turn span.
 type spanTagger interface {
@@ -1016,6 +1041,7 @@ func (a *Agent) runTurn(
 		turnSpan.SetAttributes(tagger.SpanAttributes()...)
 	}
 	turnCtx = WithRequester(turnCtx, turn.Requester())
+	turnCtx = WithSession(turnCtx, sessionOf(turn))
 	// The tool loop narrates from behind the completion boundary, and the
 	// watcher narrates a stage that is waiting rather than changing.
 	turnCtx = WithTurnProgress(turnCtx, progress)
@@ -1063,6 +1089,15 @@ func (a *Agent) runTurn(
 		return a.failTurn(turnCtx, turn, stageHistory, err)
 	}
 	historySpan.SetAttributes(attribute.Int("history.count", len(history)))
+	// The prefill size a long thread produces, which is what bounds the cost of
+	// turning this on anywhere. See docs/sirens-echo-thread-prefill.md.
+	if note := prefillNoteOf(turn); note.Read > 0 {
+		historySpan.SetAttributes(
+			attribute.Int("history.thread.read", note.Read),
+			attribute.Int("history.thread.dropped", note.Dropped),
+			attribute.Bool("history.thread.capped", note.Capped),
+		)
+	}
 	historySpan.End()
 
 	contextCtx, contextSpan := a.telemetry.StartSpan(turnCtx, "context.assemble")
@@ -1161,13 +1196,16 @@ func (a *Agent) runTurn(
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it
 	// renders after the checks. See docs/sirens-echo-phrases.md.
-	if reply, err = a.renderPhrases(reply); err != nil {
+	if reply, err = a.renderPhrases(turnCtx, reply); err != nil {
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
 
 	// Service-authored, so it runs after the checks rather than through them.
 	// One step, one budget. See docs/sirens-echo-issues.md and sirens-echo#413.
-	reply, whole := fitWithOverflow(reply, replyLimitOf(turn), result.ToolCalls)
+	reply, whole := fitWithOverflow(reply, replyLimitOf(turn), serviceFacts{
+		executed: result.ToolCalls,
+		prefill:  prefillNoteOf(turn),
+	})
 
 	// A line that just went up should be readable before the reply replaces it.
 	// See docs/sirens-echo-progress.md.
@@ -1358,7 +1396,15 @@ type discordMessageTurn struct {
 	// telemetry records a thread title that had to be trimmed, so a generator
 	// that keeps overrunning is visible. See sirens-echo#753.
 	telemetry *Telemetry
+	// wholeThread opts this turn into reading its whole thread rather than the
+	// partial window. Off is the shipped default. See sirens-echo#769.
+	wholeThread bool
+	prefill     prefillNote
 }
+
+// PrefillNote reports what the context budget dropped, which is zero for every
+// turn that read the ordinary window.
+func (t *discordMessageTurn) PrefillNote() prefillNote { return t.prefill }
 
 // Attachments lets the completion layer reach a turn's uploads without taking
 // a transport argument, the same route the reactions take.
@@ -1378,6 +1424,21 @@ func (t *discordMessageTurn) Requester() string {
 }
 
 func (t *discordMessageTurn) Transport() string { return transportDiscord }
+
+// SessionID shares a workspace with everyone in the thread, and falls back to
+// the channel pairing outside one. See docs/sirens-echo-session-workspace.md.
+func (t *discordMessageTurn) SessionID() SessionID {
+	if t.message == nil {
+		return SessionID{}
+	}
+	if t.session != nil && t.session.State != nil {
+		channel, err := t.session.State.Channel(t.message.ChannelID)
+		if err == nil && channel != nil && channel.IsThread() {
+			return ThreadSession(t.message.ChannelID)
+		}
+	}
+	return DirectSession(t.message.ChannelID, t.Requester())
+}
 
 // SpanAttributes places a turn. The account id is here by an explicit
 // reversal, recorded in docs/sirens-echo-turn-identifiers.md.
@@ -1471,19 +1532,14 @@ func replyTarget(message, resolved *discordgo.Message) *ReplySubject {
 }
 
 func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, error) {
-	messages, err := t.session.ChannelMessages(
-		t.message.ChannelID,
-		t.limit,
-		t.message.ID,
-		"",
-		"",
+	messages, capped, err := readTurnHistory(
+		t.session, t.wholeThread, t.message.ChannelID, t.message.ID, t.limit,
 	)
 	if err != nil {
 		return nil, err
 	}
 	history := make([]TranscriptEntry, 0, len(messages))
-	for index := len(messages) - 1; index >= 0; index-- {
-		message := messages[index]
+	for _, message := range messages {
 		if message.Author == nil {
 			continue
 		}
@@ -1496,7 +1552,12 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 		t.recordMentionable(message)
 	}
 	t.recordMentionable(t.message)
-	return history, nil
+	if !t.wholeThread {
+		return history, nil
+	}
+	kept, dropped := dropOldestToFit(history, threadPrefillBytes)
+	t.prefill = prefillNote{Dropped: dropped, Read: len(history), Capped: capped}
+	return kept, nil
 }
 
 // recordMentionable adds a message's author and anyone it mentioned, which is

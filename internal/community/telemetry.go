@@ -11,13 +11,17 @@ import (
 	"path"
 	"time"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	logglobal "go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/metric"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -38,6 +42,7 @@ type Telemetry struct {
 	toolCalls            metric.Int64Counter
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
+	phraseInvocations    metric.Int64Counter
 	failures             metric.Int64Counter
 	jobs                 metric.Int64Counter
 	healthRequests       metric.Int64Counter
@@ -45,6 +50,7 @@ type Telemetry struct {
 	readinessState       metric.Int64Gauge
 	readinessLastSuccess metric.Int64Gauge
 	traceSDK             *sdktrace.TracerProvider
+	logSDK               *sdklog.LoggerProvider
 	metricSDK            *sdkmetric.MeterProvider
 	traceProvider        trace.TracerProvider
 	propagator           propagation.TextMapPropagator
@@ -82,6 +88,21 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 		_ = traceExporter.Shutdown(ctx)
 		return nil, err
 	}
+	logEndpoint, err := otlpSignalURL(cfg.OTLPEndpoint, "logs")
+	if err != nil {
+		_ = traceExporter.Shutdown(ctx)
+		_ = metricExporter.Shutdown(ctx)
+		return nil, err
+	}
+	logExporter, err := otlploghttp.New(
+		ctx,
+		otlploghttp.WithEndpointURL(logEndpoint),
+	)
+	if err != nil {
+		_ = traceExporter.Shutdown(ctx)
+		_ = metricExporter.Shutdown(ctx)
+		return nil, err
+	}
 	res, err := resource.New(
 		ctx,
 		resource.WithAttributes(
@@ -94,6 +115,7 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 	if err != nil {
 		_ = traceExporter.Shutdown(ctx)
 		_ = metricExporter.Shutdown(ctx)
+		_ = logExporter.Shutdown(ctx)
 		return nil, err
 	}
 	traceSDK := sdktrace.NewTracerProvider(
@@ -107,23 +129,38 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 		)),
 		sdkmetric.WithResource(res),
 	)
+	logSDK := sdklog.NewLoggerProvider(
+		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
+		sdklog.WithResource(res),
+	)
 	otel.SetTracerProvider(traceSDK)
 	otel.SetMeterProvider(metricSDK)
+	logglobal.SetLoggerProvider(logSDK)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{},
 		propagation.Baggage{},
 	))
-	logger := slog.New(slog.NewJSONHandler(logSink(cfg.LogWriter), &slog.HandlerOptions{
-		Level: slog.LevelInfo,
-	}))
+	// Both destinations. Stdout keeps kubectl logs working when SigNoz is the
+	// thing that is down. See docs/sirens-echo-log-export.md.
+	logger := slog.New(multiHandler{handlers: []slog.Handler{
+		slog.NewJSONHandler(logSink(cfg.LogWriter), &slog.HandlerOptions{
+			Level: slog.LevelInfo,
+		}),
+		otelslog.NewHandler(
+			telemetryScope,
+			otelslog.WithLoggerProvider(logSDK),
+		),
+	}})
 	telemetry, err := newTelemetry(logger, traceSDK, metricSDK)
 	if err != nil {
+		_ = logSDK.Shutdown(ctx)
 		_ = metricSDK.Shutdown(ctx)
 		_ = traceSDK.Shutdown(ctx)
 		return nil, err
 	}
 	telemetry.traceSDK = traceSDK
 	telemetry.metricSDK = metricSDK
+	telemetry.logSDK = logSDK
 	return telemetry, nil
 }
 
@@ -177,6 +214,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	phraseInvocations, err := meter.Int64Counter("sirens_echo.phrase.invocations")
+	if err != nil {
+		return nil, err
+	}
 	accessChecks, err := meter.Int64Counter("sirens_echo.access.checks")
 	if err != nil {
 		return nil, err
@@ -223,6 +264,7 @@ func newTelemetry(
 		toolCalls:            toolCalls,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
+		phraseInvocations:    phraseInvocations,
 		failures:             failures,
 		jobs:                 jobs,
 		healthRequests:       healthRequests,
@@ -376,6 +418,16 @@ func (t *Telemetry) RecordAccess(ctx context.Context, reason string) {
 	t.accessChecks.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
 }
 
+// RecordPhrase records one canonical phrase a reply invoked. The key comes
+// from the tracked registry, so no member value reaches a metric label.
+func (t *Telemetry) RecordPhrase(ctx context.Context, key string) {
+	t.phraseInvocations.Add(
+		ctx,
+		1,
+		metric.WithAttributes(attribute.String("phrase.key", key)),
+	)
+}
+
 // RecordFailure records the stage where an accepted turn failed.
 func (t *Telemetry) RecordFailure(ctx context.Context, stage string) {
 	t.failures.Add(
@@ -413,7 +465,7 @@ func (t *Telemetry) RecordReadiness(
 	t.readinessState.Record(ctx, state)
 }
 
-// Close flushes metrics and traces before process exit.
+// Close flushes logs, metrics, and traces before process exit.
 func (t *Telemetry) Close(ctx context.Context) error {
 	var errs []error
 	if t.metricSDK != nil {
@@ -421,6 +473,9 @@ func (t *Telemetry) Close(ctx context.Context) error {
 	}
 	if t.traceSDK != nil {
 		errs = append(errs, t.traceSDK.Shutdown(ctx))
+	}
+	if t.logSDK != nil {
+		errs = append(errs, t.logSDK.Shutdown(ctx))
 	}
 	return errors.Join(errs...)
 }

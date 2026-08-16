@@ -11,6 +11,7 @@ COPY agents ./agents
 COPY .agents/skills/sirens-echo-community ./.agents/skills/sirens-echo-community
 COPY .agents/skills/sirens-echo-knowledge ./.agents/skills/sirens-echo-knowledge
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
+COPY .agents/skills/coilyco-org ./.agents/skills/coilyco-org
 COPY docs ./docs
 ARG SIRENS_ECHO_REVISION=
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -35,6 +36,7 @@ RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
 COPY agent ./agent
 COPY agents ./agents
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
+COPY .agents/skills/coilyco-org ./.agents/skills/coilyco-org
 COPY scripts/stage-compose-sources.sh ./scripts/
 # The expander comes from the build stage, so this stage needs no Go toolchain
 # work and the binary is the one the suite already exercised.
@@ -63,6 +65,7 @@ COPY --chown=1000:1000 agents /app/agents
 COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
 COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge
 COPY --chown=1000:1000 .agents/skills/coilyco-general /app/.agents/skills/coilyco-general
+COPY --chown=1000:1000 .agents/skills/coilyco-org /app/.agents/skills/coilyco-org
 COPY --from=compose --chown=1000:1000 /out/bundles /app/agent/bundles
 USER 1000:1000
 ENTRYPOINT ["/usr/local/bin/sirens-echo"]

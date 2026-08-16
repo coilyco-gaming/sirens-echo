@@ -126,7 +126,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		)
 		return
 	}
-	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
+	request.Body = http.MaxBytesReader(writer, request.Body, int64(maxHTTPBody))
 	var payload httpTurnRequest
 	decoder := json.NewDecoder(request.Body)
 	// A field the contract does not define took no effect, and a 200 tells the

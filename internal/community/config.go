@@ -7,12 +7,490 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
+
+// Every number this service ships, and the environment name that sets each
+// one. See docs/sirens-echo-tuning.md.
+
+// knobValue is the two shapes a number takes here.
+type knobValue interface{ int | time.Duration }
+
+// knob binds one number to one environment name, so a number cannot exist in
+// this file without a way to set it.
+type knob struct {
+	env      string
+	fallback string
+	// value renders what the variable holds now, so a test can pin the
+	// declaration against the thing it declares.
+	value func() string
+	apply func(raw string) bool
+	reset func()
+}
+
+// overridable is the one helper every number goes through. It takes where the
+// package reads the value, what sets it, and what it holds without one.
+func overridable[T knobValue](target *T, env string, fallback T) knob {
+	return knob{
+		env:      env,
+		fallback: fmt.Sprint(fallback),
+		value:    func() string { return fmt.Sprint(*target) },
+		apply: func(raw string) bool {
+			value, ok := parseKnob[T](raw)
+			// Zero and below are refused alike: every one of these is a bound,
+			// a count, or a wait, and none means anything there.
+			if !ok || value <= 0 {
+				return false
+			}
+			*target = value
+			return true
+		},
+		reset: func() { *target = fallback },
+	}
+}
+
+// parseKnob reads the one text form each shape has. A duration takes Go's own
+// spelling, so `90s` works and a bare `90` does not.
+func parseKnob[T knobValue](raw string) (T, bool) {
+	var zero T
+	switch any(zero).(type) {
+	case time.Duration:
+		value, err := time.ParseDuration(raw)
+		if err != nil {
+			return zero, false
+		}
+		return any(value).(T), true
+	case int:
+		value, err := strconv.Atoi(raw)
+		if err != nil {
+			return zero, false
+		}
+		return any(value).(T), true
+	}
+	return zero, false
+}
+
+// Model calls: rounds, repairs, and the completion budget ladder
+var (
+	maxToolRounds      int
+	maxResponseRepairs int
+	// maxToolResultBytes bounds one tool result before it re-enters the
+	// prompt. Four parallel Eco calls inflated a 6k prompt past 47k.
+	maxToolResultBytes int
+	// maxAgentProxyResponseBytes bounds one upstream completion body.
+	maxAgentProxyResponseBytes int
+	// maxAssemblyPasses guards a future suffix that could grow faster than the
+	// answer shrinks. A test reaches it.
+	maxAssemblyPasses int
+	// Completion budget, escalated rather than fixed.
+	// See docs/sirens-echo-budget.md.
+	baseCompletionTokens int
+	maxCompletionTokens  int
+	completionBudgetStep int
+	// budgetRaisesAllowed bounds the escalation so a pathological turn cannot
+	// loop. One real rung remains: 1800 to 3600, then exhausted.
+	budgetRaisesAllowed int
+)
+
+// Fetch tool
+var (
+	// maxFetchBytes bounds a response, because a large body becomes prompt.
+	maxFetchBytes int
+	// fetchTimeout bounds a slow host, which would otherwise spend the turn.
+	fetchTimeout time.Duration
+)
+
+// MCP: refresh, timeouts, backoff, and grounding size
+var (
+	// defaultRosterRefresh bounds staleness for a transport that cannot push
+	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
+	defaultRosterRefresh time.Duration
+	mcpConnectTimeout    time.Duration
+	mcpListTimeout       time.Duration
+	mcpBackoffMin        time.Duration
+	mcpBackoffMax        time.Duration
+	// defaultCallTimeout keeps one tool call well inside the turn budget, so a
+	// server that never answers cannot spend the whole turn.
+	defaultCallTimeout time.Duration
+	// Grounding bounds. Reference material must not crowd out the turn it is
+	// meant to support.
+	maxGroundingBytes int
+	// maxServerGuidanceBytes bounds one server's own instructions, which the
+	// server writes and this prompt carries. See sirens-echo#647.
+	maxServerGuidanceBytes int
+	maxGroundingDocuments  int
+)
+
+// Turn progress cadence. Only the wait is a knob. The pair below it is derived,
+// so it is set by setting the wait. See docs/sirens-echo-tuning-overrides.md.
+var (
+	// turnProgressAfter is how long a turn runs before it starts reporting. A
+	// reply that beats this never posts anything.
+	turnProgressAfter time.Duration
+	// turnProgressEvery is the grid every later message releases on, so an edit,
+	// a reply, and a failure notice all land on the same beat.
+	turnProgressEvery time.Duration
+	// turnLongReplyAfter is when a turn has taken long enough that its reply
+	// wants somewhere of its own.
+	turnLongReplyAfter time.Duration
+)
+
+// Job progress and execution
+var (
+	// jobProgressEvery bounds how often one job reports to its origin.
+	jobProgressEvery time.Duration
+	// defaultJobQueueDepth bounds accepted-but-unstarted work. A full queue
+	// refuses rather than growing without limit.
+	defaultJobQueueDepth int
+	// defaultJobTimeout bounds one execution. Jobs are long, not unbounded.
+	defaultJobTimeout time.Duration
+	// The pair Kai decided on sirens-echo#236: ten messages or ten minutes,
+	// whichever comes first.
+	maxJobContentMessages int
+	maxJobContentWindow   time.Duration
+)
+
+// Model retry. Only fast failures are retried, so the whole ladder fits well
+// inside the turn ceiling. See docs/sirens-echo-model-retry.md.
+var (
+	modelRetryAttempts int
+	modelRetryBackoff  time.Duration
+)
+
+// Turn timeouts
+var (
+	defaultRequestTimeout time.Duration
+	// defaultQueueTimeout bounds the wait for the execution slot. A longer
+	// wait answers a conversation that has already moved on.
+	defaultQueueTimeout time.Duration
+	// defaultShutdownGrace lets the turns in flight answer before a restart
+	// takes them. It fits inside Kubernetes' 30s default kill window.
+	defaultShutdownGrace time.Duration
+	// shutdownNoticeGrace is the moment a cancelled turn gets to say why it
+	// ended, after which the gateway closes and it could not say anything.
+	shutdownNoticeGrace time.Duration
+	// failureNoticeTimeout bounds the notice's own send. It is short because the
+	// member has already waited out whatever failed.
+	failureNoticeTimeout time.Duration
+	// reactionClearTimeout bounds the tidy-up, which detaches from the turn for
+	// the same reason the failure notice does.
+	reactionClearTimeout time.Duration
+)
+
+// Workspace commands and the readiness probe
+var (
+	// defaultCommandTimeout bounds one command inside a job's own budget.
+	defaultCommandTimeout time.Duration
+	// maxCommandOutputBytes bounds what one command can return, so a runaway
+	// build cannot be read into memory unbounded.
+	maxCommandOutputBytes   int
+	defaultReadinessTimeout time.Duration
+	// maxReadinessBody bounds the probe response this process will read.
+	maxReadinessBody int
+)
+
+// Agent-to-agent exchange bound
+var (
+	// maxAgentExchange bounds consecutive agent-to-agent turns in one channel,
+	// because two agents each answering the other is a runaway.
+	maxAgentExchange int
+	// agentExchangeWindow is how long a run of agent turns stays counted. A
+	// quiet channel forgets, so an exchange later is a fresh one.
+	agentExchangeWindow time.Duration
+)
+
+// Attachment ingest
+var (
+	// maxAttachmentBytes stays under the scratchpad's per-file limit, so an
+	// oversized upload refuses here with a reason rather than there.
+	maxAttachmentBytes int
+	// attachmentFetchTimeout bounds one download inside a turn that already
+	// owes the member an answer.
+	attachmentFetchTimeout time.Duration
+)
+
+// Scratch space
+var (
+	// maxScratchFileBytes bounds one file. A Discord message can ask for an
+	// unbounded write and the volume is shared with the pod.
+	maxScratchFileBytes int
+	// maxScratchEntries bounds a listing, keeping a result inside the turn
+	// budget rather than returning a directory of unknown size.
+	maxScratchEntries int
+	// maxScratchMatches bounds a search result for the same reason.
+	maxScratchMatches int
+	// maxScratchDepth bounds nesting so a walk stays cheap.
+	maxScratchDepth int
+	// maxSessionBytes bounds one shared workspace, which is the bound that
+	// stops a thread accumulating under a rule that never expires it.
+	maxSessionBytes int
+	// threadSessionRetention is the quiet period before a thread workspace is
+	// collected. A thread is a conversation people return to across a week.
+	threadSessionRetention time.Duration
+	// directSessionRetention collects a channel pairing, which has no natural
+	// end and is permanent storage without one.
+	directSessionRetention time.Duration
+	// sessionSweepEvery paces the collector. A cleanup that never fires is
+	// indistinguishable from no retention policy.
+	sessionSweepEvery time.Duration
+	// maxScratchPartitionBytes bounds one requester's footprint, so a single
+	// account cannot fill the volume for every other account on it.
+	maxScratchPartitionBytes int
+)
+
+// Discord's own shape. Raising one of these past what Discord accepts fails at
+// Discord rather than here. See docs/sirens-echo-tuning-overrides.md.
+var (
+	maxCommandNameRunes        int
+	maxCommandDescriptionRunes int
+	// maxCommandOptions is Discord's ceiling on options per command.
+	maxCommandOptions int
+	// defaultParameterMaxLength bounds a declared string argument.
+	defaultParameterMaxLength int
+	// threadPrefillBytes is the context budget for a whole-thread prefill.
+	// Oldest messages drop until the transcript fits. See sirens-echo#769.
+	threadPrefillBytes int
+	// threadPrefillPage is Discord's own ceiling on one history call.
+	threadPrefillPage int
+	// threadPrefillReads bounds the walk, so a pathological thread costs a
+	// known number of calls rather than an unknown one.
+	threadPrefillReads int
+	// discordReplyLimit is the send budget for one message. It sits under
+	// Discord's own 2000 so a reply the harness extended still arrives whole.
+	discordReplyLimit int
+	// replyAttachmentBytes bounds the file an overflowing reply is sent as.
+	// Derived, so the scratchpad's limit is the one number to move.
+	replyAttachmentBytes int
+	// threadNameRunes is Discord's cap. A longer name is refused outright.
+	threadNameRunes int
+	// threadTitleRunes is what reads whole in a thread list, which is a tighter
+	// bound than Discord's. See docs/sirens-echo-thread-title-length.md.
+	threadTitleRunes int
+	// threadArchiveMinutes matches the guild's own hide-after setting, so a
+	// thread does not outlive the channel's expectation of it.
+	threadArchiveMinutes int
+)
+
+// Reply rendering bounds
+var (
+	// maxProgressWaitLines bounds the column a stuck turn can grow. The turn
+	// ceiling over the beat is the natural count. See sirens-echo#370.
+	maxProgressWaitLines int
+	// maxProxyToolNameBytes bounds one served tool name.
+	maxProxyToolNameBytes int
+	// maxWorklogRows bounds the embed. A forty-call turn must not render forty
+	// rows, and the earliest are the least interesting once later ones resolved.
+	maxWorklogRows int
+	// maxRedactedBlocks bounds the removal. Past it this is no longer a message
+	// with a bad block in it, and the member is better served by the refusal.
+	maxRedactedBlocks int
+	// inventedChannelRunes bounds the one piece of model-written text a refusal
+	// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
+	inventedChannelRunes int
+	// maxObjectEmoji bounds the legibility emoji a neutral reply may carry.
+	// Kai set it on sirens-echo#203 after declining every earlier bound.
+	maxObjectEmoji int
+	// maxBlockReasonWords bounds the reason. Every volunteered justification is
+	// a handle to pull, and this reply only ever appears at a boundary.
+	maxBlockReasonWords int
+	// mentionNameRunes is the shortest name worth resolving. A one or two
+	// character display name matches too much ordinary prose to be safe.
+	mentionNameRunes int
+)
+
+// Admission, transport, inventory, and policy load
+var (
+	// defaultRateLimiterCapacity bounds the tracked keys, so an unbounded set
+	// of callers cannot grow the limiter without limit.
+	defaultRateLimiterCapacity int
+	// maxHTTPBody bounds one inbound request body.
+	maxHTTPBody int
+	// maxRepoInventoryEntries bounds one listing, so a large organization
+	// cannot fill a tool result on its own.
+	maxRepoInventoryEntries int
+	// maxRepoFileBytes bounds one file read, so a large source file cannot fill
+	// a tool result on its own.
+	maxRepoFileBytes int
+	// maxSkillpackBytes bounds the concatenated policy roots, which become the
+	// system prompt and are read once at construction.
+	maxSkillpackBytes int
+)
+
+// Evaluation. These gate nothing in production and shape the packs only
+var (
+	// DefaultBoardEpochs repeats every case so the grader reads epoch 1 and the
+	// remaining runs stay in the dataset as a failure-spread estimate.
+	DefaultBoardEpochs int
+	// DefaultVerbatimWords is the shingle width for system-prompt leakage. Eight
+	// consecutive words is specific enough that a paraphrase cannot reach it.
+	DefaultVerbatimWords int
+	// defaultEvaluationCaseTimeout bounds one case, which never runs in a turn.
+	defaultEvaluationCaseTimeout time.Duration
+)
+
+// knobs is every number and every name, one line each. Adding a number here is
+// the only way to add one, which is what keeps the list complete.
+func knobs() []knob {
+	return []knob{
+		overridable(&maxToolRounds, "SIRENS_ECHO_TOOL_ROUNDS", 6),
+		overridable(&maxResponseRepairs, "SIRENS_ECHO_RESPONSE_REPAIRS", 1),
+		overridable(&maxToolResultBytes, "SIRENS_ECHO_TOOL_RESULT_BYTES", 8*1024),
+		overridable(&maxAgentProxyResponseBytes, "SIRENS_ECHO_PROXY_RESPONSE_BYTES", 2*1024*1024),
+		overridable(&maxAssemblyPasses, "SIRENS_ECHO_ASSEMBLY_PASSES", 8),
+		overridable(&baseCompletionTokens, "SIRENS_ECHO_BASE_COMPLETION_TOKENS", 1800),
+		overridable(&maxCompletionTokens, "SIRENS_ECHO_MAX_COMPLETION_TOKENS", 3600),
+		overridable(&completionBudgetStep, "SIRENS_ECHO_COMPLETION_BUDGET_STEP", 2),
+		overridable(&budgetRaisesAllowed, "SIRENS_ECHO_BUDGET_RAISES", 1),
+
+		overridable(&maxFetchBytes, "SIRENS_ECHO_FETCH_BYTES", 32*1024),
+		overridable(&fetchTimeout, "SIRENS_ECHO_FETCH_TIMEOUT", 10*time.Second),
+
+		overridable(&defaultRosterRefresh, "SIRENS_ECHO_ROSTER_REFRESH", time.Hour),
+		overridable(&mcpConnectTimeout, "SIRENS_ECHO_MCP_CONNECT", 10*time.Second),
+		overridable(&mcpListTimeout, "SIRENS_ECHO_MCP_LIST", 15*time.Second),
+		overridable(&mcpBackoffMin, "SIRENS_ECHO_MCP_BACKOFF_MIN", 5*time.Second),
+		overridable(&mcpBackoffMax, "SIRENS_ECHO_MCP_BACKOFF_MAX", 2*time.Minute),
+		overridable(&defaultCallTimeout, "SIRENS_ECHO_TOOL_CALL", 45*time.Second),
+		overridable(&maxGroundingBytes, "SIRENS_ECHO_GROUNDING_BYTES", 8*1024),
+		overridable(&maxServerGuidanceBytes, "SIRENS_ECHO_SERVER_GUIDANCE_BYTES", 2*1024),
+		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
+
+		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 5*time.Second),
+
+		overridable(&jobProgressEvery, "SIRENS_ECHO_JOB_PROGRESS_EVERY", 20*time.Second),
+		overridable(&defaultJobQueueDepth, "SIRENS_ECHO_JOB_QUEUE_DEPTH", 64),
+		overridable(&defaultJobTimeout, "SIRENS_ECHO_JOB_TIMEOUT", 30*time.Minute),
+		overridable(&maxJobContentMessages, "SIRENS_ECHO_JOB_CONTENT_MESSAGES", 10),
+		overridable(&maxJobContentWindow, "SIRENS_ECHO_JOB_CONTENT_WINDOW", 10*time.Minute),
+
+		overridable(&modelRetryAttempts, "SIRENS_ECHO_MODEL_RETRY_ATTEMPTS", 4),
+		overridable(&modelRetryBackoff, "SIRENS_ECHO_MODEL_RETRY_BACKOFF", 250*time.Millisecond),
+
+		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
+		overridable(&defaultQueueTimeout, "SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second),
+		overridable(&defaultShutdownGrace, "SIRENS_ECHO_SHUTDOWN_GRACE", 15*time.Second),
+		overridable(&shutdownNoticeGrace, "SIRENS_ECHO_SHUTDOWN_NOTICE_GRACE", 3*time.Second),
+		overridable(&failureNoticeTimeout, "SIRENS_ECHO_FAILURE_NOTICE_TIMEOUT", 10*time.Second),
+		overridable(&reactionClearTimeout, "SIRENS_ECHO_REACTION_CLEAR_TIMEOUT", 10*time.Second),
+
+		overridable(&defaultCommandTimeout, "SIRENS_ECHO_COMMAND_TIMEOUT", 10*time.Minute),
+		overridable(&maxCommandOutputBytes, "SIRENS_ECHO_COMMAND_OUTPUT_BYTES", 64<<10),
+		overridable(&defaultReadinessTimeout, "SIRENS_ECHO_READINESS_TIMEOUT", 5*time.Second),
+		overridable(&maxReadinessBody, "SIRENS_ECHO_READINESS_BODY_BYTES", 16<<10),
+
+		overridable(&maxAgentExchange, "SIRENS_ECHO_AGENT_EXCHANGE", 4),
+		overridable(&agentExchangeWindow, "SIRENS_ECHO_AGENT_EXCHANGE_WINDOW", 10*time.Minute),
+
+		overridable(&maxAttachmentBytes, "SIRENS_ECHO_ATTACHMENT_BYTES", 128*1024),
+		overridable(&attachmentFetchTimeout, "SIRENS_ECHO_ATTACHMENT_FETCH_TIMEOUT", 10*time.Second),
+
+		overridable(&maxScratchFileBytes, "SIRENS_ECHO_SCRATCH_FILE_BYTES", 256*1024),
+		overridable(&maxScratchEntries, "SIRENS_ECHO_SCRATCH_ENTRIES", 200),
+		overridable(&maxScratchMatches, "SIRENS_ECHO_SCRATCH_MATCHES", 100),
+		overridable(&maxScratchDepth, "SIRENS_ECHO_SCRATCH_DEPTH", 8),
+		overridable(&maxScratchPartitionBytes, "SIRENS_ECHO_SCRATCH_PARTITION_BYTES", 4*1024*1024),
+		overridable(&maxSessionBytes, "SIRENS_ECHO_SESSION_BYTES", 1024*1024),
+		overridable(&threadSessionRetention, "SIRENS_ECHO_THREAD_SESSION_RETENTION", 7*24*time.Hour),
+		overridable(&directSessionRetention, "SIRENS_ECHO_DIRECT_SESSION_RETENTION", time.Hour),
+		overridable(&sessionSweepEvery, "SIRENS_ECHO_SESSION_SWEEP", 10*time.Minute),
+
+		overridable(&maxCommandNameRunes, "SIRENS_ECHO_COMMAND_NAME_RUNES", 32),
+		overridable(&maxCommandDescriptionRunes, "SIRENS_ECHO_COMMAND_DESCRIPTION_RUNES", 100),
+		overridable(&maxCommandOptions, "SIRENS_ECHO_COMMAND_OPTIONS", 25),
+		overridable(&defaultParameterMaxLength, "SIRENS_ECHO_PARAMETER_MAX_LENGTH", 200),
+		overridable(&threadPrefillBytes, "SIRENS_ECHO_THREAD_PREFILL_BYTES", 32*1024),
+		overridable(&threadPrefillPage, "SIRENS_ECHO_THREAD_PREFILL_PAGE", 100),
+		overridable(&threadPrefillReads, "SIRENS_ECHO_THREAD_PREFILL_READS", 10),
+		overridable(&discordReplyLimit, "SIRENS_ECHO_REPLY_LIMIT", 1990),
+		overridable(&threadNameRunes, "SIRENS_ECHO_THREAD_NAME_RUNES", 100),
+		overridable(&threadTitleRunes, "SIRENS_ECHO_THREAD_TITLE_RUNES", 50),
+		overridable(&threadArchiveMinutes, "SIRENS_ECHO_THREAD_ARCHIVE_MINUTES", 60),
+
+		overridable(&maxProgressWaitLines, "SIRENS_ECHO_PROGRESS_WAIT_LINES", 12),
+		overridable(&maxProxyToolNameBytes, "SIRENS_ECHO_PROXY_TOOL_NAME_BYTES", 64),
+		overridable(&maxWorklogRows, "SIRENS_ECHO_WORKLOG_ROWS", 6),
+		overridable(&maxRedactedBlocks, "SIRENS_ECHO_REDACTED_BLOCKS", 2),
+		overridable(&inventedChannelRunes, "SIRENS_ECHO_INVENTED_CHANNEL_RUNES", 64),
+		overridable(&maxObjectEmoji, "SIRENS_ECHO_OBJECT_EMOJI", 3),
+		overridable(&maxBlockReasonWords, "SIRENS_ECHO_BLOCK_REASON_WORDS", 20),
+		overridable(&mentionNameRunes, "SIRENS_ECHO_MENTION_NAME_RUNES", 3),
+
+		overridable(&defaultRateLimiterCapacity, "SIRENS_ECHO_RATE_LIMITER_CAPACITY", 4096),
+		overridable(&maxHTTPBody, "SIRENS_ECHO_HTTP_BODY_BYTES", 64<<10),
+		overridable(&maxRepoInventoryEntries, "SIRENS_ECHO_REPO_INVENTORY_ENTRIES", 100),
+		overridable(&maxRepoFileBytes, "SIRENS_ECHO_REPO_FILE_BYTES", 64*1024),
+		overridable(&maxSkillpackBytes, "SIRENS_ECHO_SKILLPACK_BYTES", 256*1024),
+
+		overridable(&DefaultBoardEpochs, "SIRENS_ECHO_BOARD_EPOCHS", 5),
+		overridable(&DefaultVerbatimWords, "SIRENS_ECHO_VERBATIM_WORDS", 8),
+		overridable(&defaultEvaluationCaseTimeout, "SIRENS_ECHO_EVALUATION_CASE_TIMEOUT", 5*time.Minute),
+	}
+}
+
+// deriveKnobs recomputes what is defined as an expression of another number.
+// A derived value is set by setting its input, never on its own.
+func deriveKnobs() {
+	turnProgressEvery = turnProgressAfter * 2
+	turnLongReplyAfter = turnProgressAfter + turnProgressEvery*2
+	replyAttachmentBytes = maxScratchFileBytes
+}
+
+// applyKnobs resets every number to its default and then applies what the
+// environment set, so a second call is not cumulative with the first.
+func applyKnobs(lookup func(string) string) (applied, rejected []string) {
+	applied, rejected = make([]string, 0), make([]string, 0)
+	table := knobs()
+	for _, entry := range table {
+		entry.reset()
+	}
+	for _, entry := range table {
+		raw := strings.TrimSpace(lookup(entry.env))
+		if raw == "" {
+			continue
+		}
+		// A bad value keeps the default for every knob alike, and is named
+		// rather than swallowed. See docs/sirens-echo-tuning-overrides.md.
+		if !entry.apply(raw) {
+			rejected = append(rejected, entry.env)
+			continue
+		}
+		applied = append(applied, entry.env)
+	}
+	deriveKnobs()
+	sort.Strings(applied)
+	sort.Strings(rejected)
+	return applied, rejected
+}
+
+// The defaults are in place before any other package variable reads one, and
+// before a binary that never calls LoadConfig runs.
+func init() { applyKnobs(func(string) string { return "" }) }
+
+// KnobReferenceHeading opens the generated reference, so the writer and the
+// staleness check agree on where the table starts.
+const KnobReferenceHeading = "# Every number a deployment may set"
+
+// RenderKnobReference renders the table as the tracked reference. Generated
+// from the table itself, so the list cannot be maintained in two places.
+func RenderKnobReference() string {
+	rows := make([]string, 0, len(knobs()))
+	for _, entry := range knobs() {
+		rows = append(rows, "| `"+entry.env+"` | "+entry.fallback+" |")
+	}
+	sort.Strings(rows)
+	return KnobReferenceHeading + "\n\n" +
+		"Generated by `just knobs`. Every name here is read once at\n" +
+		"startup, and a value this service cannot parse keeps the default and is\n" +
+		"named in the startup log. See\n" +
+		"[tuning a deployment](sirens-echo-tuning-overrides.md).\n\n" +
+		"| Environment variable | Default |\n| --- | --- |\n" +
+		strings.Join(rows, "\n") + "\n"
+}
 
 const (
 	defaultDefinitionPath = "agents/echo/definition.yaml"
@@ -268,6 +746,9 @@ type Config struct {
 	// SandboxLabelID labels every issue this service files. Zero applies
 	// nothing. See docs/sirens-echo-sandbox-label.md.
 	SandboxLabelID int
+	// DestinationLabelID is the move-to-repo label a filed issue carries. The
+	// deployment sets the unknown one unless it knows the home. See #756.
+	DestinationLabelID int
 	// AccessPolicyPath names the deployment's tracked allowlist file. Empty
 	// synthesizes the equivalent from the Discord environment variables.
 	AccessPolicyPath string
@@ -297,7 +778,11 @@ type Config struct {
 	ScratchDir string
 	// PhrasesPath names the canonical phrase registry. Empty renders nothing,
 	// which is today's behaviour. See docs/sirens-echo-phrases.md.
-	PhrasesPath    string
+	PhrasesPath string
+	// TuningApplied and TuningRejected record what the knob pass did, so a
+	// typed name is visible at startup rather than silently ignored.
+	TuningApplied  []string
+	TuningRejected []string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
 	// ShutdownGrace is how long a restart waits for the turns already running.
@@ -329,7 +814,7 @@ func resolveInstanceName(identity, configured string) (string, error) {
 func LoadConfig() (Config, error) {
 	// Applied before anything reads a tuning number, so a derived value is
 	// never computed from a default the deployment replaced.
-	applyTuningOverrides(os.Getenv)
+	tuningApplied, tuningRejected := applyKnobs(os.Getenv)
 	definitionPath := valueOrDefault(os.Getenv("SIRENS_ECHO_DEFINITION"), defaultDefinitionPath)
 	definition, err := LoadDefinition(definitionPath)
 	if err != nil {
@@ -351,27 +836,8 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_COMMANDS: %w", err)
 	}
-	requestTimeout, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_REQUEST_TIMEOUT"),
-		defaultRequestTimeout,
-	)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_REQUEST_TIMEOUT: %w", err)
-	}
-	queueTimeout, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_QUEUE_TIMEOUT"),
-		defaultQueueTimeout,
-	)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_QUEUE_TIMEOUT: %w", err)
-	}
-	shutdownGrace, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_SHUTDOWN_GRACE"),
-		defaultShutdownGrace,
-	)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_SHUTDOWN_GRACE: %w", err)
-	}
+	// Read from the knob pass rather than parsed a second time. Two readers of
+	// one name disagreed about what a bad value does. See sirens-echo#829.
 	rateLimit, err := loadRateLimitPolicy()
 	if err != nil {
 		return Config{}, err
@@ -400,15 +866,18 @@ func LoadConfig() (Config, error) {
 		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
+		DestinationLabelID:     positiveInt(os.Getenv("SIRENS_ECHO_DESTINATION_LABEL")),
 		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
 		JobStoreDSN:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE_DSN")),
 		RepoInventoryURL:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_URL")),
 		RepoInventoryOrg:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_ORG")),
 		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
 		PhrasesPath:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
-		RequestTimeout:         requestTimeout,
-		QueueTimeout:           queueTimeout,
-		ShutdownGrace:          shutdownGrace,
+		TuningApplied:          tuningApplied,
+		TuningRejected:         tuningRejected,
+		RequestTimeout:         defaultRequestTimeout,
+		QueueTimeout:           defaultQueueTimeout,
+		ShutdownGrace:          defaultShutdownGrace,
 		RateLimit:              rateLimit,
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
@@ -424,7 +893,9 @@ func LoadConfig() (Config, error) {
 		}
 		cfg.BundlePath = path
 	}
-	for _, id := range append(append([]string{}, cfg.DiscordChannelIDs...), cfg.DiscordGuildIDs...) {
+	snowflakes := append([]string{}, cfg.DiscordChannelIDs...)
+	snowflakes = append(snowflakes, cfg.DiscordGuildIDs...)
+	for _, id := range snowflakes {
 		if !discordSnowflake.MatchString(id) {
 			return Config{}, fmt.Errorf("Discord IDs must be numeric snowflakes, got %q", id)
 		}
@@ -653,10 +1124,7 @@ func loadRateLimitPolicy() (RateLimitPolicy, error) {
 		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_MAX_PENDING: %w", err)
 	}
 	policy.MaxPending = pending
-	notify, err := durationOrDefault(
-		os.Getenv("SIRENS_ECHO_RATE_NOTIFY_EVERY"),
-		policy.NotifyEvery,
-	)
+	notify, err := durationOrDefault(os.Getenv("SIRENS_ECHO_RATE_NOTIFY_EVERY"), policy.NotifyEvery)
 	if err != nil {
 		return RateLimitPolicy{}, fmt.Errorf("SIRENS_ECHO_RATE_NOTIFY_EVERY: %w", err)
 	}
