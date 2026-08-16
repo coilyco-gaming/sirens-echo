@@ -388,6 +388,9 @@ func (a *Agent) Run(ctx context.Context) error {
 		// thing that closes them and stops any stdio child.
 		defer func() { _ = a.tools.Close() }()
 	}
+	// A retention policy that is configured and never fires is no policy, so
+	// the sweeper starts with the service. See sirens-echo#156.
+	defer a.sweepSessions(ctx)()
 	httpServer := &http.Server{
 		Addr:              a.cfg.HTTPListenAddr,
 		Handler:           a.HTTPHandler(),
@@ -1038,6 +1041,7 @@ func (a *Agent) runTurn(
 		turnSpan.SetAttributes(tagger.SpanAttributes()...)
 	}
 	turnCtx = WithRequester(turnCtx, turn.Requester())
+	turnCtx = WithSession(turnCtx, sessionOf(turn))
 	// The tool loop narrates from behind the completion boundary, and the
 	// watcher narrates a stage that is waiting rather than changing.
 	turnCtx = WithTurnProgress(turnCtx, progress)
@@ -1420,6 +1424,21 @@ func (t *discordMessageTurn) Requester() string {
 }
 
 func (t *discordMessageTurn) Transport() string { return transportDiscord }
+
+// SessionID shares a workspace with everyone in the thread, and falls back to
+// the channel pairing outside one. See docs/sirens-echo-session-workspace.md.
+func (t *discordMessageTurn) SessionID() SessionID {
+	if t.message == nil {
+		return SessionID{}
+	}
+	if t.session != nil && t.session.State != nil {
+		channel, err := t.session.State.Channel(t.message.ChannelID)
+		if err == nil && channel != nil && channel.IsThread() {
+			return ThreadSession(t.message.ChannelID)
+		}
+	}
+	return DirectSession(t.message.ChannelID, t.Requester())
+}
 
 // SpanAttributes places a turn. The account id is here by an explicit
 // reversal, recorded in docs/sirens-echo-turn-identifiers.md.

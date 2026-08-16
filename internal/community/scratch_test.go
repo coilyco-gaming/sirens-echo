@@ -3,16 +3,36 @@ package community
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
+// testPartition is where a requester's own writes land under the test session,
+// so a layout change moves one helper rather than every test.
+func testPartition(root, requester string) string {
+	return filepath.Join(
+		root,
+		DirectSession("test-channel", requester).Directory(),
+		scratchPartitionName(requester),
+	)
+}
+
+// scratchContext supplies both partitions a turn carries. Production derives
+// the session from the turn; a test names one so the wiring is explicit.
+func scratchContext(requester string) context.Context {
+	return WithSession(
+		WithRequester(context.Background(), requester),
+		DirectSession("test-channel", requester),
+	)
+}
+
 func openScratch(t *testing.T, root, requester string) ToolSession {
 	t.Helper()
 	provider := &ScratchProvider{Root: root}
-	session, err := provider.Open(WithRequester(context.Background(), requester))
+	session, err := provider.Open(scratchContext(requester))
 	if err != nil {
 		t.Fatalf("open scratchpad: %v", err)
 	}
@@ -147,7 +167,7 @@ func TestScratchRefusesSymlinkEscape(t *testing.T) {
 	session := openScratch(t, root, "111")
 	// Derived, not spelled. The partition is a hash of the requester, so a
 	// literal name plants the door somewhere the session never looks.
-	partition := filepath.Join(root, scratchPartitionName("111"))
+	partition := testPartition(root, "111")
 	if err := os.Symlink(outside, filepath.Join(partition, "door")); err != nil {
 		// Only a platform that cannot make symlinks may skip. Any other error
 		// means the door was never planted, so the escape below is not tried.
@@ -182,22 +202,36 @@ func TestScratchEnforcesFileCeiling(t *testing.T) {
 	}
 }
 
-func TestScratchEnforcesPartitionCeiling(t *testing.T) {
-	session := openScratch(t, t.TempDir(), "111")
+// The per-requester ceiling binds across sessions, because inside one the
+// smaller session cap evicts first. See docs/sirens-echo-session-workspace.md.
+func TestScratchEnforcesRequesterCeilingAcrossSessions(t *testing.T) {
+	root := t.TempDir()
+	provider := &ScratchProvider{Root: root}
 	chunk := strings.Repeat("y", maxScratchFileBytes)
-	files := maxScratchPartitionBytes/maxScratchFileBytes + 1
+	perSession := maxSessionBytes / maxScratchFileBytes
 	refused := false
-	for i := 0; i < files; i++ {
-		result := callScratch(t, session, "scratch_write", map[string]any{
-			"path": filepath.Join("fill", string(rune('a'+i))+".txt"), "content": chunk,
-		})
-		if result.IsError {
-			refused = true
-			break
+	// Enough sessions to pass 4 MiB even though each is held under 1 MiB.
+	for s := 0; s < maxScratchPartitionBytes/maxSessionBytes+2 && !refused; s++ {
+		ctx := WithSession(
+			WithRequester(context.Background(), "111"),
+			DirectSession(fmt.Sprintf("channel-%d", s), "111"),
+		)
+		session, err := provider.Open(ctx)
+		if err != nil {
+			t.Fatalf("open: %v", err)
+		}
+		for i := 0; i < perSession; i++ {
+			result := callScratch(t, session, "scratch_write", map[string]any{
+				"path": fmt.Sprintf("fill-%d.txt", i), "content": chunk,
+			})
+			if result.IsError {
+				refused = true
+				break
+			}
 		}
 	}
 	if !refused {
-		t.Fatal("the partition ceiling never refused a write")
+		t.Fatal("the per-requester ceiling never refused a write across sessions")
 	}
 }
 
@@ -234,7 +268,7 @@ func TestScratchWritesNonExecutableFiles(t *testing.T) {
 	callScratch(t, session, "scratch_write", map[string]any{
 		"path": "script.sh", "content": "#!/bin/sh\necho hi\n",
 	})
-	info, err := os.Stat(filepath.Join(root, scratchPartitionName("111"), "script.sh"))
+	info, err := os.Stat(filepath.Join(testPartition(root, "111"), "script.sh"))
 	if err != nil {
 		t.Fatalf("stat: %v", err)
 	}
@@ -330,7 +364,7 @@ func TestCompositeRefusesToolNameCollision(t *testing.T) {
 		&ScratchProvider{Root: root},
 		&ScratchProvider{Root: root},
 	}}
-	if _, err := provider.Open(WithRequester(context.Background(), "111")); err == nil {
+	if _, err := provider.Open(scratchContext("111")); err == nil {
 		t.Fatal("composite accepted colliding tool names")
 	}
 }
@@ -340,7 +374,7 @@ func TestCompositeMergesToolsAndRoutesCalls(t *testing.T) {
 		&ScratchProvider{},
 		&ScratchProvider{Root: t.TempDir()},
 	}}
-	session, err := provider.Open(WithRequester(context.Background(), "111"))
+	session, err := provider.Open(scratchContext("111"))
 	if err != nil {
 		t.Fatalf("open composite: %v", err)
 	}

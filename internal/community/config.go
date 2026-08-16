@@ -223,6 +223,18 @@ var (
 	maxScratchMatches int
 	// maxScratchDepth bounds nesting so a walk stays cheap.
 	maxScratchDepth int
+	// maxSessionBytes bounds one shared workspace, which is the bound that
+	// stops a thread accumulating under a rule that never expires it.
+	maxSessionBytes int
+	// threadSessionRetention is the quiet period before a thread workspace is
+	// collected. A thread is a conversation people return to across a week.
+	threadSessionRetention time.Duration
+	// directSessionRetention collects a channel pairing, which has no natural
+	// end and is permanent storage without one.
+	directSessionRetention time.Duration
+	// sessionSweepEvery paces the collector. A cleanup that never fires is
+	// indistinguishable from no retention policy.
+	sessionSweepEvery time.Duration
 	// maxScratchPartitionBytes bounds one requester's footprint, so a single
 	// account cannot fill the volume for every other account on it.
 	maxScratchPartitionBytes int
@@ -378,6 +390,10 @@ func knobs() []knob {
 		overridable(&maxScratchMatches, "SIRENS_ECHO_SCRATCH_MATCHES", 100),
 		overridable(&maxScratchDepth, "SIRENS_ECHO_SCRATCH_DEPTH", 8),
 		overridable(&maxScratchPartitionBytes, "SIRENS_ECHO_SCRATCH_PARTITION_BYTES", 4*1024*1024),
+		overridable(&maxSessionBytes, "SIRENS_ECHO_SESSION_BYTES", 1024*1024),
+		overridable(&threadSessionRetention, "SIRENS_ECHO_THREAD_SESSION_RETENTION", 7*24*time.Hour),
+		overridable(&directSessionRetention, "SIRENS_ECHO_DIRECT_SESSION_RETENTION", time.Hour),
+		overridable(&sessionSweepEvery, "SIRENS_ECHO_SESSION_SWEEP", 10*time.Minute),
 
 		overridable(&maxCommandNameRunes, "SIRENS_ECHO_COMMAND_NAME_RUNES", 32),
 		overridable(&maxCommandDescriptionRunes, "SIRENS_ECHO_COMMAND_DESCRIPTION_RUNES", 100),
