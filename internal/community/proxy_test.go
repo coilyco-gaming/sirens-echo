@@ -827,7 +827,7 @@ func TestProxyClientAnswersAfterSpendingTheToolBudget(t *testing.T) {
 	if len(got.ToolCalls) != maxToolRounds {
 		t.Errorf("kept %d tool results, want the %d the rounds produced", len(got.ToolCalls), maxToolRounds)
 	}
-	if calls := rounds.Load(); calls != maxToolRounds+1 {
+	if calls := int(rounds.Load()); calls != maxToolRounds+1 {
 		t.Errorf("model rounds = %d, want %d", calls, maxToolRounds+1)
 	}
 }

@@ -23,10 +23,6 @@ var redactableRules = map[string]struct{}{
 	replyCheckSelfAttributed:  {},
 }
 
-// maxRedactedBlocks bounds the removal. Past it this is no longer a message
-// with a bad block in it, and the member is better served by the refusal.
-const maxRedactedBlocks = 2
-
 // listItem begins a block with no blank line before it, which is the shape the
 // reply in sirens-echo#796 had: one bullet per server, twelve of them.
 var listItem = regexp.MustCompile(`^\s*(?:[-*+]|\d+[.)])\s+`)

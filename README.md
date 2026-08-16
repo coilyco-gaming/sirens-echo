@@ -42,9 +42,17 @@ with their own permission boundary.
 
 ## Configuration
 
+Every number has one home, `internal/community/config.go`, and every one of
+them takes an environment override through the same helper. There is no tier of
+numbers a deployment cannot reach. The list is generated into
+[the reference](docs/sirens-echo-knobs.md) from the table itself, and a test
+fails if a number drifts out of the file or the reference falls behind it.
+
 Deploy selects the tracked YAML definition, Agent Proxy route, Discord switch,
 channel and guild scope, admission limits, and instance name. Reachability of
 `POST /v1/turn` is decided at the network layer by the deployment. See
+[tuning](docs/sirens-echo-tuning.md),
+[tuning a deployment](docs/sirens-echo-tuning-overrides.md),
 [response profiles](docs/response-profiles.md),
 [admission control](docs/sirens-echo-admission.md), and
 [deployment](docs/deploy.md).

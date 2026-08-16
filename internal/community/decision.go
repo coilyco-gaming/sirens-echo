@@ -128,10 +128,6 @@ func ValidateNoToolCallMarkup(reply string) error {
 	return nil
 }
 
-// inventedChannelRunes bounds the one piece of model-written text a refusal
-// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
-const inventedChannelRunes = 64
-
 // boundInvented truncates a matched token before it becomes a span attribute,
 // so one long hallucination cannot enlarge every refusal record.
 func boundInvented(token string) string {

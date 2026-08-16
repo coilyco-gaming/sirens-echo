@@ -102,10 +102,6 @@ func progressWaitIcon(line int) string {
 	return progressWaitIcons[line%len(progressWaitIcons)]
 }
 
-// maxProgressWaitLines bounds the column a stuck turn can grow. The turn
-// ceiling over the beat is the natural count. See sirens-echo#370.
-const maxProgressWaitLines = 12
-
 // progressBody renders the stage line plus one line per beat waited, which is
 // the shape Kai drew on sirens-echo#370.
 func progressBody(phrase string, waits []int) string {

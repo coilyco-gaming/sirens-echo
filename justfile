@@ -50,6 +50,14 @@ prompt-dump *ARGS:
 prompt-check *ARGS:
     @go run ./cmd/sirens-echo-prompt --check "$@"
 
+# Rewrite the tracked reference of every number a deployment may set.
+knobs *ARGS:
+    @go run ./cmd/sirens-echo-knobs "$@"
+
+# Fail when the tracked knob reference no longer matches the table.
+knobs-check *ARGS:
+    @go run ./cmd/sirens-echo-knobs --check "$@"
+
 # Regenerate the agent's own-authority skill from the deployed guardfile.
 guardfile-skill *ARGS:
     @go run ./cmd/sirens-echo-guardfile --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl "$@"

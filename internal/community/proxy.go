@@ -972,7 +972,7 @@ func (c ProxyClient) completeOnce(
 		return chatChoice{}, fmt.Errorf("Agent Proxy request: %w", err)
 	}
 	defer response.Body.Close()
-	responseRaw, err := io.ReadAll(io.LimitReader(response.Body, maxAgentProxyResponseBytes+1))
+	responseRaw, err := io.ReadAll(io.LimitReader(response.Body, int64(maxAgentProxyResponseBytes)+1))
 	if err != nil {
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseReadFailed)
