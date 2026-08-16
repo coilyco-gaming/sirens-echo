@@ -1,7 +1,7 @@
 # Every skip is a reviewed line
 
 A skipped test and a passing test print the same word and exit the same way.
-`ward exec test` reports `ok` for both, and nothing counts how many tests ran,
+`just test` reports `ok` for both, and nothing counts how many tests ran,
 so a guard can stop running for months without anyone learning.
 
 ## What went quiet
@@ -24,8 +24,8 @@ A source scan for `t.Skip` would not have caught either. Both tests carried
 their skip from the day they were written, and nothing in the source changed
 when they went quiet. What changed was the skip starting to fire.
 
-So `ward exec test-skips` runs the suite verbose, collects the tests that
-actually emitted a skip, and compares that set to `.ward/test-skips.allow`.
+So `just test-skips` runs the suite verbose, collects the tests that
+actually emitted a skip, and compares that set to `scripts/test-skips.allow`.
 
 ## It fails in both directions
 

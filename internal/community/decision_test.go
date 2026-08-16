@@ -288,7 +288,7 @@ func TestValidatorsAreEnglishOnly(t *testing.T) {
 func TestValidateNeutralStyleAllowsCodeSpansAndExponents(t *testing.T) {
 	t.Parallel()
 	for _, reply := range []string{
-		"Run `ward exec test` to check.",
+		"Run `just test` to check.",
 		"The item key is `WoodenHullPlanksItem`.",
 		"The exponent is 2^8.",
 		"Set `max_context_messages` to 12.",

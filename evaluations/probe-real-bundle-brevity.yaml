@@ -188,7 +188,7 @@ records:
           text: |-
             I can't point you at the exact file from direct evidence: this session has no tool that can read the repository, so I won't invent a path. What I can state truthfully:
 
-            - Whether I reply at all is governed by harness configuration, not by a file I can inspect. The behavior I actually run under is described in `.agents/skills/coilyco-general/references/capability.md` (one request per turn, 1800-char cap, 12-message window, six tool rounds, no background work) and in `references/guardfile.md`, which is generated from the deployed guardfile by `ward exec guardfile-skill`. Those bound what I may do, but they don't name a single dispatch file.
+            - Whether I reply at all is governed by harness configuration, not by a file I can inspect. The behavior I actually run under is described in `.agents/skills/coilyco-general/references/capability.md` (one request per turn, 1800-char cap, 12-message window, six tool rounds, no background work) and in `references/guardfile.md`, which is generated from the deployed guardfile by `just guardfile-skill`. Those bound what I may do, but they don't name a single dispatch file.
             - The actual "decide whether to send" logic lives in the harness/runtime that hosts me, which I can't see from inside this session. I can't confirm which source file owns that decision, so I won't guess a filename for you.
 
             The project source is public at forgejo.coilysiren.me/coilyco-gaming/sirens-echo — if you name a specific path or file, I

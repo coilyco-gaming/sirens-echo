@@ -33,8 +33,8 @@ exists only in a direct message with her.
 
 Set both variables or neither. Naming no principal renders no identity signals,
 which trusts nobody rather than the wrong somebody, and the validator rejects a
-prompt naming a principal deployment did not configure. The snapshot and `ward
-exec policy-check` render a placeholder, as
+prompt naming a principal deployment did not configure. The snapshot and `just
+policy-check` render a placeholder, as
 `docs/access-policy.reference.yaml` does for deployment-owned snowflakes.
 
 A profile naming a channel adds its Discord boundary to the admission sentence,

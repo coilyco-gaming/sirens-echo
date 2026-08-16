@@ -51,20 +51,20 @@ channel and guild scope, admission limits, and instance name. Reachability of
 
 ## Development
 
-Run commands through Ward:
+Run commands through just:
 
 ```sh
-ward exec setup
-ward exec build
-ward exec policy-check
-ward exec test
-ward exec vet
-ward exec pre-commit-all
+just setup
+just build
+just policy-check
+just test
+just vet
+just pre-commit-all
 ```
 
-`ward exec setup` installs the pre-commit hooks. Run it once per clone.
+`just setup` installs the pre-commit hooks. Run it once per clone.
 
-`ward exec eval-echo` exercises the production prompt, Agent Proxy, and static
+`just eval-echo` exercises the production prompt, Agent Proxy, and static
 Eco MCP roster without sending Discord messages or creating issues. Set
 `OTEL_EXPORTER_OTLP_ENDPOINT` to name the evaluation target you run against.
 
@@ -76,7 +76,7 @@ rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
 
 ## See also
 
-See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [.ward/ward.yaml](.ward/ward.yaml),
+See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [justfile](justfile), [.ward/ward.yaml](.ward/ward.yaml),
 [admission](docs/sirens-echo-admission.md), [access](docs/sirens-echo-access.md),
 [HTTP](docs/sirens-echo-http.md), [health](docs/sirens-echo-health.md),
 [notices](docs/sirens-echo-notices.md),
