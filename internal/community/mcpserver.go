@@ -27,6 +27,26 @@ type TurnOutput struct {
 	Reply string `json:"reply"`
 }
 
+// serverInstructions says what this deployment is, so a client holding several
+// servers can tell an agent from a data source. See sirens-echo#647.
+func (a *Agent) serverInstructions() string {
+	identity := strings.TrimSpace(a.cfg.Definition.Identity)
+	if identity == "" {
+		identity = "this deployment"
+	}
+	return fmt.Sprintf(
+		"One conversational turn with %s, a Discord community agent. Send a "+
+			"message and get the reply it would post: it reads its own "+
+			"knowledge and tools, and the answer passes the same response "+
+			"checks a member's would. Reach for it to ask a question in this "+
+			"community's voice, or to see what it would say. It is an agent "+
+			"rather than a data source, so it answers in prose rather than "+
+			"records, it may decline, and it is not a passthrough to the "+
+			"underlying model.",
+		identity,
+	)
+}
+
 // mcpHandler serves Echo's own turn as an MCP tool, so a fleet client reaches it
 // natively instead of learning the bespoke JSON contract.
 func (a *Agent) mcpHandler() http.Handler {
@@ -36,7 +56,9 @@ func (a *Agent) mcpHandler() http.Handler {
 			Title:   a.cfg.Definition.Identity,
 			Version: "1",
 		},
-		nil,
+		// Only Instructions is set. A nil options pointer is dereferenced into
+		// a zero value, so this changes nothing else about the server.
+		&mcp.ServerOptions{Instructions: a.serverInstructions()},
 	)
 	mcp.AddTool(
 		server,
