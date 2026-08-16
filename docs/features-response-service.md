@@ -11,7 +11,7 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
 - Definition-selected history budget, skill roots, MCP roster, issue tracker
 - Serialized turns with bounded Discord-history continuity
 - Agent Proxy loop for MCP schemas, tool calls, results, and continuation
-- Impersonal response contract rejecting greetings, emojis, banter, sign-offs,
+- Impersonal response contract rejecting greetings, emotive emoji, banter, sign-offs,
   and open-ended offers
 - Public Eco MCP for current game information
 - Private Forgejo MCP fixed to this repository with issue create, close,
@@ -46,8 +46,8 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
   no suffix is budgeted against another. See
   [reply assembly](sirens-echo-reply-assembly.md)
 - Repo-local Sirens knowledge with no automatic memory or autonomous edits
-- One org-relationship source both profiles compose, so provenance is answered
-  rather than inferred. See [organizations](sirens-echo-organizations.md)
+- One org-relationship source both profiles compose. See
+  [organizations](sirens-echo-organizations.md)
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
 - Model-filed ordinary Forgejo issues through the guarded tool, with
   exact-title reuse and no labels

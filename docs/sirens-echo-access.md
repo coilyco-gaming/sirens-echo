@@ -59,9 +59,9 @@ never reads it, and a guild listing only staff roles still allows no member.
 A missing or unparsable file, an unknown field, a non-snowflake ID, a duplicate
 guild, a guild allowing no channel or no member, and a `users: all` guild whose
 `rate_limit.per_user` is absent or `off` are all startup failures. Absent
-configuration never widens the surface. `ward exec policy-check` validates the
+configuration never widens the surface. `just policy-check` validates the
 reference copy and `SIRENS_ECHO_ACCESS_POLICY` when set, the image build runs
-the same check, and `ward exec test` proves it passes on the build context.
+the same check, and `just test` proves it passes on the build context.
 
 ## Without the file
 

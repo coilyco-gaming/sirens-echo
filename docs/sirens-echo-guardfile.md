@@ -10,7 +10,7 @@ a description of live authority. The two drift the moment either changes, and an
 agent confidently misdescribing its own boundaries on a permanent public
 recording is worse than one that declines to describe them.
 
-So the skill is generated from the KDL. `ward exec guardfile-skill` parses the
+So the skill is generated from the KDL. `just guardfile-skill` parses the
 deployed guardfile and writes
 `.agents/skills/coilyco-general/references/guardfile.md`, which is inside Deep's
 `local_skill_roots` and therefore reaches the prompt like any other local policy.
@@ -32,7 +32,7 @@ unlisted would be permitted.
 ## Staying honest
 
 The rendered skill carries a digest of the guardfile it came from, and
-`ward exec guardfile-skill-check` fails when the tracked skill no longer matches
+`just guardfile-skill-check` fails when the tracked skill no longer matches
 the source. A guardfile edit that does not refresh the skill fails rather than
 going quietly stale.
 

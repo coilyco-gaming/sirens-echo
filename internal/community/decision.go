@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 var (
@@ -128,10 +127,6 @@ func ValidateNoToolCallMarkup(reply string) error {
 	}
 	return nil
 }
-
-// inventedChannelRunes bounds the one piece of model-written text a refusal
-// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
-const inventedChannelRunes = 64
 
 // boundInvented truncates a matched token before it becomes a span attribute,
 // so one long hallucination cannot enlarge every refusal record.
@@ -323,16 +318,17 @@ func ValidateNeutralStyle(reply string) error {
 	if strings.ContainsRune(reply, '!') {
 		return fmt.Errorf("model reply used an exclamation mark")
 	}
-	for _, current := range reply {
-		// ASCII is never decorative. Sk covers the grave accent and the
-		// circumflex, so scanning it would ban code spans and exponents.
-		if current < 0x80 {
-			continue
-		}
-		if unicode.Is(unicode.So, current) || unicode.Is(unicode.Sk, current) ||
-			current == '\u200d' || current == '\ufe0f' {
-			return fmt.Errorf("model reply used an emoji or decorative symbol")
-		}
+	// An object emoji names a thing and is legible. A face or a status dot
+	// carries tone or verdict. See docs/sirens-echo-object-emoji.md.
+	objects, refused := objectEmojiCount(reply)
+	if refused {
+		return fmt.Errorf("model reply used an emotive or indicator emoji")
+	}
+	if objects > maxObjectEmoji {
+		return fmt.Errorf(
+			"model reply used %d object emoji against a limit of %d",
+			objects, maxObjectEmoji,
+		)
 	}
 	return nil
 }

@@ -32,7 +32,7 @@ func TestTheSystemPromptWithholdsThePrincipalUserID(t *testing.T) {
 	}
 }
 
-// The rendered snapshots are what ward exec prompt-check scores, so a template
+// The rendered snapshots are what just prompt-check scores, so a template
 // change that reintroduces the identifier has to fail here too.
 func TestTheRenderedPromptsWithholdThePrincipalUserID(t *testing.T) {
 	t.Parallel()

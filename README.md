@@ -42,29 +42,37 @@ with their own permission boundary.
 
 ## Configuration
 
+Every number has one home, `internal/community/config.go`, and every one of
+them takes an environment override through the same helper. There is no tier of
+numbers a deployment cannot reach. The list is generated into
+[the reference](docs/sirens-echo-knobs.md) from the table itself, and a test
+fails if a number drifts out of the file or the reference falls behind it.
+
 Deploy selects the tracked YAML definition, Agent Proxy route, Discord switch,
 channel and guild scope, admission limits, and instance name. Reachability of
 `POST /v1/turn` is decided at the network layer by the deployment. See
+[tuning](docs/sirens-echo-tuning.md),
+[tuning a deployment](docs/sirens-echo-tuning-overrides.md),
 [response profiles](docs/response-profiles.md),
 [admission control](docs/sirens-echo-admission.md), and
 [deployment](docs/deploy.md).
 
 ## Development
 
-Run commands through Ward:
+Run commands through just:
 
 ```sh
-ward exec setup
-ward exec build
-ward exec policy-check
-ward exec test
-ward exec vet
-ward exec pre-commit-all
+just setup
+just build
+just policy-check
+just test
+just vet
+just pre-commit-all
 ```
 
-`ward exec setup` installs the pre-commit hooks. Run it once per clone.
+`just setup` installs the pre-commit hooks. Run it once per clone.
 
-`ward exec eval-echo` exercises the production prompt, Agent Proxy, and static
+`just eval-echo` exercises the production prompt, Agent Proxy, and static
 Eco MCP roster without sending Discord messages or creating issues. Set
 `OTEL_EXPORTER_OTLP_ENDPOINT` to name the evaluation target you run against.
 
@@ -76,7 +84,7 @@ rollback. See [the rollout checks](docs/sirens-echo-rollout.md).
 
 ## See also
 
-See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [.ward/ward.yaml](.ward/ward.yaml),
+See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [justfile](justfile), [.ward/ward.yaml](.ward/ward.yaml),
 [admission](docs/sirens-echo-admission.md), [access](docs/sirens-echo-access.md),
 [HTTP](docs/sirens-echo-http.md), [health](docs/sirens-echo-health.md),
 [notices](docs/sirens-echo-notices.md),

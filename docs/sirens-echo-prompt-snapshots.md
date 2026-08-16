@@ -5,8 +5,8 @@ up as a diff rather than as a behaviour someone notices later. What the prompt
 is assembled from is [the rendered prompt](sirens-echo-prompt.md).
 
 ```sh
-ward exec prompt-dump    # rewrite the snapshots
-ward exec prompt-check   # fail when a snapshot is stale
+just prompt-dump    # rewrite the snapshots
+just prompt-check   # fail when a snapshot is stale
 ```
 
 `prompt-check` also runs as a pre-commit hook over `agent/`, `.agents/skills/`,

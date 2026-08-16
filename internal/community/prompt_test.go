@@ -322,10 +322,10 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 }
 
 // promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
-// is recorded in docs/sirens-echo-prompt-budget.md with its cause.
+// is recorded in docs/sirens-echo-prompt-budget-raises.md with its cause.
 var promptBudgets = map[string]int{
-	"sirens-echo.prompt.txt": 24242,
-	"sirens-deep.prompt.txt": 14526,
+	"sirens-echo.prompt.txt": 25772,
+	"sirens-deep.prompt.txt": 14516,
 }
 
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.

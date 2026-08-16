@@ -16,7 +16,7 @@ import (
 func laneFixture(t *testing.T, workflow, branch string) string {
 	t.Helper()
 	root := t.TempDir()
-	script, err := filepath.Abs(filepath.Join("..", "..", "scripts", "ward-command.sh"))
+	script, err := filepath.Abs(filepath.Join("..", "..", "scripts", "task.sh"))
 	if err != nil {
 		t.Fatalf("resolve the script: %v", err)
 	}
@@ -31,7 +31,7 @@ func laneFixture(t *testing.T, workflow, branch string) string {
 	if err != nil {
 		t.Fatalf("read the script: %v", err)
 	}
-	copied := filepath.Join(root, "scripts", "ward-command.sh")
+	copied := filepath.Join(root, "scripts", "task.sh")
 	if err := os.WriteFile(copied, source, 0o700); err != nil {
 		t.Fatalf("copy the script: %v", err)
 	}
@@ -61,7 +61,7 @@ func runLaneGate(t *testing.T, root string) string {
 	t.Helper()
 	// Executed directly rather than through a shell, so nothing here is parsed
 	// as a shell word. The script carries its own interpreter.
-	command := exec.Command(filepath.Join(root, "scripts", "ward-command.sh"), "gate")
+	command := exec.Command(filepath.Join(root, "scripts", "task.sh"), "gate")
 	command.Dir = root
 	// A pared PATH keeps git and bash and drops the Go toolchain, so a run the
 	// guard allows fails at the next step instead of building the fixture.

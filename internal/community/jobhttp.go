@@ -53,7 +53,7 @@ func (a *Agent) handleJobs(writer http.ResponseWriter, request *http.Request) {
 		http.Error(writer, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	request.Body = http.MaxBytesReader(writer, request.Body, maxHTTPBody)
+	request.Body = http.MaxBytesReader(writer, request.Body, int64(maxHTTPBody))
 	var payload jobSubmitRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
 		if oversizeBody(err) {

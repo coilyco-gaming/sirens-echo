@@ -339,7 +339,7 @@ func (s *scratchSession) read(relative string) (ToolResult, error) {
 	if info.IsDir() {
 		return scratchRefusal("%s is a directory, use scratch_list", scratchDisplayPath(relative))
 	}
-	if info.Size() > maxScratchFileBytes {
+	if info.Size() > int64(maxScratchFileBytes) {
 		return scratchRefusal(
 			"%s is %d bytes, over the %d byte read limit",
 			scratchDisplayPath(relative), info.Size(), maxScratchFileBytes,
@@ -403,7 +403,7 @@ func (s *scratchSession) writeAt(relative, content string, runtime bool) (ToolRe
 		return ToolResult{}, err
 	}
 	projected := used - scratchExistingSize(target) + int64(len(content))
-	if projected > maxScratchPartitionBytes {
+	if projected > int64(maxScratchPartitionBytes) {
 		return scratchRefusal(
 			"writing %s would use %d bytes, over the %d byte scratchpad limit",
 			scratchDisplayPath(relative), projected, maxScratchPartitionBytes,
@@ -441,7 +441,7 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 			return nil
 		}
 		info, infoErr := d.Info()
-		if infoErr != nil || info.Size() > maxScratchFileBytes {
+		if infoErr != nil || info.Size() > int64(maxScratchFileBytes) {
 			return nil
 		}
 		data, readErr := os.ReadFile(p)

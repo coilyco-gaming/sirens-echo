@@ -1,6 +1,6 @@
 # Counting a behaviour in evidence we already paid for
 
-`ward exec evidence-scan` counts tool-call markup across every committed run
+`just evidence-scan` counts tool-call markup across every committed run
 record. It answers how often without a bespoke evaluation case.
 
 ## Why not a case
@@ -23,7 +23,7 @@ copies of one definition drift in whichever direction nobody is watching.
 
 The verb exits zero whatever it finds. Evidence legitimately contains markup,
 which is what makes it evidence, so a check that failed on it would refuse the
-thing it exists to count. `ward exec test-skips` earns a non-zero exit because
+thing it exists to count. `just test-skips` earns a non-zero exit because
 a silent skip is never legitimate. This is the opposite case.
 
 ## Two kinds of record, reported separately

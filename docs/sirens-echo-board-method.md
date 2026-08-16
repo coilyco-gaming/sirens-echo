@@ -6,7 +6,7 @@ How the board at `agent/board-deep.yaml` is built and scored. See
 ## Clauses come from the rendered prompt
 
 A clause is an obligation the rendered prompt actually states, cited by line
-against `agent/rendered/sirens-deep.prompt.txt`. `ward exec prompt-check` fails
+against `agent/rendered/sirens-deep.prompt.txt`. `just prompt-check` fails
 when that snapshot drifts from its sources, so a doctrine edit surfaces as a
 board whose citations no longer match.
 

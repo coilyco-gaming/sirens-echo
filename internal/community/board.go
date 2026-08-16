@@ -213,7 +213,10 @@ func runBoard(
 	if err != nil {
 		return err
 	}
-	systemPrompt := BuildSystemPrompt(definition, principal, composed, localSkillpack)
+	systemPrompt, err := evaluationSystemPrompt(definition, principal, composed, localSkillpack)
+	if err != nil {
+		return err
+	}
 	// Derived rather than accepted, so a graded dataset cannot name a bundle
 	// this run did not read. See sirens-echo#316.
 	provenance.Composed = composedState
