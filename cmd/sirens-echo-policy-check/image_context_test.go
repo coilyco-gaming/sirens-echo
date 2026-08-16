@@ -15,6 +15,7 @@ var imageContextPaths = []string{
 	filepath.Join(".agents", "skills", "sirens-echo-community"),
 	filepath.Join(".agents", "skills", "sirens-echo-knowledge"),
 	filepath.Join(".agents", "skills", "coilyco-general"),
+	filepath.Join(".agents", "skills", "coilyco-org"),
 	"docs",
 }
 

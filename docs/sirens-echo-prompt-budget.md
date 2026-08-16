@@ -63,6 +63,13 @@ argued in the diff.
   new rule. The raise is identical on both profiles, which is the shared block
   showing up as arithmetic.
 
+- **Both, by 1951**, to 24242 and 14526, on 2026-08-15. The org relationship
+  became a knowledge source on sirens-echo#806, composed by both profiles, so
+  the raise is identical again. It is the largest single raise here and it buys
+  one thing: both agents answer "who do you work for" from a shared source
+  rather than each inferring it. A first draft cost 2827 and was cut to this
+  without dropping a fact.
+
 Deep's two profiles are not converging by accident. Deep now carries the same
 filing instructions as Echo because it does the same filing, and the budget gap
 between the two remains the local policy roots rather than the tracker. Kai
