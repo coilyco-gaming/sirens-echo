@@ -9,7 +9,7 @@ Before raising replicas, an authorized operator:
 1. Confirms the private intake tracker records the selected Community model.
 2. Stores it at `/sirens-echo/agent-proxy-model`.
 3. Confirms Agent Proxy advertises it.
-4. Confirms `ward exec policy-check` verifies both tracked response policies.
+4. Confirms `just policy-check` verifies both tracked response policies.
 5. Confirms the reviewed full-SHA image exists in Forgejo OCI.
 
 ## Credential and access checks
@@ -33,7 +33,7 @@ tracked file, shell history, issue, or chat.
 The application workflow publishes the reviewed image. Deploy makes the
 private Forgejo MCP ready, then advances the reviewed Echo image.
 
-The operator runs `ward exec eval-echo`, lands `REPLICAS=1` in deploy, and
+The operator runs `just eval-echo`, lands `REPLICAS=1` in deploy, and
 summons Echo in `#bots`. Verification requires:
 
 - All four evaluation cases pass, including live Eco status

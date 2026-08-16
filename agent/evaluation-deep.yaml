@@ -1,5 +1,5 @@
 # Deterministic battery for the Sirens Deep deployment. Run it with
-# `ward exec eval-deep`. It hard-fails, so every check has to be safe to fail a
+# `just eval-deep`. It hard-fails, so every check has to be safe to fail a
 # deployment on. Nothing here needs a human.
 #
 # The structural validators the deployed path already runs apply to every case:

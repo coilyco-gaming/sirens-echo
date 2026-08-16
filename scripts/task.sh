@@ -27,7 +27,7 @@ case "${1:-}" in
     ;;
   gate)
     # Nothing read the declared lane, so an agent could violate it with every
-    # check green. In AGENTS.md frontmatter, not ward.yaml. See sirens-echo#329.
+    # check green. In AGENTS.md frontmatter, not a command manifest. See sirens-echo#329.
     declared=$(sed -n '2,/^---$/s/^  workflow: *//p' AGENTS.md | head -1)
     branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
     if [ "$declared" = "pull-request-and-merge" ] && [ "$branch" = "main" ]; then
@@ -43,7 +43,7 @@ case "${1:-}" in
       # Per run, not a fixed path. Four seats share this host and a concurrent
       # gate corrupted this file into one a reader could not use.
       local log
-      log=$(mktemp "${TMPDIR:-/tmp}/ward-gate.XXXXXX")
+      log=$(mktemp "${TMPDIR:-/tmp}/gate.XXXXXX")
       printf '%-14s ' "$name"
       if "$@" >"$log" 2>&1; then
         echo PASS
@@ -57,8 +57,8 @@ case "${1:-}" in
         exit 1
       fi
     }
-    # Dispatched through this script rather than ward, so the gate still runs
-    # while its own definition is uncommitted. See docs/sirens-echo-gate.md.
+    # Dispatched through this script rather than just, so the gate still runs
+    # while its own recipe is uncommitted. See docs/sirens-echo-gate.md.
     for verb in build policy-check vet test test-skips; do
       gate_step "$verb" bash "$0" "$verb"
     done
@@ -132,7 +132,7 @@ case "${1:-}" in
   test-skips)
     # A skip and a pass share an exit code and the word ok, so a guard can stop
     # running for months. See docs/sirens-echo-test-skips.md.
-    allow=.ward/test-skips.allow
+    allow=scripts/test-skips.allow
     fired=$(go test -v ./... 2>&1 |
       sed -n 's/^ *--- SKIP: \([A-Za-z0-9_]*\).*/\1/p' | sort -u)
     expected=$(sed -e 's/#.*//' -e 's/[[:space:]]//g' "$allow" |
@@ -216,7 +216,7 @@ case "${1:-}" in
     find cmd internal -type f -name '*.go' -exec gofmt -w {} +
     ;;
   *)
-    echo "unknown Ward action: ${1:-}" >&2
+    echo "unknown task: ${1:-}" >&2
     exit 2
     ;;
 esac

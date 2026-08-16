@@ -1,110 +1,11 @@
-# Per-repo command allowlist for sirens-echo. Ward is the canonical
-# entry point for dev verbs here. Multi-step commands use one focused helper.
-#
-# Names follow Ward's [a-z0-9-] rule. Argv validation rejects shell
-# metacharacters at invocation time, so flags forward verbatim through
-# Ward's native argv handling.
-#
-# The `catalog:` block is metadata for the cross-repo knowledge graph.
+# Catalog metadata for the cross-repo knowledge graph.
 # Schema: coilysiren/agentic-os-kai#420 (tracker).
-
-commands:
-  setup:
-    run: bash scripts/ward-command.sh setup
-    description: Install the pre-commit hooks into this checkout. Run on a fresh clone or after .pre-commit-config.yaml changes.
-  gate:
-    run: bash scripts/ward-command.sh gate
-    description: Run every check a push must pass, in order, with pre-commit last.
-  build:
-    run: bash scripts/ward-command.sh build
-    description: Compile Sirens Echo and the Echo evaluation gate.
-  policy-check:
-    run: bash scripts/ward-command.sh policy-check
-    description: Load every tracked definition and verify its selected response policy.
-  image:
-    run: docker build -t sirens-echo:dev .
-    description: Build the Sirens Echo production container image locally.
-  image-publish-check:
-    run: bash -n scripts/publish-image.sh
-    description: Parse the trusted Forgejo OCI publisher shell contract.
-  compose-bundles:
-    run: bash scripts/ward-command.sh compose-bundles
-    description: Stage the reviewed composed sources and materialize one bundle per role.
-  prompt-dump:
-    run: go run ./cmd/sirens-echo-prompt
-    description: Rewrite the tracked rendered-prompt snapshots for every definition.
-  prompt-check:
-    run: go run ./cmd/sirens-echo-prompt --check
-    description: Fail when a rendered-prompt snapshot no longer matches its sources.
-  guardfile-skill:
-    run: go run ./cmd/sirens-echo-guardfile --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl
-    description: Regenerate the agent's own-authority skill from the deployed guardfile.
-  guardfile-skill-check:
-    run: go run ./cmd/sirens-echo-guardfile --check --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl
-    description: Fail when the own-authority skill is stale against the deployed guardfile.
-  knobs:
-    run: go run ./cmd/sirens-echo-knobs
-    description: Rewrite the tracked reference of every number a deployment may set.
-  knobs-check:
-    run: go run ./cmd/sirens-echo-knobs --check
-    description: Fail when the tracked knob reference no longer matches the table.
-  role-snapshot:
-    run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles
-    description: Rewrite the tracked per-role selection record from baked bundles.
-  role-snapshot-check:
-    run: go run ./cmd/sirens-echo-prompt --bundles agent/bundles --check
-    description: Fail when a baked role selects something its tracked record does not. Needs bundles already baked.
-  role-drift-check:
-    run: bash scripts/ward-command.sh role-drift-check
-    description: Bake the bundles and fail on record drift in one step. The gate CI runs, and the one to run from a checkout with no baked bundles.
-  vet:
-    run: bash scripts/ward-command.sh vet
-    description: go vet across the tree. Routed through the script so a hookless checkout installs the commit gate on the way past.
-  test:
-    run: bash scripts/ward-command.sh test
-    description: Run the unit test suite. Routed through the script so a hookless checkout installs the commit gate on the way past.
-  evidence-scan:
-    run: bash scripts/ward-command.sh evidence-scan
-    description: Count tool-call markup across committed run records. Gates nothing.
-  test-skips:
-    run: bash scripts/ward-command.sh test-skips
-    description: Verify every test that skips is on the reviewed skip allowlist.
-  tidy:
-    run: bash scripts/ward-command.sh tidy
-    description: go mod tidy. Routed through the script so a hookless checkout installs the commit gate on the way past.
-  rate-echo:
-    run: bash scripts/ward-command.sh rate-echo
-    description: Measure the Sirens Echo intermittent-behavior rates. Gates nothing.
-  rate-deep:
-    run: bash scripts/ward-command.sh rate-deep
-    description: Measure the Sirens Deep intermittent-behavior rates. Gates nothing.
-  rate-fixture-deep:
-    run: bash scripts/ward-command.sh rate-fixture-deep
-    description: Measure data-borne injection against a tool fixture. Gates nothing.
-  rate-fixture-tracker:
-    run: bash scripts/ward-command.sh rate-fixture-tracker
-    description: Measure the filing rule against a tracker fixture. Gates nothing.
-  rate-fixture-tracker-match:
-    run: bash scripts/ward-command.sh rate-fixture-tracker-match
-    description: Measure the filing rule's dedupe branch against a found issue. Gates nothing.
-  format:
-    run: bash scripts/ward-command.sh format
-    description: Format Go source.
-  run-echo:
-    run: bash scripts/ward-command.sh run-echo
-    description: Run Sirens Echo. Requires Discord, channel, model, and MCP env.
-  eval-echo:
-    run: bash scripts/ward-command.sh eval-echo
-    description: Run the non-mutating Sirens Echo cases through Agent Proxy.
-  eval-deep:
-    run: bash scripts/ward-command.sh eval-deep
-    description: Run the non-mutating Sirens Deep cases through Agent Proxy.
-  board-deep:
-    run: bash scripts/ward-command.sh board-deep
-    description: Emit the Sirens Deep human-graded board dataset. Gates nothing.
-  pre-commit-all:
-    run: pre-commit run --all-files
-    description: Run the complete repository pre-commit suite.
+#
+# Dev verbs used to live here as a `commands:` block. They are recipes in the
+# repo-root justfile now. This file survives only because the catalog-block
+# hook reads this exact path (agentic_os/pre_commit/check_catalog_block.py
+# pins `.ward/ward.yaml`), so the block cannot move until that validator
+# learns a new home. Tracked upstream.
 
 catalog:
   description: "Sirens Echo Discord community agent and repo-local skillpack."

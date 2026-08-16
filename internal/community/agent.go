@@ -1192,7 +1192,7 @@ func (a *Agent) runTurn(
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it
 	// renders after the checks. See docs/sirens-echo-phrases.md.
-	if reply, err = a.renderPhrases(reply); err != nil {
+	if reply, err = a.renderPhrases(turnCtx, reply); err != nil {
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
 

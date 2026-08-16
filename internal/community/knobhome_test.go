@@ -148,7 +148,7 @@ func TestTheKnobReferenceIsCurrent(t *testing.T) {
 		t.Fatalf("read the reference: %v", err)
 	}
 	if string(tracked) != RenderKnobReference() {
-		t.Error("docs/sirens-echo-knobs.md is stale. Run `ward exec knobs`.")
+		t.Error("docs/sirens-echo-knobs.md is stale. Run `just knobs`.")
 	}
 }
 

@@ -24,7 +24,7 @@ func main() {
 		}
 		if string(tracked) != rendered {
 			fmt.Fprintf(os.Stderr,
-				"%s is stale. Run `ward exec knobs`.\n", referencePath)
+				"%s is stale. Run `just knobs`.\n", referencePath)
 			os.Exit(1)
 		}
 		return

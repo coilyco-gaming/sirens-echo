@@ -53,37 +53,37 @@ Forgejo MCP, names no channel, and has no automatic issue tracker.
 
 ## Commands
 
-Route every dev verb through Ward: `ward exec setup`, `build`, `policy-check`,
+Route every dev verb through just: `just setup`, `build`, `policy-check`,
 `vet`, `test`, `tidy`, and `run-echo`. Do not invoke bare `go` or `uv`.
 
 ## Validation
 
-Run `ward exec gate` before pushing. It runs build, policy-check, vet, test,
+Run `just gate` before pushing. It runs build, policy-check, vet, test,
 test-skips, and pre-commit last, which is what CI runs and the order it runs
 them in. See [the gate](docs/sirens-echo-gate.md).
 
 `vet` and `test` alone pass on a tree CI rejects, so the separate verbs still
 leave a coverage gap that only `gate` closes. Never use `--no-verify`.
 
-A fresh clone starts with no hooks. Run `ward exec setup` to install them.
+A fresh clone starts with no hooks. Run `just setup` to install them.
 Forgetting is survivable, because every verb routed through
-`scripts/ward-command.sh` installs a missing hook on the way past, and the
+`scripts/task.sh` installs a missing hook on the way past, and the
 daily loop of `vet`, `test`, and `tidy` all route through it. The snapshot,
 regeneration, and image verbs name their tool directly and install nothing.
 
 ### Live evaluation cadence
 
-`ward exec eval-deep` runs 5 times. `ward exec eval-echo` runs once.
+`just eval-deep` runs 5 times. `just eval-echo` runs once.
 
 Deep's pack is a deterministic battery of scoped checks. Never add a check that
 could fire on a correct reply. See [the battery](docs/sirens-echo-battery.md).
 
-`ward exec board-deep` is the human-graded board and gates nothing. It repeats
+`just board-deep` is the human-graded board and gates nothing. It repeats
 each case 5 times inside one run, so it is invoked once and its stdout is the
 evidence. Never wire it into CI and never derive a pass or fail from its
 `structural` field. See [the Deep board](docs/sirens-echo-board.md).
 
-`ward exec rate-deep` measures an intermittent behavior and gates nothing. It
+`just rate-deep` measures an intermittent behavior and gates nothing. It
 runs each case its own declared number of times, reports passed over attempts,
 and excludes substrate errors from the denominator. Never wire it into CI, and
 never promote a case into the battery on a small clean sample. Record host
@@ -225,5 +225,6 @@ switching tasks, or ending a session. The remote is the only durable artifact.
 
 - [README.md](README.md) - human-facing intro.
 - [docs/FEATURES.md](docs/FEATURES.md) - shipped inventory.
-- [.ward/ward.yaml](.ward/ward.yaml) - allowlisted commands.
+- [justfile](justfile) - development recipes.
+- [.ward/ward.yaml](.ward/ward.yaml) - catalog metadata only, since the commands moved to the justfile.
 Cross-reference convention from [features-release-tooling.md](docs/features-release-tooling.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

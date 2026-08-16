@@ -45,7 +45,7 @@ declaration, and the per-role requests are build output, removed on exit.
 
 The image clones the catalogue at `AOS_CATALOG_REF`, which floats on `main` by
 design, so a rebuild takes the catalogue as it stands. Override the build arg to
-reproduce an older bundle. Locally `ward exec compose-bundles` uses an
+reproduce an older bundle. Locally `just compose-bundles` uses an
 `AOS_CATALOG` checkout and fails closed when it is too old.
 
 The graph declares no provider repositories: sources reach a bundle through the

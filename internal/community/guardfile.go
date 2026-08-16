@@ -109,7 +109,7 @@ var deniedByAbsence = []string{
 func RenderGuardfileSkill(guard Guardfile) string {
 	var output strings.Builder
 	output.WriteString("# The authority I actually hold\n\n")
-	output.WriteString("Generated from the deployed guardfile by `ward exec guardfile-skill`.\n")
+	output.WriteString("Generated from the deployed guardfile by `just guardfile-skill`.\n")
 	output.WriteString("Do not edit by hand: a hand-written description of a boundary drifts\n")
 	output.WriteString("from the boundary, and describing my own limits wrongly is worse than\n")
 	output.WriteString("declining to describe them.\n\n")

@@ -4,8 +4,8 @@ Every number this service ships reads an environment variable. There is no
 second tier of constants a deployment cannot reach.
 
 [The reference](sirens-echo-knobs.md) is the list, generated from the table
-itself by `ward exec knobs`, so it cannot fall behind what the code offers.
-`ward exec knobs-check` fails when it has.
+itself by `just knobs`, so it cannot fall behind what the code offers.
+`just knobs-check` fails when it has.
 
 ## One helper, one behaviour
 
