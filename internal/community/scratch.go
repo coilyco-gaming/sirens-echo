@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -50,6 +51,12 @@ var ErrNoScratchRequester = errors.New(
 	"scratchpad refused: the turn carries no requesting principal to partition by",
 )
 
+// ErrNoScratchSession refuses a turn carrying no workspace. Absence is denial
+// rather than one shared bucket every conversation writes into.
+var ErrNoScratchSession = errors.New(
+	"scratchpad refused: the turn carries no session to partition by",
+)
+
 // ScratchProvider exposes a per-requester text filesystem as tools. An empty
 // Root offers no tools at all, rather than tools that fail.
 type ScratchProvider struct {
@@ -66,11 +73,24 @@ func (p *ScratchProvider) Open(ctx context.Context) (ToolSession, error) {
 	if requester == "" {
 		return nil, ErrNoScratchRequester
 	}
-	partition := filepath.Join(p.Root, scratchPartitionName(requester))
+	session := SessionFrom(ctx)
+	if !session.Valid() {
+		return nil, ErrNoScratchSession
+	}
+	// Session over requester, so a thread is shared and the per-requester
+	// quota stays measurable. See docs/sirens-echo-session-workspace.md.
+	sessionRoot := filepath.Join(p.Root, session.Directory())
+	partition := filepath.Join(sessionRoot, scratchPartitionName(requester))
 	if err := os.MkdirAll(partition, scratchPermissions); err != nil {
 		return nil, fmt.Errorf("prepare scratchpad partition: %w", err)
 	}
-	return &scratchSession{root: partition, enabled: true}, nil
+	return &scratchSession{
+		root:        partition,
+		sessionRoot: sessionRoot,
+		scratchRoot: p.Root,
+		requester:   scratchPartitionName(requester),
+		enabled:     true,
+	}, nil
 }
 
 // scratchPartitionName derives a flat directory name from the requester, by
@@ -87,8 +107,15 @@ func scratchPartitionName(requesterID string) string {
 }
 
 type scratchSession struct {
-	root    string
-	enabled bool
+	// root is where this requester writes. sessionRoot is what everyone in the
+	// session reads, so a thread's members see one workspace.
+	root        string
+	sessionRoot string
+	// scratchRoot is every session, walked to hold the per-requester quota
+	// across the sessions one member takes part in.
+	scratchRoot string
+	requester   string
+	enabled     bool
 }
 
 func (s *scratchSession) Grounding() []GroundingDocument { return nil }
@@ -212,12 +239,65 @@ func reservedScratchPath(relative string) bool {
 		strings.EqualFold(first, scratchUploadDir)
 }
 
-// resolve confines a model-supplied path to the partition, deciding on where it
-// lands rather than on how it is spelled.
+// resolve confines a path to the requester's own subtree, where a write lands.
+// resolveShared is the read counterpart.
 func (s *scratchSession) resolve(relative string) (string, error) {
+	return s.resolveUnder(s.root, relative)
+}
+
+// resolveShared reads your own bare path first, then the rest of the session.
+// See docs/sirens-echo-session-workspace.md.
+func (s *scratchSession) resolveShared(relative string) (string, error) {
+	if strings.TrimSpace(s.sessionRoot) == "" {
+		return s.resolve(relative)
+	}
+	// The root of a shared read is the session, not your corner of it.
+	if strings.TrimSpace(relative) == "" {
+		return s.sessionRoot, nil
+	}
+	own, err := s.resolveUnder(s.root, relative)
+	if err == nil {
+		if _, statErr := os.Stat(own); statErr == nil {
+			return own, nil
+		}
+	}
+	shared, sharedErr := s.resolveUnder(s.sessionRoot, relative)
+	if sharedErr != nil {
+		return "", sharedErr
+	}
+	if _, statErr := os.Stat(shared); statErr == nil {
+		return shared, nil
+	}
+	// Neither exists, so a miss reads as the caller's own path.
+	if err != nil {
+		return "", err
+	}
+	return own, nil
+}
+
+// sessionRelative shows your files bare and another member's under its owner.
+func (s *scratchSession) sessionRelative(target string) (string, error) {
+	base := s.sessionRoot
+	if strings.TrimSpace(base) == "" {
+		base = s.root
+	}
+	rel, err := filepath.Rel(base, target)
+	if err != nil {
+		return "", err
+	}
+	slashed := filepath.ToSlash(rel)
+	if s.requester != "" {
+		if trimmed := strings.TrimPrefix(slashed, s.requester+"/"); trimmed != slashed {
+			return trimmed, nil
+		}
+	}
+	return slashed, nil
+}
+
+func (s *scratchSession) resolveUnder(base, relative string) (string, error) {
 	trimmed := strings.TrimSpace(relative)
 	if trimmed == "" {
-		return s.root, nil
+		return base, nil
 	}
 	if filepath.IsAbs(trimmed) || strings.HasPrefix(trimmed, "/") {
 		return "", errors.New("path must be relative to the scratchpad root")
@@ -234,19 +314,19 @@ func (s *scratchSession) resolve(relative string) (string, error) {
 	}
 	cleaned := strings.TrimPrefix(path.Clean("/"+filepath.ToSlash(trimmed)), "/")
 	if cleaned == "" || cleaned == "." {
-		return s.root, nil
+		return base, nil
 	}
 	if strings.Count(cleaned, "/") >= maxScratchDepth {
 		return "", fmt.Errorf("path nests deeper than %d directories", maxScratchDepth)
 	}
-	candidate := filepath.Join(s.root, filepath.FromSlash(cleaned))
-	return candidate, s.confine(candidate)
+	candidate := filepath.Join(base, filepath.FromSlash(cleaned))
+	return candidate, s.confine(base, candidate)
 }
 
-// confine rejects a target escaping the partition once symlinks are followed,
+// confine rejects a target escaping base once symlinks are followed,
 // evaluating the nearest existing ancestor so a new path is still checked.
-func (s *scratchSession) confine(candidate string) error {
-	rootReal, err := filepath.EvalSymlinks(s.root)
+func (s *scratchSession) confine(base, candidate string) error {
+	rootReal, err := filepath.EvalSymlinks(base)
 	if err != nil {
 		return fmt.Errorf("resolve scratchpad root: %w", err)
 	}
@@ -278,7 +358,7 @@ func scratchWithinRoot(root, target string) bool {
 }
 
 func (s *scratchSession) list(relative string) (ToolResult, error) {
-	target, err := s.resolve(relative)
+	target, err := s.resolveShared(relative)
 	if err != nil {
 		return scratchRefusal("%v", err)
 	}
@@ -293,7 +373,7 @@ func (s *scratchSession) list(relative string) (ToolResult, error) {
 		if p == target {
 			return nil
 		}
-		rel, relErr := filepath.Rel(s.root, p)
+		rel, relErr := s.sessionRelative(p)
 		if relErr != nil {
 			return relErr
 		}
@@ -325,7 +405,7 @@ func (s *scratchSession) read(relative string) (ToolResult, error) {
 	if strings.TrimSpace(relative) == "" {
 		return scratchRefusal("path is required")
 	}
-	target, err := s.resolve(relative)
+	target, err := s.resolveShared(relative)
 	if err != nil {
 		return scratchRefusal("%v", err)
 	}
@@ -376,6 +456,10 @@ func (s *scratchSession) write(relative, content string) (ToolResult, error) {
 // writeAt refuses a model-authored write into the reserved directory, so a file
 // found there was written by the runtime and not by something imitating it.
 func (s *scratchSession) writeAt(relative, content string, runtime bool) (ToolResult, error) {
+	// No scratchpad means no write. An empty root confines to the cwd.
+	if !s.enabled || strings.TrimSpace(s.root) == "" {
+		return scratchRefusal("no scratchpad is mounted")
+	}
 	if !runtime && reservedScratchPath(relative) {
 		return scratchRefusal("%s is reserved for runtime output", scratchReservedDir)
 	}
@@ -398,16 +482,22 @@ func (s *scratchSession) writeAt(relative, content string, runtime bool) (ToolRe
 	if target == s.root {
 		return scratchRefusal("path is required")
 	}
-	used, err := s.partitionBytes()
+	// The bound the volume was sized against, summed across sessions.
+	used, err := s.requesterBytes()
 	if err != nil {
 		return ToolResult{}, err
 	}
-	projected := used - scratchExistingSize(target) + int64(len(content))
-	if projected > int64(maxScratchPartitionBytes) {
+	replacing := scratchExistingSize(target)
+	if projected := used - replacing + int64(len(content)); projected > int64(maxScratchPartitionBytes) {
 		return scratchRefusal(
 			"writing %s would use %d bytes, over the %d byte scratchpad limit",
 			scratchDisplayPath(relative), projected, maxScratchPartitionBytes,
 		)
+	}
+	// The additional bound. It evicts so an active thread stays usable.
+	evicted, err := s.makeSessionRoom(int64(len(content)) - replacing)
+	if err != nil {
+		return ToolResult{}, err
 	}
 	if err := os.MkdirAll(filepath.Dir(target), scratchPermissions); err != nil {
 		return ToolResult{}, fmt.Errorf("prepare scratchpad directory: %w", err)
@@ -415,16 +505,22 @@ func (s *scratchSession) writeAt(relative, content string, runtime bool) (ToolRe
 	if err := os.WriteFile(target, []byte(content), scratchFilePermissions); err != nil {
 		return ToolResult{}, fmt.Errorf("write scratchpad file: %w", err)
 	}
-	return ToolResult{
-		Text: fmt.Sprintf("wrote %s (%d bytes)", scratchDisplayPath(relative), len(content)),
-	}, nil
+	written := fmt.Sprintf("wrote %s (%d bytes)", scratchDisplayPath(relative), len(content))
+	// Named rather than silent, so a vanished file is explainable.
+	if len(evicted) > 0 {
+		written += fmt.Sprintf(
+			"\nevicted %d older file(s) to stay inside the %d byte session limit: %s",
+			len(evicted), maxSessionBytes, strings.Join(evicted, ", "),
+		)
+	}
+	return ToolResult{Text: written}, nil
 }
 
 func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 	if strings.TrimSpace(query) == "" {
 		return scratchRefusal("query is required")
 	}
-	target, err := s.resolve(relative)
+	target, err := s.resolveShared(relative)
 	if err != nil {
 		return scratchRefusal("%v", err)
 	}
@@ -448,7 +544,7 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 		if readErr != nil || !utf8.Valid(data) {
 			return nil
 		}
-		rel, relErr := filepath.Rel(s.root, p)
+		rel, relErr := s.sessionRelative(p)
 		if relErr != nil {
 			return relErr
 		}
@@ -474,6 +570,132 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 		return ToolResult{Text: "no matches"}, nil
 	}
 	return ToolResult{Text: strings.Join(matches, "\n")}, nil
+}
+
+// requesterBytes totals this requester across sessions, so their ceiling
+// survives a workspace shared with other members.
+func (s *scratchSession) requesterBytes() (int64, error) {
+	if strings.TrimSpace(s.scratchRoot) == "" || s.requester == "" {
+		return treeBytes(s.root)
+	}
+	sessions, err := os.ReadDir(s.scratchRoot)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("read scratchpad root: %w", err)
+	}
+	var total int64
+	for _, entry := range sessions {
+		if !entry.IsDir() {
+			continue
+		}
+		mine := filepath.Join(s.scratchRoot, entry.Name(), s.requester)
+		size, sizeErr := treeBytes(mine)
+		if sizeErr != nil {
+			return 0, sizeErr
+		}
+		total += size
+	}
+	return total, nil
+}
+
+// sessionFile is one file in the workspace, with the time eviction orders by.
+type sessionFile struct {
+	path     string
+	relative string
+	size     int64
+	modified time.Time
+}
+
+// sessionFiles lists the whole workspace oldest first, which is the order
+// eviction removes in.
+func (s *scratchSession) sessionFiles() ([]sessionFile, int64, error) {
+	root := s.sessionRoot
+	if strings.TrimSpace(root) == "" {
+		root = s.root
+	}
+	files := make([]sessionFile, 0, 16)
+	var total int64
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		info, infoErr := d.Info()
+		if infoErr != nil {
+			return infoErr
+		}
+		rel, relErr := filepath.Rel(root, p)
+		if relErr != nil {
+			return relErr
+		}
+		files = append(files, sessionFile{
+			path:     p,
+			relative: filepath.ToSlash(rel),
+			size:     info.Size(),
+			modified: info.ModTime(),
+		})
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, 0, nil
+		}
+		return nil, 0, fmt.Errorf("measure session: %w", err)
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].modified.Before(files[j].modified) })
+	return files, total, nil
+}
+
+// makeSessionRoom evicts oldest first until the write fits, inside this
+// session only. See docs/sirens-echo-session-workspace.md.
+func (s *scratchSession) makeSessionRoom(delta int64) ([]string, error) {
+	files, total, err := s.sessionFiles()
+	if err != nil {
+		return nil, err
+	}
+	evicted := make([]string, 0)
+	for _, file := range files {
+		if total+delta <= int64(maxSessionBytes) {
+			break
+		}
+		if removeErr := os.Remove(file.path); removeErr != nil {
+			return evicted, fmt.Errorf("evict %s: %w", file.relative, removeErr)
+		}
+		total -= file.size
+		evicted = append(evicted, file.relative)
+	}
+	return evicted, nil
+}
+
+// treeBytes totals one directory, reporting an absent one as empty.
+func treeBytes(dir string) (int64, error) {
+	var total int64
+	err := filepath.WalkDir(dir, func(_ string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			return nil
+		}
+		info, infoErr := d.Info()
+		if infoErr != nil {
+			return infoErr
+		}
+		total += info.Size()
+		return nil
+	})
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("measure scratchpad: %w", err)
+	}
+	return total, nil
 }
 
 func (s *scratchSession) partitionBytes() (int64, error) {
