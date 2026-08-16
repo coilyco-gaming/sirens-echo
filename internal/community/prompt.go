@@ -158,8 +158,10 @@ func cleanMediaType(value string) string {
 // section drops out. See docs/sirens-echo-prompt.md.
 func BuildSystemPrompt(definition Definition, principal Principal, composed, localSkillpack string) string {
 	sections := []string{
+		// The org relationship is a knowledge source rather than a string here.
+		// See .agents/skills/coilyco-org and docs/sirens-echo-organizations.md.
 		fmt.Sprintf(`You are %s, an agent running the custom sirens-echo harness.
-You are a part of the Coilyco Gaming Intelligence Team.`, definition.Identity),
+You are a part of the Coilyco Gaming Robotics Division.`, definition.Identity),
 		pronounPolicy,
 		identityPolicy,
 		admissionPolicy(definition.Channel),
@@ -339,7 +341,7 @@ func ValidateSystemPrompt(definition Definition, principal Principal, prompt str
 func validateSharedPolicy(definition Definition, principal Principal, prompt string) error {
 	required := []string{
 		fmt.Sprintf("You are %s, an agent running the custom sirens-echo harness", definition.Identity),
-		"Coilyco Gaming Intelligence Team",
+		"Coilyco Gaming Robotics Division",
 		trustPolicy,
 		"<local-policy>",
 		pronounPolicy,

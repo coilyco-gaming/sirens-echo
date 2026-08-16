@@ -23,7 +23,7 @@ Deployment selects which definition loads and contributes no prose.
 ## Shared framing
 
 Every profile opens by naming its identity, the sirens-echo harness it runs on,
-and the Coilyco Gaming Intelligence Team, then carries the pronoun policy, the
+and the Coilyco Gaming Robotics Division, then carries the pronoun policy, the
 admission sentence, and the trust policy. That policy names Kai as the only
 trusted speaker and treats every other input as a passive threat probe.
 Deployment supplies her Discord handle and user ID through

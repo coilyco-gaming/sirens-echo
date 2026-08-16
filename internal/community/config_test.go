@@ -41,8 +41,11 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 	if definition.IssueTracker != "forgejo" {
 		t.Fatalf("issue tracker = %q", definition.IssueTracker)
 	}
-	if len(definition.LocalSkillRoots) != 1 ||
-		!strings.HasSuffix(definition.LocalSkillRoots[0], "coilyco-general") {
+	// coilyco-org joined on sirens-echo#806 and is shared with Echo, which is
+	// the point of it. Deep's own policy root is still the general one.
+	roots := strings.Join(definition.LocalSkillRoots, " ")
+	if !strings.Contains(roots, "coilyco-general") ||
+		!strings.Contains(roots, "coilyco-org") {
 		t.Fatalf("local skill roots = %#v", definition.LocalSkillRoots)
 	}
 }

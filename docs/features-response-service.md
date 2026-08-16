@@ -46,6 +46,8 @@ rest of the inventory stays in [FEATURES.md](FEATURES.md).
   no suffix is budgeted against another. See
   [reply assembly](sirens-echo-reply-assembly.md)
 - Repo-local Sirens knowledge with no automatic memory or autonomous edits
+- One org-relationship source both profiles compose. See
+  [organizations](sirens-echo-organizations.md)
 - Guarded Discord context skill with SSM fast paths and bounded MCP reads
 - Model-filed ordinary Forgejo issues through the guarded tool, with
   exact-title reuse and no labels
