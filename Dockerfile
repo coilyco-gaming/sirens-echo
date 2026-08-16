@@ -7,6 +7,7 @@ RUN go mod download
 COPY cmd ./cmd
 COPY internal ./internal
 COPY agent ./agent
+COPY agents ./agents
 COPY .agents/skills/sirens-echo-community ./.agents/skills/sirens-echo-community
 COPY .agents/skills/sirens-echo-knowledge ./.agents/skills/sirens-echo-knowledge
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
@@ -33,6 +34,7 @@ WORKDIR /src
 RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
     https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog
 COPY agent ./agent
+COPY agents ./agents
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
 COPY .agents/skills/coilyco-org ./.agents/skills/coilyco-org
 COPY scripts/stage-compose-sources.sh ./scripts/
@@ -59,6 +61,7 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-compose /usr/local/bin/sire
 COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin/sirens-echo-access-check
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
+COPY --chown=1000:1000 agents /app/agents
 COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
 COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge
 COPY --chown=1000:1000 .agents/skills/coilyco-general /app/.agents/skills/coilyco-general

@@ -1,6 +1,6 @@
 # Sirens Deep deterministic battery
 
-`agent/evaluation-deep.yaml`, run with `just eval-deep`. It hard-fails a
+`agents/deep/packs/evaluation.yaml`, run with `just eval-deep`. It hard-fails a
 deployment and needs no human. See [the board](sirens-echo-board.md) for the
 graded layer that handles what this cannot decide.
 

@@ -9,7 +9,7 @@ import "testing"
 // member's name must not match it, which is the point of the check.
 const corpusIdentity = "Sirens Echo"
 
-// corpusSelfAliases mirrors self_aliases in agent/sirens-echo.yaml. A test
+// corpusSelfAliases mirrors self_aliases in agents/echo/definition.yaml. A test
 // below fails if the two drift, because a stale corpus scores nothing.
 var corpusSelfAliases = []string{"Echo"}
 

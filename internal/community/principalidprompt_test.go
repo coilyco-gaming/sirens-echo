@@ -14,8 +14,8 @@ import (
 // empty. A vacuous guard here reads exactly like a real one.
 func TestTheSystemPromptWithholdsThePrincipalUserID(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"sirens-echo.yaml", "sirens-deep.yaml"} {
-		definition, err := LoadDefinition(filepath.Join("..", "..", "agent", name))
+	for _, name := range []string{"agents/echo/definition.yaml", "agents/deep/definition.yaml"} {
+		definition, err := LoadDefinition(filepath.Join("..", "..", name))
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
 		}
@@ -36,8 +36,8 @@ func TestTheSystemPromptWithholdsThePrincipalUserID(t *testing.T) {
 // change that reintroduces the identifier has to fail here too.
 func TestTheRenderedPromptsWithholdThePrincipalUserID(t *testing.T) {
 	t.Parallel()
-	for _, name := range []string{"sirens-echo.prompt.txt", "sirens-deep.prompt.txt"} {
-		raw, err := os.ReadFile(filepath.Join("..", "..", "agent", "rendered", name))
+	for _, name := range []string{"agents/echo/rendered/prompt.txt", "agents/deep/rendered/prompt.txt"} {
+		raw, err := os.ReadFile(filepath.Join("..", "..", name))
 		if err != nil {
 			t.Fatalf("read %s: %v", name, err)
 		}

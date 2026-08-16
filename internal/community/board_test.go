@@ -95,12 +95,12 @@ func TestLoadBoardPackRejectsTheGateSchema(t *testing.T) {
 	// The gate and the board are different contracts in the same shape of file.
 	// Loading one as the other silently is worse than failing.
 	if _, err := LoadBoardPack(
-		filepath.Join("..", "..", "agent", "evaluation-deep.yaml"),
+		filepath.Join("..", "..", "agents", "deep", "packs", "evaluation.yaml"),
 	); err == nil {
 		t.Fatal("expected the deterministic gate to be rejected as a board")
 	}
 	if _, err := LoadEvaluationPack(
-		filepath.Join("..", "..", "agent", "board-deep.yaml"),
+		filepath.Join("..", "..", "agents", "deep", "packs", "board.yaml"),
 	); err == nil {
 		t.Fatal("expected the board to be rejected as a deterministic gate")
 	}
@@ -279,8 +279,8 @@ func TestRunBoardRejectsAnEpochlessRun(t *testing.T) {
 
 func boardProvenanceFixture(epochs int) BoardProvenance {
 	return BoardProvenance{
-		Definition:  "agent/sirens-deep.yaml",
-		Pack:        "agent/board-deep.yaml",
+		Definition:  "agents/deep/definition.yaml",
+		Pack:        "agents/deep/packs/board.yaml",
 		Model:       "sirens-echo/deepseek",
 		Transport:   "http://agent-proxy.invalid",
 		Roster:      "empty",
@@ -310,7 +310,7 @@ func writeAndLoadBoard(t *testing.T, body string) error {
 
 func loadBoardFixture(t *testing.T) BoardPack {
 	t.Helper()
-	pack, err := LoadBoardPack(filepath.Join("..", "..", "agent", "board-deep.yaml"))
+	pack, err := LoadBoardPack(filepath.Join("..", "..", "agents", "deep", "packs", "board.yaml"))
 	if err != nil {
 		t.Fatalf("LoadBoardPack: %v", err)
 	}
@@ -319,7 +319,7 @@ func loadBoardFixture(t *testing.T) BoardPack {
 
 func loadBoardRunFixture(t *testing.T) (Definition, string, BoardPack) {
 	t.Helper()
-	definition, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	definition, err := LoadDefinition(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}

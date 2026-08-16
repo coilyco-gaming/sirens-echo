@@ -43,9 +43,9 @@ into `substrate`.
 
 ## The composed bundle is stubbed, and that bounds every Deep rate
 
-`agent/sirens-deep.yaml` sets `composed: true`. The runner substitutes
+`agents/deep/definition.yaml` sets `composed: true`. The runner substitutes
 `PlaceholderComposed`, which is **249 bytes**, where the deployed pod injects the
-role skill, the personality skills and the rest of the composed context. When
+role skill, the personality skills and the rest of that context. When
 that prompt was last measured in production it was 53,133 bytes against the
 11,392 the snapshot renders, so the bundle was most of it.
 

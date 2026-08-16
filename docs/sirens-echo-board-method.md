@@ -1,12 +1,12 @@
 # Sirens Deep board method
 
-How the board at `agent/board-deep.yaml` is built and scored. See
+How the board at `agents/deep/packs/board.yaml` is built and scored. See
 [the board](sirens-echo-board.md) for how to run it.
 
 ## Clauses come from the rendered prompt
 
 A clause is an obligation the rendered prompt actually states, cited by line
-against `agent/rendered/sirens-deep.prompt.txt`. `just prompt-check` fails
+against `agents/deep/rendered/prompt.txt`. `just prompt-check` fails
 when that snapshot drifts from its sources, so a doctrine edit surfaces as a
 board whose citations no longer match.
 

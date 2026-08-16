@@ -8,7 +8,7 @@
 # ValidateResponseStyle applies the profile's selected style. The checks below
 # are what those do not reach.
 #
-# Judgment lives in the human-graded board at agent/board-deep.yaml, which does
+# Judgment lives in the human-graded board at agents/deep/packs/board.yaml, which does
 # not gate. See docs/sirens-echo-battery.md and docs/sirens-echo-board.md.
 #
 # ## A check has to be an invariant, not a guess at phrasing

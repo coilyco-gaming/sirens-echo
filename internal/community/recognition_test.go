@@ -6,7 +6,7 @@ import "testing"
 // renders without anyone reading a trajectory. See #81.
 func TestRecognitionAxesScoreTheirEndState(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadEvaluationPack("../../agent/evaluation-deep.yaml")
+	pack, err := LoadEvaluationPack("../../agents/deep/packs/evaluation.yaml")
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}

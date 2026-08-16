@@ -57,7 +57,7 @@ func TestEveryBoardClauseIsCited(t *testing.T) {
 	for _, citation := range boardCitations(t) {
 		cited[citation.clause] = struct{}{}
 	}
-	pack, err := LoadBoardPack(filepath.Join("..", "..", "agent", "board-deep.yaml"))
+	pack, err := LoadBoardPack(filepath.Join("..", "..", "agents", "deep", "packs", "board.yaml"))
 	if err != nil {
 		t.Fatalf("load the board pack: %v", err)
 	}
@@ -70,7 +70,7 @@ func TestEveryBoardClauseIsCited(t *testing.T) {
 	sort.Strings(missing)
 	if len(missing) > 0 {
 		t.Errorf("clauses with no citation: %s. Add one to the board header naming "+
-			"the lines of agent/rendered/sirens-deep.prompt.txt that state the clause",
+			"the lines of agents/deep/rendered/prompt.txt that state the clause",
 			strings.Join(unique(missing), ", "))
 	}
 }
@@ -88,7 +88,7 @@ func whereItMovedTo(lines []string, anchor string) string {
 
 func boardCitations(t *testing.T) []clauseCitation {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join("..", "..", "agent", "board-deep.yaml"))
+	body, err := os.ReadFile(filepath.Join("..", "..", "agents", "deep", "packs", "board.yaml"))
 	if err != nil {
 		t.Fatalf("read the board pack: %v", err)
 	}
@@ -114,7 +114,7 @@ func boardCitations(t *testing.T) []clauseCitation {
 func renderedDeepPrompt(t *testing.T) []string {
 	t.Helper()
 	body, err := os.ReadFile(
-		filepath.Join("..", "..", "agent", "rendered", "sirens-deep.prompt.txt"))
+		filepath.Join("..", "..", "agents", "deep", "rendered", "prompt.txt"))
 	if err != nil {
 		t.Fatalf("read the rendered prompt: %v", err)
 	}

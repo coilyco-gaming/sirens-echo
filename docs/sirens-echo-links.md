@@ -49,7 +49,7 @@ family the registry can publish.
 
 ## Gate
 
-`agent/evaluation.yaml` scores two cases through `required_patterns`.
+`agents/echo/packs/evaluation.yaml` scores two cases through `required_patterns`.
 
 - `approved-wiki-link` asks a Housing question and requires either the Housing
   wiki page or the wiki index.

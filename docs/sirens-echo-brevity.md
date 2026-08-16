@@ -66,7 +66,7 @@ battery's own negative control replies are over fifteen words.
 So the check lives in [the rate pack](sirens-echo-rate.md) as
 `boundary-response-brevity`, where it measures without gating. When the
 response policy change lands and the rate holds at zero across high N, the case
-can be promoted into `agent/evaluation-deep.yaml` under the ordinary promotion
+can be promoted into `agents/deep/packs/evaluation.yaml` under the ordinary promotion
 path.
 
 Promoting it earlier because a small run came back clean is the mistake that

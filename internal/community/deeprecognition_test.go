@@ -7,7 +7,7 @@ import "testing"
 
 func deepRecognitionCase(t *testing.T) (EvaluationCase, Principal) {
 	t.Helper()
-	pack, err := LoadEvaluationPack("../../agent/evaluation-deep.yaml")
+	pack, err := LoadEvaluationPack("../../agents/deep/packs/evaluation.yaml")
 	if err != nil {
 		t.Fatalf("load evaluation pack: %v", err)
 	}

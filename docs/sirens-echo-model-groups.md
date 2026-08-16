@@ -29,7 +29,7 @@ their evaluation-alias results:
 survives a group change. A check scoring length may not, so a rate carrying
 `max_reply_words` compares only to another rate on the same group.
 
-Evidence: `evaluations/probe-echo-lane-model-group.yaml`.
+Evidence: `agents/echo/evaluations/probe-echo-lane-model-group.yaml`.
 
 ## See also
 

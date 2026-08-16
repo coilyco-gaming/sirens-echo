@@ -1,7 +1,6 @@
 package community
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -51,12 +50,11 @@ func TestTheWidenedTriggerKeepsItsTwoLimits(t *testing.T) {
 // One function serves both, so this pins the property rather than the wiring.
 func TestBothProfilesShareOneFilingPolicy(t *testing.T) {
 	t.Parallel()
-	definitions := map[string]string{
-		"echo": filepath.Join("..", "..", "agent", "sirens-echo.yaml"),
-		"deep": filepath.Join("..", "..", "agent", "sirens-deep.yaml"),
-	}
-	rendered := make(map[string]string, len(definitions))
-	for name, path := range definitions {
+	// Every tracked agent rather than the two by name, so a third profile joins
+	// the property instead of quietly sitting outside it.
+	first, firstName := "", ""
+	for _, path := range trackedDefinitionPaths(t) {
+		name := agentOf(path)
 		definition, err := LoadDefinition(path)
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
@@ -64,11 +62,15 @@ func TestBothProfilesShareOneFilingPolicy(t *testing.T) {
 		if definition.IssueTracker == "" {
 			t.Fatalf("%s names no issue tracker, so it renders no filing rule", name)
 		}
-		rendered[name] = issuePolicy(definition.IssueTracker)
-	}
-	if rendered["echo"] != rendered["deep"] {
-		t.Errorf("the profiles carry different filing rules:\n%s\n---\n%s",
-			rendered["echo"], rendered["deep"])
+		policy := issuePolicy(definition.IssueTracker)
+		if first == "" {
+			first, firstName = policy, name
+			continue
+		}
+		if policy != first {
+			t.Errorf("%s and %s carry different filing rules:\n%s\n---\n%s",
+				firstName, name, first, policy)
+		}
 	}
 }
 

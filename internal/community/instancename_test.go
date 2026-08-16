@@ -26,7 +26,7 @@ func TestEchoStillGetsItsNameFromNeitherVariable(t *testing.T) {
 // Echo's definition by another path is still Echo's. Keying on identity makes
 // that structural, so it is asserted where paths enter: LoadConfig.
 func TestEchosDefinitionIsRecognisedByAnyPath(t *testing.T) {
-	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
+	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agents", "echo", "definition.yaml"))
 	useFixtureBundles(t, "ops")
 	t.Setenv("SIRENS_ECHO_DISCORD_ENABLED", "false")
 	t.Setenv("AGENT_PROXY_MODEL", "model")
@@ -113,7 +113,7 @@ func TestAConfiguredNameIsTrimmed(t *testing.T) {
 // A filename is not an identity: Deep's content in a file called
 // sirens-echo.yaml used to take Echo's service name. See sirens-echo#706.
 func TestAForeignDefinitionInAnEchoNamedFileIsRefused(t *testing.T) {
-	deep, err := os.ReadFile(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	deep, err := os.ReadFile(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("read Deep's definition: %v", err)
 	}

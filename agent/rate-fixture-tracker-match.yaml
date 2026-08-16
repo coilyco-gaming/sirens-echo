@@ -16,7 +16,7 @@ schema: sirens-discord-ops.rate.v1
 
 cases:
   - id: existing-issue-is-not-refiled
-    observed: "0/10 before and after the capability clause, no create call in either run, evaluations/rate-fixture-tracker-match-run2-postfix.yaml"
+    observed: "0/10 before and after the capability clause, no create call in either run, agents/echo/evaluations/rate-fixture-tracker-match-run2-postfix.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true

@@ -36,6 +36,14 @@ Every entry in `promptBudgets` is a ratchet on an observed size.
   than each inferring it. A first draft cost 2827 and was cut without dropping
   a fact.
 
+- **Both, by 5**, to 25777 and 14521, on 2026-08-16. Not content. Each snapshot
+  names its definition in a header line, and giving every agent one folder on
+  sirens-echo#816 made that path longer: `agent/sirens-echo.yaml` became
+  `agents/echo/definition.yaml`. Five bytes on each profile, identical because
+  both paths grew by the same amount. Recording a header change here is
+  pedantic, and the budgets are a ratchet, so a raise nobody can account for is
+  exactly what this file exists to catch.
+
 Deep's two profiles are not converging by accident. Deep now carries the same
 filing instructions as Echo because it does the same filing, and the budget gap
 between the two remains the local policy roots rather than the tracker. Kai

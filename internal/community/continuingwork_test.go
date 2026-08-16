@@ -12,7 +12,7 @@ import (
 // gate keeps passing while the runtime stops matching, or the reverse.
 func TestContinuingWorkClaimIsPinnedToTheDeploymentGate(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadEvaluationPack("../../agent/evaluation.yaml")
+	pack, err := LoadEvaluationPack("../../agents/echo/packs/evaluation.yaml")
 	if err != nil {
 		t.Fatalf("load evaluation pack: %v", err)
 	}

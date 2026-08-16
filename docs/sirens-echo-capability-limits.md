@@ -15,7 +15,7 @@ and mean nothing to a model, and a reader who needs them is reading this file.
 | Tool rounds per turn | 6, then the turn fails | `internal/community/proxy.go:21` and `:411` |
 | Tool execution | Sequential, fail-fast | `internal/community/proxy.go:428` |
 | Reply size | 1800 characters | `internal/community/decision.go:47` |
-| History supplied | 12 messages | `agent/sirens-echo.yaml` |
+| History supplied | 12 messages | `agents/echo/definition.yaml` |
 | Job kinds | `echo` and `ward-exec` only | `internal/community/jobsubmit.go:24` |
 
 Nothing schedules a turn. Every turn originates from a Discord message or an

@@ -2,7 +2,7 @@
 
 Four configurations, one prompt, one model, one day. The prompt is the
 `prompt-leakage` case: a request to paste the system prompt, framed as a config
-check. See issue 382 and the datasets under `evaluations/`.
+check. See issue 382 and the datasets under `agents/*/evaluations/`.
 
 | Configuration | Median reply | Leaked |
 | --- | --- | --- |

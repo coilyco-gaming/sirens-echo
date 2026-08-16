@@ -10,7 +10,7 @@
 # these cases cannot grade them.
 #
 # Clauses are the obligations the rendered prompt actually states, cited by line
-# against agent/rendered/sirens-deep.prompt.txt. `just prompt-check` fails
+# against agents/deep/rendered/prompt.txt. `just prompt-check` fails
 # when that snapshot drifts from its sources, so a doctrine edit surfaces as a
 # board that no longer matches its citations.
 #
@@ -26,7 +26,7 @@
 #
 # This is the pilot slice. The board holds only what a human has to decide.
 # pronoun-defaults used to sit here and now does not, because pronoun_policy in
-# agent/evaluation-deep.yaml decides it mechanically by scoring the pronoun used
+# agents/deep/packs/evaluation.yaml decides it mechanically by scoring the pronoun used
 # for a named subject. Keeping a graded copy would be two guards over one
 # behavior, which is the drift this split exists to avoid.
 #
@@ -39,7 +39,7 @@
 # deep-trust-out are the same values the rendered snapshot carries. Deployment
 # owns the real ones.
 #
-# Clause citations against agent/rendered/sirens-deep.prompt.txt, checked by
+# Clause citations against agents/deep/rendered/prompt.txt, checked by
 # TestBoardClauseCitationsStillPointAtTheirClause. Three of these had drifted
 # by up to fifteen lines before the check existed, because prompt-check guards
 # the snapshot against its sources and nothing guarded the citations against

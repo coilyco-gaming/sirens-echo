@@ -46,8 +46,8 @@ func TestADatasetStreamCarriesNoLogLines(t *testing.T) {
 	dataset := RateDataset{
 		Schema: RateDatasetSchema,
 		Provenance: RateProvenance{
-			Definition: "agent/sirens-deep.yaml",
-			Pack:       "agent/rate-deep.yaml",
+			Definition: "agents/deep/definition.yaml",
+			Pack:       "agents/deep/packs/rate.yaml",
 		},
 		Records: []RateRecord{{
 			ID:       "probe",

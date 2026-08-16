@@ -40,13 +40,13 @@ func TestEvaluationTargetsEchoByDefault(t *testing.T) {
 }
 
 func TestEvaluationTargetsTheSelectedProfile(t *testing.T) {
-	t.Setenv("SIRENS_ECHO_DEFINITION", "agent/sirens-deep.yaml")
-	t.Setenv("SIRENS_ECHO_EVALUATION_PACK", "agent/evaluation-deep.yaml")
+	t.Setenv("SIRENS_ECHO_DEFINITION", "agents/deep/definition.yaml")
+	t.Setenv("SIRENS_ECHO_EVALUATION_PACK", "agents/deep/packs/evaluation.yaml")
 
-	if got := evaluationDefinitionPath(); got != "agent/sirens-deep.yaml" {
+	if got := evaluationDefinitionPath(); got != "agents/deep/definition.yaml" {
 		t.Fatalf("evaluationDefinitionPath() = %q, want the Deep definition", got)
 	}
-	if got := evaluationPackPath(); got != "agent/evaluation-deep.yaml" {
+	if got := evaluationPackPath(); got != "agents/deep/packs/evaluation.yaml" {
 		t.Fatalf("evaluationPackPath() = %q, want the Deep pack", got)
 	}
 }
@@ -58,7 +58,7 @@ func TestRateProvenanceRecordsTheFixtureAndRunner(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_RUNNER", "abc1234")
 	t.Setenv("SIRENS_ECHO_SUBSTRATE", "")
 	t.Setenv("SIRENS_ECHO_IMAGE", "")
-	got := rateProvenance("agent/rate-fixture-deep.yaml", "http://proxy", "route", "")
+	got := rateProvenance("agents/deep/packs/rate-fixture.yaml", "http://proxy", "route", "")
 	if got.Fixture != "agent/tool-fixture-injection.yaml" {
 		t.Errorf("Fixture = %q, want the fixture path", got.Fixture)
 	}
@@ -76,7 +76,7 @@ func TestRateProvenanceRecordsTheFixtureAndRunner(t *testing.T) {
 func TestRateProvenanceNamesTheAbsenceOfAFixture(t *testing.T) {
 	t.Setenv("SIRENS_ECHO_TOOL_FIXTURE", "")
 	t.Setenv("SIRENS_ECHO_RUNNER", "")
-	got := rateProvenance("agent/rate-deep.yaml", "http://proxy", "route", "")
+	got := rateProvenance("agents/deep/packs/rate.yaml", "http://proxy", "route", "")
 	if got.Fixture != community.FixtureNone {
 		t.Errorf("Fixture = %q, want %q", got.Fixture, community.FixtureNone)
 	}

@@ -16,7 +16,7 @@ import (
 
 // evidenceGlob is every committed dataset. Runs we already pay for answer how
 // often, without a bespoke case or a larger N.
-const evidenceGlob = "evaluations/*.yaml"
+const evidenceGlob = "agents/*/evaluations/*.yaml"
 
 // replyStrings walks a decoded record for text a model produced. Walking rather
 // than modelling the schema, since three runners emit three shapes.

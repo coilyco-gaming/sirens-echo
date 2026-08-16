@@ -64,7 +64,7 @@ func ratePackFixture(t *testing.T) RatePack {
 
 func rateFixtureDefinition(t *testing.T) (Definition, string) {
 	t.Helper()
-	definition, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	definition, err := LoadDefinition(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}

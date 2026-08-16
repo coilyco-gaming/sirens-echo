@@ -21,14 +21,14 @@ type gatingPack struct {
 // The counts are asserted rather than described, so the gap cannot close or
 // widen without someone reading sirens-echo#301.
 var gatingPacks = []gatingPack{
-	{"evaluation.yaml", 10, 0},
-	{"evaluation-deep.yaml", 9, 0},
-	{"board-deep.yaml", 10, 0},
+	{"agents/echo/packs/evaluation.yaml", 10, 0},
+	{"agents/deep/packs/evaluation.yaml", 9, 0},
+	{"agents/deep/packs/board.yaml", 10, 0},
 }
 
 func countInPack(t *testing.T, name string) (cases, guarding int) {
 	t.Helper()
-	body, err := os.ReadFile(filepath.Join("..", "..", "agent", name))
+	body, err := os.ReadFile(filepath.Join("..", "..", name))
 	if err != nil {
 		t.Fatalf("read %s: %v", name, err)
 	}
@@ -77,8 +77,9 @@ func TestTheRatePacksDoAskForIt(t *testing.T) {
 	t.Parallel()
 	guarding := 0
 	for _, name := range []string{
-		"rate-echo.yaml", "rate-deep.yaml", "rate-fixture-deep.yaml",
-		"rate-fixture-tracker.yaml", "rate-fixture-tracker-match.yaml",
+		"agents/echo/packs/rate.yaml", "agents/deep/packs/rate.yaml",
+		"agents/deep/packs/rate-fixture.yaml",
+		"agent/rate-fixture-tracker.yaml", "agent/rate-fixture-tracker-match.yaml",
 	} {
 		_, count := countInPack(t, name)
 		guarding += count

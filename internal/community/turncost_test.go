@@ -70,10 +70,7 @@ func TestTranscriptCapsStillTruncate(t *testing.T) {
 // the deployment actually uses, so the window comes from the tracked file.
 func trackedContextWindow(t *testing.T) int {
 	t.Helper()
-	definitions, err := filepath.Glob(filepath.Join("..", "..", "agent", "*.yaml"))
-	if err != nil || len(definitions) == 0 {
-		t.Fatalf("glob agent definitions: %v, found %d", err, len(definitions))
-	}
+	definitions := trackedDefinitionPaths(t)
 	widest := 0
 	for _, path := range definitions {
 		body, err := os.ReadFile(path)

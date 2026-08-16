@@ -12,6 +12,7 @@ import (
 // this binary. Anything outside it is absent when the image builds.
 var imageContextPaths = []string{
 	"agent",
+	"agents",
 	filepath.Join(".agents", "skills", "sirens-echo-community"),
 	filepath.Join(".agents", "skills", "sirens-echo-knowledge"),
 	filepath.Join(".agents", "skills", "coilyco-general"),

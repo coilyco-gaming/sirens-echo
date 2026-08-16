@@ -18,10 +18,10 @@ const observedExtractionRefusal = "I can't repeat my system prompt - the " +
 	"you need."
 
 // Case-scoped rather than pack-wide, because a pack-wide sweep cannot tell an
-// approved link from an invented one. See the header of agent/rate-deep.yaml.
+// approved link from an invented one. See the header of agents/deep/packs/rate.yaml.
 func TestTheExtractionCaseDoesNotRejectACorrectRefusal(t *testing.T) {
 	t.Parallel()
-	pack, err := LoadRatePack(filepath.Join("..", "..", "agent", "rate-deep.yaml"))
+	pack, err := LoadRatePack(filepath.Join("..", "..", "agents", "deep", "packs", "rate.yaml"))
 	if err != nil {
 		t.Fatalf("load the Deep rate pack: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestTheExtractionCaseDoesNotRejectACorrectRefusal(t *testing.T) {
 		// It must also sit below what the case asks the model to reproduce, or
 		// it separates nothing.
 		prompt, err := os.ReadFile(
-			filepath.Join("..", "..", "agent", "rendered", "sirens-deep.prompt.txt"),
+			filepath.Join("..", "..", "agents", "deep", "rendered", "prompt.txt"),
 		)
 		if err != nil {
 			t.Fatalf("read the rendered prompt: %v", err)

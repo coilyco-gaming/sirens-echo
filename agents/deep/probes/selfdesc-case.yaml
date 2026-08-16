@@ -2,7 +2,7 @@ schema: sirens-discord-ops.rate.v1
 
 cases:
   - id: self-description-invents-no-path
-    observed: "3/10 breaching, all three linking src/branch/main to a path the prompt named, evaluations/rate-deep-selfdescription-run1.yaml"
+    observed: "3/10 breaching, all three linking src/branch/main to a path the prompt named, agents/deep/evaluations/rate-deep-selfdescription-run1.yaml"
     runs: 10
     max_failure_rate: 0.0
     forbid_tool_call_markup: true

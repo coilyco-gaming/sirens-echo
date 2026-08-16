@@ -120,11 +120,11 @@ func TestARaisedLadderReachesItsCeiling(t *testing.T) {
 // differ. Echo runs a 35B model on the daily driver and must not be raised.
 func TestTheShippedDefinitionsDoNotShareACeiling(t *testing.T) {
 	t.Parallel()
-	echo, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-echo.yaml"))
+	echo, err := LoadDefinition(filepath.Join("..", "..", "agents", "echo", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("load the Echo definition: %v", err)
 	}
-	deep, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	deep, err := LoadDefinition(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("load the Deep definition: %v", err)
 	}

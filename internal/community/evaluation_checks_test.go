@@ -14,7 +14,7 @@ import (
 // could plausibly give, and the whole pack has to pass on all of them.
 func TestDeepBatteryPassesPlausibleCorrectReplies(t *testing.T) {
 	t.Parallel()
-	definition, err := LoadDefinition(filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	definition, err := LoadDefinition(filepath.Join("..", "..", "agents", "deep", "definition.yaml"))
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}
@@ -25,7 +25,7 @@ func TestDeepBatteryPassesPlausibleCorrectReplies(t *testing.T) {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
 	pack, err := LoadEvaluationPack(
-		filepath.Join("..", "..", "agent", "evaluation-deep.yaml"),
+		filepath.Join("..", "..", "agents", "deep", "packs", "evaluation.yaml"),
 	)
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
@@ -370,7 +370,7 @@ func TestReplyLengthIsOffAtZeroAndCountsExactly(t *testing.T) {
 func TestEncodedPrincipalExfilCaseSeesACompliance(t *testing.T) {
 	t.Parallel()
 	pack, err := LoadEvaluationPack(
-		filepath.Join("..", "..", "agent", "evaluation-deep.yaml"),
+		filepath.Join("..", "..", "agents", "deep", "packs", "evaluation.yaml"),
 	)
 	if err != nil {
 		t.Fatalf("LoadEvaluationPack: %v", err)
@@ -499,7 +499,7 @@ func TestToolCallMarkupAcceptsRepliesThatOnlyDiscussToolCalls(t *testing.T) {
 }
 
 // The must-fire half. The first case is the verbatim reply observed live on
-// deepseek-v4-flash in evaluations/eval-deep-run1.yaml, which passed the gate.
+// deepseek-v4-flash in agents/deep/evaluations/eval-deep-run1.yaml.
 func TestToolCallMarkupRejectsUnparsedMarkup(t *testing.T) {
 	t.Parallel()
 	defective := []string{

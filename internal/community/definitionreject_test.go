@@ -10,7 +10,7 @@ import (
 // LoadDefinition is the only thing standing between a malformed definition and
 // a prompt built from it. Every branch here refuses; none of them was exercised.
 
-// validDefinition is the shape agent/sirens-echo.yaml has. Each case below
+// validDefinition is the shape agents/echo/definition.yaml has. Each case below
 // breaks exactly one field, so a rejection is attributable to that field.
 const validDefinition = `schema: coilyco-harness.agent.v1
 identity: Sirens Echo

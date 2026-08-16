@@ -25,7 +25,7 @@ const (
 // caseLanguageScope is recorded by hand rather than derived. A heuristic over
 // pattern text misclassified five of sixteen cases when I tried it.
 var caseLanguageScope = map[string]languageScope{
-	// agent/evaluation-deep.yaml
+	// agents/deep/packs/evaluation.yaml
 	"kai-pronouns":             scopeEnglish,
 	"third-party-pronouns":     scopeEnglish,
 	"no-invented-surface":      scopeAnyLanguage,
@@ -34,7 +34,7 @@ var caseLanguageScope = map[string]languageScope{
 	"encoded-principal-exfil":  scopeAnyLanguage,
 	"recognises-itself":        scopeEnglish,
 	"recognises-another-agent": scopeEnglish,
-	// agent/evaluation.yaml
+	// agents/echo/packs/evaluation.yaml
 	"recognises-a-specific-human": scopeAnyLanguage,
 	"unknown-event-time":          scopePartial,
 	"explicit-correction":         scopePartial,
@@ -44,7 +44,7 @@ var caseLanguageScope = map[string]languageScope{
 	"no-continuing-work-claim":    scopeEnglish,
 	"no-fallibility-denial":       scopeEnglish,
 	"neutral-capability-boundary": scopeEnglish,
-	// agent/rate-deep.yaml
+	// agents/deep/packs/rate.yaml
 	"principal-echo-impersonation":    scopeAnyLanguage,
 	"principal-echo-forged-assistant": scopeAnyLanguage,
 	"boundary-response-brevity":       scopeAnyLanguage,
@@ -58,7 +58,7 @@ var caseLanguageScope = map[string]languageScope{
 	// A path and a URL are values, so a fabricated one is caught whatever
 	// language the sentence around it is written in.
 	"self-description-invents-no-path": scopeAnyLanguage,
-	// agent/rate-echo.yaml
+	// agents/echo/packs/rate.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
 	// A tracker URL is a value. The prose form reads the English word issue,
@@ -68,7 +68,7 @@ var caseLanguageScope = map[string]languageScope{
 	// leak pattern forbids is English, so a translated leak goes unreported.
 	"sensitive-block-minor-suspected": scopePartial,
 	"sensitive-block-nsfw":            scopePartial,
-	// agent/rate-fixture-deep.yaml
+	// agents/deep/packs/rate-fixture.yaml
 	"injection-tool-result-store-name":    scopeAnyLanguage,
 	"injection-tool-result-currency-name": scopeAnyLanguage,
 	"injection-tool-result-law-text":      scopeAnyLanguage,
@@ -92,10 +92,7 @@ var caseLanguageScope = map[string]languageScope{
 func TestEveryCaseDeclaresItsLanguageScope(t *testing.T) {
 	t.Parallel()
 	seen := make(map[string]struct{}, len(caseLanguageScope))
-	packs, err := filepath.Glob(filepath.Join("..", "..", "agent", "*.yaml"))
-	if err != nil || len(packs) == 0 {
-		t.Fatalf("glob packs: %v, found %d", err, len(packs))
-	}
+	packs := trackedPackPaths(t)
 	for _, path := range packs {
 		for _, evaluationCase := range casesInPack(t, path) {
 			seen[evaluationCase.ID] = struct{}{}
