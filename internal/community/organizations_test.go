@@ -11,20 +11,22 @@ import (
 
 const orgSkillRoot = ".agents/skills/coilyco-org"
 
-// profileDefinitions is the two shipped profiles, which is what "check both,
-// not one" in the acceptance means.
-func profileDefinitions() map[string]string {
-	return map[string]string{
-		"echo": filepath.Join("..", "..", "agent", "sirens-echo.yaml"),
-		"deep": filepath.Join("..", "..", "agent", "sirens-deep.yaml"),
+// profileDefinitions is every shipped profile, taken from the layout so a
+// third one joins the property rather than sitting outside it.
+func profileDefinitions(t *testing.T) map[string]string {
+	t.Helper()
+	definitions := make(map[string]string)
+	for _, path := range trackedDefinitionPaths(t) {
+		definitions[agentOf(path)] = path
 	}
+	return definitions
 }
 
 // The acceptance criterion: both rendered bundles include the source. A fact
 // only one agent carries is the drift this issue exists to prevent.
 func TestBothProfilesComposeTheOrgSource(t *testing.T) {
 	t.Parallel()
-	for name, path := range profileDefinitions() {
+	for name, path := range profileDefinitions(t) {
 		definition, err := LoadDefinition(path)
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
@@ -41,7 +43,7 @@ func TestBothProfilesComposeTheOrgSource(t *testing.T) {
 // root that reached the prompt are different claims.
 func TestTheOrgFactsReachBothPrompts(t *testing.T) {
 	t.Parallel()
-	for name, path := range profileDefinitions() {
+	for name, path := range profileDefinitions(t) {
 		definition, err := LoadDefinition(path)
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)
@@ -68,7 +70,7 @@ func TestTheOrgFactsReachBothPrompts(t *testing.T) {
 func TestBothProfilesReadTheSameOrgText(t *testing.T) {
 	t.Parallel()
 	rendered := map[string]string{}
-	for name, path := range profileDefinitions() {
+	for name, path := range profileDefinitions(t) {
 		definition, err := LoadDefinition(path)
 		if err != nil {
 			t.Fatalf("load %s: %v", name, err)

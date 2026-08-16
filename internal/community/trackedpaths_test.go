@@ -3,6 +3,7 @@ package community
 import (
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 )
 
@@ -48,8 +49,27 @@ func trackedRatePackPaths(t *testing.T) []string {
 	return globAll(t, []string{"..", "..", "agents", "*", "packs", "rate.yaml"})
 }
 
-// agentOf names the agent a tracked path belongs to, so a failure names it
-// rather than printing a path the reader has to parse.
+// agentOf reads the segment after `agents/`, not directories up from the file:
+// a definition sits shallower than a pack, and counting up returned "agents".
 func agentOf(path string) string {
-	return filepath.Base(filepath.Dir(filepath.Dir(path)))
+	parts := strings.Split(filepath.ToSlash(path), "/")
+	for i, part := range parts {
+		if part == "agents" && i+1 < len(parts) {
+			return parts[i+1]
+		}
+	}
+	return filepath.Base(filepath.Dir(path))
+}
+
+// definitionOf is one named agent's definition, for a test that is about that
+// agent rather than about a property every agent shares.
+func definitionOf(t *testing.T, agent string) string {
+	t.Helper()
+	for _, path := range trackedDefinitionPaths(t) {
+		if agentOf(path) == agent {
+			return path
+		}
+	}
+	t.Fatalf("no tracked definition for agent %q", agent)
+	return ""
 }

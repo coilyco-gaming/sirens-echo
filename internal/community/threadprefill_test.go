@@ -2,7 +2,6 @@ package community
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -232,7 +231,7 @@ func (failingReader) ChannelMessages(
 // prefill test states only what it is about.
 func discordEnv(t *testing.T, channels string) {
 	t.Helper()
-	t.Setenv("SIRENS_ECHO_DEFINITION", filepath.Join("..", "..", "agent", "sirens-deep.yaml"))
+	t.Setenv("SIRENS_ECHO_DEFINITION", definitionOf(t, "deep"))
 	useFixtureBundles(t, "creator")
 	t.Setenv("SIRENS_ECHO_STEAM_MCP_URL", "http://sirens-deep-steam-mcp:9112/mcp")
 	t.Setenv("SIRENS_ECHO_FORGEJO_MCP_URL", "http://sirens-deep-forgejo-mcp:8080/mcp")
