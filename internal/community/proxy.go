@@ -160,6 +160,27 @@ type ProxyClient struct {
 	// ValidateReply offers the harness checks to the repair loop. Advisory, so a
 	// nil hook changes no verdict. See docs/sirens-echo-reply-assembly.md.
 	ValidateReply func(reply string, prompt TurnPrompt, executed []ExecutedTool) error
+	// Now is the turn's only clock. Nil is the wall clock. See sirens-echo#855.
+	Now Clock
+}
+
+func (c ProxyClient) now() time.Time {
+	if c.Now != nil {
+		return c.Now()
+	}
+	return time.Now().UTC()
+}
+
+// clockMessage states the moment the turn started. Nothing else in the prompt
+// carries one, so no question about the time was answerable. See #855.
+func clockMessage(now time.Time) string {
+	moment := now.UTC()
+	return fmt.Sprintf(
+		"The current time is %s. Unix epoch %d. It is read once when the turn "+
+			"starts and does not advance while the turn runs.",
+		moment.Format("2006-01-02 15:04:05 UTC"),
+		moment.Unix(),
+	)
 }
 
 // harnessRefusal asks the injected checks, if any. Kept separate from the
@@ -419,7 +440,12 @@ func (c ProxyClient) Complete(
 		}
 	}
 
-	messages := []chatMessage{{Role: "system", Content: prompt.System}}
+	messages := []chatMessage{
+		{Role: "system", Content: prompt.System},
+		// Directly under the local policy, because it is a fact about this turn
+		// rather than reference material. See docs/sirens-echo-prompt.md.
+		{Role: "system", Content: clockMessage(c.now())},
+	}
 	// What each surface is for, in the server's own words, so the model knows
 	// which one to reach for. See docs/sirens-echo-mcp.md.
 	if guidance := guidanceMessage(serverGuidances); guidance != "" {
