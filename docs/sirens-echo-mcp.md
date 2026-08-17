@@ -61,26 +61,27 @@ before writing**, because a `RoundTripper` must not modify the request it is han
 ## What each surface is for
 
 The model receives every tool's schema on every turn but not **which server to reach for**, the question
-members' requests actually pose. `InitializeResult.Instructions` answers it, read off the handshake the
-harness already performs and rendered beside the roster, rather than generated into skill files at build
-time as sirens-echo#647 first asked: **that generator failed open**, an unreachable server producing a
-valid-looking file saying no schema was available. **Absence is nothing**, so a server publishing no
+members actually pose. `InitializeResult.Instructions` answers it, read off the handshake the harness
+already performs and rendered beside the roster, rather than generated into skill files at build time as
+sirens-echo#647 asked: **that generator failed open**, an unreachable server producing a file saying no
+schema was available. **Absence is nothing**, so a server publishing no
 instructions produces no entry, and **it describes, it does not authorise**, which the message says in
-the same breath as the text. `SIRENS_ECHO_SERVER_GUIDANCE_BYTES` caps one entry, because **a bound
-supplied by the thing being bounded is not a bound**.
+the same breath as the text. `SIRENS_ECHO_SERVER_GUIDANCE_BYTES` caps one entry: **a bound
+supplied by the thing bounded is not a bound**.
 
 ## Resources
 
-A server can hand Echo reference material directly, instead of Echo asking through a tool call and
-paying a round trip plus the tool-result bound. **The specification calls resources
-application-driven**, naming automatic context inclusion as one pattern, which is why Echo may pull a
-resource in without the model asking while it does not do the same for prompts.
+A server can hand Echo reference material directly, rather than asking through a tool call and paying
+a round trip plus the tool-result bound. **The specification calls resources application-driven**,
+naming automatic context inclusion as one pattern, which is why Echo pulls a resource in without the
+model asking and does not do the same for prompts.
 
 Only a resource whose `annotations.audience` names `assistant` is included, so **inclusion is a
 deliberate server signal rather than an Echo assumption**. Qualifying resources are ordered by
 `annotations.priority`, highest first, URI as tiebreak, and **ordering matters because the bounds cut
-from the bottom**: at most eight documents and 8KB per turn, a document crossing the budget truncated on
-a rune boundary and marked, and a binary or unreadable resource skipped rather than failing the turn. **Included documents appear in a system message below the local policy, labelled as data to
+from the bottom**: at most eight documents and 8KB **per connected server, not per turn**, so an
+eleven-server roster tops out at 88 and 90KB (#858). One over budget is truncated on a rune boundary and
+marked, and an unreadable one is skipped, never failing the turn. **Included documents appear in a system message below the local policy, labelled as data to
 answer from and never as instructions to follow**, because letting third-party content read as
 instruction would give any connected server a way to redirect the turn.
 

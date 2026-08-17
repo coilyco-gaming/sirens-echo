@@ -646,8 +646,8 @@ func boundGuidanceText(raw string) (string, bool) {
 	return text, true
 }
 
-// readGrounding reads the marked resources in priority order, stopping at the
-// document and byte bounds so a large catalogue cannot crowd out the turn.
+// readGrounding reads one server's marked resources in priority order. The
+// bounds are per server rather than per turn. See docs/sirens-echo-mcp.md.
 func (p *MCPProvider) readGrounding(
 	base context.Context,
 	entry *supervisedServer,
@@ -665,6 +665,7 @@ func (p *MCPProvider) readGrounding(
 		return candidates[i].URI < candidates[j].URI
 	})
 	documents := make([]GroundingDocument, 0, len(candidates))
+	// Per server, so a roster of eleven admits eleven of these. See #858.
 	budget := maxGroundingBytes
 	for _, resource := range candidates {
 		if len(documents) >= maxGroundingDocuments || budget <= 0 {
