@@ -18,11 +18,13 @@ type unwiredCapability struct {
 
 var unwiredCapabilities = []unwiredCapability{
 	{"CommandFromPrompt", "renders an MCP prompt as a Discord command"},
-	{"IsGrantDenial", "classifies a refusal as record-do-not-retry"},
 }
 
 // RecordEffect and EffectApplied left this table when the job content path
 // wired them. See sirens-echo#621 and docs/sirens-echo-jobs.md.
+
+// IsGrantDenial left it when both submit surfaces started classifying a
+// refusal. See sirens-echo#825 and docs/sirens-echo-grants.md.
 
 // declared reports whether the function still exists. Both have unit tests,
 // so this only fires on a deletion that took those tests with it.
