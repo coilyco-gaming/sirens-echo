@@ -4,6 +4,10 @@
 human sees when they look for work that needs them. It was measured wrong in
 both directions at once, which is why it has a document.
 
+Written out it is **`autonomy/async-consult`**, one of an exclusive `autonomy/*`
+set, so applying it removes `autonomy/headless`. This page says `consult` for
+short; a command line has to say the whole thing or it silently applies nothing.
+
 ## What went wrong
 
 The label is written once, when someone thinks to write it, and never again.

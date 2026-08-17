@@ -171,6 +171,11 @@ both attach to a comment you are already writing:
   correctly fail-closed for dispatch and invisible to the human, which is the
   worst pair.
 
+**The label is spelled `autonomy/async-consult`.** `consult` is not a label in
+this repository or its org, and `issue-label add --labels consult` exits zero
+having applied nothing. The `autonomy/*` set is exclusive, so adding it removes
+`autonomy/headless` rather than sitting beside it, which is the intended effect.
+
 See [the consult gate](docs/sirens-echo-consult-gate.md).
 
 **A claim reserves an issue number, and the collision surface is files.** Two
@@ -207,7 +212,8 @@ status read without the note says a successful write failed. See
 is `[]string`, so an ID goes over as `"332"` and Forgejo reads a quoted numeral
 as a label name. `add` then applies nothing. **`set` is a PUT, so it replaces
 the label set with nothing and silently strips every label the issue had.**
-Both exit zero. Use `--labels consult`.
+Both exit zero. Use `--labels autonomy/async-consult`, the full name: a label
+that does not exist is discarded just as silently as a numeral.
 
 `issue create --labels 332` is a different flag of a different type and does
 work, which is why the numeric form is easy to trust. `issue-label remove`
