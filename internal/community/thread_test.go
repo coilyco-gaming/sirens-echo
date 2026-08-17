@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/bwmarrin/discordgo"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
@@ -100,7 +99,7 @@ func TestATurnWithNoProgressLineGetsNoThread(t *testing.T) {
 // sirens-echo#375. See docs/sirens-echo-progress.md.
 func TestTheThreadWindowIsTheOneThatWasAskedFor(t *testing.T) {
 	t.Parallel()
-	if turnLongReplyAfter != 25*time.Second {
+	if turnLongReplyAfter != wantLongReplyAfter {
 		t.Errorf("the thread window is %s, want the wait plus two beats", turnLongReplyAfter)
 	}
 	if turnLongReplyAfter <= turnProgressAfter {

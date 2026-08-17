@@ -7,18 +7,26 @@ import (
 
 // Three independent numbers that had to agree became one. See sirens-echo#354.
 
+// The expected cadence, in one place, so a raise edits one file rather than
+// three that drift apart. See sirens-echo#901.
+var (
+	wantProgressAfter  = 8 * time.Second
+	wantProgressEvery  = 16 * time.Second
+	wantLongReplyAfter = 40 * time.Second
+)
+
 // The values, pinned so a change to the base reports what it moved rather than
-// moving three things quietly. Kai raised the wait to 5s on sirens-echo#375.
-func TestTheCadenceIsFiveTenTen(t *testing.T) {
+// moving three things quietly. Raised 60% on sirens-echo#901, from 5s.
+func TestTheCadenceIsEightSixteenForty(t *testing.T) {
 	t.Parallel()
 	for _, check := range []struct {
 		name string
 		got  time.Duration
 		want time.Duration
 	}{
-		{"startup wait", turnProgressAfter, 5 * time.Second},
-		{"artificial delay", turnProgressEvery, 10 * time.Second},
-		{"long reply window", turnLongReplyAfter, 25 * time.Second},
+		{"startup wait", turnProgressAfter, wantProgressAfter},
+		{"artificial delay", turnProgressEvery, wantProgressEvery},
+		{"long reply window", turnLongReplyAfter, wantLongReplyAfter},
 	} {
 		if check.got != check.want {
 			t.Errorf("%s = %s, want %s", check.name, check.got, check.want)
