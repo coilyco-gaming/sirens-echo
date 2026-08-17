@@ -1,9 +1,14 @@
-# Tuning numbers
+# Tuning numbers and feature switches
 
 Every tuning number this package has lives in `internal/community/config.go`, beside what the deployment
 supplies. **The generated list of names and defaults is `agent/rendered/knobs.txt`**, written by
 `just knobs` from the table itself so it cannot fall behind what the code offers, with `just
 knobs-check` failing when it has.
+
+**Every enabled/disabled switch takes the same treatment**, in `internal/community/featureflags.go`
+and generated into `agent/rendered/flags.txt` by `just flags` (#854). One difference: a knob that does
+not parse keeps its default, and **a switch that does not parse is fatal**, because a surface silently
+off is worse than a refused start.
 
 **A number in the file that uses it is easy to find once you already know which file that is. The
 problem is the other direction**: nobody could answer "how many numbers does this service have" or
@@ -16,9 +21,9 @@ number that is part of a data structure or an algorithm, a cache capacity chosen
 test fixture. **Every one that is here goes through one helper and takes one environment name, so there
 is no second tier of numbers a deployment cannot reach.**
 
-Change one here, and **read the neighbours first**: a number in a group usually has a relationship to
-the others in it, **and that relationship is the thing most likely to break**. Where a relationship
-exists, **prefer writing it down over restating a value**. The progress cadence is the worked example:
+Change one here, and **read the neighbours first**: a number in a group usually relates to the others,
+**and that relationship is the thing most likely to break**. Where one exists, **prefer writing it down
+over restating a value**. The progress cadence is the worked example:
 the beat is twice the wait and the long-reply window is the wait plus two beats, so one edit moves all
 three and a test pins both the values and the derivation.
 

@@ -58,6 +58,14 @@ knobs *ARGS:
 knobs-check *ARGS:
     @go run ./cmd/sirens-echo-knobs --check "$@"
 
+# Rewrite the tracked reference of every feature a deployment may turn on or off.
+flags *ARGS:
+    @go run ./cmd/sirens-echo-flags "$@"
+
+# Fail when the tracked feature reference no longer matches the table.
+flags-check *ARGS:
+    @go run ./cmd/sirens-echo-flags --check "$@"
+
 # Regenerate the agent's own-authority skill from the deployed guardfile.
 guardfile-skill *ARGS:
     @go run ./cmd/sirens-echo-guardfile --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl "$@"

@@ -872,18 +872,6 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	discordEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_ENABLED"), true)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_ENABLED: %w", err)
-	}
-	dmEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_DM_ENABLED"), false)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_DM_ENABLED: %w", err)
-	}
-	commandsEnabled, err := boolOrDefault(os.Getenv("SIRENS_ECHO_DISCORD_COMMANDS"), false)
-	if err != nil {
-		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_COMMANDS: %w", err)
-	}
 	// Read from the knob pass rather than parsed a second time. Two readers of
 	// one name disagreed about what a bad value does. See sirens-echo#829.
 	rateLimit, err := loadRateLimitPolicy()
@@ -898,12 +886,9 @@ func LoadConfig() (Config, error) {
 			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
 			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
 		},
-		DiscordEnabled:         discordEnabled,
-		DiscordToken:           strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
-		DiscordChannelIDs:      splitList(os.Getenv("DISCORD_CHANNEL_ID")),
-		DiscordGuildIDs:        splitList(os.Getenv("DISCORD_GUILD_IDS")),
-		DiscordDMEnabled:       dmEnabled,
-		DiscordCommandsEnabled: commandsEnabled,
+		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
+		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
+		DiscordGuildIDs:   splitList(os.Getenv("DISCORD_GUILD_IDS")),
 		TemporalMirror: TemporalMirrorConfig{
 			HostPort:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_HOST")),
 			Namespace: strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_NAMESPACE")),
@@ -933,6 +918,11 @@ func LoadConfig() (Config, error) {
 		QueueTimeout:       defaultQueueTimeout,
 		ShutdownGrace:      defaultShutdownGrace,
 		RateLimit:          rateLimit,
+	}
+	// One pass over the flag table, so a switch cannot be read at a call site
+	// the reference does not know about. See internal/community/featureflags.go.
+	if err := applyFeatureFlags(&cfg, os.Getenv); err != nil {
+		return Config{}, err
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_INSTANCE must be a lowercase service name")
