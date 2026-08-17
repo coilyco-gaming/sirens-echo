@@ -44,14 +44,6 @@ HTTP requester is a caller-asserted header, **which makes that reachable on purp
 keeps the identifier from being recoverable at all. Only an absent requester falls back to a shared
 name.
 
-**Before the tool-result spill a partition held only what a caller deliberately wrote.** Since it, an
-oversized tool result lands there automatically, **so a colliding caller reads output the other party
-never chose to persist**: the spill widened the blast radius of the naming defect rather than creating
-it. The cost, stated: an operator can no longer read a requester off a directory listing, **a privacy
-improvement rather than a loss** since attribution lives in the job record, and every partition name
-changes on the next roll, which orphans existing directories - within contract, since the scratchpad
-lives for one rollout.
-
 **Keeping partitions apart says whose files these are. It does not say who wrote them.** A trimmed tool
 result is saved under `tool-output`, and the model is refused any write whose first segment is that
 directory, **checked before the path is cleaned so a spelling cannot smuggle one in**. So a file there

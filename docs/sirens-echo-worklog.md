@@ -107,9 +107,3 @@ real, while hiding five**: a reader who trusted it would have been wrong about f
 **Recording a decision removes the label. Asking a human a question adds it.** You are already writing
 to the issue at that moment, so each costs one call and nothing else, and a comment ending with a
 question for a director or an operator **is a `consult` issue by definition**.
-
-**A check would need to decide whether a comment contains an unanswered question, which is a judgement
-rather than a pattern.** The two directions are easy to detect approximately and hard to detect
-correctly, **and a hygiene check that is wrong sometimes trains people to ignore it**. A sweep that
-**flags rather than enforces** is a reasonable middle, and that query has been run by hand and produced
-both lists, so it is known to work: worth building when someone wants it, and not a prerequisite.

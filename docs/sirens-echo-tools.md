@@ -37,13 +37,6 @@ a long time to be wrong about your own tools, and **the thing best placed to not
 just failed to find one it expected**, so `harness__refresh_tools` lets it say so. It marks every
 rostered server for re-reading and dials nothing, so twenty calls in one turn cost one listing.
 
-**The refresh does not change the tools the calling turn is holding.** Its result says so in as many
-words, because a model that read otherwise would tell a member a tool is available before it can see one
-(issue 211), which is why the description carries the bound. The name uses the same `server__tool` rule
-with `harness` as the server, **so a rostered server called `harness` publishing `refresh_tools`
-collides**, fatal exactly as a roster collision is. **An empty roster is offered nothing**, because a
-refresh with nothing to refresh puts a tool in the one configuration meant to have none.
-
 ## The fetch tool
 
 A read-only HTTPS GET the model can call. **The fetching is the easy part, the allowlist is the

@@ -24,13 +24,6 @@ read or write**, because demanding the exact write tool would reject a correct r
 runtime only looked up, and links are masked first so the word `issues` inside a URL path cannot seed a
 claim.
 
-**`Sirens Echo has filed a correction` is unambiguous to a reader and not to a pattern**, because a
-pattern cannot tell the service's own name from a member's: `Octavian has filed a correction` has the
-same shape and is a correct reply. So that check reads the configured identity rather than a general
-subject, travelling the same route the response style does from the definition into the scorer, **so the
-evaluation gate and the live path judge a self-claim identically rather than drifting**. Without a
-configured identity the check is inert.
-
 **One shape asserts a completed filing and is deliberately not caught.** `A tracking issue was created`
 is a simple past passive, and catching it means reading simple past as a claim, **which is exactly what
 was producing false positives on `created in June` and `closed last week`**. The clipped form `Filed a
@@ -97,15 +90,6 @@ refuses markup, when it was never measurable at that size**. The datasets alread
 attempts. The scanner calls `ValidateNoToolCallMarkup`, reading the same patterns the deployment gate
 and the reply path read, **because two copies of one definition drift in whichever direction nobody is
 watching**.
-
-**It gates nothing, deliberately**: the verb exits zero whatever it finds, because evidence legitimately
-contains markup, **which is what makes it evidence**. The rate datasets carry per-attempt records, so
-they have a reply count and a share, while the `eval-deep-run*` files are free-text transcripts that
-**can report that markup is present and never how often per attempt**: summing the two would invent a
-denominator. Logs and the record shared stdout until the eval runner moved its logs to stderr, so every
-dataset committed before that interleaves JSON log lines with the document; **those files stay as they
-are, because they are cited evidence and rewriting them would edit the record**, and the scanner seeks
-the record rather than starting at byte zero.
 
 **Two limits belong with any number this produces.** A dataset that parses to no replies is a parse that
 found nothing rather than a run that produced nothing, so the scanner exits non-zero when no structured

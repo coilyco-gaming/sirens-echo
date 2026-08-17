@@ -26,7 +26,7 @@
 # See docs/sirens-echo-access.md.
 
 # agents.allow names counterpart agents that are answered. Empty answers none,
-# which is the shipped posture. See docs/sirens-echo-counterparts.md.
+# which is the shipped posture. See docs/sirens-echo-compose.md.
 
 schema: coilyco-harness.access.v1
 

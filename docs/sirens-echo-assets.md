@@ -66,14 +66,6 @@ on black is one token away from northern lights, and northern lights arrive with
 underneath them**; plus text, typography, logos, watermarks, marine life, photographic and 3D cues, and
 every off-palette colour. **Removing a term reintroduces its failure.**
 
-**Over-specifying the layout cost more than it bought.** Asking for the gesture to sit along the bottom,
-the upper half to stay empty, and the left third to stay clear at the same time **left the model nowhere
-to put a shape**, and it returned bare fields and a terrain hump. The prompt asks only for a quiet left
-third and lets the curve fall where it will. Type is Avenir Next, Demi Bold 50 for the names in lilac
-with the separator in mint, Regular 31 for the description in mint, **on a centred dark halo rather than
-an offset drop shadow**: an offset implies a light direction the mark does not have and protects only
-one side of each glyph, **while a centred blur darkens the bed under every edge equally**.
-
 ## Public repository inventory
 
 `list_public_repos` lists an organization's public repositories with description, URL, language, and

@@ -51,11 +51,6 @@ created failed rather than left queued forever. `GET /v1/jobs/{id}` reports stat
 count, and **a job belonging to another principal answers `404`, the same as an id that does not
 exist**, so an id cannot be probed for.
 
-Only Discord gets notified, being the one transport with a durable place to answer in. The notice
-carries the job id and **is sent on a context detached from the worker, so a shutdown cannot swallow the
-one message telling the requester how their job went**. Mention safety applies with empty allowed
-mentions, **which matters more here than on a reply, because a job speaks without being asked again**.
-
 `POST /v1/jobs/{id}/cancel` moves queued work straight to `cancelled` and running work to `cancelling`,
 interrupting the execution context. **Interruption is immediate rather than polled**, so a cancel does
 not wait out the job's own timeout, and a watcher also polls the record, covering a cancel arriving from
@@ -85,17 +80,6 @@ set is refused at boot** rather than resolved by precedence, because a lane that
 configured stores would put the jobs somewhere nobody was looking. **Connection failure at boot is fatal
 for the same reason**: falling back to memory on an unreachable database would turn a loud outage into
 the silent data loss the durable store was chosen to prevent.
-
-The Postgres schema is one table created idempotently on first boot, **which is the whole migration
-story**. The record is one `JSONB` column, so the Go struct stays authoritative and adding a field needs
-no migration. The four flat columns beside it are a projection existing only because the list queries
-would otherwise scan; **nothing reads them back into a `Job`, so they cannot become a second source of
-truth**, and they are rewritten on every write rather than only on insert, because `BindJobToThread`
-rebinds through `Update` **and a projection tracking inserts alone would answer `ListByThread` from a
-stale value**. `Transition` and `Update` read the row `FOR UPDATE` inside a transaction, **the lock
-being what keeps a refused move from leaving a partly-applied record**. Its SQL is covered by tests that
-need a live database and skip under `just test`, with a CI step running exactly that set against a
-scratch service container.
 
 **`JobKinds` is a closed set.** A kind is a capability, so widening it is a reviewed act here rather
 than something a caller picks: an open set would let a caller name a kind the service has never been

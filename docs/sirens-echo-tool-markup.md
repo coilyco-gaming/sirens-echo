@@ -17,10 +17,6 @@ and `<tool_round> {...}` were uncaught. Two patterns were then added, a tag carr
 attribute and the observed `mm_tool_calls` and `tool_round` wrappers, **validated against 396 replies
 persisted in `evaluations/` with zero false positives**. Echo's `ornith:35b` form is unverified (#324).
 
-Two structural candidates measured clean and were left out on purpose, a tag followed by a JSON object
-and a bare `<parameters>`: the reply most likely to trip either is one explaining a tool schema to a
-member, and **missing a form beats eating an explanation**.
-
 It is opt-in because the rate depends on the request, 1 of 5 for a case asking for no action and 4 of 5
 when it asks for one, and **an always-on check would turn the gate flaky on a non-security behaviour**.
 It runs last in `runScopedChecks`, leaving precedence unchanged. **Every rate case sets it, and a test

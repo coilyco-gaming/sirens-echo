@@ -15,12 +15,6 @@ arguments are not**, because a clone argument is a repository URL. Three outcome
 closed label does not want**), and `did_not_run`. The span carries duration, the truncation flag, and
 the job id, **and the output never reaches any of them**.
 
-Attachment ingest emits an `attachment.fetch` span and `sirens_echo.attachments`. **Every arm records,
-including the three that used to `continue` silently**: `refused_host`, `fetch_failed`,
-`refused_binary`, `write_failed`, and `stored`. **The filename never appears**, which is why the span
-carries the byte count and the status code rather than the URL: **a CDN path has the member's filename
-in it**. Before this, a refused upload and no upload at all were the same observation.
-
 **The bug the timeout test found.** `exec.CommandContext` kills the direct child on expiry but does not
 close the pipe, and `CombinedOutput` waits for every writer to it, **a grandchild included**, so a shell
 that forks rather than execs outlived its own deadline: **30s measured against a 50ms timeout**.
@@ -45,15 +39,6 @@ than only by walking down from the root. Logs carry `job_id` as a row field. **A
 job carries no job id at all**, because an attribute that is sometimes absent is more useful than one
 that is sometimes wrong. Given a job id and nothing else you get every span, every log row, and the
 record itself, **with service and namespace needed for none of the three**.
-
-`sirens_echo.jobs` counts a job reaching a state, labelled by `kind` and `state`, both closed sets
-declared here. **There is no job id on the metric, deliberately**: an id is unbounded cardinality and
-belongs on spans and logs. A long job reports while it runs: updates **edit one message** rather than
-posting a column of them, so **a job that runs for an hour leaves one message that ends by saying how it
-went**. Progress is rate limited per job, **advisory** (every update is logged, delivery is best effort,
-and the message id is held in memory so a restart posts a fresh line), and carries empty allowed
-mentions. When a thread is bound the updates go there, **but no production path binds one today**
-(#620).
 
 ## Evaluation telemetry is its own service
 
@@ -115,11 +100,3 @@ Discovery covers a connect and three listings per server, and the whole roster u
 span, **so a rejection was an `HTTP POST` carrying a URL and nothing else**. `mcp.server.discovery` now
 wraps one server's round trips and carries `mcp.server.name`, with `mcp.discovery.stage` moving through
 `connect`, `tools`, `resources`, and `prompts`, **so a failure's stage is the span's last value** (#139).
-
-**Why not the duration**: it works and it is not a contract. A cache hit was around a tenth of a
-millisecond and a round trip around sixty, **so a 500x gap was standing in for a field that did not
-exist**, correct until a server answers in under a millisecond or the process gets slower, **with
-nothing to announce the change** (#520). A transport that can send `tools/list_changed` never expires
-and one that cannot expires at the roster refresh interval, **so neither is per turn**: a count still at
-one per turn means the cache is being **missed** rather than absent, **the likeliest cause being
-connections not surviving between turns**.

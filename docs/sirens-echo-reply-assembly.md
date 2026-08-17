@@ -13,15 +13,6 @@ is what yields**: both suffixes are service-authored, short, and bounded, and th
 those, so the answer is shortened rather than a suffix dropped. A transport with no ceiling, like the
 HTTP turn, declares none and nothing is shortened.
 
-**Convergence, not reservation.** Suffix length is not monotone in the answer, so rendering once and
-truncating to `limit - len(suffixes)` is wrong in both directions: the reference block resolves short
-forms found in the reply, so shortening can remove the `#233` a link was resolving; and it skips a URL
-the reply already contains, so shortening can remove that URL and the suffix **grows**. Each pass
-therefore renders the suffixes unbounded against the current answer, measures the overflow, and removes
-at least that much, **so references always resolve against the answer that will be sent**. Termination
-is by construction, and an explicit pass bound guards a future suffix that grows faster than the answer
-shrinks.
-
 **The append order is the preference order**, because a cut reaches the tail first: a reference is a
 link a member can act on and the footer is a record of what ran, so the reference goes first and the
 footer yields. When the answer has yielded everything and the suffixes still do not fit, the least

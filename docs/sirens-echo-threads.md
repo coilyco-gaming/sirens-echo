@@ -44,15 +44,6 @@ would be left with a question and no visible answer. The progress line **is** th
 also makes the guild's hide-after setting cheap: a thread that auto-hides takes nothing with it that was
 not already in the channel.
 
-The title summarises the member's intent, so *how much does it cost to build a log house* becomes
-something like *log house pricing*. An earlier version refused to summarise, on the grounds that
-summarising is writing a member a title; **that was overruled deliberately in issue 461**. The summary
-needs the model, so it is one short extra completion, proportionate because a thread only happens on a
-turn that already ran past the long-reply window. **It degrades rather than fails**: if the call errors,
-times out, or returns nothing usable, the thread is still created with the mechanically derived name.
-The summary takes the same cleaning as a derived name, so it cannot introduce markup a member's own
-message could not.
-
 **A thread that cannot be made must not cost a member their reply.** No permission, a channel type that
 cannot hold threads, an API failure, a turn already inside a thread: every one returns "no thread"
 rather than an error, and the reply goes to the channel as before. That is why the decision returns a

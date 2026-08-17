@@ -65,33 +65,26 @@ the end.
 
 - Deploy-selected definition, ingress switch, instance, and Agent Proxy route, with independent
   community and general-purpose definitions **in one immutable image**.
-- Deployment-owned Forgejo MCP URL in Echo, repository-scoped token only in the MCP pod. ExternalSecret
-  injection **with no pod AWS permission**.
+- Deployment-owned Forgejo MCP URL in Echo, repository-scoped token only in the MCP pod, and
+  ExternalSecret injection **with no pod AWS permission**.
 - Deploy-selected job store: in-memory, a mounted directory, or Postgres. Singleton k3s Deployment, and
-  full-source-SHA images published to Forgejo OCI.
+  full-source-SHA images published to Forgejo OCI. **A main push that publishes no image fails the run**,
+  and an hourly `image-coverage` workflow asks the registry whether main's tip has an image.
 
 ## Development gates
 
 - `just` recipes for build, policy verification, prompt snapshots, format, vet, test, tidy, run,
-  per-profile evaluation, failure-rate measurement, and full pre-commit. `.ward/ward.yaml` carries
-  catalog metadata only.
-- Every boundary this deployment holds **declared once** in `eval/boundaries.yaml`, with `just
-  boundaries` printing the paired case list and `just boundaries-check` failing when a declaration no
-  longer resolves.
+  per-profile evaluation, failure-rate measurement, and full pre-commit.
+- Every boundary this deployment holds **declared once** in `eval/boundaries.yaml`, with
+  `just boundaries-check` failing when a declaration no longer resolves.
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit. Structure, skills, links, modules,
   comments, secrets, and prompt all validated. **Entrypoint failures logged as severity-carrying JSON,
   never bare stderr.**
-- A main push that publishes no image **fails the run**: the publish job is skipped when tests fail,
-  cancelled when a later push supersedes it, and failed when the publish breaks, **so a terminal job
-  reports the consequence rather than letting a stopped pipeline read as a flaky suite**. An hourly
-  `image-coverage` workflow asks the registry whether main's tip has an image, **which is the only way
-  the cancellation case is visible from outside a push's run**.
 
 ## Deliberate exclusions
 
-Echo has **no moderation, account, role, announcement, Forgejo edit, delete, reaction,
-cross-repository, or ambient-channel surface**, sends no unsolicited direct message, and owns no web or
-mobile UI.
+Echo has **no moderation, account, role, announcement, Forgejo edit, delete, reaction, cross-repository,
+or ambient-channel surface**, sends no unsolicited direct message, and owns no web or mobile UI.
 
 ## The pages
 
@@ -116,5 +109,12 @@ Telemetry: [observability](sirens-echo-observability.md), [telemetry](sirens-ech
 Evaluation: [board](sirens-echo-board.md), [testing](sirens-echo-testing.md),
 [harness-design](sirens-echo-harness-design.md).
 Shipping: [deploy](sirens-echo-deploy.md), [assets](sirens-echo-assets.md).
+
+## See also
+
+- [README.md](../README.md) - human-facing introduction.
+- [AGENTS.md](../AGENTS.md) - agent-facing rules.
+- [.ward/ward.yaml](../.ward/ward.yaml) - catalog metadata only.
+- [justfile](../justfile) - development recipes.
 
 Cross-reference convention from [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

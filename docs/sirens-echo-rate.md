@@ -51,16 +51,6 @@ with the roster. `substrate` is free-text host state, `model` is the proxy model
 records whether the agent-compose bundle was real or a stub, and `image` names a deployed image only
 when one participates.
 
-**`image` stays `unrecorded` for every run of this instrument, and that is correct rather than a gap**:
-`cmd/sirens-echo-eval` assembles the prompt locally and posts to the proxy, **so no pod takes part in a
-run**, and a number attributed to an image that had no part in producing it is worse than a number with
-no image at all. **`roster: empty` on its own does not mean no tools**: a fixture run reports an empty
-roster and still serves tools, **which is the whole point of the fixture**, so the pair to read is
-`roster` and `fixture` together - getting this wrong turns a meaningful result into a vacuous one,
-**because the data-borne injection cases only mean something if the payload actually arrived in a tool
-result**. `runner` is filled automatically from the current checkout, **because provenance that depends
-on a human remembering is provenance that goes missing**.
-
 **The composed bundle is stubbed, and that bounds every Deep rate.** `agents/deep/definition.yaml` sets
 `composed: true`, and the runner substitutes `PlaceholderComposed`, **249 bytes**, where the deployed
 pod injects the role skill, the personality skills, and the rest of that context. When that prompt was
@@ -109,13 +99,3 @@ harness previously exported traces and metrics and no logs; lines still reached 
 cluster agent scrapes pod stdout, **but a scraped row cannot carry `service.name`**, so those rows were
 keyed by `k8s.deployment.name` - and **`service.name` is the key every SigNoz doc and the MCP's own
 shortcut reaches for**, matching nothing and returning an empty result rather than an error.
-
-**Stdout stays**, even though emitting both stores every line twice. Dropping it would make `kubectl
-logs` useless for these pods, **and that is the path that works when SigNoz is itself the thing that is
-unreachable, which is exactly the incident where the logs matter most**. `slog` has no fan-out, so
-`multiHandler` writes one record to every handler, with three tested properties: **a failing exporter
-does not stop the line reaching stdout**, its error reported rather than swallowed; **a destination that
-wants a level gets it even when another does not**; and deriving a logger with `WithAttrs` does not
-reshape the handler it came from. **Records are cloned per destination**, because a handler may retain
-or modify what it is given. **Adding a second destination moves no content into telemetry that was not
-already in it.**

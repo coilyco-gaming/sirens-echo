@@ -35,11 +35,6 @@ and named a class outside the closed list. Before this the failure was one log l
 string and no span, **so a gate that had stopped working was visible only to somebody already reading
 logs for that turn**.
 
-**The two are separate because they need different people.** A dead classifier is a dependency to chase;
-one answering off its own list is a prompt or a taxonomy that has drifted on an otherwise healthy model.
-Under one name they read as the same outage, **and the quieter hides inside the louder whenever they
-fail at different rates**. Both are the service's fault, so neither inflates the caller-fault rate.
-
 **The suffix is a fixed vocabulary and never model output.** The class the classifier invented is
 exactly the tempting thing to put in the name, and it would make the name unbounded: one span name per
 invented string, **a grouping key that never groups**. It goes to the log line beside the span, so it

@@ -14,19 +14,6 @@ Docker config, pushing one immutable tag, and proving the remote manifest exists
 repository publishes an artifact only. It holds no cluster credential and never reaches into the
 deployment layer.**
 
-**A pull request builds the same Dockerfile without publishing**, so a build-context fault fails the
-review rather than the merge. That job container gets no `DOCKER_HOST` and no mounted socket, and
-dockerd listens on `0.0.0.0:2375` in the runner pod, **so the daemon answers on the container's default
-gateway and the script has to work out which address that is**. `scripts/lib/docker-host.sh` derives an
-inherited `DOCKER_HOST`, then the default gateway decoded from `/proc/net/route`, then the conventional
-`172.17.0.1`, then the socket path. **Deriving the gateway ahead of the hardcoded address is what lets
-the bridge renumber, which it has** - one run built against `172.18.0.1`. `scripts/ci-docker-probe.sh`
-runs only when the build fails and reads the same candidate list, **so it can never report on an address
-the build would not have tried**. The build records the address it settled on and the probe leads with
-that, because **most failures are Dockerfile faults, and a bare list of candidates with some marked
-unreachable reads like a partial outage that did not happen**. The probe never fails, because its caller
-wants the report rather than a second red step.
-
 ## The k3s lifecycle
 
 `coilyco-bridge/deploy/services/sirens-echo/` owns the namespace and Echo's SSM-backed ExternalSecret, a
@@ -56,16 +43,6 @@ value**, Message Content is enabled with Echo limited to view, read history, and
 uses exact image SHAs with its read-only pull credential, and Agent Proxy, Eco MCP, the private Forgejo
 MCP, and SigNoz are reachable. **Echo receives the private MCP's ClusterIP URL but no Forgejo
 credential, and no secret belongs in a tracked file, shell history, issue, or chat.**
-
-The operator runs `just eval-echo`, lands `REPLICAS=1`, and summons Echo in `#bots`. Verification
-requires all four evaluation cases passing including live Eco status; the neutral-capability case
-containing **no greeting, emoji, first-person voice, self-description, banter, sign-off, or open-ended
-offer**; Echo responding only to a direct summon and pinging nobody; a second summon able to refer to
-the first exchange; SigNoz showing one joined turn trace; trace-correlated logs retaining safe metadata
-and byte counts **without prompt, model, tool, or reply bodies**; turn, latency, model, tool, and
-failure metrics existing; the unknown case creating or reusing an ordinary unlabeled issue **containing
-no identity, Discord identifier, quote, or private data**; the Forgejo MCP publishing only its reviewed
-issue and label tools; and **Echo's container carrying the MCP URL and no `FORGEJO_TOKEN`**.
 
 **Missing SSM values fail before either workload becomes ready.** Agent Proxy, MCP, loop,
 response-contract, or validation failures return a neutral retry reply, **invalid output never reaches
@@ -97,13 +74,6 @@ here that validates one has to know that, because the pod never sees the shape t
 Kubernetes mounts the value under `data:` as a file, so **the runtime loader receives a bare document
 and is right to expect one**, while an offline checker reads the wrapper. **The two inputs are different
 and both are real.**
-
-It failed twice, in opposite directions. `LoadAccessPolicy` uses `KnownFields(true)`, so a ConfigMap's
-own keys are unknown and it **errors**, so the gate built on it rejected every policy deploy has while
-passing every fixture. `LoadMCPRoster` had no such strictness, so the same wrapper parsed, `mcpServers`
-was simply absent, and it returned **zero servers and no error** - and an empty roster is a legitimate
-state, **so a wrong path and a deliberate no-tool deployment looked identical**. **The loud one cost
-half a day of noticing. The quiet one cost a deployment its tools with nothing in a log.**
 
 **Read the inner document, and let deploy extract it.** Unwrapping `data:` inside the checker **is wrong
 twice**: it puts Kubernetes knowledge in the repository that does not own k3s, and it makes the checker

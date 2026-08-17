@@ -44,13 +44,6 @@ that no longer fires reads as a known exception forever **and nobody deletes a l
 hurting**. **An allowlist rather than a count**, because a count is a number someone bumps **and a name
 is a line someone has to write a reason next to**.
 
-The neighbouring surfaces were checked for the same shape, a success that means nothing ran. **Pack
-loaders refuse an empty pack.** **Shell scripts all set `-euo pipefail`** except one that documents why
-it never fails and one that is sourced. **And `policy-check` named its inputs by hand**: nothing was
-unverified at the time, **but a pack added later would have been verified by nothing while the output
-stayed green**. **A skip stops running a check that exists; an unlisted pack never gets a check at all,
-and both print success.**
-
 ## Tool fixtures
 
 An evaluation case can set what the caller says. **It cannot set what a tool returns**, so no case could
@@ -113,11 +106,3 @@ commit. **A push option cannot contain a newline**, so the description is one li
 belongs on the issue - **and that one line is the pull request body, so it is where the closing
 reference has to appear**. Accepted: `closes #324` or `closes owner/repo#324`, with `fixes` and
 `resolves` equivalent, the keyword followed immediately by the reference.
-
-**A full issue URL does not satisfy it, and this is the trap**, because a URL is the house convention
-everywhere else: the tracker guard rejects a bare hash-ref in an issue comment and requires the
-canonical URL form, **so the habit every agent builds is the one the merge verb cannot read**. The two
-rules do not overlap - the guard governs issue comments and the merge verb governs pull request bodies -
-so **write the URL in comments and the hash-ref in a pull request body**. If a pull request does not
-fully close its motivating issue, **file the slice as its own issue and close that**, because weakening
-the reference to satisfy the verb **turns a merge into something that names nothing**.

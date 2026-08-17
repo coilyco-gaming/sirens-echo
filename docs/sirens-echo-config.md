@@ -34,13 +34,6 @@ a `#channel-name` the grounding validator also accepts. An empty channel is tran
 for Discord and HTTP alike, an empty MCP roster is valid, and `issue_tracker` must name a configured
 server when present.
 
-Echo's Discord token needs only `#bots` visibility, history, and reply permissions. **The pod receives a
-cluster-local MCP URL and no Forgejo token**, and the separate MCP pod receives an exact-repository
-token and a guardfile publishing only the reviewed issue and label tools. `just policy-check` verifies
-both tracked response policies, `just test` exercises the offline harness, the zero-tool CoilyCo
-profile, and an official MCP server fixture, and `just eval-echo` omits environment-backed MCP servers
-and gives each case its own five-minute deadline **without a Discord or Forgejo write**.
-
 ## Encoded capability limits
 
 `.agents/skills/sirens-echo-knowledge/references/capability.md` tells the model what the service can do.
@@ -107,15 +100,6 @@ so a caller mistake does not inflate the service error rate**. The stage cannot 
 well-formed request, **and a code declaring neither fails the suite**. **Echo emits no
 `exception.stacktrace`**, and an invalid or unclassified code becomes `sirens_echo.telemetry.
 unclassified` **without retaining the supplied value**.
-
-**The catalog's hard grouping bound** covers the `turn`, `history`, `validation`, `forgejo`, `reply`,
-`mcp`, `model`, `http`, `jobs`, and `content_gate` stages plus a `telemetry` fallback, and **adding a
-failure path requires an explicit catalog entry and a reviewed increase to that bound**. The most recent
-increase is the two `content_gate` types, **two rather than one because a dead classifier and one
-answering off its own closed list need different people**. Before that, the five `jobs` types, that
-surface having failed through bare `http.Error` and recorded nothing, **so the failure rate omitted it
-entirely**; five rather than fewer because `queue_full` is the service's fault and the rest the
-caller's.
 
 **The recording API accepts only the catalog's numeric code type**, so upstream error text, request
 identifiers, member data, URLs and paths, credentials, and payloads cannot be passed into the exception

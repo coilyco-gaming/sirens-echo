@@ -49,13 +49,6 @@ instructions from one issuing them. **So the bound is posture rather than detect
 untrusted input always, **including from the principal**, never widening authority, never admitting a
 caller, never naming a tool, and a URL inside it is inert.
 
-**Fetching a URL that arrives in a payload is the shape of a server-side request forgery**, bounded
-twice: the address comes off the Gateway payload rather than message text, **so a member cannot type
-one**, and the host allowlist admits only Discord's CDN over TLS. An oversized file refuses rather than
-storing a prefix, because **a truncated document read as a whole one is worse than no document**. No
-scratchpad, an unreachable host, a non-text body, an oversized file, or a partition at quota all leave
-the turn as it is today, the transcript still reporting that an attachment exists and was not read.
-
 ## Caller-supplied history carries no authority
 
 Both private ingresses take an optional `history`, and **the caller writes every field, including each
@@ -98,10 +91,6 @@ handle in their hostnames and **every approved link would otherwise fail the che
 link paths are still read. The digit normalization applies only to an identifier of eight digits or
 more, because **collapsing a reply to its digits would let a short identifier collide with ordinary
 numbers**.
-
-`PrincipalEchoed` is the exported form, and the deployed reply-path validator calls it rather than
-reimplementing the normalization, because **two matchers for one invariant drift and the evaluation
-would then measure something the runtime does not enforce**. It covers matching only.
 
 **Residual misses, stated rather than implied**: bases other than ten, ciphers such as rot13, compound
 number words, nonstandard digit names, a value split across separate replies because the check is per

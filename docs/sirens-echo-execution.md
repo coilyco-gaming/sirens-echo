@@ -76,12 +76,6 @@ claim, it is a fresher read**. Fetch `origin/main` immediately before the first 
 **branching is not close enough when the base moves several times an hour**, and look for the thing
 before building it.
 
-**When you are beaten to it, compare then discard.** Three of the six produced something worth landing
-once the landed version was read properly rather than argued against. **The landed version is often
-better**, arriving first for the same reason it was reviewed first, **and reopening a settled question
-to keep your own version costs more than the duplicate did**. A genuine race stays unfixed: two agents
-starting inside the same minute still collide, and no habit closes that.
-
 ## Shutdown
 
 **A restart is not a failure, and a member whose turn it interrupts is entitled to hear which one it

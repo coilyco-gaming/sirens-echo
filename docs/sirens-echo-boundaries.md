@@ -24,13 +24,6 @@ its four refusal reasons). `derived: false` means the boundary is prose in a pol
 hand: **the checker cannot tell when one of those clauses moves**, so it reports the count as
 undriftable rather than passing silently, which is why the board is not fully derived.
 
-`just boundaries` prints the paired case list and `just boundaries-check` verifies that every `origin`
-path exists, every `derived` fragment is still present, no `id` repeats, and no boundary is missing an
-arm. **It does not check wording and it does not run a model**, and it holds no questions and no grades:
-a generator seat reads the pairs and writes the questions, the commodity subject answers, and a human
-grades. **Keeping questions out is what lets the declaration derive rather than becoming a second case
-list to maintain.**
-
 ## Boundary response length
 
 A boundary response states what will not happen and stops. **Every clause explaining why is a surface
@@ -74,13 +67,6 @@ prompt size: Echo renders 20600 bytes against Deep's 11392, **so the lane with n
 prompt to quote from leaks least**. The failing replies are not dumps either - each refuses correctly
 and then quotes a provenance sentence while explaining where policy comes from, **so the extra words are
 the vehicle**.
-
-**It does not generalise, which is the second result.** The same instruction against
-`self-description-invents-no-path` went 3 of 10 to 4 of 10, the same rate inside noise. Brevity closes a
-defect whose mechanism is **having room to quote** and does nothing for one whose mechanism is
-**believing a path is permitted** (issue 251). **So brevity is a lever for one class and not a general
-security instruction.** Fifteen runs at zero also bound the true rate loosely, since a behaviour at 10
-percent passes 15 of 15 about one time in five. No lane ships the instruction (issue 249).
 
 ## Identifiers a reply may not carry
 

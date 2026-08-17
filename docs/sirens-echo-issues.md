@@ -53,14 +53,6 @@ attacker-influenceable content is indistinguishable from work an agent authored.
 existed and says exactly the right thing, that the issue came in from the live MCP and its inputs are
 not safe or verified until the label is removed.
 
-Three other layers fail in ways worth recording. **Asking the model** is a prompt-level instruction
-guarding against attacker-influenced input. **A guardfile `fail-when`** reports after the call, so the
-unlabelled issue exists and the caller is told the call failed, with nothing retrying the labelling:
-**a control that leaves the hazard in place and returns an error is not a control.** **A guardfile
-shadow** could inject the field, but that construct exists on the CLI surface and not in the MCP
-guardfiles. The harness is the remaining layer and the right one, **every tool call passing through one
-function with its arguments in hand, before dispatch**.
-
 **It is atomic**: the label goes into the create-issue call rather than a second call afterwards, so
 there is no window where the issue exists unlabelled. That is why the deployment must also grant the
 `labels` field on create-issue, **the two halves being one change**, since without the grant the call is

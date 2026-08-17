@@ -44,11 +44,6 @@ answers is which boundaries members actually probe, and how often. The issue rec
 an invocation would appear as its own span; the registry that shipped implements the sentinel, **a real
 divergence that costs the span** but not the anti-spoofing argument, which the terminal rule closes.
 
-**The eval measures the deployed prompt.** The live path wrapped its system prompt with the phrase
-policy and the three eval paths did not, so an eval scored a prompt no deployment renders. With no
-registry configured the two were byte-identical, **which is why it went unnoticed**, and the moment
-`SIRENS_ECHO_PHRASES` is set they diverge. `evaluationSystemPrompt` is now the one builder.
-
 `expect_phrase` asserts which key the reply invoked, failing when the reply invoked nothing, a different
 key, more than one, or the right key beside other text. **This is the replacement for frozen keyword
 lists**: a keyword list can be fitted to outputs after seeing them, **and a key is exact with nothing to
@@ -69,15 +64,6 @@ not an object. Admitted: everything else, at most **three** in one reply.
 emoji nobody thought of, and a style refusal costs a repair attempt and then the turn, **and wrongly
 refusing a correct reply is the more expensive mistake**. The model is steered toward objects by the
 object table rather than by the check: **the check is a floor against tone, not the taste.**
-
-Three rules the doctrine carries because a validator cannot judge them: the emoji **follows** the object
-rather than replacing it, since `🪵 is listed at 3 Spectres` is unreadable to a screen reader; first
-mention only; and an object with no obvious emoji is written plainly, **because an approximate one has
-to be decoded rather than skimmed**. `maxObjectEmoji` is three, Kai's answer to the warning that one
-emoji per referenced object across a long list turns legibility back into noise. **A reply carrying a
-fourth is refused**, costing one repair attempt, deliberately: a model reaching four has ignored an
-instruction rather than met an edge case. Harness reactions signalling machine state are a different
-mechanism and **must not share this implementation** (#221).
 
 ## What a reply in another language is still checked for
 
