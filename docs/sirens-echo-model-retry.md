@@ -48,6 +48,24 @@ That is not this ladder and this ladder does not change it. It is worth knowing
 because the two multiply: anything added here rides on top of an upstream
 ladder that is already longer than the turn.
 
+## A refusal is not an outage
+
+A 4xx means the backend answered and refused the request this service built.
+Retrying rebuilds the same request, so `rejectedByModel` classifies it and the
+member is told the harness built something the model refused rather than that
+the backend is unavailable.
+
+`429` and `408` are excluded: those are the two a 4xx can mean that waiting does
+fix, so they stay retryable and keep the availability notice.
+
+This mattered under sirens-echo#875, where a malformed message array drew a
+DeepSeek 400 on every attempt and the member was told to retry shortly. The
+advice could not work, because the same array was rebuilt each time. Same family
+as sirens-echo#449: a true sentence pointing somewhere useless.
+
+The cause is `model_rejected` rather than `stage_failed`, so a malformed-request
+class is countable on its own instead of collapsing into the stage.
+
 ## See also
 
 - [tuning](sirens-echo-tuning.md) - where the constants live.
