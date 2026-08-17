@@ -13,9 +13,9 @@ everything. Two numbers that must agree could sit in different files with
 nothing connecting them, which is how the progress cadence came to be three
 constants whose relationship existed only in whoever remembered it.
 
-`TestEveryTuningNumberLivesInConfigGo` holds the arrangement, which seven
-numbers had drifted out of, and a knob-shaped number that is not one takes a
-named exemption. See sirens-echo#829.
+[`TestEveryTuningNumberLivesInConfigGo`](sirens-echo-knob-guard.md) holds the
+arrangement, which seven numbers had drifted out of. It finds a stray by shape
+rather than by name, and a number that is not a knob takes a named exemption.
 
 ## What lives here and what does not
 
