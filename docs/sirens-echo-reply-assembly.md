@@ -1,80 +1,104 @@
 # Reply assembly
 
-Some of a reply is written by the service rather than the model. The tool
-disclosure footer and the issue reference block are both appended after the
-reply checks have run, because the harness wrote them and the checks exist to
-police what the model wrote.
+Some of a reply is written by the service rather than the model: the tool disclosure footer and the
+issue reference block are both appended **after** the reply checks have run, because the harness wrote
+them and the checks exist to police what the model wrote. **One step appends all of them, inside one
+transport budget.**
 
-One step appends all of them, inside one transport budget.
+**Two independent appends budget against each other.** The first is appended, the second inside the
+remaining room, and the transport cuts the tail blindly, where both live, so the second silently
+truncates the first. **The failure is invisible**, and it lands on the turn that did the most for the
+member, because a turn that filed an issue and called tools carries both suffixes (#413). **The answer
+is what yields**: both suffixes are service-authored, short, and bounded, and the answer is none of
+those, so the answer is shortened rather than a suffix dropped. A transport with no ceiling, like the
+HTTP turn, declares none and nothing is shortened.
 
-## Why one step
+**Convergence, not reservation.** Suffix length is not monotone in the answer, so rendering once and
+truncating to `limit - len(suffixes)` is wrong in both directions: the reference block resolves short
+forms found in the reply, so shortening can remove the `#233` a link was resolving; and it skips a URL
+the reply already contains, so shortening can remove that URL and the suffix **grows**. Each pass
+therefore renders the suffixes unbounded against the current answer, measures the overflow, and removes
+at least that much, **so references always resolve against the answer that will be sent**. Termination
+is by construction, and an explicit pass bound guards a future suffix that grows faster than the answer
+shrinks.
 
-Two independent appends budget against each other. The first is appended, the
-second is appended inside the remaining room, and the transport cuts the tail
-blindly. The tail is where both live, so the second silently truncates the
-first. The failure is invisible. A reader sees a reply that looks complete, and it
-lands on the turn that did the most for the member, because a turn that filed
-an issue and called tools is the turn carrying both suffixes. Neither suffix
-can fix it, because neither can see the total and the total is what decides
-what yields. See sirens-echo#413.
+**The append order is the preference order**, because a cut reaches the tail first: a reference is a
+link a member can act on and the footer is a record of what ran, so the reference goes first and the
+footer yields. When the answer has yielded everything and the suffixes still do not fit, the least
+preferred is **dropped whole rather than cut into a half-rendered receipt**, and a reference block that
+cannot fit whole is dropped entire, **because a truncated URL is worse than no URL**. **Assert on the
+assembled string, not on a budget function**: a budget can be correct while the send is not.
 
-## The answer is what yields
+## A reply too large for one message
 
-Both suffixes are service-authored, short, and bounded. The answer is none of
-those, so the answer is shortened to make room rather than a suffix being
-dropped for it. A transport with a ceiling declares it, and one with no
-ceiling, like the HTTP turn, declares none and nothing is shortened.
+Large content has three paths and two already refuse to destroy the remainder: an upload lands in the
+scratchpad and the turn is told the path and true size, and a tool result over its cap is saved whole.
+**Outbound was the exception**, cut at the send budget with everything past the cut gone. Now a reply
+that does not fit is sent as a message plus the whole reply as `reply.txt`, the message carrying what
+fits and one line naming the file and the byte count. The file name is fixed, because **nothing
+member-supplied or model-supplied reaches an attachment name**. **The file is the complete reply and the
+message is a prefix of it**: attaching only the remainder would make a reader stitch two pieces
+together. The bytes are held in memory for the length of the send, so no quota is spent.
 
-## Convergence, not reservation
+**The cut was never a disclosure control.** Every reply check runs on the untruncated text, so sending
+the rest as a file adds nothing that was not already approved. Three cases send the cut message exactly
+as before, none as an error: a transport that cannot carry a file, a reply larger than the attachment
+bound, and a send budget with no room to say the file exists. **Discord does not render mentions inside
+an attachment**, so the file carries the answer as composed while the message carries the ids the
+harness resolved. The job-notice path truncates at the same budget and looks like the same defect but is
+not one: **a job ends on one of three fixed phrases, so that cut can never fire.**
 
-Suffix length is not monotone in the answer, so the natural implementation is
-wrong:
+## Repairing a refused reply
 
-```
-suffixes := render(answer)
-answer    = truncate(answer, limit - len(suffixes))
-reply     = answer + suffixes
-```
+A reply check refuses the whole message, so one block naming a channel nobody has discarded eleven
+correct blocks beside it, including an outage report found in a trace hours later rather than read in
+the channel (#796). A repair loop already existed in the completion layer, naming the refusing check to
+the model so it could fix the clause rather than rephrase blind, **but it covered only `parse` and
+`response_style`**. The other five ran in `runReplyChecks` after `Complete` returned, so a grounding
+refusal ended a 51-second turn outright: **the machinery was there and those checks were not wired into
+it.** `ProxyClient.ValidateReply` now takes the harness's own check set, so all ten rules reach the loop.
 
-It assumes rendering against a shorter answer cannot produce a longer suffix.
-Both directions break that:
+**Repair is advisory, and the verdict did not move.** `runReplyChecks` is still the only thing that
+refuses, so the hook **can turn a refusal into a rewrite and can never turn a refusal into a delivery**.
+That is why the loop drops the harness checks once the repair budget is spent rather than failing on
+them: failing would return `ErrResponseRepairExhausted` and report `stage=model`, true about the code
+and false about the world. **A model that will not fix the clause produces the same outcome as before
+this change, byte for byte.**
 
-- The reference block resolves short forms found in the reply. Shortening can
-  remove the `#233` a link was resolving, leaving a link to something the
-  member cannot see.
-- The reference block skips a URL the reply already contains. Shortening can
-  remove that URL, so the block is no longer suppressed and the suffix grows.
+**Tools are already withdrawn on a repair attempt**, so the model cannot answer a grounding refusal by
+substantiating the claim: **a check refusing an unsupported claim must not become a prompt to go find
+support for it.** The budget is `maxResponseRepairs`, one attempt, shared with the contract checks.
+Preserving a refused reply for an operator was weighed on #796 and is not implemented, because **a reply
+refused by `identifier_disclosure` carries the value that check exists to keep out of logs**.
+**Measurement is deliberately unhooked**: the eval scorer runs the checks itself, so the rate packs stay
+comparable **instead of reporting the harness's repair as the model improving**.
 
-So the step re-measures. Each pass renders the suffixes unbounded against the
-current answer, measures the overflow, and removes at least that much from the
-answer, so references always resolve against the answer that will be sent.
+## Redacting a block instead of the message
 
-Termination is by construction, since every pass removes at least the overflow
-it measured and the answer is finite. An explicit pass bound guards a future
-suffix that grows faster than the answer shrinks, and a test reaches it.
+Redaction is the last rung: repair gives the model a chance to fix the block, and only when that fails
+does the block go. **The unit is a block**, a paragraph or one item of a list, because the blank line is
+the break a member already reads and a list item is a break too, the reply this was written for being
+twelve bullets with no blank line in it. **A sentence is the wrong unit**: `[.!?]+` splits prose, not
+reasoning, so a claim and the qualifier bounding it land in different sentences.
 
-## When the suffixes alone do not fit
+`redactableRules` is an allowlist: the four grounding rules, tool-call markup, and self-attributed
+claim. Everything else refuses whole, because `response_style` and `identity_claim` are properties of
+the whole voice and `parse` means there was no reply to cut. **`identifier_disclosure` looks redactable
+and is not**: it collapses digits and spelled numbers across the entire reply, so a guarded value can
+span two blocks and neither block fails alone.
 
-The append order is the preference order, because a cut reaches the tail first.
-A reference is a link a member can act on and the footer is a record of what
-ran, so the reference is appended first and the footer yields.
+**Two passes, and the second is the authority.** The first runs the checks over each block alone and
+marks the blocks failing **the same rule that refused the message**, which keeps a block that merely
+disagrees in isolation from being removed. The second runs every check again over the surviving prose,
+**so what is delivered passed the full set on its own rather than merely lacking the removed block** -
+which makes an imperfect first pass safe, since it picks candidates and licenses nothing. If the
+remainder fails, the reply is refused whole. It stops when there is nothing to save, nothing left, or
+too much to remove (`maxRedactedBlocks`).
 
-When the answer has yielded everything it has and the suffixes still do not fit,
-the least preferred suffix is dropped whole rather than cut into a
-half-rendered receipt. Below that, a reference block that cannot fit whole is
-dropped entire, because a truncated URL is worse than no URL, and the receipt
-that does fit remains.
-
-A third suffix is one entry in the order. Adding it does not re-decide either
-trade, which is the property the two-append shape could not offer.
-
-## Verify at the send
-
-Assert on the assembled string, not on a budget function. A budget can be
-correct while the send is not, which is what happened to the first repair here.
-
-## See also
-
-See [tool call disclosure](sirens-echo-tool-disclosure.md), [knowledge gaps and
-corrections](sirens-echo-issues.md), and [thread
-prefill](sirens-echo-thread-prefill.md) for the suffixes this assembles.
+The removal is marked in place in the harness notice shape, **whose alphabet a model reply cannot
+forge**, with adjacent removals sharing one mark. The mark is part of the answer rather than a service
+suffix, so length truncation can reach it when the removed block was last: **only the disclosure is ever
+at risk, never the removal.** **A remainder can still depend on what was removed**, and re-validation
+checks rules rather than reasoning, so the mark is the mitigation. `response.check` names the rule so a
+redaction appears in the refusal rates, `response.redacted.blocks` carries the count on every turn
+including zero, and `response.check.redacted` logs the rule, the sentence, and the count.
