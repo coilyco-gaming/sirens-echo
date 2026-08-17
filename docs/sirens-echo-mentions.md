@@ -4,9 +4,17 @@ What addresses this service, and what a reply may reach back to.
 
 ## What counts as a summon
 
-Three things address this service in a guild: an explicit mention, a reply to one of its own messages,
-and an edit that adds a mention to a message that did not have one. A direct message is addressed to it
-by definition.
+Four things address this service in a guild: an explicit mention, a mention of a role this account
+holds, a reply to one of its own messages, and an edit that adds a mention to a message that did not
+have one. A direct message is addressed to it by definition.
+
+**A role mention summons, because a member who @s the role is addressing what holds it** (#866).
+Discord delivers the mentioned role ids on the payload, and the account's own roles come from the
+member Discord sends on `GuildCreate`, which arrives without the privileged members intent; a miss
+falls back to one REST read written back to state, so a guild costs at most one lookup. **`@everyone`
+does not summon**: its role id is the guild's and every member holds it, so an announcement would
+otherwise address every agent in the channel. Nothing downstream changes. A role mention is a message
+in a channel and takes the same access policy, allowlist, and admission budget a direct mention takes.
 
 **A reply summons when the referenced message was authored by this service.** The Gateway payload
 usually carries the referenced message already, so the common case costs no API call, and when the

@@ -749,7 +749,50 @@ func mentionsBot(session *discordgo.Session, message *discordgo.Message) bool {
 			return true
 		}
 	}
+	return mentionsBotRole(session, message)
+}
+
+// mentionsBotRole summons on a mention of a role this account holds, because a
+// member who @s the role is addressing it. See docs/sirens-echo-mentions.md.
+func mentionsBotRole(session *discordgo.Session, message *discordgo.Message) bool {
+	if len(message.MentionRoles) == 0 || message.GuildID == "" {
+		return false
+	}
+	held := botRoles(session, message.GuildID)
+	if len(held) == 0 {
+		return false
+	}
+	for _, mentioned := range message.MentionRoles {
+		// The everyone role's id is the guild's, and every member holds it. An
+		// announcement is not addressed to this service.
+		if mentioned == message.GuildID {
+			continue
+		}
+		if _, holds := held[mentioned]; holds {
+			return true
+		}
+	}
 	return false
+}
+
+// botRoles reads this account's roles in one guild. Discord delivers its own
+// member on GuildCreate without the members intent, and a miss self-heals.
+func botRoles(session *discordgo.Session, guildID string) map[string]struct{} {
+	botID := session.State.User.ID
+	member, err := session.State.Member(guildID, botID)
+	if err != nil || member == nil {
+		member, err = session.GuildMember(guildID, botID)
+		if err != nil || member == nil {
+			return nil
+		}
+		// Written back so one lookup covers every later message in this guild.
+		_ = session.State.MemberAdd(member)
+	}
+	held := make(map[string]struct{}, len(member.Roles))
+	for _, role := range member.Roles {
+		held[role] = struct{}{}
+	}
+	return held
 }
 
 func summonedByReference(session *discordgo.Session, message *discordgo.Message) bool {
