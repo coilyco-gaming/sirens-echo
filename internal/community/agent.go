@@ -198,6 +198,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	// read it. See docs/sirens-echo-reply-assembly.md.
 	proxy.ValidateReply = agent.repairableReplyChecks
 	agent.completions = proxy
+	// Attached after the agent exists, because the checks are model calls it
+	// makes. See docs/sirens-echo-issues.md.
+	tools.FilingCheck = agent.checkMemberFiling
 	agent.ensureRuntimeDefaults()
 	if err := agent.attachToolMirror(); err != nil {
 		return nil, err

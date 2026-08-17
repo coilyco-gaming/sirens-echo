@@ -41,6 +41,14 @@ write fails, `forgejo.issue.failed` carries the failing MCP tool, the HTTP statu
 reported the error rather than the transport, **with the remote response body discarded before the error
 is built so it never reaches a log**.
 
+## What a member's ticket has to clear
+
+**The shape to catch is not abuse.** #907 was polite, on topic, well formed, and produced a tracker
+entry with nothing to act on (#852). A member-originated `create_issue` passes two model checks first,
+each answering from a closed list: **validity** refuses `placeholder` and `unclear`, **scope** refuses
+`out-of-scope`. A refusal returns as a tool result saying what would fix it. **A failed checker files
+anyway**, matching the content gate, the principal is exempt, and the checks run before the label.
+
 ## The labels a filed issue carries
 
 Every issue this service files carries a label marking its contents as unverified, and a
@@ -50,13 +58,13 @@ them and cannot omit them.**
 **This service files in response to member input**, so the body of an issue it files contains text a
 member influenced, and that issue lands in a tracker four agents read and act on: **without a marker,
 attacker-influenceable content is indistinguishable from work an agent authored.** The label already
-existed and says exactly the right thing, that the issue came in from the live MCP and its inputs are
-not safe or verified until the label is removed.
+existed and says the right thing: the issue came from the live MCP and its inputs are not verified
+until the label is removed.
 
 **It is atomic**: the label goes into the create-issue call rather than a second call afterwards, so
-there is no window where the issue exists unlabelled. That is why the deployment must also grant the
-`labels` field on create-issue, **the two halves being one change**, since without the grant the call is
-rejected for carrying a field the guard does not list.
+there is no window where the issue exists unlabelled. The deployment must also grant the `labels` field on
+create-issue, **the two halves being one change**, or the call is rejected for carrying a field the
+guard does not list.
 
 A filed issue also carries one `move-to-repo/*` label. The deployment names the id and sets
 `move-to-repo/unknown` unless it knows the home, **so the default state is the honest one: nothing has
