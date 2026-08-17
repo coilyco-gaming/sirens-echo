@@ -44,9 +44,20 @@ Every arm records, including the three that used to `continue` silently:
 the status code rather than the URL: a CDN path has the member's filename in it.
 The content never appears either.
 
-Before this, an upload that was refused and an upload that never happened were
-the same observation. `discord.attachment.stored` counted the successes at the
-caller and nothing counted the rest.
+Before this, a refused upload and no upload at all were the same observation:
+`discord.attachment.stored` counted successes and nothing counted the rest.
+
+## The bug the timeout test found
+
+`exec.CommandContext` kills the direct child on expiry. It does not close the
+pipe, and `CombinedOutput` waits for every writer to it, a **grandchild**
+included. A shell that forks rather than execs outlived its own deadline for as
+long as the grandchild ran: 30s measured against a 50ms timeout.
+
+`command.WaitDelay = commandKillGrace` bounds the wait after the kill and closes
+the pipes. `SIRENS_ECHO_COMMAND_KILL_GRACE` defaults to 5s. The orphan is not
+reaped - this unblocks the harness rather than killing the process tree, which
+would want a process group and its own decision. See sirens-echo#892.
 
 ## It stops at telemetry
 

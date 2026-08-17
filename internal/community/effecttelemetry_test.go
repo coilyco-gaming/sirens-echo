@@ -90,12 +90,16 @@ func TestTheCommandTimeoutStillApplies(t *testing.T) {
 	t.Cleanup(func() { _ = workspace.Remove() })
 	runner := WardCommandRunner{Binary: "sh", Timeout: 50 * time.Millisecond}
 
+	// A grandchild that inherits the pipe is the case that used to hang: killing
+	// sh does not close the pipe sleep still holds. See sirens-echo#892.
 	started := time.Now()
-	if _, err := runner.Run(context.Background(), workspace, "-c", "sleep 10"); err == nil {
+	if _, err := runner.Run(
+		context.Background(), workspace, "-c", "sleep 30 & wait",
+	); err == nil {
 		t.Fatal("a command outran its own timeout")
 	}
-	if elapsed := time.Since(started); elapsed > 5*time.Second {
-		t.Errorf("the timeout took %s to fire", elapsed)
+	if elapsed := time.Since(started); elapsed > 10*time.Second {
+		t.Errorf("the timeout took %s to fire, so it does not bound wall clock", elapsed)
 	}
 }
 

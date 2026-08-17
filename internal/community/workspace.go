@@ -122,6 +122,9 @@ func (r WardCommandRunner) Run(
 	defer cancel()
 	command := exec.CommandContext(runCtx, r.binary(), append([]string{name}, args...)...)
 	command.Dir = workspace.Root
+	// Killing the command does not close a pipe a grandchild still holds, so the
+	// deadline bounded nothing without this. See docs/sirens-echo-execution.md.
+	command.WaitDelay = commandKillGrace
 	// An explicit environment rather than the process's own, so a command never
 	// inherits a token this process holds.
 	command.Env = append([]string{}, r.Environment...)
