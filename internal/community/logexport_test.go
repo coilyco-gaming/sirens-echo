@@ -13,7 +13,7 @@ import (
 )
 
 // The acceptance on sirens-echo#810: a log row carries service.name matching
-// the trace side. See docs/sirens-echo-log-export.md.
+// the trace side. See docs/sirens-echo-rate.md.
 
 // collectorCapture records what the exporters actually sent, by path.
 type collectorCapture struct {

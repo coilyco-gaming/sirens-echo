@@ -3,7 +3,7 @@ package community
 import "unicode"
 
 // The neutral profile admits an emoji that names a thing and refuses one that
-// carries tone. See docs/sirens-echo-object-emoji.md for where the line sits.
+// carries tone. See docs/sirens-echo-phrases.md for where the line sits.
 
 // emotiveRunes are faces, people, body, hearts, and celebration marks. A party
 // popper is an object to Unicode and tone to a reader, so the reader wins.

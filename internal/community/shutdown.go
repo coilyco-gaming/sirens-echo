@@ -11,7 +11,7 @@ import (
 )
 
 // A Discord turn runs in its own goroutine, so shutdown has to be told about it
-// to wait for it. See docs/sirens-echo-shutdown.md.
+// to wait for it. See docs/sirens-echo-execution.md.
 
 // errShuttingDown is the cancellation cause a drained turn carries. Without it
 // the turn sees context.Canceled and cannot say what ended it.

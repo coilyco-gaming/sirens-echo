@@ -6,7 +6,7 @@ import (
 )
 
 // The relative half of the brevity rule, which an absolute ceiling cannot
-// express. See docs/sirens-echo-brevity.md.
+// express. See docs/sirens-echo-boundaries.md.
 
 // Case shapes. A case is classified by what a correct reply to it looks like,
 // not by what it probes. Unset stays out of both sides.
@@ -21,7 +21,7 @@ func validShape(shape string) bool {
 }
 
 // RateBrevity compares boundary reply length against ordinary reply length in
-// one run set. See docs/sirens-echo-brevity.md.
+// one run set. See docs/sirens-echo-boundaries.md.
 type RateBrevity struct {
 	BoundaryCases         []string `yaml:"boundary_cases"`
 	ConversationalCases   []string `yaml:"conversational_cases"`

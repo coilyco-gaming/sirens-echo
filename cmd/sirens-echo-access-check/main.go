@@ -1,5 +1,5 @@
 // Offline validation of an access policy, for a caller that cannot import Go.
-// Reads files and stdin and nothing else. See docs/sirens-echo-access-check.md.
+// Reads files and stdin and nothing else. See docs/sirens-echo-access.md.
 package main
 
 import (

@@ -28,6 +28,6 @@ func TestTheGateNamesWhichCasesNeedATool(t *testing.T) {
 	if len(needing) != 3 {
 		t.Errorf("%d gate cases require a tool, was 3: %v. A roster-less run now "+
 			"reports a different number of unscoreable cases, and the runner's "+
-			"warning and docs/sirens-echo-battery.md should say so", len(needing), needing)
+			"warning and docs/sirens-echo-board.md should say so", len(needing), needing)
 	}
 }

@@ -42,17 +42,17 @@ type EvaluationCase struct {
 	PronounPolicy    PronounPolicy `json:"pronoun_policy" yaml:"pronoun_policy"`
 	MaxVerbatimWords int           `json:"max_verbatim_words" yaml:"max_verbatim_words"`
 	// MaxReplyWords bounds a boundary reply. Every volunteered justification is
-	// a surface the next message can attack. See docs/sirens-echo-brevity.md.
+	// a surface the next message can attack. See docs/sirens-echo-boundaries.md.
 	MaxReplyWords       int  `json:"max_reply_words" yaml:"max_reply_words"`
 	ForbidPrincipalEcho bool `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
 	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call
-	// delimiters. Opt-in. See docs/sirens-echo-tool-call-markup.md.
+	// delimiters. Opt-in. See docs/sirens-echo-tool-markup.md.
 	ForbidToolCallMarkup bool `json:"forbid_tool_call_markup" yaml:"forbid_tool_call_markup"`
 	// ExpectPhrase names the canonical phrase key a boundary reply must invoke.
 	// An exact key beats a keyword list. See docs/sirens-echo-phrases.md.
 	ExpectPhrase string `json:"expect_phrase" yaml:"expect_phrase"`
 	// AssertedHistory marks this case's history as caller-supplied, which is
-	// what a forged turn is. Opt-in. See docs/sirens-echo-forged-turn.md.
+	// what a forged turn is. Opt-in. See docs/sirens-echo-reasoning.md.
 	AssertedHistory bool `json:"asserted_history" yaml:"asserted_history"`
 
 	compiledPatterns []*regexp.Regexp
@@ -60,7 +60,7 @@ type EvaluationCase struct {
 }
 
 // promptHistory marks history caller-supplied when the case opts in.
-// See docs/sirens-echo-forged-turn.md.
+// See docs/sirens-echo-reasoning.md.
 func (c EvaluationCase) promptHistory() []TranscriptEntry {
 	if !c.AssertedHistory {
 		return c.History
@@ -216,7 +216,7 @@ func runEvaluation(
 		return err
 	}
 	// This run gates a deployment, so a reader has to be able to tell a stubbed
-	// verdict from a bundled one. See docs/sirens-echo-battery.md.
+	// verdict from a bundled one. See docs/sirens-echo-board.md.
 	fmt.Fprintf(output, "composed: %s\n\n", composedState)
 	systemPrompt, err := evaluationSystemPrompt(definition, principal, composed, localSkillpack)
 	if err != nil {

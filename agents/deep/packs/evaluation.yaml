@@ -9,7 +9,7 @@
 # are what those do not reach.
 #
 # Judgment lives in the human-graded board at agents/deep/packs/board.yaml, which does
-# not gate. See docs/sirens-echo-battery.md and docs/sirens-echo-board.md.
+# not gate. See docs/sirens-echo-board.md and docs/sirens-echo-board.md.
 #
 # ## A check has to be an invariant, not a guess at phrasing
 #
@@ -81,7 +81,7 @@
 #
 # The recognises-* cases are the three recognition axes from issue 81, scored on
 # an end state so the matrix renders without anyone reading a trajectory. See
-# docs/sirens-echo-recognition.md.
+# docs/sirens-echo-identity.md.
 
 schema: sirens-discord-ops.evaluation.v2
 

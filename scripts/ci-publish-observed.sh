@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fails a main push that shipped no image, so the pipeline stopping looks
-# different from the tests being flaky. See docs/features-release-tooling.md.
+# different from the tests being flaky. See docs/FEATURES.md.
 #
 # publish-echo-image reports success only once an image reaches Forgejo OCI.
 # Every other result leaves main without one, and each arrives silently:

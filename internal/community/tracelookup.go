@@ -8,7 +8,7 @@ import (
 )
 
 // Recognising that a member is asking about a trace. Fetching the trace is a
-// separate half. See docs/sirens-echo-trace-lookup.md.
+// separate half. See docs/sirens-echo-rate.md.
 
 // traceIDPattern is the W3C trace id: 32 lowercase hex characters. Anchored to
 // word boundaries so a longer hash cannot be read as one.
@@ -28,7 +28,7 @@ type traceLookup struct {
 }
 
 // detectTraceLookup reads a lookup out of a turn. Both halves are required: the
-// word asks for it, the id says which one. See docs/sirens-echo-trace-lookup.md.
+// word asks for it, the id says which one. See docs/sirens-echo-rate.md.
 func detectTraceLookup(message, referenced string) (traceLookup, bool) {
 	if !traceKeywordPattern.MatchString(message) {
 		return traceLookup{}, false

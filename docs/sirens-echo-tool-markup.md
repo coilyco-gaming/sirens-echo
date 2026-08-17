@@ -47,10 +47,23 @@ content escapes, because `<tool_uri> <tool>issue-create</tool>` puts the name in
 ## Tool call disclosure
 
 A reply that called tools carries a footer naming them. **It is the receipt a reader can see, where the
-grounding check is a guard only the service can see.** Three states, because two would conflate: `✅` the
-call returned data, `📭` the call worked and returned nothing, `❌` the call failed. **A reply that
-reported an empty result as a confident zero is the defect this distinction exists to prevent.** The
-glyph is a scanning anchor rather than the message, so an empty result also says `no results` in words.
+grounding check is a guard only the service can see.**
+
+```
+> 🔨 ✅ `eco.get_market`
+> 🔨 📭 `eco.find_trade` — no results
+> 🔨 ❌ `eco.get_stores`
+```
+
+| Glyph | Meaning |
+| --- | --- |
+| ✅ | the call returned data |
+| 📭 | the call worked and returned nothing |
+| ❌ | the call failed |
+
+**Three states, because two would conflate**: a reply that reported an empty result as a confident zero
+is the defect this distinction exists to prevent. The glyph is a scanning anchor rather than the
+message, so an empty result also says `no results` in words.
 
 A run of the same tool at the same status collapses to one line with a count. **Any other tool breaks
 the run**, so `A A B A` renders three lines and the order the model worked in survives, and a status

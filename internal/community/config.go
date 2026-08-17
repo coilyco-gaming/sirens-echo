@@ -88,7 +88,7 @@ var (
 	// answer shrinks. A test reaches it.
 	maxAssemblyPasses int
 	// Completion budget, escalated rather than fixed.
-	// See docs/sirens-echo-budget.md.
+	// See docs/sirens-echo-model-call.md.
 	baseCompletionTokens int
 	maxCompletionTokens  int
 	completionBudgetStep int
@@ -108,7 +108,7 @@ var (
 // MCP: refresh, timeouts, backoff, and grounding size
 var (
 	// defaultRosterRefresh bounds staleness for a transport that cannot push
-	// tools/list_changed. See docs/sirens-echo-mcp-roster.md.
+	// tools/list_changed. See docs/sirens-echo-mcp.md.
 	defaultRosterRefresh time.Duration
 	mcpConnectTimeout    time.Duration
 	mcpListTimeout       time.Duration
@@ -127,7 +127,7 @@ var (
 )
 
 // Turn progress cadence. Only the wait is a knob. The pair below it is derived,
-// so it is set by setting the wait. See docs/sirens-echo-tuning-overrides.md.
+// so it is set by setting the wait. See docs/sirens-echo-tuning.md.
 var (
 	// turnProgressAfter is how long a turn runs before it starts reporting. A
 	// reply that beats this never posts anything.
@@ -156,7 +156,7 @@ var (
 )
 
 // Tool-call mirror. Metadata only, and off the turn's path entirely.
-// See docs/sirens-echo-tool-mirror.md.
+// See docs/sirens-echo-tool-markup.md.
 var (
 	// mirrorQueueDepth bounds what a Temporal outage can hold in memory. Past
 	// it records drop, which is counted rather than silent.
@@ -172,12 +172,12 @@ var (
 )
 
 // Model retry. Only fast failures are retried, so the whole ladder fits well
-// inside the turn ceiling. See docs/sirens-echo-model-retry.md.
+// inside the turn ceiling. See docs/sirens-echo-model-call.md.
 var (
 	modelRetryAttempts int
 	modelRetryBackoff  time.Duration
 	// modelIdleTimeout bounds silence rather than the whole call, so a backend
-	// still sending heartbeats is not cut. See docs/sirens-echo-model-stream.md.
+	// still sending heartbeats is not cut. See docs/sirens-echo-model-call.md.
 	modelIdleTimeout time.Duration
 )
 
@@ -266,7 +266,7 @@ var (
 )
 
 // Discord's own shape. Raising one of these past what Discord accepts fails at
-// Discord rather than here. See docs/sirens-echo-tuning-overrides.md.
+// Discord rather than here. See docs/sirens-echo-tuning.md.
 var (
 	maxCommandNameRunes        int
 	maxCommandDescriptionRunes int
@@ -294,7 +294,7 @@ var (
 	// threadNameRunes is Discord's cap. A longer name is refused outright.
 	threadNameRunes int
 	// threadTitleRunes is what reads whole in a thread list, which is a tighter
-	// bound than Discord's. See docs/sirens-echo-thread-title-length.md.
+	// bound than Discord's. See docs/sirens-echo-threads.md.
 	threadTitleRunes int
 	// threadArchiveMinutes matches the guild's own hide-after setting, so a
 	// thread does not outlive the channel's expectation of it.
@@ -315,7 +315,7 @@ var (
 	// with a bad block in it, and the member is better served by the refusal.
 	maxRedactedBlocks int
 	// inventedChannelRunes bounds the one piece of model-written text a refusal
-	// carries into telemetry. See docs/sirens-echo-refusal-reason.md.
+	// carries into telemetry. See docs/sirens-echo-delivery.md.
 	inventedChannelRunes int
 	// maxObjectEmoji bounds the legibility emoji a neutral reply may carry.
 	// Kai set it on sirens-echo#203 after declining every earlier bound.
@@ -487,7 +487,7 @@ func applyKnobs(lookup func(string) string) (applied, rejected []string) {
 			continue
 		}
 		// A bad value keeps the default for every knob alike, and is named
-		// rather than swallowed. See docs/sirens-echo-tuning-overrides.md.
+		// rather than swallowed. See docs/sirens-echo-tuning.md.
 		if !entry.apply(raw) {
 			rejected = append(rejected, entry.env)
 			continue
@@ -779,13 +779,13 @@ type Config struct {
 	// runs no gate at all, so the deployment is the switch.
 	ContentClassesPath string
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
-	// nobody. See docs/sirens-echo-http-identity.md.
+	// nobody. See docs/sirens-echo-http.md.
 	HTTPTrustToken string
 	// FetchHosts is the allowlist the fetch tool may reach. Empty offers no
-	// tool. See docs/sirens-echo-fetch.md.
+	// tool. See docs/sirens-echo-tools.md.
 	FetchHosts []string
 	// SandboxLabelID labels every issue this service files. Zero applies
-	// nothing. See docs/sirens-echo-sandbox-label.md.
+	// nothing. See docs/sirens-echo-issues.md.
 	SandboxLabelID int
 	// DestinationLabelID is the move-to-repo label a filed issue carries. The
 	// deployment sets the unknown one unless it knows the home. See #756.
@@ -797,7 +797,7 @@ type Config struct {
 	// default because registering is a write to Discord's API.
 	DiscordCommandsEnabled bool
 	// TemporalMirror is the Temporal Cloud mirror's connection. Empty disables
-	// it entirely. See docs/sirens-echo-tool-mirror.md.
+	// it entirely. See docs/sirens-echo-tool-markup.md.
 	TemporalMirror TemporalMirrorConfig
 	// JobWorkspaceRoot enables executing jobs. Empty means no execution at all,
 	// which is the default posture.
@@ -810,7 +810,7 @@ type Config struct {
 	// memory, which loses them on restart. See docs/sirens-echo-jobs.md.
 	JobStoreDir string
 	// JobStoreDSN points the store at Postgres instead of a directory. It is a
-	// credential, so it is never logged. See docs/sirens-echo-jobs-store.md.
+	// credential, so it is never logged. See docs/sirens-echo-jobs.md.
 	JobStoreDSN string
 	// RepoInventoryURL and RepoInventoryOrg name the forge and organization the
 	// inventory lists. Either empty offers no tool.
@@ -830,7 +830,7 @@ type Config struct {
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
 	// ShutdownGrace is how long a restart waits for the turns already running.
-	// It has to fit the pod's kill window. See docs/sirens-echo-shutdown.md.
+	// It has to fit the pod's kill window. See docs/sirens-echo-execution.md.
 	ShutdownGrace time.Duration
 	RateLimit     RateLimitPolicy
 }

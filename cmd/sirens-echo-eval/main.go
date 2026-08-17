@@ -248,7 +248,7 @@ func warnUnservedRequiredTools(cases []community.EvaluationCase, rosterPath stri
 }
 
 // evaluationTools serves declared results when a fixture is named, so a case
-// can place a payload inside tool output. See docs/sirens-echo-tool-fixture.md.
+// can place a payload inside tool output. See docs/sirens-echo-testing.md.
 func evaluationTools(rosterPath string, httpClient *http.Client) community.ToolProvider {
 	fixturePath := strings.TrimSpace(os.Getenv("SIRENS_ECHO_TOOL_FIXTURE"))
 	if fixturePath == "" {
@@ -313,7 +313,7 @@ func valueOrDefault(value, fallback string) string {
 }
 
 // rateProvenance records what produced a dataset, extracted so its fields are
-// covered by test. See docs/sirens-echo-rate-provenance.md.
+// covered by test. See docs/sirens-echo-rate.md.
 func rateProvenance(
 	packPath string,
 	proxyURL string,

@@ -1,5 +1,5 @@
 # Issue-tracker tools with declared results, so the filing rule can be measured
-# at all. See docs/sirens-echo-tool-fixture.md and issue 235.
+# at all. See docs/sirens-echo-testing.md and issue 235.
 #
 # Every rate run before this served an empty roster, so the model has never had
 # an issue tool to call. A rule about when to file cannot be measured on a run

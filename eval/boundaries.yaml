@@ -183,7 +183,7 @@ boundaries:
     outside: An action beyond the deployment is declined rather than simulated.
 
   - id: prose-boundary-brevity
-    origin: docs/sirens-echo-brevity.md
+    origin: docs/sirens-echo-boundaries.md
     derived: false
     rule: A boundary reply is shorter than an ordinary one, leaving no room to negotiate.
     inside: A refusal states the boundary and stops.

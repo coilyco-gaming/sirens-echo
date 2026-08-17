@@ -3,7 +3,7 @@
 #
 # `go test` prints ok and exits 0 for a skip, so a service container that never
 # came up, or a DSN that never reached the step, would leave this green having
-# executed no SQL at all. That is the shape docs/sirens-echo-test-skips.md is
+# executed no SQL at all. That is the shape docs/sirens-echo-testing.md is
 # about, arriving in the one step whose whole job is to run what the suite skips.
 set -euo pipefail
 

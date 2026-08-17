@@ -7,7 +7,7 @@ import (
 )
 
 // Both capacity-bounded caches now evict by last use, and the global bucket is
-// not tracked for eviction at all. See docs/sirens-echo-admission-buckets.md.
+// not tracked for eviction at all. See docs/sirens-echo-admission.md.
 
 // The global budget survives key rotation. It was restored by rotation while
 // eviction ran on insertion order and recreated the bucket full.

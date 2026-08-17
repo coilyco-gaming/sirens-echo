@@ -70,7 +70,7 @@ func TestABoardDatasetRecordsTheComposedStateToo(t *testing.T) {
 // meets, since a reader of a dataset reads the provenance doc to interpret it.
 func TestTheProvenanceDocExplainsTheStub(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-rate-provenance.md"))
+	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-rate.md"))
 	if err != nil {
 		t.Fatalf("read the provenance doc: %v", err)
 	}

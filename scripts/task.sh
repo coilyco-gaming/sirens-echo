@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Provenance nobody has to remember: a dataset that cannot name its checkout
-# cannot be compared. See docs/sirens-echo-rate-provenance.md.
+# cannot be compared. See docs/sirens-echo-rate.md.
 if [ -z "${SIRENS_ECHO_RUNNER:-}" ]; then
   SIRENS_ECHO_RUNNER=$(git rev-parse --short HEAD 2>/dev/null || echo "")
   export SIRENS_ECHO_RUNNER
@@ -58,7 +58,7 @@ case "${1:-}" in
       fi
     }
     # Dispatched through this script rather than just, so the gate still runs
-    # while its own recipe is uncommitted. See docs/sirens-echo-gate.md.
+    # while its own recipe is uncommitted. See docs/sirens-echo-testing.md.
     for verb in build policy-check vet test test-skips; do
       gate_step "$verb" bash "$0" "$verb"
     done
@@ -74,7 +74,7 @@ case "${1:-}" in
     }
     if [ ${#gate_marked[@]} -gt 0 ]; then
       # Intent only: no content is staged, and the index is restored however
-      # this run exits. See docs/sirens-echo-gate.md.
+      # this run exits. See docs/sirens-echo-testing.md.
       git add --intent-to-add -- "${gate_marked[@]}"
       trap gate_unmark EXIT
     fi
@@ -131,7 +131,7 @@ case "${1:-}" in
     ;;
   test-skips)
     # A skip and a pass share an exit code and the word ok, so a guard can stop
-    # running for months. See docs/sirens-echo-test-skips.md.
+    # running for months. See docs/sirens-echo-testing.md.
     allow=scripts/test-skips.allow
     fired=$(go test -v ./... 2>&1 |
       sed -n 's/^ *--- SKIP: \([A-Za-z0-9_]*\).*/\1/p' | sort -u)

@@ -139,7 +139,7 @@ func TestStoppingAServiceThatNeverTookATurnIsQuiet(t *testing.T) {
 }
 
 // The failure series has to separate a deploy from a defect, or a rollout
-// reads as an outage. See docs/sirens-echo-shutdown.md.
+// reads as an outage. See docs/sirens-echo-execution.md.
 func TestARestartIsNotCountedAsAStageFailure(t *testing.T) {
 	t.Parallel()
 	if got := failureCause(errShuttingDown); got != causeShutdown {

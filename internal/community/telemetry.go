@@ -57,7 +57,7 @@ type Telemetry struct {
 	traceProvider        trace.TracerProvider
 	propagator           propagation.TextMapPropagator
 	// mirrorDrops counts records the mirror never delivered, so an outage is
-	// visible rather than silent. See docs/sirens-echo-tool-mirror.md.
+	// visible rather than silent. See docs/sirens-echo-tool-markup.md.
 	mirrorDrops metric.Int64Counter
 	dispatch    *mirrorDispatch
 }
@@ -147,7 +147,7 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 		propagation.Baggage{},
 	))
 	// Both destinations. Stdout keeps kubectl logs working when SigNoz is the
-	// thing that is down. See docs/sirens-echo-log-export.md.
+	// thing that is down. See docs/sirens-echo-rate.md.
 	logger := slog.New(multiHandler{handlers: []slog.Handler{
 		slog.NewJSONHandler(logSink(cfg.LogWriter), &slog.HandlerOptions{
 			Level: slog.LevelInfo,
@@ -351,7 +351,7 @@ func (t *Telemetry) log(
 		)
 	}
 	// A job id joins trace_id and span_id as a row field, so a job's whole log
-	// history is retrievable by id. See docs/sirens-echo-jobs-lifecycle.md.
+	// history is retrievable by id. See docs/sirens-echo-jobs.md.
 	if id := JobIDFromContext(ctx); id != "" {
 		attrs = append(attrs, slog.String("job_id", id))
 	}
@@ -420,7 +420,7 @@ func (t *Telemetry) RecordToolCall(
 		),
 	)
 	// The same curated triple, and nothing read from the span. See
-	// docs/sirens-echo-tool-mirror.md.
+	// docs/sirens-echo-tool-markup.md.
 	t.dispatch.send(ToolCallRecord{
 		Server:        server,
 		Tool:          tool,

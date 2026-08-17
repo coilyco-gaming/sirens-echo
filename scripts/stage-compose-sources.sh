@@ -54,7 +54,7 @@ fi
 echo "stage-compose-sources: baking $(echo "$roles" | wc -w | tr -d ' ') roster roles"
 
 # Per-role seat names, because one request template bakes every roster role and
-# an identity in it would rename all of them. See docs/sirens-echo-role-and-voice.md.
+# an identity in it would rename all of them. See docs/sirens-echo-identity.md.
 seat_identity() {
     case "$1" in
         ops) printf '    identity name="Echo" pronouns="it"\n' ;;

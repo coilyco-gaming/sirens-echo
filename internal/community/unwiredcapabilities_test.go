@@ -18,7 +18,7 @@ type unwiredCapability struct {
 
 var unwiredCapabilities = []unwiredCapability{
 	// Groundwork for sirens-echo#127, decided on sirens-echo#823. Reasons in
-	// docs/sirens-echo-prompt-commands.md.
+	// docs/sirens-echo-commands.md.
 	{"CommandFromPrompt", "renders an MCP prompt as a Discord command"},
 }
 
@@ -26,7 +26,7 @@ var unwiredCapabilities = []unwiredCapability{
 // wired them. See sirens-echo#621 and docs/sirens-echo-jobs.md.
 
 // IsGrantDenial left it when both submit surfaces started classifying a
-// refusal. See sirens-echo#825 and docs/sirens-echo-grants.md.
+// refusal. See sirens-echo#825 and docs/sirens-echo-access.md.
 
 // declared reports whether the function still exists. Both have unit tests,
 // so this only fires on a deletion that took those tests with it.

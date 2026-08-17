@@ -12,7 +12,7 @@ import (
 )
 
 // A notice is a string this service wrote, never a model reply. The rendered
-// shape is fixed so a member can tell the two apart. See docs/sirens-echo-notices.md.
+// shape is fixed so a member can tell the two apart. See docs/sirens-echo-delivery.md.
 
 const (
 	noticeOpen  = "> `"
@@ -20,7 +20,7 @@ const (
 )
 
 // noticeAllowed is the phrase alphabet, underscore included for tool names.
-// See docs/sirens-echo-notices.md and docs/sirens-echo-worklog.md.
+// See docs/sirens-echo-delivery.md and docs/sirens-echo-worklog.md.
 var noticeAllowed = regexp.MustCompile(`[^a-z0-9 ,./_-]+`)
 
 // noticeShape is what every rendered notice matches. A non-ASCII icon may
@@ -82,7 +82,7 @@ var (
 	noticeReplyBlocked = harnessNotice("reply blocked by response check, rephrase")
 	noticeTurnCrashed  = harnessNotice("turn crashed")
 	// The answer existed and the send failed. A member reading silence cannot
-	// tell that from being ignored. See docs/sirens-echo-delivery-failures.md.
+	// tell that from being ignored. See docs/sirens-echo-delivery.md.
 	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
 	// The turn was cut by a restart rather than by anything it did, so retrying
 	// is the right move and nothing about it was wrong. See sirens-echo#597.
@@ -90,7 +90,7 @@ var (
 )
 
 // noticeWithTrace appends the turn's trace so a member's screenshot becomes a
-// query. See docs/sirens-echo-notices.md for why it is not a colon.
+// query. See docs/sirens-echo-delivery.md for why it is not a colon.
 func noticeWithTrace(ctx context.Context, notice string) string {
 	span := trace.SpanContextFromContext(ctx)
 	// Outside a span there is nothing to cite, and a blank id reads as a bug.

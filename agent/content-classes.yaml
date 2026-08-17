@@ -25,7 +25,7 @@
 #
 # A block is one sentence. Every volunteered justification is a handle to pull,
 # and a refusal that argues its own case is the longest thing Echo says.
-# See docs/sirens-echo-content-classes.md and issue 175.
+# See docs/sirens-echo-content-gate.md and issue 175.
 #
 # The allowed classes come first and exist so the set is closed, not because
 # they need a rule. The denied classes follow, each carrying deny: true.

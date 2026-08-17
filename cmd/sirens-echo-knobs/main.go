@@ -1,5 +1,5 @@
 // Command sirens-echo-knobs writes the generated reference of every number a
-// deployment may set. See docs/sirens-echo-tuning-overrides.md.
+// deployment may set. See docs/sirens-echo-tuning.md.
 package main
 
 import (

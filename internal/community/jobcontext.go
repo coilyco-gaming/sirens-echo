@@ -3,7 +3,7 @@ package community
 import "context"
 
 // The job id rides the context so spans and logs carry it without every call
-// site threading it. See docs/sirens-echo-jobs-lifecycle.md.
+// site threading it. See docs/sirens-echo-jobs.md.
 
 type jobIDKey struct{}
 

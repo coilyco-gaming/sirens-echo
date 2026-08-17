@@ -496,7 +496,7 @@ func settleDelayFromContext(ctx context.Context) time.Duration {
 }
 
 // Carry turns the narration into the turn's answer, for a notice that could not
-// be sent. See docs/sirens-echo-delivery-failures.md.
+// be sent. See docs/sirens-echo-delivery.md.
 func (p *turnProgress) Carry(ctx context.Context, notice string) {
 	if p == nil || p.sink == nil || strings.TrimSpace(notice) == "" {
 		return

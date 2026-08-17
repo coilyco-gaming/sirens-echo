@@ -8,7 +8,7 @@ import (
 )
 
 // The revision arrives through -X, which fails silently when its symbol path is
-// wrong. See docs/sirens-echo-build-revision.md.
+// wrong. See docs/sirens-echo-deploy.md.
 
 // xTarget captures the symbol the Dockerfile stamps, so the test compares the
 // real string rather than one written twice.

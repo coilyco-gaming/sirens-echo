@@ -9,7 +9,7 @@ import (
 )
 
 // promptBudgets ratchets the system prompt. The turn context is the other half
-// of every request and nothing measured it. See docs/sirens-echo-turn-cost.md.
+// of every request and nothing measured it. See docs/sirens-echo-telemetry.md.
 
 // turnContextBudget is the worst case a turn may assemble, in bytes. Raising N
 // or a per-entry cap moves this, which is the point: it is paid every turn.

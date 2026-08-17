@@ -7,10 +7,10 @@ import (
 )
 
 // Mirroring the tool-call trajectory, metadata only. Temporal observes the
-// turn, it never runs it. See docs/sirens-echo-tool-mirror.md.
+// turn, it never runs it. See docs/sirens-echo-tool-markup.md.
 
 // ToolCallRecord is the entire mirrored payload. Named fields rather than an
-// attribute slice, and the reason is docs/sirens-echo-tool-mirror.md.
+// attribute slice, and the reason is docs/sirens-echo-tool-markup.md.
 type ToolCallRecord struct {
 	// Server and Tool are roster identifiers this repository declares.
 	Server string `json:"server"`
@@ -127,7 +127,7 @@ func (d *mirrorDispatch) Close() {
 }
 
 // attachToolMirror connects the mirror when one is configured. A typo is fatal
-// and an outage is not. See docs/sirens-echo-tool-mirror.md.
+// and an outage is not. See docs/sirens-echo-tool-markup.md.
 func (a *Agent) attachToolMirror() error {
 	if err := a.cfg.TemporalMirror.Validate(); err != nil {
 		return err

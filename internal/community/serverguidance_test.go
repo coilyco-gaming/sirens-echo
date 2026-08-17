@@ -6,7 +6,7 @@ import (
 )
 
 // A server's own instructions are what tell the model which surface answers a
-// request. See sirens-echo#647 and docs/sirens-echo-server-guidance.md.
+// request. See sirens-echo#647 and docs/sirens-echo-mcp.md.
 
 func TestGuidanceMessageNamesEachSurface(t *testing.T) {
 	t.Parallel()

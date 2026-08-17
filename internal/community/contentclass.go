@@ -53,7 +53,7 @@ func LoadContentTaxonomy(path string) (ContentTaxonomy, error) {
 }
 
 // validate refuses a taxonomy that cannot do its job. See
-// docs/sirens-echo-content-classes.md for why a set without a catch-all fails.
+// docs/sirens-echo-content-gate.md for why a set without a catch-all fails.
 func (t ContentTaxonomy) validate() error {
 	if len(t.Classes) == 0 {
 		return fmt.Errorf("content taxonomy declares no classes")
@@ -108,7 +108,7 @@ func (t ContentTaxonomy) Lookup(id string) (ContentClass, bool) {
 }
 
 // Verdict resolves matched classes. Sensitive wins ties, so a request tripping
-// both never names the ordinary one. See docs/sirens-echo-content-classes.md.
+// both never names the ordinary one. See docs/sirens-echo-content-gate.md.
 func (t ContentTaxonomy) Verdict(ids []string) (ContentClass, bool, error) {
 	decided := ContentClass{}
 	blocked := false

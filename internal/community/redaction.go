@@ -6,14 +6,14 @@ import (
 )
 
 // Removing the block a check refused, rather than the message around it. See
-// docs/sirens-echo-reply-redaction.md.
+// docs/sirens-echo-reply-assembly.md.
 
 // noticeRedacted marks where a block was removed. It renders in the harness
-// notice shape, which model prose cannot forge. See docs/sirens-echo-notices.md.
+// notice shape, which model prose cannot forge. See docs/sirens-echo-delivery.md.
 var noticeRedacted = harnessNotice("content removed by a response check")
 
 // redactableRules are the refusals one block can carry by itself. An allowlist
-// rather than a default. See docs/sirens-echo-reply-redaction.md.
+// rather than a default. See docs/sirens-echo-reply-assembly.md.
 var redactableRules = map[string]struct{}{
 	replyCheckInventedChannel: {},
 	replyCheckClaimedAction:   {},

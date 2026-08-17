@@ -3,7 +3,7 @@ package community
 import "testing"
 
 // The patterns were widened against 396 persisted replies. These rows are the
-// evidence, not the corpus. See docs/sirens-echo-tool-call-markup.md.
+// evidence, not the corpus. See docs/sirens-echo-tool-markup.md.
 
 // observedMarkupShapes are replies a live model actually produced. The last two
 // are the tool-name-as-tag family a closed set of published names cannot cover.

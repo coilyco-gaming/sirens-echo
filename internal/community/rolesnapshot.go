@@ -11,7 +11,7 @@ import (
 )
 
 // A role snapshot records what a baked bundle selected, not what it says.
-// See docs/sirens-echo-role-record.md.
+// See docs/sirens-echo-compose.md.
 
 // bundleManifest is the subset of agent-compose's manifest this repository
 // gates on. Digests are deliberately absent.
@@ -23,7 +23,7 @@ type bundleManifest struct {
 	Personalities []string `json:"personalities"`
 	Sources       []string `json:"sources"`
 	// Identity is recorded because a request may now rename the seat, and a
-	// rename no record carries is a silent one. See docs/sirens-echo-role-and-voice.md.
+	// rename no record carries is a silent one. See docs/sirens-echo-identity.md.
 	Identity struct {
 		Seats []struct {
 			Name     string `json:"name"`

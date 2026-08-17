@@ -2,7 +2,7 @@ package community
 
 import "testing"
 
-// Action-claim corpus for ValidateGrounding. See docs/sirens-echo-grounding-corpus.md
+// Action-claim corpus for ValidateGrounding. See docs/sirens-echo-grounding.md
 // for what each column means and how to retire a row.
 
 // corpusIdentity is the service name a self-attributed claim would use. A

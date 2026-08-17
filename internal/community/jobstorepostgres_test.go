@@ -34,7 +34,7 @@ func TestTheJobStoreSelectionFollowsTheConfig(t *testing.T) {
 }
 
 // Both set is refused rather than resolved. Picking one silently would put the
-// jobs somewhere nobody was watching. See docs/sirens-echo-jobs-store.md.
+// jobs somewhere nobody was watching. See docs/sirens-echo-jobs.md.
 func TestABothStoresConfiguredDeploymentIsRefused(t *testing.T) {
 	t.Parallel()
 	_, err := openJobStore(Config{

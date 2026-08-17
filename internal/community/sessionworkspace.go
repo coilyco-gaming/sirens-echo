@@ -15,7 +15,7 @@ import (
 )
 
 // A scratchpad partition is a session, not a requester. See
-// docs/sirens-echo-session-workspace.md for the layout and both timers.
+// docs/sirens-echo-scratchpad.md for the layout and both timers.
 
 const (
 	// threadSessionPrefix and directSessionPrefix name which timer collects a
@@ -60,7 +60,7 @@ func (s SessionID) Directory() string {
 }
 
 // ThreadSession is the workspace of one Discord thread, shared by everyone in
-// it. See docs/sirens-echo-session-workspace.md.
+// it. See docs/sirens-echo-scratchpad.md.
 func ThreadSession(threadID string) SessionID {
 	return SessionID{Kind: SessionThread, Key: "thread:" + strings.TrimSpace(threadID)}
 }
@@ -120,7 +120,7 @@ func sessionOf(turn turnIO) SessionID {
 }
 
 // sessionAge is how long since the newest file changed. See
-// docs/sirens-echo-session-workspace.md.
+// docs/sirens-echo-scratchpad.md.
 func sessionAge(dir string, now time.Time) (time.Duration, error) {
 	newest := time.Time{}
 	err := filepath.WalkDir(dir, func(_ string, entry fs.DirEntry, walkErr error) error {

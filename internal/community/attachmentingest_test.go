@@ -9,7 +9,7 @@ import (
 )
 
 // An upload is untrusted input the turn may read. Every case here is a way that
-// could stop being true. See docs/sirens-echo-attachments.md.
+// could stop being true. See docs/sirens-echo-untrusted-input.md.
 
 // The host allowlist is the whole egress surface, so a payload naming any other
 // address must not produce a request at all.

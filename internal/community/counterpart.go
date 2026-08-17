@@ -6,7 +6,7 @@ import (
 )
 
 // Recognition is grounded in Discord's bot flag, never inferred from prose.
-// See docs/sirens-echo-counterparts.md.
+// See docs/sirens-echo-compose.md.
 
 // CounterpartKind is what the author of a message is. It is grounded, so it
 // carries only what Discord asserted.

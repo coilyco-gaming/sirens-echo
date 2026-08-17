@@ -11,7 +11,7 @@ import (
 // 447 and e5c9163 stopped the two code surfaces drifting apart. The doc is a
 // third copy and nothing related it to either. See sirens-echo#447.
 
-const glyphDoc = "sirens-echo-tool-disclosure.md"
+const glyphDoc = "sirens-echo-tool-markup.md"
 
 // The table a reader consults has to name the glyphs the footer emits, or the
 // documentation is a fourth spelling of a vocabulary that has already drifted.

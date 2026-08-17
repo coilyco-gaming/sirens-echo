@@ -9,10 +9,10 @@ import (
 )
 
 // A delivery failure used to record that it happened and discard why. See
-// docs/sirens-echo-delivery-failures.md.
+// docs/sirens-echo-delivery.md.
 
 // undeliveredReply marks a turn error as the reply send itself failing. See
-// docs/sirens-echo-turn-verdict.md and #292.
+// docs/sirens-echo-turn-stages.md and #292.
 type undeliveredReply struct{ err error }
 
 func (u *undeliveredReply) Error() string { return u.err.Error() }

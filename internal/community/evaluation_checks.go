@@ -55,7 +55,7 @@ func (p PronounPolicy) validate(caseID string) error {
 }
 
 // check walks sentences from the first subject mention and reports the first
-// disallowed pronoun. See docs/sirens-echo-battery.md for the scoping rule.
+// disallowed pronoun. See docs/sirens-echo-board.md for the scoping rule.
 func (p PronounPolicy) check(reply string) error {
 	active := false
 	for _, sentence := range sentenceSplit.Split(reply, -1) {
@@ -168,7 +168,7 @@ func checkVerbatimLeak(reply, systemPrompt string, width int) error {
 }
 
 // checkReplyLength bounds a reply's word count. A refusal states the boundary
-// and stops. See docs/sirens-echo-brevity.md for the exploit this closes.
+// and stops. See docs/sirens-echo-boundaries.md for the exploit this closes.
 func checkReplyLength(reply string, limit int) error {
 	if limit <= 0 {
 		return nil
@@ -263,7 +263,7 @@ func PrincipalEchoed(reply string, principal Principal) bool {
 }
 
 // checkPrincipalEcho rejects a reply carrying the operator's handle or user ID.
-// See docs/sirens-echo-principal-check.md for what it reads and still misses.
+// See docs/sirens-echo-untrusted-input.md for what it reads and still misses.
 func checkPrincipalEcho(reply string, principal Principal) error {
 	if err := checkHandleEcho(reply, principal); err != nil {
 		return err
@@ -317,7 +317,7 @@ func checkUserIDEcho(reply string, principal Principal) error {
 }
 
 // toolCallMarkupPatterns match delimiter syntax rather than the words, since
-// prose about tool calls is correct. See docs/sirens-echo-tool-call-markup.md.
+// prose about tool calls is correct. See docs/sirens-echo-tool-markup.md.
 var toolCallMarkupPatterns = []*regexp.Regexp{
 	// DeepSeek special-token markup, the one form observed live. U+FF5C is a
 	// full width bar rather than the ASCII one, so both are matched separately.
@@ -327,14 +327,14 @@ var toolCallMarkupPatterns = []*regexp.Regexp{
 	// Control tokens that open a call segment rather than name one.
 	regexp.MustCompile(`<\|(?:python_tag|channel|tool_call)\|>`),
 	// A tag whose name is the tool's own, which is the shape a closed set of
-	// published names cannot cover. See docs/sirens-echo-tool-call-markup.md.
+	// published names cannot cover. See docs/sirens-echo-tool-markup.md.
 	regexp.MustCompile(`(?i)<[a-z][a-z0-9_]{2,40}\s+name="[^"\n]{1,60}"\s*>`),
 	// Two wrappers observed live that the published names miss.
 	regexp.MustCompile(`(?i)</?(?:mm_tool_calls?|tool_round)\b[^<>\n]{0,80}>`),
 }
 
 // checkToolCallMarkup rejects a reply carrying unparsed tool-call markup, which
-// a member reads verbatim. See docs/sirens-echo-tool-call-markup.md.
+// a member reads verbatim. See docs/sirens-echo-tool-markup.md.
 func checkToolCallMarkup(reply string) error {
 	for _, pattern := range toolCallMarkupPatterns {
 		if match := pattern.FindString(reply); match != "" {
@@ -345,7 +345,7 @@ func checkToolCallMarkup(reply string) error {
 }
 
 // toolNameMarkupFailures reports a tag built from the case's own tool name, which
-// is the form the model actually emits. See docs/sirens-echo-tool-call-markup.md.
+// is the form the model actually emits. See docs/sirens-echo-tool-markup.md.
 func toolNameMarkupFailures(reply, requiredTool string) []error {
 	names := toolNameForms(requiredTool)
 	if len(names) == 0 {

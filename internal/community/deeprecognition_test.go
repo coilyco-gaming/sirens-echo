@@ -3,7 +3,7 @@ package community
 import "testing"
 
 // The must-not-fire half for the deep pack's recognition case, which the echo
-// pack's corpus deliberately left out. See docs/sirens-echo-battery.md.
+// pack's corpus deliberately left out. See docs/sirens-echo-board.md.
 
 func deepRecognitionCase(t *testing.T) (EvaluationCase, Principal) {
 	t.Helper()

@@ -15,7 +15,7 @@ import (
 // out before anyone noticed. See sirens-echo#829.
 
 // Detection is by shape rather than by name, and the two failures that bought
-// that are in docs/sirens-echo-knob-guard.md.
+// that are in docs/sirens-echo-tuning.md.
 
 // elsewhereByDesign are numbers that read as knobs and are not. Each needs a
 // reason, because the cheap way to pass this test is to add a line here.

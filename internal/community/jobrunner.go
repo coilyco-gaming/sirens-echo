@@ -10,7 +10,7 @@ import (
 )
 
 // The runner turns a submission into work that outlives its turn. See
-// docs/sirens-echo-jobs-lifecycle.md.
+// docs/sirens-echo-jobs.md.
 
 const (
 	// cancelPollInterval is how often a running job learns it was cancelled.
@@ -130,7 +130,7 @@ func (r *JobRunner) Submit(ctx context.Context, submission Submission) (Job, err
 		return Job{}, fmt.Errorf("no executor for job kind %q", prepared.Kind)
 	}
 	// A denial is a recorded outcome with a reason, so a refused request is
-	// attributable rather than invisible. See docs/sirens-echo-grants.md.
+	// attributable rather than invisible. See docs/sirens-echo-access.md.
 	if denial := r.permits(prepared); denial != nil {
 		refused, _, storeErr := r.Store.Submit(prepared)
 		if storeErr != nil {

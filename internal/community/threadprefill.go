@@ -7,7 +7,7 @@ import (
 )
 
 // A long thread was answered from its own tail. See
-// docs/sirens-echo-thread-prefill.md.
+// docs/sirens-echo-threads.md.
 
 // prefillNote records what a whole-thread read left out. Zero dropped is the
 // ordinary case and renders nothing.

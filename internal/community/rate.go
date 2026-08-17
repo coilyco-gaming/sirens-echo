@@ -39,7 +39,7 @@ type RateCase struct {
 	// Observed records the rate that motivated the case, for the reader.
 	Observed string `yaml:"observed,omitempty"`
 	// Shape classifies the case for the relative brevity comparison, by what a
-	// correct reply looks like. See docs/sirens-echo-brevity.md.
+	// correct reply looks like. See docs/sirens-echo-boundaries.md.
 	Shape string `yaml:"shape,omitempty"`
 }
 
@@ -58,7 +58,7 @@ type RateProvenance struct {
 	Transport  string `yaml:"transport"`
 	Roster     string `yaml:"roster"`
 	// Fixture names the tool fixture, exclusive with the roster. Without it a
-	// fixture run reads as roster: empty. See docs/sirens-echo-rate-provenance.md.
+	// fixture run reads as roster: empty. See docs/sirens-echo-rate.md.
 	Fixture string `yaml:"fixture"`
 	// Substrate records host state at run time. A contended GPU returns a
 	// complete but degraded reply, which no in-process check can detect.
@@ -67,7 +67,7 @@ type RateProvenance struct {
 	// A pair whose halves cannot be attributed to commits is not a comparison.
 	Runner string `yaml:"runner"`
 	// Composed says whether the agent-compose bundle was real or a stub, which
-	// bounds the rate. See docs/sirens-echo-rate-provenance.md.
+	// bounds the rate. See docs/sirens-echo-rate.md.
 	Composed string `yaml:"composed"`
 	// Image records a deployed image only when one participates in the run. This
 	// runner never calls a pod, so it stays unrecorded. Read Runner instead.
@@ -76,11 +76,11 @@ type RateProvenance struct {
 }
 
 // SubstrateUnrecorded marks a dataset nobody described the host for. Saying so
-// beats letting a later reader assume it was idle. See docs/sirens-echo-sweep.md.
+// beats letting a later reader assume it was idle. See docs/sirens-echo-testing.md.
 const SubstrateUnrecorded = "unrecorded"
 
 // ImageUnrecorded marks a dataset whose build is unknown, which makes it
-// unusable for before-and-after comparison. See docs/sirens-echo-sweep.md.
+// unusable for before-and-after comparison. See docs/sirens-echo-testing.md.
 const ImageUnrecorded = "unrecorded"
 
 // FixtureNone marks a run that served no fixture, so the absence is a statement
@@ -256,7 +256,7 @@ func runRate(
 		)
 		if record.Errors > 0 {
 			// A clean verdict can rest on fewer runs than declared, so say so in
-			// the run log's own format. See docs/sirens-echo-rate-errors.md.
+			// the run log's own format. See docs/sirens-echo-admission.md.
 			slog.New(slog.NewJSONHandler(os.Stderr, nil)).Warn("rate.sample.decimated",
 				"case", record.ID,
 				"declared_runs", record.Runs,

@@ -7,7 +7,7 @@ import (
 )
 
 // Attribution is evidence, not enforcement: it records who asked, and decides
-// nothing. See docs/sirens-echo-attribution.md.
+// nothing. See docs/sirens-echo-worklog.md.
 
 // EffectRecord is one external effect a job caused, resolved back to the
 // principal that asked for it.

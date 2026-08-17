@@ -56,7 +56,7 @@ var ErrToolRoundsExhausted = errors.New("tool rounds exhausted")
 var ErrResponseRepairExhausted = errors.New("response repair exhausted")
 
 // ErrBudgetExhausted marks a turn whose model deliberated past the completion
-// ceiling and emitted nothing. See docs/sirens-echo-budget-exhaustion.md.
+// ceiling and emitted nothing. See docs/sirens-echo-model-call.md.
 var ErrBudgetExhausted = errors.New("completion budget exhausted")
 
 // isToolFailure reports a cause that reached the turn from an MCP surface.
@@ -102,7 +102,7 @@ type CompletionResult struct {
 	Content   string
 	ToolCalls []ExecutedTool
 	// ServedModel is what actually answered, which a fallback makes different
-	// from the route requested. See docs/sirens-echo-sweep.md.
+	// from the route requested. See docs/sirens-echo-testing.md.
 	ServedModel string
 	// OfferedTools names what the model could have called. A tool absent here
 	// was never offered, which is not a tool it declined. See sirens-echo#357.
@@ -158,7 +158,7 @@ type ProxyClient struct {
 	// Budget is the definition's ceilings. Zero means the packaged defaults.
 	Budget ModelBudget
 	// ValidateReply offers the harness checks to the repair loop. Advisory, so a
-	// nil hook changes no verdict. See docs/sirens-echo-reply-repair.md.
+	// nil hook changes no verdict. See docs/sirens-echo-reply-assembly.md.
 	ValidateReply func(reply string, prompt TurnPrompt, executed []ExecutedTool) error
 }
 
@@ -194,7 +194,7 @@ type chatRequest struct {
 type chatMessage struct {
 	Role string `json:"role"`
 	// A pointer, so an empty string the model returned survives the encoding a
-	// plain omitempty erased. See docs/sirens-echo-reasoning-roundtrip.md.
+	// plain omitempty erased. See docs/sirens-echo-reasoning.md.
 	Content          any            `json:"content"`
 	ReasoningContent *string        `json:"reasoning_content,omitempty"`
 	ToolCalls        []chatToolCall `json:"tool_calls,omitempty"`
@@ -257,7 +257,7 @@ func (c chatChoice) truncated() bool {
 }
 
 // nextCompletionBudget raises the budget and reports whether the raise is real.
-// A raise that cannot raise is exhaustion. See docs/sirens-echo-budget.md.
+// A raise that cannot raise is exhaustion. See docs/sirens-echo-model-call.md.
 func nextCompletionBudget(current, ceiling int) (int, bool) {
 	raised := current * completionBudgetStep
 	if raised > ceiling {
@@ -421,7 +421,7 @@ func (c ProxyClient) Complete(
 
 	messages := []chatMessage{{Role: "system", Content: prompt.System}}
 	// What each surface is for, in the server's own words, so the model knows
-	// which one to reach for. See docs/sirens-echo-server-guidance.md.
+	// which one to reach for. See docs/sirens-echo-mcp.md.
 	if guidance := guidanceMessage(serverGuidances); guidance != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: guidance})
 	}
@@ -437,7 +437,7 @@ func (c ProxyClient) Complete(
 	}
 	messages = append(messages, chatMessage{Role: "user", Content: prompt.Message})
 	// A path the model has to think to look for is a path it will not read.
-	// See docs/sirens-echo-attachments.md.
+	// See docs/sirens-echo-untrusted-input.md.
 	if len(uploads) > 0 {
 		messages = append(messages, chatMessage{
 			Role:    "system",
@@ -460,7 +460,7 @@ func (c ProxyClient) Complete(
 	repairAttempts := 0
 	budgetRaises := 0
 	// toolsSpent forces one final answer from the results already gathered,
-	// rather than discarding them. See docs/sirens-echo-tool-results.md.
+	// rather than discarding them. See docs/sirens-echo-tools.md.
 	toolsSpent := false
 	budget := c.budget()
 	completionTokens := budget.BaseCompletionTokens
@@ -475,7 +475,7 @@ func (c ProxyClient) Complete(
 			Messages: messages,
 			Tools:    requestTools,
 			// Heartbeats have nowhere to go on a non-streaming request, so the
-			// idle timeout needs this. See docs/sirens-echo-model-stream.md.
+			// idle timeout needs this. See docs/sirens-echo-model-call.md.
 			Stream:      true,
 			Temperature: 0,
 			MaxTokens:   completionTokens,
@@ -525,7 +525,7 @@ func (c ProxyClient) Complete(
 				contractErr = ValidateResponseStyle(c.ResponseStyle, reply)
 			}
 			// Advisory, and out of the way once the budget is spent, so the run
-			// after Complete still refuses. See docs/sirens-echo-reply-repair.md.
+			// after Complete still refuses. See docs/sirens-echo-reply-assembly.md.
 			if contractErr == nil && repairAttempts < maxResponseRepairs {
 				contractErr = c.harnessRefusal(reply, prompt, executed)
 			}
@@ -738,7 +738,7 @@ func (c ProxyClient) Complete(
 			})
 		}
 		// The budget is spent and the results are in. Ask for an answer from
-		// them rather than discarding the work. See docs/sirens-echo-tool-results.md.
+		// them rather than discarding the work. See docs/sirens-echo-tools.md.
 		if toolRounds == budget.ToolRounds {
 			toolsSpent = true
 			telemetry.Info(ctx, "mcp.tool.rounds.spent", slog.Int("rounds", toolRounds))
@@ -785,7 +785,7 @@ func spillToolResult(
 	}
 	relative := spillPath(tool, index)
 	// No scratchpad errors here and an over-limit result refuses. Both fall back
-	// to plain truncation. See docs/sirens-echo-tool-results.md.
+	// to plain truncation. See docs/sirens-echo-tools.md.
 	written, err := writer.WriteReserved(relative, full)
 	if err != nil || written.IsError {
 		return ""
@@ -849,7 +849,7 @@ func groundingMessage(documents []GroundingDocument) string {
 }
 
 // guidanceMessage renders what each server says it is for, framed as
-// description rather than authority. See docs/sirens-echo-server-guidance.md.
+// description rather than authority. See docs/sirens-echo-mcp.md.
 func guidanceMessage(guidance []ServerGuidance) string {
 	if len(guidance) == 0 {
 		return ""

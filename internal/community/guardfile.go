@@ -11,7 +11,7 @@ import (
 )
 
 // The agent's knowledge of its own authority is generated from the guardfile,
-// never written by hand. See docs/sirens-echo-guardfile.md.
+// never written by hand. See docs/sirens-echo-config.md.
 
 // GuardGrant is one `can <verb> <resource>` block.
 type GuardGrant struct {
@@ -91,7 +91,7 @@ func ParseGuardfile(path string) (Guardfile, error) {
 }
 
 // deniedByAbsence names what the surrounding API has and this guardfile does
-// not. See docs/sirens-echo-guardfile.md.
+// not. See docs/sirens-echo-config.md.
 var deniedByAbsence = []string{
 	"edit an issue body",
 	"edit or delete a comment",
