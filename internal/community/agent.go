@@ -429,6 +429,9 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		// Empty when the build carried no revision, which is the honest answer.
 		slog.String("build_revision", BuildRevision()),
 	)
+	// Ready is the first point the application id exists, and registration is
+	// what makes a declared command reachable. See sirens-echo#127.
+	a.registerCommandsOnReady(context.Background(), ready)
 }
 
 // summonContext is the origin of one summon, and its key is the admission
