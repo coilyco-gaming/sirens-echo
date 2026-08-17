@@ -70,9 +70,22 @@ type ExecutedTool struct {
 	Name      string
 	Arguments string
 	Result    string
+	// Server and Original are how the worklog names the same call, carried so
+	// the two member-facing surfaces agree. See docs/sirens-echo-worklog.md.
+	Server   string
+	Original string
 	// Outcome is what the call did. Recorded here rather than derived later,
 	// because a failure is not visible from the result text.
 	Outcome ToolOutcome
+}
+
+// Label is the one spelling of a call a member sees, on the worklog row while
+// it runs and in the receipt afterwards. See sirens-echo#900.
+func (e ExecutedTool) Label() string {
+	if e.Server == "" || e.Original == "" {
+		return e.Name
+	}
+	return e.Server + "." + e.Original
 }
 
 // ToolOutcome is the three-state vocabulary the disclosure footer renders. An
@@ -704,6 +717,8 @@ func (c ProxyClient) Complete(
 				Name:      call.Function.Name,
 				Arguments: call.Function.Arguments,
 				Result:    result.Text,
+				Server:    definition.Server,
+				Original:  definition.Original,
 				Outcome:   outcomeOf(result),
 			})
 			if trimmed {

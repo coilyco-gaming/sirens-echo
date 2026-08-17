@@ -668,7 +668,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 	}
 	// The turn called a tool, so the reply carries its disclosure footer. This
 	// is the end-to-end proof it reaches a member. See sirens-echo#385.
-	wantReply := "Eco is online now.\n\n> 🔨 ✅ `eco__get_eco_server_status`"
+	wantReply := "Eco is online now.\n\n> 🔨 ✅ `eco.get_eco_server_status`"
 	if turn.reply != wantReply {
 		t.Fatalf("reply = %q, want %q", turn.reply, wantReply)
 	}
@@ -729,7 +729,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 		`"msg":"model.response"`,
 		`"response_bytes":`,
 		`"msg":"turn.reply.ready"`,
-		`"reply_bytes":59`,
+		`"reply_bytes":58`,
 		`"trace_id":"`,
 		`"span_id":"`,
 	} {
