@@ -18,11 +18,15 @@ answered stays in [response service features](features-response-service.md).
 - Metrics-only liveness and non-generating route readiness, bounded
 - A metadata-only tool-call trajectory mirrored into Temporal Cloud, off the
   turn's path and counted when it drops
+- Workspace command execution and attachment ingest recorded by verb and
+  outcome, with no arguments, output, filename, or content
 
 ## See also
 
 See [observability](sirens-echo-observability.md) for the guided investigation,
 [turn identifiers](sirens-echo-turn-identifiers.md) for what a span may carry,
 [exceptions](sirens-echo-exceptions.md) for the catalog,
-[the tool mirror](sirens-echo-tool-mirror.md) for the Temporal record, and
+[the tool mirror](sirens-echo-tool-mirror.md) for the Temporal record,
+[effect telemetry](sirens-echo-effect-telemetry.md) for what the harness itself
+did, and
 [FEATURES.md](FEATURES.md) for the rest of the inventory.

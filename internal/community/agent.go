@@ -322,7 +322,7 @@ func (a *Agent) buildJobRunner() error {
 	if err != nil {
 		return err
 	}
-	executors, err := buildExecutingKinds(a.cfg, a.access)
+	executors, err := buildExecutingKinds(a.cfg, a.access, a.telemetry)
 	if err != nil {
 		return err
 	}

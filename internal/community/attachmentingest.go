@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 	"unicode/utf8"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // An uploaded file is a large prompt body the turn reads through a tool rather
@@ -83,23 +86,40 @@ func textualAttachment(body []byte) bool {
 
 // fetchAttachment reads at most one byte past the limit, so an oversized file
 // is refused rather than silently truncated into a partial document.
-func fetchAttachment(ctx context.Context, client *http.Client, source string) ([]byte, error) {
-	request, err := http.NewRequestWithContext(ctx, http.MethodGet, source, nil)
+func fetchAttachment(
+	ctx context.Context,
+	client *http.Client,
+	source string,
+	telemetry *Telemetry,
+) ([]byte, error) {
+	// The host, never the URL: a CDN path carries the member's filename.
+	fetchCtx, span := telemetryOrNoop(telemetry).StartSpan(ctx, "attachment.fetch")
+	defer span.End()
+	startedAt := time.Now()
+	request, err := http.NewRequestWithContext(fetchCtx, http.MethodGet, source, nil)
 	if err != nil {
 		return nil, err
 	}
 	response, err := client.Do(request)
 	if err != nil {
+		telemetryOrNoop(telemetry).MarkSpanError(span, exceptionAttachmentFetchFailed)
 		return nil, err
 	}
 	defer func() { _ = response.Body.Close() }()
+	span.SetAttributes(attribute.Int("http.status_code", response.StatusCode))
 	if response.StatusCode != http.StatusOK {
+		telemetryOrNoop(telemetry).MarkSpanError(span, exceptionAttachmentFetchFailed)
 		return nil, fmt.Errorf("attachment fetch returned %d", response.StatusCode)
 	}
 	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxAttachmentBytes)+1))
 	if err != nil {
+		telemetryOrNoop(telemetry).MarkSpanError(span, exceptionAttachmentFetchFailed)
 		return nil, err
 	}
+	span.SetAttributes(
+		attribute.Int("attachment.bytes", len(body)),
+		attribute.Int64("attachment.millis", time.Since(startedAt).Milliseconds()),
+	)
 	if len(body) > maxAttachmentBytes {
 		return nil, fmt.Errorf("attachment exceeds %d bytes", maxAttachmentBytes)
 	}
@@ -112,7 +132,9 @@ func ingestAttachments(
 	ctx context.Context,
 	session ToolSession,
 	client *http.Client,
+	telemetry *Telemetry,
 ) []storedUpload {
+	record := telemetryOrNoop(telemetry)
 	sources := attachmentsFrom(ctx)
 	if len(sources) == 0 || session == nil {
 		return nil
@@ -126,18 +148,28 @@ func ingestAttachments(
 	}
 	stored := make([]storedUpload, 0, len(sources))
 	for index, source := range sources {
+		// Every arm records. These refusals used to return silently, which is
+		// what made an ingest that never happened indistinguishable from none.
 		if !permittedAttachmentURL(source.URL) {
+			record.RecordAttachment(ctx, "refused_host")
 			continue
 		}
-		body, err := fetchAttachment(ctx, client, source.URL)
-		if err != nil || !textualAttachment(body) {
+		body, err := fetchAttachment(ctx, client, source.URL, telemetry)
+		if err != nil {
+			record.RecordAttachment(ctx, "fetch_failed")
+			continue
+		}
+		if !textualAttachment(body) {
+			record.RecordAttachment(ctx, "refused_binary")
 			continue
 		}
 		relative := uploadPath(index)
 		written, err := writer.WriteReserved(relative, string(body))
 		if err != nil || written.IsError {
+			record.RecordAttachment(ctx, "write_failed")
 			continue
 		}
+		record.RecordAttachment(ctx, "stored")
 		stored = append(stored, storedUpload{Path: relative, Bytes: len(body)})
 	}
 	return stored

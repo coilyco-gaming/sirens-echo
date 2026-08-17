@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"go.opentelemetry.io/otel/attribute"
 )
 
 // A workspace is one job's private directory. See docs/sirens-echo-execution.md.
@@ -78,6 +80,8 @@ type WardCommandRunner struct {
 	// Environment is the exact environment a command gets. Nil means empty,
 	// so a command inherits nothing this process holds.
 	Environment []string
+	// Telemetry records that a command ran. Nil is the no-op recorder.
+	Telemetry *Telemetry
 }
 
 func (r WardCommandRunner) binary() string {
@@ -104,14 +108,32 @@ func (r WardCommandRunner) Run(
 	if workspace == nil || workspace.Root == "" {
 		return CommandResult{}, fmt.Errorf("a command needs a workspace")
 	}
-	runCtx, cancel := context.WithTimeout(ctx, r.timeout())
+	telemetry := telemetryOrNoop(r.Telemetry)
+	// The verb and the job, never the arguments: a clone argument is a URL.
+	// See docs/sirens-echo-effect-telemetry.md.
+	runCtx, span := telemetry.StartSpan(
+		ctx,
+		"job.command",
+		attribute.String("command.verb", name),
+		attribute.String("job.id", workspace.JobID),
+	)
+	defer span.End()
+	runCtx, cancel := context.WithTimeout(runCtx, r.timeout())
 	defer cancel()
 	command := exec.CommandContext(runCtx, r.binary(), append([]string{name}, args...)...)
 	command.Dir = workspace.Root
+	// Killing the command does not close a pipe a grandchild still holds, so the
+	// deadline bounded nothing without this. See docs/sirens-echo-execution.md.
+	command.WaitDelay = commandKillGrace
 	// An explicit environment rather than the process's own, so a command never
 	// inherits a token this process holds.
 	command.Env = append([]string{}, r.Environment...)
+	startedAt := time.Now()
 	raw, runErr := command.CombinedOutput()
+	span.SetAttributes(
+		attribute.Int64("command.millis", time.Since(startedAt).Milliseconds()),
+		attribute.Bool("command.truncated", len(raw) > maxCommandOutputBytes),
+	)
 	result := CommandResult{Output: string(raw)}
 	if len(raw) > maxCommandOutputBytes {
 		result.Output = string(raw[:maxCommandOutputBytes])
@@ -119,12 +141,19 @@ func (r WardCommandRunner) Run(
 	}
 	if runErr != nil {
 		var exitErr *exec.ExitError
+		telemetry.MarkSpanError(span, exceptionCommandFailed)
 		if asExitError(runErr, &exitErr) {
 			result.ExitCode = exitErr.ExitCode()
+			// The code on the span, not the metric: 0 to 255 is cardinality a
+			// closed outcome label does not want.
+			span.SetAttributes(attribute.Int("command.exit_code", result.ExitCode))
+			telemetry.RecordCommand(runCtx, name, "exited")
 			return result, fmt.Errorf("command %s exited %d", name, result.ExitCode)
 		}
+		telemetry.RecordCommand(runCtx, name, "did_not_run")
 		return result, fmt.Errorf("command %s did not run", name)
 	}
+	telemetry.RecordCommand(runCtx, name, "ok")
 	return result, nil
 }
 

@@ -40,6 +40,8 @@ type Telemetry struct {
 	turnDuration         metric.Float64Histogram
 	modelCalls           metric.Int64Counter
 	toolCalls            metric.Int64Counter
+	commands             metric.Int64Counter
+	attachments          metric.Int64Counter
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
 	phraseInvocations    metric.Int64Counter
@@ -218,6 +220,14 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	commands, err := meter.Int64Counter("sirens_echo.commands")
+	if err != nil {
+		return nil, err
+	}
+	attachments, err := meter.Int64Counter("sirens_echo.attachments")
+	if err != nil {
+		return nil, err
+	}
 	admissions, err := meter.Int64Counter("sirens_echo.admissions")
 	if err != nil {
 		return nil, err
@@ -270,6 +280,8 @@ func newTelemetry(
 		turnDuration:         turnDuration,
 		modelCalls:           modelCalls,
 		toolCalls:            toolCalls,
+		commands:             commands,
+		attachments:          attachments,
 		mirrorDrops:          mirrorDrops,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
@@ -416,6 +428,29 @@ func (t *Telemetry) RecordToolCall(
 		ElapsedMillis: elapsed.Milliseconds(),
 		TraceID:       traceIDOf(ctx),
 	})
+}
+
+// RecordCommand records one workspace execution. The verb is this repository's
+// own, so it is a label. Arguments carry a clone URL and never reach here.
+func (t *Telemetry) RecordCommand(ctx context.Context, verb, outcome string) {
+	t.commands.Add(
+		ctx,
+		1,
+		metric.WithAttributes(
+			attribute.String("command.verb", verb),
+			attribute.String("outcome", outcome),
+		),
+	)
+}
+
+// RecordAttachment records one ingest attempt, including the refusals that used
+// to return silently. The filename and the bytes never reach here.
+func (t *Telemetry) RecordAttachment(ctx context.Context, outcome string) {
+	t.attachments.Add(
+		ctx,
+		1,
+		metric.WithAttributes(attribute.String("outcome", outcome)),
+	)
 }
 
 // AttachToolMirror starts the mirror. A nil mirror leaves the dispatch nil and

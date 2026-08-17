@@ -207,7 +207,10 @@ var (
 	defaultCommandTimeout time.Duration
 	// maxCommandOutputBytes bounds what one command can return, so a runaway
 	// build cannot be read into memory unbounded.
-	maxCommandOutputBytes   int
+	maxCommandOutputBytes int
+	// commandKillGrace bounds the wait after the deadline kills a command, so a
+	// grandchild holding the pipe cannot outlive it. See sirens-echo#892.
+	commandKillGrace        time.Duration
 	defaultReadinessTimeout time.Duration
 	// maxReadinessBody bounds the probe response this process will read.
 	maxReadinessBody int
@@ -408,6 +411,7 @@ func knobs() []knob {
 
 		overridable(&defaultCommandTimeout, "SIRENS_ECHO_COMMAND_TIMEOUT", 10*time.Minute),
 		overridable(&maxCommandOutputBytes, "SIRENS_ECHO_COMMAND_OUTPUT_BYTES", 64<<10),
+		overridable(&commandKillGrace, "SIRENS_ECHO_COMMAND_KILL_GRACE", 5*time.Second),
 		overridable(&defaultReadinessTimeout, "SIRENS_ECHO_READINESS_TIMEOUT", 5*time.Second),
 		overridable(&maxReadinessBody, "SIRENS_ECHO_READINESS_BODY_BYTES", 16<<10),
 
