@@ -6,7 +6,7 @@ alert filters remain stable.
 
 ## Field contract
 
-- Grouping type - `exception.type` is one of 34 unique `sirens_echo.*` values.
+- Grouping type - `exception.type` is one of 38 unique `sirens_echo.*` values.
 - Human wording - `exception.message` and the span status description use the
   same fixed sentence from the catalog.
 - Operational tags - `error.stage` has ten possible values and

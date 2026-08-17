@@ -43,6 +43,8 @@ const (
 	exceptionJobNotPermitted
 	exceptionJobNotFound
 	exceptionJobQueueFull
+	exceptionCommandFailed
+	exceptionAttachmentFetchFailed
 	exceptionContentGateModelFailed
 	exceptionContentGateUnknownClass
 	exceptionCodeCount
@@ -312,6 +314,24 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The job queue is full.",
 		stage:    "jobs",
 		outcome:  "queue_full",
+		fault:    faultService,
+	},
+	// A declared verb exiting non-zero is this deployment's job failing, not a
+	// member asking for something wrong.
+	exceptionCommandFailed: {
+		typeName: "sirens_echo.command.failed",
+		message:  "A workspace command exited non-zero or did not run.",
+		stage:    "command",
+		outcome:  "failed",
+		fault:    faultService,
+	},
+	// The member uploaded a file and this service could not fetch it, which is
+	// the CDN or this egress path rather than anything they did.
+	exceptionAttachmentFetchFailed: {
+		typeName: "sirens_echo.attachment.fetch_failed",
+		message:  "An attachment could not be fetched.",
+		stage:    "attachment",
+		outcome:  "fetch_failed",
 		fault:    faultService,
 	},
 	// Both gate failures are the service's, including the unknown class: the

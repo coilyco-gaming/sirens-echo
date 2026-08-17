@@ -386,7 +386,7 @@ func (c ProxyClient) Complete(
 		}
 		// An upload lands before the first model call, so the turn can read it
 		// through a tool rather than paying for it in the prompt.
-		uploads = ingestAttachments(ctx, toolSession, nil)
+		uploads = ingestAttachments(ctx, toolSession, nil, telemetry)
 		if len(uploads) > 0 {
 			telemetry.Info(
 				ctx,

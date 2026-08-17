@@ -84,7 +84,9 @@ func (e WardJobExecutor) Execute(
 
 // buildExecutingKinds adds the executing kind when the deployment enabled it
 // and the admission surface allows it.
-func buildExecutingKinds(cfg Config, policy *AccessPolicy) (map[string]JobExecutor, error) {
+func buildExecutingKinds(
+	cfg Config, policy *AccessPolicy, telemetry *Telemetry,
+) (map[string]JobExecutor, error) {
 	executors := DefaultJobExecutors()
 	if strings.TrimSpace(cfg.JobWorkspaceRoot) == "" {
 		return executors, nil
@@ -94,7 +96,7 @@ func buildExecutingKinds(cfg Config, policy *AccessPolicy) (map[string]JobExecut
 	}
 	executors["ward-exec"] = WardJobExecutor{
 		WorkspaceRoot: cfg.JobWorkspaceRoot,
-		Runner:        WardCommandRunner{},
+		Runner:        WardCommandRunner{Telemetry: telemetry},
 		Repository:    cfg.JobRepository,
 		Verb:          cfg.JobVerb,
 	}

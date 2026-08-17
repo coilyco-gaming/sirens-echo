@@ -237,7 +237,7 @@ func TestExecutingKindIsOnlyBuiltWhenTheSurfaceAllowsIt(t *testing.T) {
 		JobRepository:    "coilyco-gaming/sirens-echo",
 		JobVerb:          "test",
 	}
-	executors, err := buildExecutingKinds(cfg, safe)
+	executors, err := buildExecutingKinds(cfg, safe, nil)
 	if err != nil {
 		t.Fatalf("buildExecutingKinds: %v", err)
 	}
@@ -249,12 +249,12 @@ func TestExecutingKindIsOnlyBuiltWhenTheSurfaceAllowsIt(t *testing.T) {
 		Schema: accessPolicySchema,
 		Guilds: []GuildAccess{{ID: "1300204416229441587"}},
 	}
-	if _, err := buildExecutingKinds(cfg, widened); err == nil {
+	if _, err := buildExecutingKinds(cfg, widened, nil); err == nil {
 		t.Error("execution was built against a widened surface")
 	}
 
 	// With no workspace root there is no execution at all, which is the default.
-	none, err := buildExecutingKinds(Config{}, widened)
+	none, err := buildExecutingKinds(Config{}, widened, nil)
 	if err != nil {
 		t.Fatalf("default posture errored: %v", err)
 	}

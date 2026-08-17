@@ -56,8 +56,8 @@ func TestMarkSpanErrorRecordsCatalogedException(t *testing.T) {
 }
 
 func TestExceptionCatalogIsCompleteAndBounded(t *testing.T) {
-	if exceptionCodeCount != 36 {
-		t.Fatalf("catalog cardinality = %d, want documented bound 36", exceptionCodeCount)
+	if exceptionCodeCount != 38 {
+		t.Fatalf("catalog cardinality = %d, want documented bound 38", exceptionCodeCount)
 	}
 	types := make(map[string]struct{}, exceptionCodeCount)
 	stages := make(map[string]struct{})
@@ -79,8 +79,8 @@ func TestExceptionCatalogIsCompleteAndBounded(t *testing.T) {
 	if len(types) != int(exceptionCodeCount) {
 		t.Fatalf("exception type cardinality = %d, want %d", len(types), exceptionCodeCount)
 	}
-	if len(stages) != 10 {
-		t.Fatalf("exception stage cardinality = %d, want documented bound 10", len(stages))
+	if len(stages) != 12 {
+		t.Fatalf("exception stage cardinality = %d, want documented bound 12", len(stages))
 	}
 }
 

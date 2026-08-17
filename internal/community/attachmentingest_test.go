@@ -58,7 +58,7 @@ func TestAnOversizedAttachmentRefuses(t *testing.T) {
 		_, _ = w.Write([]byte(strings.Repeat("a", maxAttachmentBytes+64)))
 	}))
 	defer server.Close()
-	if _, err := fetchAttachment(context.Background(), server.Client(), server.URL); err == nil {
+	if _, err := fetchAttachment(context.Background(), server.Client(), server.URL, nil); err == nil {
 		t.Fatal("an oversized attachment was accepted")
 	}
 }
@@ -69,7 +69,7 @@ func TestAFailedFetchIsAnError(t *testing.T) {
 		w.WriteHeader(http.StatusForbidden)
 	}))
 	defer server.Close()
-	if _, err := fetchAttachment(context.Background(), server.Client(), server.URL); err == nil {
+	if _, err := fetchAttachment(context.Background(), server.Client(), server.URL, nil); err == nil {
 		t.Fatal("a 403 was accepted")
 	}
 }
@@ -81,10 +81,10 @@ func TestIngestIsInertWithoutASession(t *testing.T) {
 	ctx := WithAttachments(context.Background(), []AttachmentSource{
 		{URL: "https://cdn.discordapp.com/attachments/1/2/a.txt"},
 	})
-	if stored := ingestAttachments(ctx, nil, nil); len(stored) != 0 {
+	if stored := ingestAttachments(ctx, nil, nil, nil); len(stored) != 0 {
 		t.Errorf("a turn with no session stored %d files", len(stored))
 	}
-	if stored := ingestAttachments(context.Background(), nil, nil); len(stored) != 0 {
+	if stored := ingestAttachments(context.Background(), nil, nil, nil); len(stored) != 0 {
 		t.Errorf("a turn with no uploads stored %d files", len(stored))
 	}
 }
