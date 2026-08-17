@@ -114,7 +114,8 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	telemetry = telemetryOrNoop(telemetry)
 	httpClient := &http.Client{
-		Timeout: cfg.RequestTimeout,
+		// No total timeout: it would cut a streaming completion on schedule
+		// however many heartbeats arrived. See docs/sirens-echo-model-stream.md.
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
 			otelhttp.WithTracerProvider(telemetry.traceProvider),

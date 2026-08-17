@@ -42,8 +42,10 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		if body.Metadata.Role != "community" || body.Metadata.Seat != "Sirens Echo" {
 			t.Errorf("metadata identity = %#v", body.Metadata)
 		}
-		if body.Stream {
-			t.Error("stream must be false")
+		// Streaming is what carries the heartbeats the idle timeout reads.
+		// See sirens-echo#171 and docs/sirens-echo-model-stream.md.
+		if !body.Stream {
+			t.Error("stream must be true")
 		}
 		// The reply contract is plain text, so the request must not ask the
 		// backend for a JSON object. See coilyco-gaming/sirens-echo#102.

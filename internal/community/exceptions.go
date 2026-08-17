@@ -27,6 +27,7 @@ const (
 	exceptionModelResponseHTTPError
 	exceptionModelResponseDecodeFailed
 	exceptionModelResponseMissingChoice
+	exceptionModelSilent
 	exceptionHTTPTurnMethodNotAllowed
 	exceptionHTTPTurnInvalidJSON
 	exceptionHTTPTurnBodyTooLarge
@@ -189,6 +190,15 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "Agent Proxy response contained no choice.",
 		stage:    "model",
 		outcome:  "response_missing_choice",
+		fault:    faultService,
+	},
+	// Silence is not the same failure as a slow answer, and the whole point of
+	// the idle timeout is being able to say which. See sirens-echo#171.
+	exceptionModelSilent: {
+		typeName: "sirens_echo.model.silent",
+		message:  "The model backend sent nothing within the idle timeout.",
+		stage:    "model",
+		outcome:  "silent",
 		fault:    faultService,
 	},
 	exceptionHTTPTurnMethodNotAllowed: {

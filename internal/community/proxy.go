@@ -471,10 +471,12 @@ func (c ProxyClient) Complete(
 			requestTools = nil
 		}
 		payload := chatRequest{
-			Model:       c.Model,
-			Messages:    messages,
-			Tools:       requestTools,
-			Stream:      false,
+			Model:    c.Model,
+			Messages: messages,
+			Tools:    requestTools,
+			// Heartbeats have nowhere to go on a non-streaming request, so the
+			// idle timeout needs this. See docs/sirens-echo-model-stream.md.
+			Stream:      true,
 			Temperature: 0,
 			MaxTokens:   completionTokens,
 			Metadata: chatMetadata{
@@ -995,6 +997,72 @@ func (c ProxyClient) completeOnce(
 		return chatChoice{}, fmt.Errorf("Agent Proxy request: %w", err)
 	}
 	defer response.Body.Close()
+	// Read before the status check, because an error body is small and a
+	// streamed success must not be pulled into memory whole.
+	if response.StatusCode != http.StatusOK {
+		_, _ = io.Copy(io.Discard, io.LimitReader(response.Body, int64(maxAgentProxyResponseBytes)))
+		err := modelHTTPError{Status: response.StatusCode}
+		telemetry.RecordModelCall(modelCtx, "error")
+		telemetry.MarkSpanError(modelSpan, exceptionModelResponseHTTPError)
+		modelSpan.End()
+		return chatChoice{}, err
+	}
+	// The proxy's non-streaming surface still answers this way, and refusing a
+	// turn that arrived intact is the worse trade.
+	if !strings.Contains(response.Header.Get("Content-Type"), "text/event-stream") {
+		return c.wholeCompletion(modelCtx, telemetry, modelSpan, response, round)
+	}
+	beats := 0
+	choice, err := readModelStream(modelCtx, response.Body, modelIdleTimeout,
+		func(beat streamHeartbeat) {
+			beats++
+			// One line per state change, not per keepalive: a ten-second beat
+			// over a five-minute ceiling would be thirty lines saying nothing.
+			if beat.State == "attempt" {
+				telemetry.Info(modelCtx, "model.attempt",
+					slog.Int("round", round),
+					slog.Int("attempt", beat.Attempt),
+					slog.Int("attempts", beat.Of),
+					slog.String("backend", beat.Backend),
+					slog.String("regime", beat.Regime),
+				)
+			}
+		})
+	telemetry.Info(
+		modelCtx,
+		"model.response",
+		slog.Int("round", round),
+		slog.Int("status", response.StatusCode),
+		slog.Int("heartbeats", beats),
+	)
+	if err != nil {
+		telemetry.RecordModelCall(modelCtx, "error")
+		telemetry.MarkSpanError(modelSpan, streamException(err))
+		modelSpan.End()
+		return chatChoice{}, err
+	}
+	if choice.Message.Content.Text == "" && len(choice.Message.ToolCalls) == 0 &&
+		choice.FinishReason == "" {
+		err := fmt.Errorf("Agent Proxy stream carried no completion")
+		telemetry.RecordModelCall(modelCtx, "error")
+		telemetry.MarkSpanError(modelSpan, exceptionModelResponseMissingChoice)
+		modelSpan.End()
+		return chatChoice{}, err
+	}
+	telemetry.RecordModelCall(modelCtx, "ok")
+	modelSpan.End()
+	return choice, nil
+}
+
+// wholeCompletion reads the non-streamed shape. No heartbeats reach it, so the
+// turn context is the only bound available and that is the pre-stream behaviour.
+func (c ProxyClient) wholeCompletion(
+	modelCtx context.Context,
+	telemetry *Telemetry,
+	modelSpan trace.Span,
+	response *http.Response,
+	round int,
+) (chatChoice, error) {
 	responseRaw, err := io.ReadAll(io.LimitReader(response.Body, int64(maxAgentProxyResponseBytes)+1))
 	if err != nil {
 		telemetry.RecordModelCall(modelCtx, "error")
@@ -1013,13 +1081,6 @@ func (c ProxyClient) completeOnce(
 		err := fmt.Errorf("Agent Proxy response exceeded %d bytes", maxAgentProxyResponseBytes)
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseTooLarge)
-		modelSpan.End()
-		return chatChoice{}, err
-	}
-	if response.StatusCode != http.StatusOK {
-		err := modelHTTPError{Status: response.StatusCode}
-		telemetry.RecordModelCall(modelCtx, "error")
-		telemetry.MarkSpanError(modelSpan, exceptionModelResponseHTTPError)
 		modelSpan.End()
 		return chatChoice{}, err
 	}
@@ -1044,4 +1105,18 @@ func (c ProxyClient) completeOnce(
 		Message:      completion.Choices[0].Message,
 		FinishReason: completion.Choices[0].FinishReason,
 	}, nil
+}
+
+// streamException keeps the three stream failures apart in telemetry, because
+// silence, an oversized stream, and a malformed frame want different answers.
+func streamException(err error) exceptionCode {
+	switch {
+	case errors.Is(err, ErrModelSilent):
+		return exceptionModelSilent
+	case strings.Contains(err.Error(), "exceeded"):
+		return exceptionModelResponseTooLarge
+	case strings.Contains(err.Error(), "decode"):
+		return exceptionModelResponseDecodeFailed
+	}
+	return exceptionModelResponseReadFailed
 }

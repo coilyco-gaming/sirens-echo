@@ -70,11 +70,14 @@ var (
 	noticeTimedOut      = harnessNotice("turn timed out, retry shortly")
 	noticeHistoryFailed = harnessNotice("channel history unavailable")
 	noticeModelFailed   = harnessNotice("model backend unavailable, retry shortly")
-	noticeToolFailed    = harnessNotice("tool call failed")
-	noticeRoundsSpent   = harnessNotice("ran out of steps, ask for something narrower")
-	noticeBudgetSpent   = harnessNotice("ran out of room to answer, ask for something narrower")
-	noticeReplyBlocked  = harnessNotice("reply blocked by response check, rephrase")
-	noticeTurnCrashed   = harnessNotice("turn crashed")
+	// Distinct from the ceiling notice: nothing arrived at all, so retrying is
+	// the right advice where at the ceiling it is not. See sirens-echo#171.
+	noticeModelSilent  = harnessNotice("model backend went quiet, retry shortly")
+	noticeToolFailed   = harnessNotice("tool call failed")
+	noticeRoundsSpent  = harnessNotice("ran out of steps, ask for something narrower")
+	noticeBudgetSpent  = harnessNotice("ran out of room to answer, ask for something narrower")
+	noticeReplyBlocked = harnessNotice("reply blocked by response check, rephrase")
+	noticeTurnCrashed  = harnessNotice("turn crashed")
 	// The answer existed and the send failed. A member reading silence cannot
 	// tell that from being ignored. See docs/sirens-echo-delivery-failures.md.
 	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
@@ -97,7 +100,9 @@ func noticeWithTrace(ctx context.Context, notice string) string {
 // The failure causes, a closed set. error_type is the stage, so two conditions
 // at one stage collapse into it and neither can be alerted on. See issue 292.
 const (
-	causeTimeout     = "timeout"
+	causeTimeout = "timeout"
+	// The backend sent no bytes at all, which the turn ceiling cannot express.
+	causeModelSilent = "model_silent"
 	causeToolFailed  = "tool_failed"
 	causeRoundsSpent = "rounds_spent"
 	// Named for what happened rather than where, because the stage is model
@@ -120,6 +125,10 @@ func failureCause(cause error) string {
 	// budget and the reason it ended is the restart.
 	case errors.Is(cause, errShuttingDown):
 		return causeShutdown
+	// Ahead of the timeout, because an idle cut is also a deadline and the
+	// interesting half is that nothing arrived.
+	case errors.Is(cause, ErrModelSilent):
+		return causeModelSilent
 	case errors.Is(cause, context.DeadlineExceeded):
 		return causeTimeout
 	case isToolFailure(cause):
@@ -145,6 +154,8 @@ func turnFailureNotice(stage string, cause error) string {
 	// Same order as failureCause, so the label and the phrase agree.
 	case errors.Is(cause, errShuttingDown):
 		return noticeShuttingDown
+	case errors.Is(cause, ErrModelSilent):
+		return noticeModelSilent
 	case errors.Is(cause, context.DeadlineExceeded):
 		return noticeTimedOut
 	case isToolFailure(cause):
