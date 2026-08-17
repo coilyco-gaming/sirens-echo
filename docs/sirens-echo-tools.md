@@ -32,10 +32,19 @@ fails on the call bound rather than on the turn's**. The live Echo evaluation re
 ## Harness tools
 
 Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
-harness itself answers the call**, and there is one today. A tool listing is held for an hour, which is
-a long time to be wrong about your own tools, and **the thing best placed to notice is the model that
-just failed to find one it expected**, so `harness__refresh_tools` lets it say so. It marks every
-rostered server for re-reading and dials nothing, so twenty calls in one turn cost one listing.
+harness itself answers the call.** A tool listing is held for an hour, and **the thing best
+placed to notice it is wrong is the model that failed to find a tool it expected**, so
+`harness__refresh_tools` lets it say so. It marks every rostered
+server for re-reading and dials nothing, so twenty calls cost one listing.
+
+## The calculate tool
+
+**Every number Echo produced herself was predicted rather than calculated** (#916), fine for "roughly a
+third" and not for a total or a unit price. `calculate` evaluates `+ - * / ^`, parentheses and a
+trailing `%`, and **nothing else**: the grammar has no identifiers and no calls, so no expression
+reaches anything. **Exact rather than floating point**, so `0.1 + 0.2` is `0.3`, and a result that is
+not a decimal is rounded **and says so**, the exact fraction beside it. The expression is echoed with
+the answer. In process rather than a twelfth roster server, and registered unconditionally.
 
 ## The fetch tool
 

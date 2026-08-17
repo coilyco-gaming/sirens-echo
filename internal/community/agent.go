@@ -148,6 +148,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(cfg.FetchHosts) > 0 {
 		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
 	}
+	// Unconditional, because it needs no configuration and a tool shipped dark
+	// behind an unset switch is a tool nobody has. See sirens-echo#916.
+	extras = append(extras, &CalculatorProvider{})
 	if cfg.RepoInventoryOrg != "" && cfg.RepoInventoryURL != "" {
 		extras = append(extras, &RepoInventoryProvider{
 			BaseURL: cfg.RepoInventoryURL,

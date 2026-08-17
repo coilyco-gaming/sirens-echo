@@ -309,6 +309,16 @@ var (
 	// maxProgressWaitLines bounds how tall the column grows, not how long it
 	// reports: a full column advances in place. See sirens-echo#899.
 	maxProgressWaitLines int
+	// maxCalculatorRunes bounds one expression, so a pasted document cannot
+	// arrive as arithmetic. See docs/sirens-echo-tools.md.
+	maxCalculatorRunes int
+	// maxCalculatorDigits bounds one literal inside it.
+	maxCalculatorDigits int
+	// maxCalculatorExponent bounds a power, which grows fastest of the four.
+	maxCalculatorExponent int
+	// maxCalculatorPlaces is how far an inexact result is reported. A third is
+	// not a decimal, so the answer says it was rounded rather than implying it.
+	maxCalculatorPlaces int
 	// maxProxyToolNameBytes bounds one served tool name.
 	maxProxyToolNameBytes int
 	// maxWorklogRows bounds the embed. A forty-call turn must not render forty
@@ -449,6 +459,10 @@ func knobs() []knob {
 		overridable(&threadArchiveMinutes, "SIRENS_ECHO_THREAD_ARCHIVE_MINUTES", 60),
 
 		overridable(&maxProgressWaitLines, "SIRENS_ECHO_PROGRESS_WAIT_LINES", 12),
+		overridable(&maxCalculatorRunes, "SIRENS_ECHO_CALCULATOR_RUNES", 200),
+		overridable(&maxCalculatorDigits, "SIRENS_ECHO_CALCULATOR_DIGITS", 30),
+		overridable(&maxCalculatorExponent, "SIRENS_ECHO_CALCULATOR_EXPONENT", 64),
+		overridable(&maxCalculatorPlaces, "SIRENS_ECHO_CALCULATOR_PLACES", 10),
 		overridable(&maxProxyToolNameBytes, "SIRENS_ECHO_PROXY_TOOL_NAME_BYTES", 64),
 		overridable(&maxWorklogRows, "SIRENS_ECHO_WORKLOG_ROWS", 6),
 		overridable(&maxRedactedBlocks, "SIRENS_ECHO_REDACTED_BLOCKS", 2),
