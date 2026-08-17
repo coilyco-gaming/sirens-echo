@@ -1,80 +1,104 @@
 # Composing a lane identity
 
-Both lanes compose an Agent Compose role bundle. Sirens Deep composes `creator`
-and takes its voice from it. Sirens Echo composes `ops` and does not. Why those
-come apart is [role and voice](sirens-echo-role-and-voice.md).
+Both lanes compose an Agent Compose role bundle. Deep composes `creator` and takes its voice from it,
+Echo composes `ops` and does not ([role and voice](sirens-echo-identity.md)).
 
 ## The allowlist is a role graph
 
-`agent/compose/roles.kdl` is the one tracked allowlist, in agent-compose's own
-role-graph format, with globs. It is purely additive: it grants a role its
-skills and does not decide which roles exist. The roster does that and the build
-bakes a bundle per roster role, so a role with no entry here composes the roster
-identity alone and a new roster role needs no change.
+`agent/compose/roles.kdl` is the one tracked allowlist, in agent-compose's role-graph format, with
+globs. **It is purely additive**: it grants a role its skills and does not decide which roles exist. The
+roster does that and the build bakes a bundle per roster role, so a role with no entry composes the
+roster identity alone. `agent/compose/request.kdl` is the second tracked file, and **only
+`declaration=` is permitted**: with `root=`, the source repository's own `.agents/roles.kdl` decides,
+and agentic-os-kai's creator role deliberately binds Kai's career, job-search, and LinkedIn context,
+because that role serves Kai rather than an agent answering strangers. The declaration is generated,
+its `path="skills/<name>"` mechanically derived.
 
-`agent/compose/request.kdl` is the second tracked file, and the grammar forces
-it: a request source needs a separate declaration file. Only `declaration=` is
-permitted. With `root=` the **source repository's own** `.agents/roles.kdl`
-decides, and `coilyco-bridge/agentic-os-kai`'s creator role deliberately binds
-Kai's career, job-search, and LinkedIn context because that role serves Kai
-rather than an agent that answers strangers.
+`cmd/sirens-echo-compose` expands the graph and fails when a pattern reaches a name in
+`DeniedComposedSkills`, matches nothing, or globalizes a private repository. **An empty selector hides
+an upstream rename, so it is an error.** Every admitted source lives in the public
+`coilyco-flight-deck/agentic-os`, under that repository's `docs/composed-house-taste.md` placement rule,
+and **the graph declares no provider repositories**, so sources reach a bundle through the request's
+declarations and a globalized provider would bypass that review.
+`internal/community/compose_test.go` re-runs those failures plus `root=` usage and tracked build output,
+with the deny list in `composepolicy.go` beside the expander, **so build and suite enforce one list.**
 
-The declaration itself is generated. Its `path="skills/<name>"` is mechanically
-derived, so hand-writing it is boilerplate with a chance of drift.
+`scripts/stage-compose-sources.sh` reads the roster for the role list, runs the generator per role, and
+stages each admitted `COMPOSED.md` as `SKILL.md` beside a written declaration, because a declaration's
+paths resolve beneath its own directory. That staged tree is build output, removed on exit. The image
+clones the catalogue at `AOS_CATALOG_REF`, **which floats on `main` by design**, so reproducing an older
+bundle means overriding the build arg. At runtime `composed: true` makes a bundle mandatory and
+`SIRENS_ECHO_ROLE` selects which one loads, so flipping the role needs no rebuild, while **a missing or
+unreadable bundle stops the process**: a profile that asks for an identity never answers without one.
 
-## Globs stay safe
+## Reviewing a wider compile
 
-`cmd/sirens-echo-compose` expands the graph and fails when a pattern reaches a
-name in `DeniedComposedSkills`, matches nothing, or globalizes a private
-repository. An empty selector hides an upstream rename, so it is an error.
+The image bakes a bundle from the public catalogue it can reach. A layer holding catalogues this build
+cannot read composes the same allowlist against all of them, so the wider result is reviewable alongside
+the shipped one, and **neither compile replaces the other**. It runs from the image itself with
+catalogues mounted read-only, so **it is this repository's expander over this repository's graph**:
+every rule above still applies and the other layer contributes checkouts and delivery, never policy.
+Two rules only the wider set makes visible: **a name owned by two catalogues is an error rather than a
+silent first-wins**, and a pattern naming a denied source **exactly** is fatal while a family glob that
+merely brushes one drops that member and prints it, without which `personal-preference-*` would become
+unusable the moment a catalogue holding the denied `personal-preference-social` is present.
 
-## Where the sources live
+## The per-role selection record
 
-Every admitted source is in the public `coilyco-flight-deck/agentic-os`. The
-house-taste sources were promoted there from the private personal catalogue for
-exactly this reason; the placement rule is that repository's
-`docs/composed-house-taste.md`.
+`agent/rendered/roles/<role>.bundle.txt` records what each baked role selected: role skill, model tier,
+personalities, sources, and the sorted skill set as `<source>/<skill>`. **No bodies and no digests**,
+because the catalogue ref floats on `main`, so a record built from bodies would go stale on every
+upstream commit and redden `main` for a reason nobody here can act on. What does move it is a role
+gaining or losing a skill, exactly the change that should be reviewed. CI bakes the bundles in the
+`test` job and the image build checks the same thing again over the bundles it ships: **the second stops
+a bad image, the first tells you in seconds rather than two thirds of the way through a build**
+(sirens-echo#788). A record most often drifts because the branch was cut before a composed-sources
+change landed on `main`, so the merge is the remedy and the failure names it first. Loading the bundles
+also renders and validates each role's prompt, because a bundle that failed to compose would ship as a
+quietly neutral agent and one filed under the wrong slug would make `SIRENS_ECHO_ROLE` select the wrong
+identity. **Prompt sizes are printed per role and never gated.**
 
-## Build
+`just role-drift-check` bakes and checks in one step, the gate CI runs, and it bakes to a scratch
+directory it removes, **because pre-commit walks the filesystem and a baked bundle is a tree of skill
+files those hooks then read as this repository's own**. `just compose-bundles`, `role-snapshot`, and
+`role-snapshot-check` work against `agent/bundles` and need `AOS_CATALOG`. Read a diff here beside the
+allowlist diff: `roles.kdl` says what a role **may** have, this says what it **got**.
 
-`scripts/stage-compose-sources.sh` reads the roster for the role list, then runs
-the generator per role, staging each admitted `COMPOSED.md` as `SKILL.md` and
-writing the declaration, because a declaration's paths resolve beneath its own
-directory. It composes and verifies one bundle per role. The staged tree, the
-declaration, and the per-role requests are build output, removed on exit.
+## Who the agents belong to
 
-The image clones the catalogue at `AOS_CATALOG_REF`, which floats on `main` by
-design, so a rebuild takes the catalogue as it stands. Override the build arg to
-reproduce an older bundle. Locally `just compose-bundles` uses an
-`AOS_CATALOG` checkout and fails closed when it is too old.
+Sirens Discord is the community. Coilyco Gaming is a separate organization holding a staffing and
+product contract with it, the Robotics Division is the part of Coilyco Gaming that contract is with, and
+Echo and Deep are that division (sourced from Kai on sirens-echo#806). Every surface naming both
+organizations had to improvise the connection, and **two agents improvising the same relationship
+separately is the drift this prevents**. So it lives in `.agents/skills/coilyco-org`, **the only local
+skill root the two profiles share**, which makes "both agents read the same text" a property a test can
+hold. The prompt carries one line naming the division.
 
-The graph declares no provider repositories: sources reach a bundle through the
-request's declarations, and a globalized provider would bypass that review. The
-guard against globalizing a private one stays wired regardless. Each baked role
-gets a tracked selection record. See [the role record](sirens-echo-role-record.md).
+**The separation is the load-bearing part.** An agent is never Sirens Discord staff, and Sirens Discord
+staff are never Coilyco Gaming employees: either half alone is a different and wrong claim. The contract
+exists and its terms are not something to disclose, and nothing in the source names a person, account,
+or internal system.
 
-## Runtime
+## Recognising a counterpart agent
 
-`composed: true` makes a bundle mandatory and `SIRENS_ECHO_ROLE` selects which
-one loads, so flipping the role needs no rebuild. A missing or unreadable bundle
-stops the process: a profile that asks for an identity never answers without
-one.
+Deep can tell whether the account it is answering is an agent or a person. **Discord marks bot accounts,
+and that flag is ground truth costing nothing**, whereas guessing from writing style would be a worse
+version of the problem, because anyone can write "I am an agent" and a member who does must not become
+one. So recognition reads `Author.Bot` and nothing else, asserted in tests rather than assumed.
 
-`ValidateSystemPrompt` keys on the definition, not the voice, and a composing
-neutral profile carries an extra clause. See [role and
-voice](sirens-echo-role-and-voice.md). The anchors are strings a bundle contains.
+Bot authors were rejected outright, so recognition required admitting them, which widens the summon
+surface, so it is **opt-in by name**: `agents.allow` lists the counterpart accounts answered, empty
+answers none, which is the shipped posture, and Deep never answers itself. **A named counterpart is
+admitted, not trusted**, passing the same channel and guild gates a member does. Two agents each
+answering the other is a runaway, so consecutive agent-authored turns in one channel are capped, a human
+turn resets the run, **a capped exchange does not resume by waiting so the cap is not a speed limit**, a
+quiet channel forgets, and the bound is per channel. The check runs before admission spends anything.
 
-## Enforcement
-
-`internal/community/compose_test.go` expands the tracked graph and fails when a
-pattern reaches a denied source, matches nothing, or globalizes a private
-repository, and when a request uses `root=` or build output is tracked. The deny
-list lives in `composepolicy.go` beside the expander, so the build and the suite
-enforce one list rather than two copies.
-
-## See also
-
-The seat carries its own name and pronouns, so the agent has an identity of its
-own rather than borrowing a person's. See [identity](sirens-echo-identity.md),
-[the wider compile](sirens-echo-compose-review.md),
-[the prompt](sirens-echo-prompt.md), and [profiles](response-profiles.md).
+An agent-authored line is marked in the turn context as `- Sirens Echo (an agent, not a person):`, with
+a matching sentence naming the requester. **A human turn gains no marking at all**, because an
+annotation that is sometimes absent is more useful than one that is sometimes wrong, and the member's
+message itself is untouched per the final-user-turn rule. **What deliberately does not change is
+behaviour**: no disclosure line, no register change, no altered trust. An admitted counterpart widens
+the requester set beyond one account, so `CheckExecutionAdmission` refuses execution while one is
+allowed. Both refusals log without an identifier, as `discord.agent.ignored` and
+`discord.exchange.bounded`.
