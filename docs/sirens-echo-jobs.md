@@ -55,14 +55,22 @@ rename, so a crash mid-write leaves the previous record rather than a truncated
 one. Opening it loads what is on disk, which makes a restart recoverable rather
 than merely non-fatal. Dedup survives with it.
 
-Only `running` and `cancelling` can be stranded by a crash. `queued` is still
-accurate and recovery leaves it alone. `RecoverStrandedJobs` moves the stranded
-ones to a terminal state with an outcome saying why, so an interrupted job never
-sits live forever and never later reports success.
+Only `running` and `cancelling` can be stranded by a crash. `RecoverStrandedJobs`
+moves those to a terminal state with an outcome saying why, so an interrupted job
+never sits live forever and never later reports success.
+
+**`queued` is left alone, and nothing picks it back up.** The work queue is a
+channel built empty by `Start`, `enqueue` is called only by `Submit`, and
+`JobStore` exposes no query by state, so a job that was accepted and durable but
+not yet started is dropped on restart without a notice to its requester. That is
+the live gap, tracked separately, and it is the opposite of the double-apply this
+section's next paragraph guards against.
 
 `Attempts` counts executions started, so a resumed job cannot look like a first
 run. `Effects` records what a job already applied, keyed by a step its kind
-declares, so a resumed job skips work it did rather than double-applying it.
+declares, so a resumed job skips work it did rather than double-applying it. The
+content path writes one per delivered message. Nothing reads a non-empty result
+yet, because no path executes a job twice. See sirens-echo#824.
 
 ## The store and the kinds
 

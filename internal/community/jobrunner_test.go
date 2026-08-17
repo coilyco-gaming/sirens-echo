@@ -352,3 +352,39 @@ func TestJobIDRidesTheContext(t *testing.T) {
 		t.Errorf("job id outside a job = %q", got)
 	}
 }
+
+// The runner's own comment claimed Start requeued these, and it never did. See
+// sirens-echo#824 and docs/sirens-echo-jobs.md.
+func TestARestartDropsWhatWasQueued(t *testing.T) {
+	t.Parallel()
+	store := NewMemoryJobStore(nil)
+	queued := submitTestJob(t, store)
+	if queued.State != JobQueued {
+		t.Fatalf("fixture is not queued: %s", queued.State)
+	}
+
+	executor := newBlockingExecutor()
+	runner := &JobRunner{
+		Store:     store,
+		Executors: map[string]JobExecutor{"echo": executor},
+		Timeout:   5 * time.Second,
+	}
+	if err := runner.Start(context.Background()); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	t.Cleanup(runner.Stop)
+
+	// Long enough for a worker to have picked it up if anything had queued it.
+	select {
+	case <-executor.started:
+		t.Fatal("Start ran a job the store already held, so this behaviour changed")
+	case <-time.After(200 * time.Millisecond):
+	}
+	current, err := store.Get(queued.ID)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if current.State != JobQueued {
+		t.Errorf("a restart moved the queued job to %s", current.State)
+	}
+}
