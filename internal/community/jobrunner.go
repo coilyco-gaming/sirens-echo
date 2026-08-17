@@ -75,7 +75,8 @@ func (r *JobRunner) timeout() time.Duration {
 	return defaultJobTimeout
 }
 
-// Start brings up the workers and requeues anything a restart left queued.
+// Start brings up the workers on an empty queue. It requeues nothing, so a
+// restart drops whatever was queued. See docs/sirens-echo-jobs.md.
 func (r *JobRunner) Start(ctx context.Context) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
