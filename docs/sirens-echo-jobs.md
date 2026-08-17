@@ -34,12 +34,17 @@ mid-write leaves the previous record rather than a truncated one**. **Only `runn
 can be stranded**, and `RecoverStrandedJobs` moves those to a terminal state with an outcome saying why,
 so an interrupted job never sits live forever and never later reports success.
 
-**`queued` is left alone, and nothing picks it back up.** The work queue is a channel built empty by
-`Start`, `enqueue` is called only by `Submit`, and `JobStore` exposes no query by state, so **a job that
-was accepted and durable but not yet started is dropped on restart without a notice to its requester**.
-That is the live gap, tracked separately. `Attempts` counts executions started, so a resumed job cannot
-look like a first run, and `Effects` records what a job already applied, keyed by a step its kind
-declares, **so a resumed job skips work it did rather than double-applying it**.
+**`queued` is dropped rather than stranded, and the record now says so.** The work queue is a channel
+built empty by `Start` and `enqueue` is called only by `Submit`, **so nothing requeues a job a restart
+found queued** and an accurate `queued` record is a permanently pending one. `SettleDroppedJobs` moves
+those to `failed` under `dropped by a restart`. Requeuing instead was considered and not taken: it is
+the larger change, it needs `Effects` to be load-bearing, and it may be replaced outright if jobs move
+onto Temporal. See sirens-echo#878.
+
+**Recovery announces every job it settles**, dropped and stranded alike, because correcting the record
+tells nobody: a Discord requester never reads one. `Attempts` counts executions started, so a resumed
+job cannot look like a first run, and `Effects` records what a job already applied, keyed by a step its
+kind declares, **so a resumed job skips work it did rather than double-applying it**.
 
 ## Lifecycle
 

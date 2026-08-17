@@ -350,23 +350,45 @@ func jobGrants(policy *AccessPolicy) *GrantTable {
 	return &table
 }
 
-// recoverJobs settles whatever a restart found mid-flight, so no record sits
-// live forever after a crash.
+// recoverJobs settles whatever a restart left live, so no record sits live
+// forever after a crash and no requester is left waiting on one.
 func (a *Agent) recoverJobs(ctx context.Context) {
 	memory, ok := a.jobs.Store.(interface{ All() []Job })
 	if !ok {
 		return
 	}
-	stranded := StrandedJobIDs(memory.All())
-	if len(stranded) == 0 {
+	all := memory.All()
+	a.settleRestart(ctx, "stranded", StrandedJobIDs(all),
+		"interrupted by a restart", RecoverStrandedJobs)
+	// Queued work is dropped rather than stranded: nothing requeues it, so
+	// leaving the record accurate leaves it pending forever. See sirens-echo#878.
+	a.settleRestart(ctx, "dropped", DroppedJobIDs(all),
+		"dropped by a restart", SettleDroppedJobs)
+}
+
+// settleRestart settles one group and tells each requester, because a Discord
+// requester never reads the record. See docs/sirens-echo-jobs.md.
+func (a *Agent) settleRestart(
+	ctx context.Context,
+	group string,
+	ids []string,
+	outcome string,
+	settle func(JobStore, []string, string) ([]Job, error),
+) {
+	if len(ids) == 0 {
 		return
 	}
-	recovered, err := RecoverStrandedJobs(a.jobs.Store, stranded, "interrupted by a restart")
+	settled, err := settle(a.jobs.Store, ids, outcome)
 	if err != nil {
-		a.telemetry.Error(ctx, "job.recovery.failed", slog.Int("stranded", len(stranded)))
+		a.telemetry.Error(ctx, "job.recovery.failed",
+			slog.String("group", group), slog.Int("jobs", len(ids)))
 		return
 	}
-	a.telemetry.Info(ctx, "job.recovery.settled", slog.Int("jobs", len(recovered)))
+	for _, job := range settled {
+		a.jobs.notify(ctx, job)
+	}
+	a.telemetry.Info(ctx, "job.recovery.settled",
+		slog.String("group", group), slog.Int("jobs", len(settled)))
 }
 
 // Run opens the Gateway session and blocks until shutdown.
