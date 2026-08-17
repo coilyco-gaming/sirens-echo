@@ -5,7 +5,7 @@ two-second reply is noise.**
 
 ## The line
 
-Nothing for the first five seconds. After that, one line in the harness notice format that edits in
+Nothing for the first eight seconds. After that, one line in the harness notice format that edits in
 place as the turn moves: `reading recent messages`, `thinking...`, `calling a tool`, `checking the
 reply`. A turn that sits in one stage grows a clock line per beat, hour hand advancing
 (`still thinking 19 seconds...`). **The line is removed when the reply lands**, because the reply, or
@@ -36,10 +36,10 @@ separate mechanism with the same shape, because **a job's origin outlives its tu
 
 **The line starts a grid, and everything later lands on it.** A turn just over the threshold posts a
 line and answers a moment later, so the line vanishes before it is readable and the channel churns for
-nothing. So the line posts at five seconds and every message after it releases on a ten second grid
-measured from that post: ready at 5.1s means posted at 15s, ready at 15.1s means 25s.
+nothing. So the line posts at eight seconds and every message after releases on a sixteen second grid
+measured from that post: ready at 8.1s means posted at 24s, ready at 24.1s means 40s.
 
-**Only the five is written down.** The beat is twice the wait and the long-reply window is the wait plus
+**Only the eight is written down.** The beat is twice the wait and the long-reply window is the wait plus
 two beats, so one number moves all three, and a test pins both the derivation and today's values **so a
 derivation that quietly stopped deriving cannot pass**. The grid does not stop: a turn still running at
 the tenth beat waits for the eleventh, so the hold is at most one window and averages half of one
