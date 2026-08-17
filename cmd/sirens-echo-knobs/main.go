@@ -10,7 +10,7 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
-const referencePath = "docs/sirens-echo-knobs.md"
+const referencePath = "agent/rendered/knobs.txt"
 
 func main() {
 	check := flag.Bool("check", false, "fail when the tracked reference is stale")
