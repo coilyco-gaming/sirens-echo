@@ -1,8 +1,7 @@
 # The rendered prompt
 
 The model's instruction surface comes from three tracked sources, and `agent/rendered/*.prompt.txt`
-holds the assembled result, so **a prompt change is a reviewable diff rather than something a reader
-concatenates by hand**.
+holds the assembled result.
 
 `internal/community/prompt.go` supplies the scaffolding: harness identity line, pronoun policy, identity
 policy, admission sentence, trust policy, untrusted-input clause, tool-use clause, reply contract,
@@ -29,10 +28,13 @@ when any of that goes missing.
 A member replying to a message is addressing that message, so the turn names it rather than leaving the
 model to infer it from position: `bob is replying to alice: the plank market crashed on tuesday`. **The
 recent conversation still renders in full**, because naming the subject supplements recency rather than
-replacing it. Discord delivers the addressed message inline for most replies, and when it does not,
-**which is likeliest for the old messages this is worth most for**, the harness fetches it under the
-same budget as the other gate-forced calls. **Only one level renders**: a reply to a reply does not walk
-the chain, because the second level is a claim about what someone else was addressing.
+replacing it. Discord delivers the addressed message inline for most replies, and otherwise the harness
+fetches it under the same budget as the other gate-forced calls. **Only one level renders**: a reply to
+a reply does not walk the chain, because the second is a claim about someone else's subject.
+
+**The turn also carries a clock.** Nothing named the time, so `what time is it` had no answer and
+`discord-timestamps` had no epoch to render from (#855). One system message states the moment, **read
+once per turn**, so two rounds agree about it.
 
 ## Snapshots
 

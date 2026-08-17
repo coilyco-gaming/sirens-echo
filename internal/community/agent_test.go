@@ -583,12 +583,12 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 		}
 		switch modelRound.Add(1) {
 		case 1:
-			if len(body.Messages) != 3 {
+			if len(body.Messages) != 4 {
 				t.Fatalf("messages = %#v", body.Messages)
 			}
-			turnContext, ok := body.Messages[1].Content.(string)
+			turnContext, ok := body.Messages[2].Content.(string)
 			if !ok {
-				t.Errorf("turn context type = %T", body.Messages[1].Content)
+				t.Errorf("turn context type = %T", body.Messages[2].Content)
 			}
 			for _, expected := range []string{
 				"first member: Is Eco online?",
@@ -601,7 +601,7 @@ func TestRunTurnJoinsHistoryModelToolValidationAndReplyTrace(t *testing.T) {
 			}
 			// The last user message is exactly what the member typed, which is
 			// what agentproxy.user_message reads downstream. See #104.
-			if got := body.Messages[2].Content; got != "Can you check now?" {
+			if got := body.Messages[3].Content; got != "Can you check now?" {
 				t.Errorf("final user message = %#v", got)
 			}
 			writer.Header().Set("Content-Type", "application/json")
