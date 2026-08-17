@@ -263,6 +263,9 @@ var (
 	// discordReplyLimit is the send budget for one message. It sits under
 	// Discord's own 2000 so a reply the harness extended still arrives whole.
 	discordReplyLimit int
+	// mcpsReplyBudget leaves room under discordReplyLimit for /mcps's own
+	// truncation notice, so a long roster is cut with a line saying so.
+	mcpsReplyBudget int
 	// replyAttachmentBytes bounds the file an overflowing reply is sent as.
 	// Derived, so the scratchpad's limit is the one number to move.
 	replyAttachmentBytes int
@@ -407,6 +410,7 @@ func knobs() []knob {
 		overridable(&threadPrefillPage, "SIRENS_ECHO_THREAD_PREFILL_PAGE", 100),
 		overridable(&threadPrefillReads, "SIRENS_ECHO_THREAD_PREFILL_READS", 10),
 		overridable(&discordReplyLimit, "SIRENS_ECHO_REPLY_LIMIT", 1990),
+		overridable(&mcpsReplyBudget, "SIRENS_ECHO_MCPS_REPLY_BUDGET", 1800),
 		overridable(&threadNameRunes, "SIRENS_ECHO_THREAD_NAME_RUNES", 100),
 		overridable(&threadTitleRunes, "SIRENS_ECHO_THREAD_TITLE_RUNES", 50),
 		overridable(&threadArchiveMinutes, "SIRENS_ECHO_THREAD_ARCHIVE_MINUTES", 60),
