@@ -1,56 +1,96 @@
-# Mentions
+# Summons and mentions
 
-Naming someone in a reply reaches them. Only people already in the conversation
-can be reached, and the harness decides which — never the model.
+What addresses this service, and what a reply may reach back to.
 
-## What was wrong before
+## What counts as a summon
 
-Every reply carried `Parse: []`, so Discord parsed no mentions at all. Even a
-correctly formed `<@id>` arrived as inert text. Nothing anywhere resolved a
-name to an account. The service could name people and could not reach them.
+Three things address this service in a guild: an explicit mention, a reply to one of its own messages,
+and an edit that adds a mention to a message that did not have one. A direct message is addressed to it
+by definition.
 
-## Never parse
+**A reply summons when the referenced message was authored by this service.** The Gateway payload
+usually carries the referenced message already, so the common case costs no API call, and when the
+payload carries only a reference id the runtime looks it up and compares the author, that lookup passing
+through the admission gate **so a busy channel cannot turn replies into a stream of API calls**. A reply
+aimed at another member is not a summon, and an unresolved reference is never guessed either way.
 
-`Parse` stays empty. The allowance is an explicit list of ids the harness
-resolved, so a mention is something the harness decided to deliver rather than
-something the model wrote. Parsing reply text would let a model be talked into
-pinging everyone, which is the failure this suppression was added for.
+Discord delivers `MESSAGE_UPDATE` under the guild messages intent the runtime already requests, so an
+edit involves no additional intent or permission and runs the same eligibility, exchange, access,
+admission, and summon path a new message runs. Three gates come first.
 
-## The roster is the conversation
+* **A member edit, not a link preview.** Discord emits the same event when it resolves an embed, with no
+  member involved. Only a member edit sets `edited_timestamp`, so an update without one is ignored.
+  Without this gate **a message that already named the service would summon again every time Discord
+  finished unfurling a link in it**.
+* **Guild only.** An update payload is partial, and a missing guild id would otherwise read as a direct
+  message, which summons without a mention and answers to a different policy.
+* **An explicit mention.** A partial payload is not a sound basis for re-deriving a reply reference, so
+  an edit summons on a mention alone.
 
-A name resolves only if it belongs to someone already in the turn: an author of
-a message in the history, the member who spoke, or someone one of those
-messages mentioned.
+**The duplicate gate keys on message id, and an edit keeps the id of the message it edited**, so a
+message this service already answered stays answered once however many times it is edited afterwards.
+Only a message it had no reason to answer before can become a summon, which is what "newly mentioned"
+means here.
 
-That needs no membership lookup and no API call, because all of it is already
-in the payloads the turn was built from. It is also the narrowest of the
-plausible rosters: the only people reachable are people in the room. Widening
-to guild members or roles later is a change of source, not a change of shape.
+## Mentions
 
-Two of those three sources are member-authored, so a member naming someone puts
-that person in the candidate set. That is correct, because reaching the person a
-conversation is about is the point. The harness still decides whether to deliver
-a mention, and those are separate: the candidate set is member-influenced, the
-delivery decision is not. Anyone widening the roster is widening a set that
-member text already reaches into.
+Naming someone in a reply reaches them. **Only people already in the conversation can be reached, and
+the harness decides which, never the model.** Every reply used to carry `Parse: []`, so Discord parsed
+no mentions at all and even a correctly formed `<@id>` arrived as inert text: the service could name
+people and could not reach them.
 
-## What it will not do
+`Parse` stays empty. The allowance is an explicit list of ids the harness resolved, so a mention is
+something the harness decided to deliver rather than something the model wrote, because **parsing reply
+text would let a model be talked into pinging everyone**, the failure this suppression was added for.
 
-Several rules decide that a name in a reply is not a person: a name too short,
-a name inside a word, a name inside a link, a code span or Discord markup, and a
-name inside a dotted identifier such as a hostname. See [what a mention will not
-do](sirens-echo-mention-boundaries.md).
+**The roster is the conversation.** A name resolves only if it belongs to someone already in the turn:
+an author of a message in the history, the member who spoke, or someone one of those messages mentioned.
+That needs no membership lookup and no API call, since all of it is already in the payloads the turn was
+built from, and it is the narrowest of the plausible rosters. Widening to guild members or roles later
+is a change of source, not a change of shape, and remains the open question: neither is built, because
+the narrow version answers the case the issue was filed about.
 
-## What is still open
+Two of those three sources are member-authored, so **a member naming someone puts that person in the
+candidate set**. That is correct, because reaching the person a conversation is about is the point, and
+the two decisions stay separate: the candidate set is member-influenced, the delivery decision is not.
+Anyone widening the roster is widening a set that member text already reaches into.
 
-Whether the roster should widen. Every guild member and named roles were both
-considered and neither is built, because the narrow version needs no new data
-and answers the case the issue was filed about: naming someone in a reply to
-the conversation they are part of.
+## What a mention will not do
 
-## See also
+**A name shorter than three characters never resolves**, because it matches too much ordinary prose to
+be safe. **A name inside a longer word is not that person**, matching being bounded so `alphabet` does
+not reach `alpha`. **A longer name wins over a shorter one it contains**, so a display name that happens
+to start with another person's name resolves as itself.
 
-- [notices](sirens-echo-notices.md) - the other thing the harness renders into
-  a reply rather than letting the model write.
-- [what a mention will not do](sirens-echo-mention-boundaries.md) - the
-  boundaries, in one place.
+**A person is named in prose, and that is what bounds this.** A name resolves only where prose puts one:
+after whitespace, an opening bracket, an emphasis mark, or the start of the reply. That one rule is what
+keeps a name from matching inside a link, a code span, Discord markup, or a dotted identifier. **Each of
+those arrived as its own defect and its own patch within one afternoon, and enumerating them was
+losing** (sirens-echo#494). The specific rules below remain as defence in depth, and their corpora are
+this rule's regression suite.
+
+A link, a code span, and Discord markup are carried through byte-identical, because their contents are
+an address, a command, or an id rather than a person, so **a member called `eco`, `wiki`, or `main`
+cannot corrupt a URL or a tool name by being in the room**. Bold, italic, and quoted text is prose, so a
+name inside one is still that person. The non-prose runs are named rather than prose being named,
+because the miss costs differ: an unlisted markup kind gets rewritten and someone reports it, while **an
+unlisted prose kind silently stops reaching people, and nobody reports that**.
+
+**A name inside a dotted identifier is not that person either.** A host written without a scheme is not
+a link by the shared definition, so a second rule covers it: a name immediately preceded by a dot is a
+label, so is a name whose following run of label characters arrives at a dot that begins another label,
+and a trailing dot before a space or the end of the reply is sentence punctuation, so a name that ends
+one still resolves (sirens-echo#481, sirens-echo#515).
+
+**The rule walks forward rather than reading the adjacent character**, because the *first* label of a
+host has nothing before it but a space, which is what prose looks like. In `eco-app.coilysiren.me` the
+name `coilysiren` sits after a dot and `eco` does not, so reading adjacency alone made the same host
+safe for one member and not for another. A hyphen joins labels, so the walk crosses one, and a hyphen
+that arrives at no dot is an ordinary word: **a member named `eco` is still reached in `eco-friendly
+builds`**, which is the case that keeps this from becoming "a name before a hyphen never resolves".
+Resolution reads every occurrence in a span rather than the first, because the first can be a hostname
+label while the person is named later in the sentence.
+
+**Someone named four times is reached once**, because a reply that mentions a person repeatedly should
+notify them, not ping them per sentence, and the remaining occurrences stay as the name and still read
+correctly. **An existing mention is left alone**, so nothing nests.
