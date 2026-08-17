@@ -40,12 +40,34 @@ never instructions it obeys. No filter separates a prompt that describes an
 instruction from one that issues it, so the bound is posture rather than
 detection, exactly as it is for [attachments](sirens-echo-attachments.md).
 
-## Not yet built
+## Deliberate groundwork for sirens-echo#127
 
-Registration itself. Rendering a command is pure and testable; registering it
-is a live API call whose failure mode is a malformed set in a real guild, and
-it interacts with when prompts are known, which is the open question on
-boot-time discovery.
+`CommandFromPrompt` has no production caller and that is the intended state,
+not an abandonment. It is the mapping half of sirens-echo#127, named as such in
+the commit that introduced it, and #127 is open with Kai's approval recorded.
+
+**The access-policy gap is not what is holding it.** #127 opened on the concern
+that a slash command is a summon path the policy does not model, and that gap
+closed: `docs/access-policy.reference.yaml` names all six summon paths, slash
+commands included, and `onInteraction` puts an interaction through the same
+`access.Evaluate` a mention takes.
+
+What is left is smaller and more concrete:
+
+* **Registration is a live API call**, and its failure mode is a malformed set
+  in a real guild. Rendering is pure and testable, so the split is where the
+  verifiable work stops.
+* **The promotable-prompt allowlist**, decided on #127. A prompt is not a
+  command until this repository says it is, and its argument schema is declared
+  here rather than taken from the publishing server. Nothing declares that list
+  yet.
+* `SIRENS_ECHO_DISCORD_COMMANDS` **defaults false** and neither lane sets it,
+  so the surface that does exist is dark rather than reachable.
+
+Boot-time prompt discovery was the fourth reason and is no longer one:
+sirens-echo#163 closed.
+
+Delete this file only alongside #127. A caller count is not the reason to.
 
 ## See also
 
