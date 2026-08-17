@@ -1,6 +1,7 @@
 package community
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -104,15 +105,35 @@ func claimsCompletedTrackerAction(reply string) bool {
 	return false
 }
 
-// ParseReply bounds the model's plain-text reply. Nothing unwraps a fence or
-// JSON: a fence is reply content now, and stripping it would corrupt an answer.
+// ErrReplySilent reports a model that returned no final text. See
+// docs/sirens-echo-reply-assembly.md.
+var ErrReplySilent = errors.New("model reply is empty")
+
+// unchosenSilence reports an empty reply from a turn that did nothing, which is
+// a failure rather than a decision. See docs/sirens-echo-reply-assembly.md.
+func unchosenSilence(reply string, executed []ExecutedTool) bool {
+	return reply == "" && len(executed) == 0
+}
+
+// ParseReply bounds the reply and reads empty as silence. Nothing unwraps a
+// fence: a fence is reply content, and stripping it would corrupt an answer.
 func ParseReply(raw string) (string, error) {
 	reply := strings.TrimSpace(raw)
-	if reply == "" {
-		return "", fmt.Errorf("model reply is empty")
-	}
 	if len([]rune(reply)) > 1800 {
 		return "", fmt.Errorf("model reply exceeds 1800 characters")
+	}
+	return reply, nil
+}
+
+// RequireReply is ParseReply where the caller has no silence to express: a
+// scorer measures text and a job content message delivers it.
+func RequireReply(raw string) (string, error) {
+	reply, err := ParseReply(raw)
+	if err != nil {
+		return "", err
+	}
+	if reply == "" {
+		return "", ErrReplySilent
 	}
 	return reply, nil
 }
