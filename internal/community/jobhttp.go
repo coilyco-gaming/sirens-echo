@@ -135,6 +135,13 @@ func (a *Agent) writeJobError(
 			writer, request,
 			http.StatusNotFound, exceptionJobNotFound, "job not found",
 		)
+	case IsGrantDenial(err):
+		// A grant this deployment does not hold is not a request the caller can
+		// correct, so it must not share 400 with a malformed one.
+		a.writeJobHTTPError(
+			writer, request,
+			http.StatusForbidden, exceptionJobNotPermitted, "job kind is not permitted",
+		)
 	case errors.Is(err, ErrJobQueueFull):
 		a.writeJobHTTPError(
 			writer, request,

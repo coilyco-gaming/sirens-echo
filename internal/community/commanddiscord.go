@@ -188,6 +188,11 @@ func (a *Agent) runCommand(ctx context.Context, request commandRequest) string {
 		},
 	})
 	if err != nil {
+		// Retrying a refusal cannot succeed, so it does not get the notice that
+		// invites one. See sirens-echo#825.
+		if IsGrantDenial(err) {
+			return harnessNotice("you are not permitted to start this job kind")
+		}
 		return harnessNotice("job could not be accepted")
 	}
 	a.bindJobThread(ctx, job, request.ThreadID)

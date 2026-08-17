@@ -204,6 +204,7 @@ func TestEveryJobRefusalCarriesItsOwnExceptionCode(t *testing.T) {
 		exceptionJobRequestInvalid,
 		exceptionJobBodyTooLarge,
 		exceptionJobRejected,
+		exceptionJobNotPermitted,
 		exceptionJobNotFound,
 		exceptionJobQueueFull,
 	} {
@@ -229,10 +230,37 @@ func TestEveryJobRefusalCarriesItsOwnExceptionCode(t *testing.T) {
 		exceptionJobRequestInvalid,
 		exceptionJobBodyTooLarge,
 		exceptionJobRejected,
+		exceptionJobNotPermitted,
 		exceptionJobNotFound,
 	} {
 		if got := exceptionFor(code).fault; got != faultCaller {
 			t.Errorf("%s fault = %q, want %q", exceptionFor(code).typeName, got, faultCaller)
 		}
+	}
+}
+
+// A grant this deployment does not hold is permanent, so it must not arrive as
+// the 400 a malformed body gets. See sirens-echo#825.
+func TestARefusedGrantIsForbiddenRatherThanABadRequest(t *testing.T) {
+	t.Parallel()
+	blocker := newBlockingExecutor()
+	agent := jobAgent(t, blocker)
+	t.Cleanup(func() { close(blocker.release) })
+	agent.jobs.Grants = &GrantTable{Principals: []PrincipalGrant{
+		{ID: "1024000000000000001", Kinds: Allowlist{All: true}},
+	}}
+
+	refused, _ := postJob(t, agent, `{"kind":"echo","request_id":"ungranted"}`)
+	if refused.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d. body = %s",
+			refused.Code, http.StatusForbidden, refused.Body.String())
+	}
+
+	// The separation is the point: a caller cannot tell a permanent refusal from
+	// a correctable mistake when both answer the same way.
+	malformed, _ := postJob(t, agent, `{"kind":"nonexistent"}`)
+	if malformed.Code == refused.Code {
+		t.Errorf("a malformed request and a refused grant both answered %d",
+			malformed.Code)
 	}
 }

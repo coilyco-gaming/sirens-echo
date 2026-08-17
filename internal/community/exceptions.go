@@ -39,6 +39,7 @@ const (
 	exceptionJobRequestInvalid
 	exceptionJobBodyTooLarge
 	exceptionJobRejected
+	exceptionJobNotPermitted
 	exceptionJobNotFound
 	exceptionJobQueueFull
 	exceptionContentGateModelFailed
@@ -276,6 +277,15 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "The job submission was refused.",
 		stage:    "jobs",
 		outcome:  "rejected",
+		fault:    faultCaller,
+	},
+	// Separate from rejected, because a refusal a retry can never satisfy must
+	// not read as a request the caller could correct. See sirens-echo#825.
+	exceptionJobNotPermitted: {
+		typeName: "sirens_echo.jobs.not_permitted",
+		message:  "The principal is not granted this job kind.",
+		stage:    "jobs",
+		outcome:  "not_permitted",
 		fault:    faultCaller,
 	},
 	exceptionJobNotFound: {
