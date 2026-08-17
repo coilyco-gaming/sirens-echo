@@ -155,6 +155,22 @@ var (
 	maxJobContentWindow   time.Duration
 )
 
+// Tool-call mirror. Metadata only, and off the turn's path entirely.
+// See docs/sirens-echo-tool-mirror.md.
+var (
+	// mirrorQueueDepth bounds what a Temporal outage can hold in memory. Past
+	// it records drop, which is counted rather than silent.
+	mirrorQueueDepth int
+	// mirrorTimeout bounds one mirror write, well under a turn so a hung
+	// backend cannot stall the queue behind it.
+	mirrorTimeout time.Duration
+	// trajectoryIdle ends a turn's trajectory workflow once its calls stop.
+	trajectoryIdle time.Duration
+	// trajectoryLifetime is the hard ceiling on one trajectory, so a lost idle
+	// timer cannot leave a workflow open forever.
+	trajectoryLifetime time.Duration
+)
+
 // Model retry. Only fast failures are retried, so the whole ladder fits well
 // inside the turn ceiling. See docs/sirens-echo-model-retry.md.
 var (
@@ -377,6 +393,11 @@ func knobs() []knob {
 		overridable(&modelRetryAttempts, "SIRENS_ECHO_MODEL_RETRY_ATTEMPTS", 4),
 		overridable(&modelRetryBackoff, "SIRENS_ECHO_MODEL_RETRY_BACKOFF", 250*time.Millisecond),
 		overridable(&modelIdleTimeout, "SIRENS_ECHO_MODEL_IDLE_TIMEOUT", 45*time.Second),
+
+		overridable(&mirrorQueueDepth, "SIRENS_ECHO_MIRROR_QUEUE_DEPTH", 256),
+		overridable(&mirrorTimeout, "SIRENS_ECHO_MIRROR_TIMEOUT", 5*time.Second),
+		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 10*time.Minute),
+		overridable(&trajectoryLifetime, "SIRENS_ECHO_TRAJECTORY_LIFETIME", time.Hour),
 
 		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
 		overridable(&defaultQueueTimeout, "SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second),
@@ -763,6 +784,9 @@ type Config struct {
 	// DiscordCommandsEnabled registers and serves application commands. Off by
 	// default because registering is a write to Discord's API.
 	DiscordCommandsEnabled bool
+	// TemporalMirror is the Temporal Cloud mirror's connection. Empty disables
+	// it entirely. See docs/sirens-echo-tool-mirror.md.
+	TemporalMirror TemporalMirrorConfig
 	// JobWorkspaceRoot enables executing jobs. Empty means no execution at all,
 	// which is the default posture.
 	JobWorkspaceRoot string
@@ -864,29 +888,35 @@ func LoadConfig() (Config, error) {
 		DiscordGuildIDs:        splitList(os.Getenv("DISCORD_GUILD_IDS")),
 		DiscordDMEnabled:       dmEnabled,
 		DiscordCommandsEnabled: commandsEnabled,
-		AgentProxyURL:          valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
-		AgentProxyModel:        strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
-		OTLPEndpoint:           valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
-		HTTPListenAddr:         valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
-		MCPRosterPath:          strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
-		AccessPolicyPath:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
-		ContentClassesPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
-		HTTPTrustToken:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
-		FetchHosts:             fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
-		SandboxLabelID:         positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
-		DestinationLabelID:     positiveInt(os.Getenv("SIRENS_ECHO_DESTINATION_LABEL")),
-		JobStoreDir:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
-		JobStoreDSN:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE_DSN")),
-		RepoInventoryURL:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_URL")),
-		RepoInventoryOrg:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_ORG")),
-		ScratchDir:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
-		PhrasesPath:            strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
-		TuningApplied:          tuningApplied,
-		TuningRejected:         tuningRejected,
-		RequestTimeout:         defaultRequestTimeout,
-		QueueTimeout:           defaultQueueTimeout,
-		ShutdownGrace:          defaultShutdownGrace,
-		RateLimit:              rateLimit,
+		TemporalMirror: TemporalMirrorConfig{
+			HostPort:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_HOST")),
+			Namespace: strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_NAMESPACE")),
+			TaskQueue: strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_TASK_QUEUE")),
+			APIKey:    strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_API_KEY")),
+		},
+		AgentProxyURL:      valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
+		AgentProxyModel:    strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
+		OTLPEndpoint:       valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),
+		HTTPListenAddr:     valueOrDefault(os.Getenv("SIRENS_ECHO_HTTP_ADDR"), defaultHTTPListenAddr),
+		MCPRosterPath:      strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
+		AccessPolicyPath:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
+		ContentClassesPath: strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
+		HTTPTrustToken:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
+		FetchHosts:         fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
+		SandboxLabelID:     positiveInt(os.Getenv("SIRENS_ECHO_SANDBOX_LABEL")),
+		DestinationLabelID: positiveInt(os.Getenv("SIRENS_ECHO_DESTINATION_LABEL")),
+		JobStoreDir:        strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE")),
+		JobStoreDSN:        strings.TrimSpace(os.Getenv("SIRENS_ECHO_JOB_STORE_DSN")),
+		RepoInventoryURL:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_URL")),
+		RepoInventoryOrg:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_REPO_INVENTORY_ORG")),
+		ScratchDir:         strings.TrimSpace(os.Getenv("SIRENS_ECHO_SCRATCH")),
+		PhrasesPath:        strings.TrimSpace(os.Getenv("SIRENS_ECHO_PHRASES")),
+		TuningApplied:      tuningApplied,
+		TuningRejected:     tuningRejected,
+		RequestTimeout:     defaultRequestTimeout,
+		QueueTimeout:       defaultQueueTimeout,
+		ShutdownGrace:      defaultShutdownGrace,
+		RateLimit:          rateLimit,
 	}
 	if !mcpServerNamePattern.MatchString(cfg.InstanceName) {
 		return Config{}, fmt.Errorf("SIRENS_ECHO_INSTANCE must be a lowercase service name")

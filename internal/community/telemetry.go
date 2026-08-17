@@ -54,6 +54,10 @@ type Telemetry struct {
 	metricSDK            *sdkmetric.MeterProvider
 	traceProvider        trace.TracerProvider
 	propagator           propagation.TextMapPropagator
+	// mirrorDrops counts records the mirror never delivered, so an outage is
+	// visible rather than silent. See docs/sirens-echo-tool-mirror.md.
+	mirrorDrops metric.Int64Counter
+	dispatch    *mirrorDispatch
 }
 
 // logSink chooses where structured logs go. Nil means stdout; a runner writing
@@ -210,6 +214,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	mirrorDrops, err := meter.Int64Counter("sirens_echo.mirror.drops")
+	if err != nil {
+		return nil, err
+	}
 	admissions, err := meter.Int64Counter("sirens_echo.admissions")
 	if err != nil {
 		return nil, err
@@ -262,6 +270,7 @@ func newTelemetry(
 		turnDuration:         turnDuration,
 		modelCalls:           modelCalls,
 		toolCalls:            toolCalls,
+		mirrorDrops:          mirrorDrops,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
 		phraseInvocations:    phraseInvocations,
@@ -387,6 +396,7 @@ func (t *Telemetry) RecordModelCall(ctx context.Context, outcome string) {
 func (t *Telemetry) RecordToolCall(
 	ctx context.Context,
 	server, tool, outcome string,
+	elapsed time.Duration,
 ) {
 	t.toolCalls.Add(
 		ctx,
@@ -397,6 +407,39 @@ func (t *Telemetry) RecordToolCall(
 			attribute.String("outcome", outcome),
 		),
 	)
+	// The same curated triple, and nothing read from the span. See
+	// docs/sirens-echo-tool-mirror.md.
+	t.dispatch.send(ToolCallRecord{
+		Server:        server,
+		Tool:          tool,
+		Outcome:       outcome,
+		ElapsedMillis: elapsed.Milliseconds(),
+		TraceID:       traceIDOf(ctx),
+	})
+}
+
+// AttachToolMirror starts the mirror. A nil mirror leaves the dispatch nil and
+// every send a no-op, which is the shape a deployment without one runs.
+func (t *Telemetry) AttachToolMirror(mirror ToolCallMirror) {
+	t.dispatch = newMirrorDispatch(
+		mirror,
+		mirrorQueueDepth,
+		mirrorTimeout,
+		func() { t.mirrorDrops.Add(context.Background(), 1) },
+	)
+}
+
+// CloseToolMirror stops the worker. Anything still queued is dropped, because
+// the turns it described have already answered.
+func (t *Telemetry) CloseToolMirror() { t.dispatch.Close() }
+
+// traceIDOf reads the correlation id off the span, or empty outside one.
+func traceIDOf(ctx context.Context) string {
+	span := trace.SpanContextFromContext(ctx)
+	if !span.IsValid() {
+		return ""
+	}
+	return span.TraceID().String()
 }
 
 // RecordAdmission records one admission decision. Both labels are closed sets,
