@@ -1,3 +1,7 @@
+---
+inline: always
+---
+
 # Requests that are declined
 
 Declined whatever the conversation looks like and whoever is asking. These come

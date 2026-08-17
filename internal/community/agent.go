@@ -148,6 +148,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(cfg.FetchHosts) > 0 {
 		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
 	}
+	// The references the prompt no longer carries, read when the model decides
+	// one is relevant. See sirens-echo#859.
+	if references, err := LoadSkillReferences(cfg.Definition.LocalSkillRoots); err == nil &&
+		len(references) > 0 {
+		extras = append(extras, &SkillProvider{References: references})
+	}
 	// Unconditional, because it needs no configuration and a tool shipped dark
 	// behind an unset switch is a tool nobody has. See sirens-echo#916.
 	extras = append(extras, &CalculatorProvider{})

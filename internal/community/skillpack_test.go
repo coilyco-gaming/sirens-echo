@@ -86,10 +86,25 @@ func TestLoadSkillpackReadsComposedSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
-	for _, expected := range []string{"Purple and black.", "Reference detail.", "Ordinary body."} {
+	for _, expected := range []string{"Purple and black.", "Ordinary body."} {
 		if !strings.Contains(pack, expected) {
 			t.Fatalf("skillpack missing %q:\n%s", expected, pack)
 		}
+	}
+	// The reference is fetchable rather than inlined, and the pack says so, or
+	// the model has no way to know it exists. See sirens-echo#859.
+	if strings.Contains(pack, "Reference detail.") {
+		t.Errorf("a reference was inlined:\n%s", pack)
+	}
+	if !strings.Contains(pack, "references/detail.md") {
+		t.Errorf("the pack does not index the reference:\n%s", pack)
+	}
+	references, err := LoadSkillReferences([]string{composed, ordinary})
+	if err != nil {
+		t.Fatalf("LoadSkillReferences: %v", err)
+	}
+	if len(references) != 1 || !strings.Contains(references[0].Body, "Reference detail.") {
+		t.Fatalf("references = %#v", references)
 	}
 	if strings.Contains(pack, "name: coilyco-favorites") {
 		t.Fatal("composed frontmatter reached the model context")

@@ -1,3 +1,7 @@
+---
+inline: always
+---
+
 # The organizations, and what these agents are
 
 ## The relationship

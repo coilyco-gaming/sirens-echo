@@ -13,9 +13,69 @@ import (
 // skills ship SKILL.md and agent-compose composed sources ship COMPOSED.md.
 var skillEntrypoints = []string{"SKILL.md", "COMPOSED.md"}
 
-// LoadSkillpack loads each root's entrypoint and one-level reference Markdown
-// in deterministic order. See docs/sirens-echo-prompt.md.
+// SkillReference is one reference file the model reads when it decides the file
+// is relevant, rather than paying for it every turn. See sirens-echo#859.
+type SkillReference struct {
+	// Path is repo-relative and is the identifier read_skill takes.
+	Path  string
+	Title string
+	Body  string
+}
+
+// LoadSkillpack loads what every turn carries: each root's entrypoint, plus the
+// references that must not be optional. See docs/sirens-echo-prompt.md.
 func LoadSkillpack(roots []string) (string, error) {
+	pack, _, err := loadSkills(roots)
+	return pack, err
+}
+
+// LoadSkillReferences returns what read_skill serves, which is everything the
+// pack left out.
+func LoadSkillReferences(roots []string) ([]SkillReference, error) {
+	_, references, err := loadSkills(roots)
+	return references, err
+}
+
+// loadSkills partitions the roots once, so the pack and the catalog cannot
+// disagree about which file is in which.
+func loadSkills(roots []string) (string, []SkillReference, error) {
+	files, err := skillFiles(roots)
+	if err != nil {
+		return "", nil, err
+	}
+	if len(files) == 0 {
+		return "", nil, fmt.Errorf("skillpack contains no SKILL.md or reference Markdown")
+	}
+	var output strings.Builder
+	references := make([]SkillReference, 0)
+	for _, path := range files {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			return "", nil, fmt.Errorf("read skill file %s: %w", path, err)
+		}
+		text := string(raw)
+		body := stripFrontmatter(text)
+		if body == "" {
+			return "", nil, fmt.Errorf("skill file %s has no body", path)
+		}
+		slashed := filepath.ToSlash(path)
+		if isReferencePath(path) && !inlineAlways(text) {
+			references = append(references, SkillReference{
+				Path: slashed, Title: firstHeading(body), Body: body,
+			})
+			continue
+		}
+		fmt.Fprintf(&output, "\n## Source: %s\n\n%s\n", slashed, body)
+		if output.Len() > maxSkillpackBytes {
+			return "", nil, fmt.Errorf("skillpack exceeds %d bytes", maxSkillpackBytes)
+		}
+	}
+	return strings.TrimSpace(output.String() + skillIndex(references)), references, nil
+}
+
+// skillFiles lists every entrypoint and one-level reference, in deterministic
+// order, across every root.
+func skillFiles(roots []string) ([]string, error) {
 	files := make([]string, 0)
 	for _, root := range roots {
 		if err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
@@ -29,37 +89,54 @@ func LoadSkillpack(roots []string) (string, error) {
 			if err != nil {
 				return err
 			}
-			slashed := filepath.ToSlash(relative)
-			if isSkillEntrypoint(slashed) ||
-				(strings.HasPrefix(slashed, "references/") && strings.HasSuffix(slashed, ".md")) {
+			if isSkillEntrypoint(filepath.ToSlash(relative)) || isReferencePath(path) {
 				files = append(files, path)
 			}
 			return nil
 		}); err != nil {
-			return "", fmt.Errorf("walk skill root %s: %w", root, err)
+			return nil, fmt.Errorf("walk skill root %s: %w", root, err)
 		}
 	}
 	sort.Strings(files)
-	if len(files) == 0 {
-		return "", fmt.Errorf("skillpack contains no SKILL.md or reference Markdown")
-	}
+	return files, nil
+}
 
-	var output strings.Builder
-	for _, path := range files {
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return "", fmt.Errorf("read skill file %s: %w", path, err)
-		}
-		body := stripFrontmatter(string(raw))
-		if body == "" {
-			return "", fmt.Errorf("skill file %s has no body", path)
-		}
-		fmt.Fprintf(&output, "\n## Source: %s\n\n%s\n", filepath.ToSlash(path), body)
-		if output.Len() > maxSkillpackBytes {
-			return "", fmt.Errorf("skillpack exceeds %d bytes", maxSkillpackBytes)
+// isReferencePath reports a one-level reference file under a skill root.
+func isReferencePath(path string) bool {
+	slashed := filepath.ToSlash(path)
+	return strings.Contains(slashed, "/references/") && strings.HasSuffix(slashed, ".md")
+}
+
+// inlineAlways reports a reference that must not be optional. A model that has
+// to choose to read its own boundaries may not. See docs/sirens-echo-prompt.md.
+func inlineAlways(raw string) bool {
+	return frontmatterFlag(raw, "inline")
+}
+
+// skillIndex tells the model what it can read, because a file it cannot see is
+// a file it will not ask for.
+func skillIndex(references []SkillReference) string {
+	if len(references) == 0 {
+		return ""
+	}
+	var index strings.Builder
+	index.WriteString("\n## Readable references\n\n" +
+		"These are not in this prompt. Call read_skill with the path to read one, " +
+		"and do it before answering from memory on the subject it names.\n\n")
+	for _, reference := range references {
+		fmt.Fprintf(&index, "- `%s` - %s\n", reference.Path, reference.Title)
+	}
+	return index.String()
+}
+
+// firstHeading is what the index says a reference is about.
+func firstHeading(body string) string {
+	for _, line := range strings.Split(body, "\n") {
+		if trimmed := strings.TrimSpace(line); strings.HasPrefix(trimmed, "#") {
+			return strings.TrimSpace(strings.TrimLeft(trimmed, "# "))
 		}
 	}
-	return strings.TrimSpace(output.String()), nil
+	return "reference material"
 }
 
 // PlaceholderComposed keeps the tracked snapshot and the build-time policy
@@ -140,6 +217,26 @@ func isSkillEntrypoint(slashed string) bool {
 	for _, name := range skillEntrypoints {
 		if slashed == name {
 			return true
+		}
+	}
+	return false
+}
+
+// frontmatterFlag reads one boolean key out of a file's frontmatter, so the
+// decision about a reference lives in the reference.
+func frontmatterFlag(raw, key string) bool {
+	normalized := strings.ReplaceAll(raw, "\r\n", "\n")
+	if !strings.HasPrefix(normalized, "---\n") {
+		return false
+	}
+	end := strings.Index(normalized[4:], "\n---\n")
+	if end < 0 {
+		return false
+	}
+	for _, line := range strings.Split(normalized[4:4+end], "\n") {
+		name, value, found := strings.Cut(line, ":")
+		if found && strings.TrimSpace(name) == key {
+			return strings.TrimSpace(value) == "always" || strings.TrimSpace(value) == "true"
 		}
 	}
 	return false

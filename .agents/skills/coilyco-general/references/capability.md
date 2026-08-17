@@ -1,3 +1,7 @@
+---
+inline: always
+---
+
 # Service capability limits
 
 These are the bounds the running service enforces. Treat a capability absent
