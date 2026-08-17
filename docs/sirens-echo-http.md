@@ -17,8 +17,17 @@ own roster is not guarded against**: turns are serialized, so a self-call waits 
 already holds and fails on the queue timeout rather than recursing.
 
 **Reachability is decided at the network layer rather than by the process.** The k3s deployment binds
-`0.0.0.0:8080`, publishes only a private ClusterIP Service with no Ingress, certificate, DNS record, or
-NodePort, and routes callers through Echo's Tailscale sidecar, so reaching `/v1/turn` requires being an
+`0.0.0.0:8080` and publishes no Ingress, certificate, DNS record, or public resource. **Two paths reach
+it, and a lane has one or both.** Where a lane runs Echo's Tailscale sidecar, callers arrive on its
+MagicDNS name. Where the deployment binds a NodePort on kai-server they arrive there: `sirens-echo`
+30120, `sirens-deep` 30121, `sirens-deep-owl-glass` 30122, **one port per lane covering both surfaces**,
+because `HTTPHandler` hangs `/mcp` and the `/v1` paths off one mux on one listener. The ClusterIP is
+retained either way, so the in-namespace path is unchanged.
+
+**`sirens-deep-owl-glass` runs `tailnet.enabled: false`**, so it has no sidecar, no MagicDNS name, and
+the NodePort is its only path. Before that port it had no tailnet reach at all, which the single-path
+description above could not express. **The boundary is the same either way**: the NodePort is LAN and
+tailnet only, the home router forwards nothing to it, so reaching `/v1/turn` still requires being an
 authorized node on the tailnet. The process carries no credential of its own, and a deployment that
 exposes the listener any other way owns that boundary itself. The process binds `127.0.0.1:8080` by
 default; `SIRENS_ECHO_HTTP_ADDR` moves it.
@@ -69,8 +78,8 @@ one-second bucket so the advertised wait is a real window rather than a constant
 ## A trusted caller
 
 `/v1/turn` could not tell one caller from another. Authenticating the caller is the first half of fixing
-that; sessions and the prompt's principal assertion are separate, and the order matters. Echo is exposed
-through `ingress-tailscale` and has never been on the public internet, which does not make
+that; sessions and the prompt's principal assertion are separate, and the order matters. Echo is reached over the
+tailnet or the LAN behind it and has never been on the public internet, which does not make
 authentication unimportant, it makes the threat model **which tailnet peer** rather than **anyone at
 all**, a bounded problem.
 
