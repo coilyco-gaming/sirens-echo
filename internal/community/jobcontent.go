@@ -168,7 +168,7 @@ func (r *discordJobReporter) EmitJobContent(ctx context.Context, job Job, conten
 // validateJobContent runs the turn-independent half of runReplyChecks. The
 // order matches, so the two paths refuse in the same sequence.
 func (a *Agent) validateJobContent(content string) error {
-	reply, err := ParseReply(content)
+	reply, err := RequireReply(content)
 	if err != nil {
 		return err
 	}

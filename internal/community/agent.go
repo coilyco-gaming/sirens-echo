@@ -1156,6 +1156,11 @@ func (a *Agent) runTurn(
 	validateCtx, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
 	refused := replyCheckParse
+	// Silence a turn did not earn is the parse failure it always was, so the
+	// stage, the check name, and the notice are unchanged for it.
+	if err == nil && unchosenSilence(reply, result.ToolCalls) {
+		err = ErrReplySilent
+	}
 	if err == nil {
 		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
@@ -1204,6 +1209,12 @@ func (a *Agent) runTurn(
 	)
 	validateSpan.End()
 
+	// An agent that already answered through a tool declines to answer twice,
+	// and nothing else can express that. See docs/sirens-echo-reply-assembly.md.
+	if reply == "" {
+		return a.finishSilently(turnCtx, progress, result)
+	}
+
 	// A canonical phrase is a deployment artifact rather than model prose, so it
 	// renders after the checks. See docs/sirens-echo-phrases.md.
 	if reply, err = a.renderPhrases(turnCtx, reply); err != nil {
@@ -1226,6 +1237,24 @@ func (a *Agent) runTurn(
 	}
 	// The answer is the outcome, so nothing is left to describe work in flight.
 	a.clearTurnMarks(turnCtx)
+	a.beats.reply()
+	return nil
+}
+
+// finishSilently ends a turn that chose to produce no final text. The choice is
+// recorded, so chosen silence and a broken turn stay apart. See sirens-echo#895.
+func (a *Agent) finishSilently(
+	ctx context.Context,
+	progress *turnProgress,
+	result CompletionResult,
+) error {
+	a.telemetry.Info(
+		ctx,
+		"turn.reply.silent",
+		slog.Int("tool_calls", len(result.ToolCalls)),
+	)
+	a.settleWithSpan(ctx, progress.settleDelay(), progress.Settle)
+	a.clearTurnMarks(ctx)
 	a.beats.reply()
 	return nil
 }

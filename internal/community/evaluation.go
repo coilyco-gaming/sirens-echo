@@ -295,7 +295,7 @@ func ScoreEvaluationCaseAll(
 	aliases []string,
 	principal Principal,
 ) (string, []error) {
-	reply, err := ParseReply(result.Content)
+	reply, err := RequireReply(result.Content)
 	// A parse failure is a precondition rather than a peer. Running the rest on
 	// an unparsed reply would report failures about text nobody would send.
 	if err != nil {

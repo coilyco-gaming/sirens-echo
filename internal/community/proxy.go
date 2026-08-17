@@ -521,6 +521,10 @@ func (c ProxyClient) Complete(
 		if len(message.ToolCalls) == 0 {
 			content := strings.TrimSpace(message.Content.Text)
 			reply, contractErr := ParseReply(content)
+			// A turn that produced nothing at all is what repair exists for.
+			if contractErr == nil && unchosenSilence(reply, executed) {
+				contractErr = ErrReplySilent
+			}
 			if contractErr == nil {
 				contractErr = ValidateResponseStyle(c.ResponseStyle, reply)
 			}
