@@ -17,6 +17,8 @@ type unwiredCapability struct {
 }
 
 var unwiredCapabilities = []unwiredCapability{
+	// Groundwork for sirens-echo#127, decided on sirens-echo#823. Reasons in
+	// docs/sirens-echo-prompt-commands.md.
 	{"CommandFromPrompt", "renders an MCP prompt as a Discord command"},
 	{"IsGrantDenial", "classifies a refusal as record-do-not-retry"},
 }
