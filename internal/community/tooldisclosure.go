@@ -69,7 +69,7 @@ func toolDisclosure(executed []ExecutedTool) string {
 func toolDisclosureLine(call ExecutedTool, run int) string {
 	line := fmt.Sprintf(
 		"> %s %s `%s`",
-		toolDisclosureGlyph, toolOutcomeGlyph(call.Outcome), call.Name,
+		toolDisclosureGlyph, toolOutcomeGlyph(call.Outcome), call.Label(),
 	)
 	if run > 1 {
 		line += fmt.Sprintf(" ×%d", run)

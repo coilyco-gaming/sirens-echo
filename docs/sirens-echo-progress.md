@@ -5,7 +5,7 @@ two-second reply is noise.**
 
 ## The line
 
-Nothing for the first five seconds. After that, one line in the harness notice format that edits in
+Nothing for the first eight seconds. After that, one line in the harness notice format that edits in
 place as the turn moves: `reading recent messages`, `thinking...`, `calling a tool`, `checking the
 reply`. A turn that sits in one stage grows a clock line per beat, hour hand advancing
 (`still thinking 19 seconds...`). **The line is removed when the reply lands**, because the reply, or
@@ -19,11 +19,12 @@ read as two bots**. Restyling it is a contained change to `TurnProgressSink` onc
 * **Threshold** - nothing is posted until a turn has run long enough to be worth narrating, so **the
   fast path makes no Discord calls at all**.
 * **Edit rate** - edits are bounded, so a tool-heavy turn cannot spend its budget talking about itself,
-  and a stage that repeats is not re-sent.
-* **Advisory** - a failed post or edit is dropped rather than failing the turn, and a line that arrives
-  after the reply is deleted rather than left behind.
-* **Mention safety** - empty allowed mentions, as everywhere the harness speaks unprompted.
-* **Discord only** - HTTP and MCP answer synchronously, so the non-Discord path is a nil progress that
+  and a stage that repeats is not re-sent. **The clock column bounds height, not duration**, advancing
+  in place once full (#899).
+* **Advisory** - a failed post or edit is dropped rather than failing the turn, and a line arriving
+  after the reply is deleted.
+* **Mention safety** - empty allowed mentions, as everywhere the harness speaks.
+* **Discord only** - HTTP and MCP answer synchronously, so the non-Discord path is a nil progress
   every method accepts.
 
 **Stage transitions alone are not enough.** A turn changes stage twice in its first moments and then
@@ -36,10 +37,10 @@ separate mechanism with the same shape, because **a job's origin outlives its tu
 
 **The line starts a grid, and everything later lands on it.** A turn just over the threshold posts a
 line and answers a moment later, so the line vanishes before it is readable and the channel churns for
-nothing. So the line posts at five seconds and every message after it releases on a ten second grid
-measured from that post: ready at 5.1s means posted at 15s, ready at 15.1s means 25s.
+nothing. So the line posts at eight seconds and every message after releases on a sixteen second grid
+measured from that post: ready at 8.1s means posted at 24s, ready at 24.1s means 40s.
 
-**Only the five is written down.** The beat is twice the wait and the long-reply window is the wait plus
+**Only the eight is written down.** The beat is twice the wait and the long-reply window is the wait plus
 two beats, so one number moves all three, and a test pins both the derivation and today's values **so a
 derivation that quietly stopped deriving cannot pass**. The grid does not stop: a turn still running at
 the tenth beat waits for the eleventh, so the hold is at most one window and averages half of one
@@ -47,17 +48,16 @@ however long the turn runs. **Landing exactly on a beat is on time**, since roun
 to a whole extra window would be the cadence working against the member.
 
 **An unnarrated turn is never held**, which is what keeps an ordinary reply fast: a reply before five
-seconds posts no line, so there is no grid to wait for, and a cancelled turn stops waiting rather than
-sitting on the member's answer. **The failure path holds too**, reaching the line through the turn
+seconds posts no line, so there is no grid to wait for, and a cancelled turn stops waiting rather than sitting on
+the answer. **The failure path holds too**, reaching the line through the turn
 context, since a notice replacing a just-posted line churns as much as a reply does. That means a dead
 turn can show a stale line for up to one window before the notice replaces it, and **a notice that
 jumped the grid would make failure the one thing that answers instantly**. Edits ride the same beat,
 with the post counting as the first, so the first edit lands with the first beat.
 
-**Every sink call is recorded.** A discarded failure made three states indistinguishable: too short to
-narrate, posted and missed, or refused in silence. Post, edit, and delete now record
-`discord.progress.posted` or `discord.progress.failed`, so a refused post is visible without being a
-turn failure.
+**Every sink call is recorded.** A discarded failure made too short to narrate, posted and missed, and
+refused in silence alike. Post, edit, and delete record `discord.progress.posted` or
+`discord.progress.failed`, so a refused post is visible without failing a turn.
 
 ## Reactions as harness state
 

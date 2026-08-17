@@ -19,16 +19,21 @@ const threadNameFallback = "a longer answer"
 
 // threadTitlePrompt asks for the intent rather than a restatement. Kai's
 // example: how much does it cost to build a log house, to log house pricing.
-const threadTitlePrompt = "Name this request in at most six words, as a topic " +
-	"rather than a sentence. No punctuation at the end, no quotes, no preamble. " +
-	"Reply with the name and nothing else."
+func threadTitlePrompt() string {
+	return fmt.Sprintf(
+		"Name this request in at most %d words, as a topic rather than a sentence. "+
+			"No punctuation at the end, no quotes, no preamble. Reply with the name "+
+			"and nothing else.",
+		threadTitleWords,
+	)
+}
 
 // threadTitleRetryPrompt states the bound the first attempt missed. Built from
-// the constant, so the sentence cannot drift away from the number.
+// the knob, so the sentence cannot drift away from the number.
 func threadTitleRetryPrompt() string {
 	return fmt.Sprintf(
 		"%s The name must be at most %d characters.",
-		threadTitlePrompt,
+		threadTitlePrompt(),
 		threadTitleRunes,
 	)
 }
@@ -45,7 +50,7 @@ func threadTitle(
 	if completions == nil || message == nil {
 		return ""
 	}
-	name := threadTitleAttempt(ctx, completions, message, requestID, threadTitlePrompt)
+	name := threadTitleAttempt(ctx, completions, message, requestID, threadTitlePrompt())
 	if withinTitleBound(name) {
 		return name
 	}

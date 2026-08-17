@@ -2,6 +2,7 @@ package community
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -145,20 +146,30 @@ func TestAnEarlyBeatAddsNothing(t *testing.T) {
 	}
 }
 
-// The column is bounded, so a turn that hangs cannot grow without limit.
-func TestTheWaitColumnIsBounded(t *testing.T) {
+// The column is bounded, so a turn that hangs cannot grow without limit. The
+// bound is on height, not on how long it reports. See sirens-echo#899.
+func TestTheWaitColumnIsBoundedAndKeepsUpdating(t *testing.T) {
 	t.Parallel()
 	progress, sink, advance := waitingTurn(t)
 
-	for i := 0; i < maxProgressWaitLines+5; i++ {
+	beats := maxProgressWaitLines + 5
+	for i := 0; i < beats; i++ {
 		advance(turnProgressEvery)
 		progress.refresh(context.Background())
 	}
-	if len(sink.edits) != maxProgressWaitLines {
-		t.Fatalf("edits = %d, want the bound %d", len(sink.edits), maxProgressWaitLines)
+	// Every beat edits. The indicator went quiet at the cap, which is what a
+	// member read as the turn stalling around 130 seconds.
+	if len(sink.edits) != beats {
+		t.Fatalf("edits = %d, want one per beat, %d", len(sink.edits), beats)
 	}
-	if got := strings.Count(sink.edits[len(sink.edits)-1], "still "); got != maxProgressWaitLines {
+	final := sink.edits[len(sink.edits)-1]
+	if got := strings.Count(final, "still "); got != maxProgressWaitLines {
 		t.Errorf("final body carries %d wait lines, want %d", got, maxProgressWaitLines)
+	}
+	// The last line advances in place, so the newest elapsed is the one shown.
+	newest := int(turnProgressEvery.Seconds()) * beats
+	if !strings.Contains(final, fmt.Sprintf("%d seconds", newest)) {
+		t.Errorf("final body does not report %d seconds: %q", newest, final)
 	}
 }
 

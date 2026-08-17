@@ -3,6 +3,8 @@ package community
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/codes"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -121,5 +124,54 @@ func TestATraceSaysWhetherAToolReturnedAnything(t *testing.T) {
 				t.Errorf("mcp.tool.result_bytes = %q, want %q", got, testCase.bytes)
 			}
 		})
+	}
+}
+
+// 51 tool calls reported failure over 12h and 1 span carried error status, so
+// every generic error query sailed past them. See sirens-echo#873.
+func TestAToolReportingFailureCarriesSpanErrorStatus(t *testing.T) {
+	t.Parallel()
+	failed := toolCallSpan(t, FixtureTool{
+		Name: "find_trade", Server: "eco", Result: "boom", IsError: true,
+	})
+	if got := failed.Status().Code; got != codes.Error {
+		t.Errorf("status code = %v, want %v", got, codes.Error)
+	}
+	spec := exceptionFor(exceptionMCPToolReportedError)
+	if got := failed.Status().Description; got != spec.message {
+		t.Errorf("status description = %q, want %q", got, spec.message)
+	}
+	// The reason was null on all 51, which is the second half of the issue.
+	if got := recordedAttribute(failed, "error.type"); got != spec.typeName {
+		t.Errorf("error.type = %q, want %q", got, spec.typeName)
+	}
+	if got := recordedAttribute(failed, "error.outcome"); got != spec.outcome {
+		t.Errorf("error.outcome = %q, want %q", got, spec.outcome)
+	}
+}
+
+// A working call must stay unset, or the status stops meaning anything.
+func TestASucceedingToolCallCarriesNoErrorStatus(t *testing.T) {
+	t.Parallel()
+	ok := toolCallSpan(t, FixtureTool{Name: "find_trade", Server: "eco", Result: "913 offers"})
+	if got := ok.Status().Code; got == codes.Error {
+		t.Errorf("a successful tool call carried error status")
+	}
+	if got := recordedAttribute(ok, "error.type"); got != "" {
+		t.Errorf("error.type = %q on a successful call", got)
+	}
+}
+
+// A deadline and any other transport failure read alike until now, so a trace
+// could not confirm the 30s MCP timeout the issue suspected.
+func TestATimedOutToolCallIsNamedApartFromOtherFailures(t *testing.T) {
+	t.Parallel()
+	timedOut := mcpCallFailure(fmt.Errorf("call eco: %w", context.DeadlineExceeded))
+	if timedOut != exceptionMCPToolCallTimedOut {
+		t.Errorf("a deadline classified as %v", exceptionFor(timedOut).typeName)
+	}
+	other := mcpCallFailure(errors.New("connection reset"))
+	if other != exceptionMCPToolCallFailed {
+		t.Errorf("a transport failure classified as %v", exceptionFor(other).typeName)
 	}
 }

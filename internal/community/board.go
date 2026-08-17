@@ -299,7 +299,7 @@ func runBoardEpoch(
 	for _, call := range result.ToolCalls {
 		response.Tools = append(response.Tools, call.Name)
 	}
-	reply, err := ParseReply(result.Content)
+	reply, err := RequireReply(result.Content)
 	if err != nil {
 		// Preserve the raw content. A reply the parser rejects is still the
 		// behavior under study and deleting it would drop the evidence.

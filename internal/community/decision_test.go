@@ -1,6 +1,7 @@
 package community
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -30,13 +31,27 @@ func TestParseReplyPreservesFencedAndBracedContent(t *testing.T) {
 	}
 }
 
-func TestParseReplyRejectsEmptyAndOverlongReplies(t *testing.T) {
+// An empty reply is silence rather than a fault, so an agent that already
+// answered through a tool can decline to answer twice. See sirens-echo#895.
+func TestParseReplyTreatsEmptyAsSilenceAndRejectsOverlong(t *testing.T) {
 	t.Parallel()
-	if _, err := ParseReply("   "); err == nil {
-		t.Fatal("expected empty reply error")
+	if reply, err := ParseReply("   "); err != nil || reply != "" {
+		t.Fatalf("ParseReply(blank) = %q, %v", reply, err)
 	}
 	if _, err := ParseReply(strings.Repeat("a", 1801)); err == nil {
 		t.Fatal("expected overlong reply error")
+	}
+}
+
+// A scorer and a job content message have no silence to express, so the strict
+// parse is still available and still refuses.
+func TestRequireReplyStillRefusesSilence(t *testing.T) {
+	t.Parallel()
+	if _, err := RequireReply("   "); !errors.Is(err, ErrReplySilent) {
+		t.Fatalf("RequireReply(blank) error = %v", err)
+	}
+	if reply, err := RequireReply(" answered "); err != nil || reply != "answered" {
+		t.Fatalf("RequireReply = %q, %v", reply, err)
 	}
 }
 

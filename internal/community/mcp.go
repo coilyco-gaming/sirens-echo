@@ -87,9 +87,12 @@ const refreshToolDescription = "Re-read which tools every configured server " +
 // An empty roster is a valid no-tool capability boundary.
 type MCPProvider struct {
 	// Labels are what the harness attaches to a filed issue. Zero applies nothing.
-	Labels     issueLabelPolicy
-	Servers    []MCPServerDefinition
-	HTTPClient *http.Client
+	Labels issueLabelPolicy
+	// FilingCheck refuses a member-originated ticket with nothing to act on.
+	// Nil files everything. See docs/sirens-echo-issues.md.
+	FilingCheck func(ctx context.Context, title, body string) error
+	Servers     []MCPServerDefinition
+	HTTPClient  *http.Client
 	// RefreshInterval bounds staleness where notifications cannot arrive. Zero
 	// uses defaultRosterRefresh.
 	RefreshInterval time.Duration
@@ -154,9 +157,22 @@ type mcpToolSession struct {
 	callTimeout time.Duration
 	// labels are attached to an issue this service files. See sirens-echo#208.
 	labels issueLabelPolicy
+	// filingCheck runs before a filing reaches the tracker. See sirens-echo#852.
+	filingCheck func(ctx context.Context, title, body string) error
 	// refresh is the one tool that is not an MCP server's. Nil leaves it
 	// unoffered. See docs/sirens-echo-mcp.md.
 	refresh func() int
+}
+
+// refuseFiling runs the harness checks over what the model proposed to file.
+// Nil means it may be filed. See docs/sirens-echo-issues.md.
+func (s *mcpToolSession) refuseFiling(ctx context.Context, arguments map[string]any) error {
+	if s.filingCheck == nil {
+		return nil
+	}
+	title, _ := arguments["title"].(string)
+	body, _ := arguments["body"].(string)
+	return s.filingCheck(ctx, title, body)
 }
 
 // Open returns this turn's view over the supervised roster. It connects only
@@ -169,6 +185,7 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		registered:  make(map[string]registeredMCPTool),
 		callTimeout: p.callTimeout(),
 		labels:      p.Labels,
+		filingCheck: p.FilingCheck,
 	}
 	now := time.Now()
 	reached, listed := 0, 0
@@ -646,8 +663,8 @@ func boundGuidanceText(raw string) (string, bool) {
 	return text, true
 }
 
-// readGrounding reads the marked resources in priority order, stopping at the
-// document and byte bounds so a large catalogue cannot crowd out the turn.
+// readGrounding reads one server's marked resources in priority order. The
+// bounds are per server rather than per turn. See docs/sirens-echo-mcp.md.
 func (p *MCPProvider) readGrounding(
 	base context.Context,
 	entry *supervisedServer,
@@ -665,6 +682,7 @@ func (p *MCPProvider) readGrounding(
 		return candidates[i].URI < candidates[j].URI
 	})
 	documents := make([]GroundingDocument, 0, len(candidates))
+	// Per server, so a roster of eleven admits eleven of these. See #858.
 	budget := maxGroundingBytes
 	for _, resource := range candidates {
 		if len(documents) >= maxGroundingDocuments || budget <= 0 {
@@ -784,6 +802,11 @@ func (s *mcpToolSession) Call(
 	defer cancel()
 	// The model never supplies this and cannot omit it. See sirens-echo#208.
 	if s.labels.applies(tool) {
+		// Before the label, because a refused filing should not be labelled as
+		// one that happened. See docs/sirens-echo-issues.md.
+		if refused := s.refuseFiling(callCtx, arguments); refused != nil {
+			return ToolResult{Text: refused.Error(), IsError: true}, nil
+		}
 		arguments = s.labels.withHarnessLabels(arguments)
 	}
 	result, err := tool.session.CallTool(callCtx, &mcp.CallToolParams{

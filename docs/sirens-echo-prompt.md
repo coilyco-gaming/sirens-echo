@@ -1,8 +1,7 @@
 # The rendered prompt
 
 The model's instruction surface comes from three tracked sources, and `agent/rendered/*.prompt.txt`
-holds the assembled result, so **a prompt change is a reviewable diff rather than something a reader
-concatenates by hand**.
+holds the assembled result.
 
 `internal/community/prompt.go` supplies the scaffolding: harness identity line, pronoun policy, identity
 policy, admission sentence, trust policy, untrusted-input clause, tool-use clause, reply contract,
@@ -29,10 +28,13 @@ when any of that goes missing.
 A member replying to a message is addressing that message, so the turn names it rather than leaving the
 model to infer it from position: `bob is replying to alice: the plank market crashed on tuesday`. **The
 recent conversation still renders in full**, because naming the subject supplements recency rather than
-replacing it. Discord delivers the addressed message inline for most replies, and when it does not,
-**which is likeliest for the old messages this is worth most for**, the harness fetches it under the
-same budget as the other gate-forced calls. **Only one level renders**: a reply to a reply does not walk
-the chain, because the second level is a claim about what someone else was addressing.
+replacing it. Discord delivers the addressed message inline for most replies, and otherwise the harness
+fetches it under the same budget as the other gate-forced calls. **Only one level renders**: a reply to
+a reply does not walk the chain, because the second is a claim about someone else's subject.
+
+**The turn also carries a clock.** Nothing named the time, so `what time is it` had no answer and
+`discord-timestamps` had no epoch to render from (#855). One system message states the moment, **read
+once per turn**, so two rounds agree about it.
 
 ## Snapshots
 
@@ -97,8 +99,8 @@ Every raise is recorded with its cause, because **a raise is only correct when t
 intended**: Echo to 21976 for composing the ops role; Deep to 12260 when it gained
 `issue_tracker: forgejo`, the whole 863 bytes being the filing block Echo already carried; both by 315
 when Kai widened the filing trigger on #235; Echo to 23826 for object emoji (#203), the whole 1535 bytes
-being `references/object-emoji.md` and its pointer, **most of it the five rules rather than a lookup
-table**; both by 1951 when the org relationship became a shared knowledge source (#806); and both by 5
-when giving every agent one folder (#816) lengthened the definition path in each snapshot's header.
-**Recording a header change is pedantic, and that is the point**: a raise nobody can account for is
-exactly what this catches.
+being `references/object-emoji.md`; both by 1951 when the org relationship became a shared knowledge source (#806); both by 5
+when giving every agent one folder (#816) lengthened the definition path in each snapshot's header; and
+both by 203 for the rule routing arithmetic through the calculate tool (#916), which is what makes
+that tool used rather than offered.
+**Recording a header change is pedantic, and that is the point.**

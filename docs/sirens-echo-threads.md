@@ -53,12 +53,18 @@ job started in a channel has no referent of its own.
 
 ## Thread title length
 
-**Fifty characters, and an over-long one is asked again rather than cut.** `threadTitleRunes` is 50.
+**Sixty characters, and an over-long one is asked again rather than cut.** `threadTitleRunes` is 60.
 Discord's own cap is 100 and `threadNameRunes` still holds it, but 100 does not display whole in the
 thread list or in the narrow surfaces that truncate hardest (Kai's decision on sirens-echo#753). A
 trimmed title loses its subject, the one thing a title exists to carry, so an over-length title goes
 back to the model with the limit stated. `threadTitleRetryPrompt` builds that sentence from
 `threadTitleRunes`, **so the number in the prose cannot drift from the number in the check**.
+
+**The bound is not what decides length. `threadTitleWords` is.** Titles were reported clipped at around
+thirty characters against a fifty-rune bound, and nothing was truncating them: the titler was asked for
+six words, and six words is about thirty characters (#904). The bound is a ceiling the model never
+approached. Nine words reaches the forty to sixty range the report asked for, and raising the ceiling
+alone would have changed nothing a member could see.
 
 **Exactly one regeneration.** If the second answer is also over, the title is hard-trimmed and recorded
 as `thread.title.trimmed`, never a loop, because **a title generator must not be able to spend a turn's

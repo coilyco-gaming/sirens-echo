@@ -148,6 +148,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(cfg.FetchHosts) > 0 {
 		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
 	}
+	// Unconditional, because it needs no configuration and a tool shipped dark
+	// behind an unset switch is a tool nobody has. See sirens-echo#916.
+	extras = append(extras, &CalculatorProvider{})
 	if cfg.RepoInventoryOrg != "" && cfg.RepoInventoryURL != "" {
 		extras = append(extras, &RepoInventoryProvider{
 			BaseURL: cfg.RepoInventoryURL,
@@ -198,6 +201,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	// read it. See docs/sirens-echo-reply-assembly.md.
 	proxy.ValidateReply = agent.repairableReplyChecks
 	agent.completions = proxy
+	// Attached after the agent exists, because the checks are model calls it
+	// makes. See docs/sirens-echo-issues.md.
+	tools.FilingCheck = agent.checkMemberFiling
 	agent.ensureRuntimeDefaults()
 	if err := agent.attachToolMirror(); err != nil {
 		return nil, err
@@ -350,23 +356,45 @@ func jobGrants(policy *AccessPolicy) *GrantTable {
 	return &table
 }
 
-// recoverJobs settles whatever a restart found mid-flight, so no record sits
-// live forever after a crash.
+// recoverJobs settles whatever a restart left live, so no record sits live
+// forever after a crash and no requester is left waiting on one.
 func (a *Agent) recoverJobs(ctx context.Context) {
 	memory, ok := a.jobs.Store.(interface{ All() []Job })
 	if !ok {
 		return
 	}
-	stranded := StrandedJobIDs(memory.All())
-	if len(stranded) == 0 {
+	all := memory.All()
+	a.settleRestart(ctx, "stranded", StrandedJobIDs(all),
+		"interrupted by a restart", RecoverStrandedJobs)
+	// Queued work is dropped rather than stranded: nothing requeues it, so
+	// leaving the record accurate leaves it pending forever. See sirens-echo#878.
+	a.settleRestart(ctx, "dropped", DroppedJobIDs(all),
+		"dropped by a restart", SettleDroppedJobs)
+}
+
+// settleRestart settles one group and tells each requester, because a Discord
+// requester never reads the record. See docs/sirens-echo-jobs.md.
+func (a *Agent) settleRestart(
+	ctx context.Context,
+	group string,
+	ids []string,
+	outcome string,
+	settle func(JobStore, []string, string) ([]Job, error),
+) {
+	if len(ids) == 0 {
 		return
 	}
-	recovered, err := RecoverStrandedJobs(a.jobs.Store, stranded, "interrupted by a restart")
+	settled, err := settle(a.jobs.Store, ids, outcome)
 	if err != nil {
-		a.telemetry.Error(ctx, "job.recovery.failed", slog.Int("stranded", len(stranded)))
+		a.telemetry.Error(ctx, "job.recovery.failed",
+			slog.String("group", group), slog.Int("jobs", len(ids)))
 		return
 	}
-	a.telemetry.Info(ctx, "job.recovery.settled", slog.Int("jobs", len(recovered)))
+	for _, job := range settled {
+		a.jobs.notify(ctx, job)
+	}
+	a.telemetry.Info(ctx, "job.recovery.settled",
+		slog.String("group", group), slog.Int("jobs", len(settled)))
 }
 
 // Run opens the Gateway session and blocks until shutdown.
@@ -749,7 +777,50 @@ func mentionsBot(session *discordgo.Session, message *discordgo.Message) bool {
 			return true
 		}
 	}
+	return mentionsBotRole(session, message)
+}
+
+// mentionsBotRole summons on a mention of a role this account holds, because a
+// member who @s the role is addressing it. See docs/sirens-echo-mentions.md.
+func mentionsBotRole(session *discordgo.Session, message *discordgo.Message) bool {
+	if len(message.MentionRoles) == 0 || message.GuildID == "" {
+		return false
+	}
+	held := botRoles(session, message.GuildID)
+	if len(held) == 0 {
+		return false
+	}
+	for _, mentioned := range message.MentionRoles {
+		// The everyone role's id is the guild's, and every member holds it. An
+		// announcement is not addressed to this service.
+		if mentioned == message.GuildID {
+			continue
+		}
+		if _, holds := held[mentioned]; holds {
+			return true
+		}
+	}
 	return false
+}
+
+// botRoles reads this account's roles in one guild. Discord delivers its own
+// member on GuildCreate without the members intent, and a miss self-heals.
+func botRoles(session *discordgo.Session, guildID string) map[string]struct{} {
+	botID := session.State.User.ID
+	member, err := session.State.Member(guildID, botID)
+	if err != nil || member == nil {
+		member, err = session.GuildMember(guildID, botID)
+		if err != nil || member == nil {
+			return nil
+		}
+		// Written back so one lookup covers every later message in this guild.
+		_ = session.State.MemberAdd(member)
+	}
+	held := make(map[string]struct{}, len(member.Roles))
+	for _, role := range member.Roles {
+		held[role] = struct{}{}
+	}
+	return held
 }
 
 func summonedByReference(session *discordgo.Session, message *discordgo.Message) bool {
@@ -1156,6 +1227,11 @@ func (a *Agent) runTurn(
 	validateCtx, validateSpan := a.telemetry.StartSpan(turnCtx, "response.validate")
 	reply, err := ParseReply(result.Content)
 	refused := replyCheckParse
+	// Silence a turn did not earn is the parse failure it always was, so the
+	// stage, the check name, and the notice are unchanged for it.
+	if err == nil && unchosenSilence(reply, result.ToolCalls) {
+		err = ErrReplySilent
+	}
 	if err == nil {
 		reply, refused, err = a.runReplyChecks(reply, prompt, result)
 	}
@@ -1221,6 +1297,12 @@ func (a *Agent) runTurn(
 	)
 	validateSpan.End()
 
+	// An agent that already answered through a tool declines to answer twice,
+	// and nothing else can express that. See docs/sirens-echo-reply-assembly.md.
+	if reply == "" {
+		return a.finishSilently(turnCtx, progress, result)
+	}
+
 	// A canonical phrase is a deployment artifact rather than model prose, so it
 	// renders after the checks. See docs/sirens-echo-phrases.md.
 	if reply, err = a.renderPhrases(turnCtx, reply); err != nil {
@@ -1243,6 +1325,24 @@ func (a *Agent) runTurn(
 	}
 	// The answer is the outcome, so nothing is left to describe work in flight.
 	a.clearTurnMarks(turnCtx)
+	a.beats.reply()
+	return nil
+}
+
+// finishSilently ends a turn that chose to produce no final text. The choice is
+// recorded, so chosen silence and a broken turn stay apart. See sirens-echo#895.
+func (a *Agent) finishSilently(
+	ctx context.Context,
+	progress *turnProgress,
+	result CompletionResult,
+) error {
+	a.telemetry.Info(
+		ctx,
+		"turn.reply.silent",
+		slog.Int("tool_calls", len(result.ToolCalls)),
+	)
+	a.settleWithSpan(ctx, progress.settleDelay(), progress.Settle)
+	a.clearTurnMarks(ctx)
 	a.beats.reply()
 	return nil
 }

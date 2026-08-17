@@ -70,9 +70,22 @@ type ExecutedTool struct {
 	Name      string
 	Arguments string
 	Result    string
+	// Server and Original are how the worklog names the same call, carried so
+	// the two member-facing surfaces agree. See docs/sirens-echo-worklog.md.
+	Server   string
+	Original string
 	// Outcome is what the call did. Recorded here rather than derived later,
 	// because a failure is not visible from the result text.
 	Outcome ToolOutcome
+}
+
+// Label is the one spelling of a call a member sees, on the worklog row while
+// it runs and in the receipt afterwards. See sirens-echo#900.
+func (e ExecutedTool) Label() string {
+	if e.Server == "" || e.Original == "" {
+		return e.Name
+	}
+	return e.Server + "." + e.Original
 }
 
 // ToolOutcome is the three-state vocabulary the disclosure footer renders. An
@@ -84,6 +97,15 @@ const (
 	ToolOutcomeEmpty  ToolOutcome = "empty"
 	ToolOutcomeFailed ToolOutcome = "failed"
 )
+
+// mcpCallFailure separates a deadline from every other transport failure, so a
+// trace can confirm a timeout. See sirens-echo#873.
+func mcpCallFailure(err error) exceptionCode {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return exceptionMCPToolCallTimedOut
+	}
+	return exceptionMCPToolCallFailed
+}
 
 // outcomeOf classifies one completed call. A transport error never reaches
 // here, because it ends the turn instead.
@@ -160,6 +182,27 @@ type ProxyClient struct {
 	// ValidateReply offers the harness checks to the repair loop. Advisory, so a
 	// nil hook changes no verdict. See docs/sirens-echo-reply-assembly.md.
 	ValidateReply func(reply string, prompt TurnPrompt, executed []ExecutedTool) error
+	// Now is the turn's only clock. Nil is the wall clock. See sirens-echo#855.
+	Now Clock
+}
+
+func (c ProxyClient) now() time.Time {
+	if c.Now != nil {
+		return c.Now()
+	}
+	return time.Now().UTC()
+}
+
+// clockMessage states the moment the turn started. Nothing else in the prompt
+// carries one, so no question about the time was answerable. See #855.
+func clockMessage(now time.Time) string {
+	moment := now.UTC()
+	return fmt.Sprintf(
+		"The current time is %s. Unix epoch %d. It is read once when the turn "+
+			"starts and does not advance while the turn runs.",
+		moment.Format("2006-01-02 15:04:05 UTC"),
+		moment.Unix(),
+	)
 }
 
 // harnessRefusal asks the injected checks, if any. Kept separate from the
@@ -419,7 +462,12 @@ func (c ProxyClient) Complete(
 		}
 	}
 
-	messages := []chatMessage{{Role: "system", Content: prompt.System}}
+	messages := []chatMessage{
+		{Role: "system", Content: prompt.System},
+		// Directly under the local policy, because it is a fact about this turn
+		// rather than reference material. See docs/sirens-echo-prompt.md.
+		{Role: "system", Content: clockMessage(c.now())},
+	}
 	// What each surface is for, in the server's own words, so the model knows
 	// which one to reach for. See docs/sirens-echo-mcp.md.
 	if guidance := guidanceMessage(serverGuidances); guidance != "" {
@@ -522,6 +570,11 @@ func (c ProxyClient) Complete(
 			content := strings.TrimSpace(message.Content.Text)
 			reply, contractErr := ParseReply(content)
 			refused := replyCheckParse
+			// A turn that produced nothing at all is what repair exists for, and
+			// it gates rather than ships: parse has nothing to send.
+			if contractErr == nil && unchosenSilence(reply, executed) {
+				contractErr = ErrReplySilent
+			}
 			if contractErr == nil {
 				if styleErr := ValidateResponseStyle(c.ResponseStyle, reply); styleErr != nil {
 					contractErr, refused = styleErr, replyCheckResponseStyle
@@ -670,7 +723,7 @@ func (c ProxyClient) Complete(
 					toolCtx, definition.Server, definition.Original, ToolOutcomeFailed)
 				telemetry.RecordToolCall(
 					toolCtx, definition.Server, definition.Original, "error", elapsed)
-				telemetry.MarkSpanError(toolSpan, exceptionMCPToolCallFailed)
+				telemetry.MarkSpanError(toolSpan, mcpCallFailure(err))
 				toolSpan.End()
 				return CompletionResult{}, ToolFailure{
 					Server: definition.Server,
@@ -710,6 +763,11 @@ func (c ProxyClient) Complete(
 				attribute.Int("mcp.tool.limit_bytes", toolBytes),
 				attribute.Bool("mcp.tool.truncated", trimmed),
 			)
+			// Error status, or a tool reporting its own failure stays invisible
+			// to every query keyed on it. See sirens-echo#873.
+			if result.IsError {
+				telemetry.MarkSpanError(toolSpan, exceptionMCPToolReportedError)
+			}
 			// Ended before the spill, which writes a file. A disk write inside
 			// this span would report as tool latency.
 			toolSpan.End()
@@ -719,6 +777,8 @@ func (c ProxyClient) Complete(
 				Name:      call.Function.Name,
 				Arguments: call.Function.Arguments,
 				Result:    result.Text,
+				Server:    definition.Server,
+				Original:  definition.Original,
 				Outcome:   outcomeOf(result),
 			})
 			if trimmed {

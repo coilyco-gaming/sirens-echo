@@ -56,9 +56,9 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 		if _, present := fields["response_format"]; present {
 			t.Errorf("request carries response_format = %s", fields["response_format"])
 		}
-		if len(body.Messages) != 2 ||
+		if len(body.Messages) != 3 ||
 			body.Messages[0].Role != "system" ||
-			body.Messages[1].Role != "user" {
+			body.Messages[2].Role != "user" {
 			t.Errorf("messages = %#v", body.Messages)
 		}
 		if len(body.Tools) != 0 {
@@ -215,9 +215,9 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 				`{"choices":[{"message":{"content":null,"reasoning_content":"` + reasoning + `","tool_calls":[{"id":"call-1","type":"function","function":{"name":"eco__get_eco_server_status","arguments":"{}"}}]}}]}`,
 			))
 		case 2:
-			if len(body.Messages) != 4 {
+			if len(body.Messages) != 5 {
 				t.Errorf("messages = %#v", body.Messages)
-			} else if got := reasoningText(body.Messages[2].ReasoningContent); got != reasoning {
+			} else if got := reasoningText(body.Messages[3].ReasoningContent); got != reasoning {
 				t.Errorf("reasoning content = %q, want %q", got, reasoning)
 			}
 			_, _ = writer.Write([]byte(
@@ -298,12 +298,12 @@ func TestProxyClientRepairsStyleViolationOnce(t *testing.T) {
 			))
 		case 2:
 			repairPrompt := ""
-			if len(body.Messages) == 4 {
-				repairPrompt, _ = body.Messages[3].Content.(string)
+			if len(body.Messages) == 5 {
+				repairPrompt, _ = body.Messages[4].Content.(string)
 			}
-			if len(body.Messages) != 4 ||
-				body.Messages[2].Role != "assistant" ||
-				body.Messages[3].Role != "user" ||
+			if len(body.Messages) != 5 ||
+				body.Messages[3].Role != "assistant" ||
+				body.Messages[4].Role != "user" ||
 				!strings.Contains(repairPrompt, "violated the required response contract") {
 				t.Errorf("repair messages = %#v", body.Messages)
 			}
@@ -354,11 +354,11 @@ func TestProxyClientRepairsEmptyReplyOnce(t *testing.T) {
 			))
 		case 2:
 			repairPrompt := ""
-			if len(body.Messages) == 3 {
-				repairPrompt, _ = body.Messages[2].Content.(string)
+			if len(body.Messages) == 4 {
+				repairPrompt, _ = body.Messages[3].Content.(string)
 			}
-			if len(body.Messages) != 3 ||
-				body.Messages[2].Role != "user" ||
+			if len(body.Messages) != 4 ||
+				body.Messages[3].Role != "user" ||
 				!strings.Contains(repairPrompt, "violated the required response contract") {
 				t.Errorf("repair messages = %#v", body.Messages)
 			}
@@ -412,10 +412,10 @@ func TestProxyClientRepairsPersonalityOnce(t *testing.T) {
 			))
 		case 2:
 			repairPrompt := ""
-			if len(body.Messages) == 4 {
-				repairPrompt, _ = body.Messages[3].Content.(string)
+			if len(body.Messages) == 5 {
+				repairPrompt, _ = body.Messages[4].Content.(string)
 			}
-			if len(body.Messages) != 4 ||
+			if len(body.Messages) != 5 ||
 				!strings.Contains(repairPrompt, "neutral, concise") ||
 				len(body.Tools) != 0 {
 				t.Errorf("repair request = %#v", body)
@@ -467,8 +467,8 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 			))
 		case 2:
 			repairPrompt := ""
-			if len(body.Messages) == 4 {
-				repairPrompt, _ = body.Messages[3].Content.(string)
+			if len(body.Messages) == 5 {
+				repairPrompt, _ = body.Messages[4].Content.(string)
 			}
 			if !strings.Contains(repairPrompt, "selected social tone") ||
 				strings.Contains(repairPrompt, "neutral, concise") {

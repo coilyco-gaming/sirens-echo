@@ -21,7 +21,7 @@ the end.
   with the loss stated in the reply**.
 - Agent Proxy loop for MCP schemas, tool calls, results, and continuation. Public Eco MCP, and a private
   Forgejo MCP fixed to this repository with issue create, close, comment, label changes, and bounded
-  reads. **No Forgejo token in the Echo pod.**
+  reads. **No Forgejo token in the Echo pod.** Arithmetic evaluated exactly in process.
 - Impersonal response contract rejecting greetings, emotive emoji, banter, sign-offs, and open-ended
   offers. Plain-text replies with one style-aware repair, grounding checks reading first-person and
   passive claims alike **over prose with links masked out**, and neutral-style validation where

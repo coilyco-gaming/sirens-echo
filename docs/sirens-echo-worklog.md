@@ -50,6 +50,11 @@ path (#791) and the thread routing**, so it is its own change. **The threshold i
 seconds**: the design table says ~2.5s, but `turnProgressAfter` is an operator knob with the beat and
 the thread threshold derived from it, **so halving it halves both**.
 
+**The receipt names a call the way this element did.** The footer rendered the model-facing
+`scratchpad__write` while the row above rendered `scratchpad.write`, so a member who watched a scratch
+call run looked for it afterwards and found nothing (#900). `ExecutedTool.Label` is the one spelling
+both take. **Neither surface filters anything**, and the receipt's collapsed runs state their count.
+
 ## Attribution
 
 Reading the record of any effect answers "who asked for this" without inference. **Attribution is

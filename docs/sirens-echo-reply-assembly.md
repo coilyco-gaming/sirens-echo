@@ -93,3 +93,11 @@ at risk, never the removal.** **A remainder can still depend on what was removed
 checks rules rather than reasoning, so the mark is the mitigation. `response.check` names the rule so a
 redaction appears in the refusal rates, `response.redacted.blocks` carries the count on every turn
 including zero, and `response.check.redacted` logs the rule, the sentence, and the count.
+
+## A turn may be silent
+
+**An agent holding a write tool aimed at its own reply channel answered twice**, because every accepted
+turn had to produce text (#895). `ParseReply` reads empty as silence and a silent turn posts nothing.
+**Silence is a choice only once the turn has done something**: a turn that ran no tool and said nothing
+is the failure it always was. `RequireReply` keeps the strict parse for the scorer and job content, and
+`turn.reply.silent` records the choice, **so chosen silence and a broken turn never read alike**.

@@ -313,15 +313,15 @@ func TestAFailedProgressPostIsRecorded(t *testing.T) {
 	}
 }
 
-// Kai asked for a five second threshold on sirens-echo#375, and the grid is
-// twice it by derivation rather than by a second decision.
+// The threshold is a decision rather than an accident, and the grid is twice it
+// by derivation. The numbers live in cadencederivation_test.go.
 func TestProgressThresholdsMatchTheRequestedCadence(t *testing.T) {
 	t.Parallel()
-	if turnProgressAfter != 5*time.Second {
-		t.Errorf("turnProgressAfter = %s, want 5s", turnProgressAfter)
+	if turnProgressAfter != wantProgressAfter {
+		t.Errorf("turnProgressAfter = %s, want %s", turnProgressAfter, wantProgressAfter)
 	}
-	if turnProgressEvery != 10*time.Second {
-		t.Errorf("turnProgressEvery = %s, want 10s", turnProgressEvery)
+	if turnProgressEvery != wantProgressEvery {
+		t.Errorf("turnProgressEvery = %s, want %s", turnProgressEvery, wantProgressEvery)
 	}
 }
 

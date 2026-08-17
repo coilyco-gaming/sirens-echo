@@ -19,6 +19,8 @@ const (
 	exceptionMCPServerUnavailable
 	exceptionMCPSessionCloseFailed
 	exceptionMCPToolCallFailed
+	exceptionMCPToolCallTimedOut
+	exceptionMCPToolReportedError
 	exceptionModelRequestMarshalFailed
 	exceptionModelRequestBuildFailed
 	exceptionModelTransportFailed
@@ -136,6 +138,24 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		message:  "MCP tool call failed.",
 		stage:    "mcp",
 		outcome:  "tool_call_failed",
+		fault:    faultService,
+	},
+	// Split from tool_call_failed so a trace can confirm a timeout rather than
+	// leaving the duration to imply one. See sirens-echo#873.
+	exceptionMCPToolCallTimedOut: {
+		typeName: "sirens_echo.mcp.tool_call_timed_out",
+		message:  "MCP tool call exceeded its deadline.",
+		stage:    "mcp",
+		outcome:  "tool_call_timed_out",
+		fault:    faultService,
+	},
+	// The tool answered and reported its own failure, so the turn continues.
+	// See docs/sirens-echo-telemetry.md.
+	exceptionMCPToolReportedError: {
+		typeName: "sirens_echo.mcp.tool_reported_error",
+		message:  "An MCP tool reported its own call as failed.",
+		stage:    "mcp",
+		outcome:  "tool_reported_error",
 		fault:    faultService,
 	},
 	exceptionModelRequestMarshalFailed: {

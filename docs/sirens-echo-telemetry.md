@@ -100,3 +100,8 @@ Discovery covers a connect and three listings per server, and the whole roster u
 span, **so a rejection was an `HTTP POST` carrying a URL and nothing else**. `mcp.server.discovery` now
 wraps one server's round trips and carries `mcp.server.name`, with `mcp.discovery.stage` moving through
 `connect`, `tools`, `resources`, and `prompts`, **so a failure's stage is the span's last value** (#139).
+
+**A tool reporting its own failure now carries error status.** 51 did in twelve hours against one error
+span of 158, so every generic error query missed them (#873). The type is
+`sirens_echo.mcp.tool_reported_error`, **the class rather than the tool's own words**, since a span
+carries no bodies, and a deadline splits out as `tool_call_timed_out`. Neither fails the turn.
