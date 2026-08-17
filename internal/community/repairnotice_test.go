@@ -21,9 +21,13 @@ const firstPersonAnswer = "No, I do not have access to an AOS general knowledge 
 	"base. My available tools are limited to Eco server data, Forgejo issue " +
 	"tracking, Steam store data, and scratchpad file operations."
 
-// refusingServer answers every call with 200 and the same refusable reply, so
-// the repair path exhausts without the backend ever failing.
-func refusingServer(t *testing.T, calls *atomic.Int32) *httptest.Server {
+// A gating refusal, which is what still reaches exhaustion now that a quality
+// rule ships instead. Over the transport bound, so there is nothing to send.
+var overlongAnswer = strings.Repeat("a", 1801)
+
+// refusingServer answers every call with 200 and the same reply, so the repair
+// path resolves without the backend ever failing.
+func refusingServer(t *testing.T, calls *atomic.Int32, answer string) *httptest.Server {
 	t.Helper()
 	return httptest.NewServer(http.HandlerFunc(func(
 		writer http.ResponseWriter,
@@ -35,7 +39,7 @@ func refusingServer(t *testing.T, calls *atomic.Int32) *httptest.Server {
 		}
 		calls.Add(1)
 		writer.Header().Set("Content-Type", "application/json")
-		reply, err := json.Marshal(firstPersonAnswer)
+		reply, err := json.Marshal(answer)
 		if err != nil {
 			t.Fatalf("marshal reply: %v", err)
 		}
@@ -44,29 +48,58 @@ func refusingServer(t *testing.T, calls *atomic.Int32) *httptest.Server {
 	}))
 }
 
-// exhaustRepair drives a neutral turn to repair exhaustion and returns the
-// error, so each assertion below reads one property of the same failure.
-func exhaustRepair(t *testing.T) error {
-	t.Helper()
-	var calls atomic.Int32
-	server := refusingServer(t, &calls)
-	defer server.Close()
-
-	client := ProxyClient{
-		BaseURL:       server.URL,
+// neutralClient is the profile from the trace, pointed at one fixture server.
+func neutralClient(url string) ProxyClient {
+	return ProxyClient{
+		BaseURL:       url,
 		Model:         "model",
 		AuditRole:     "community",
 		Attribution:   "Sirens Echo",
 		ResponseStyle: ResponseStyleNeutral,
 		HTTPClient:    &http.Client{Timeout: 2 * time.Second},
 	}
-	_, err := client.Complete(
+}
+
+// The answer the issue is about. Two correct completions were discarded and the
+// member was told the backend was down. Now it reaches them. See #651.
+func TestTheAnswerFromTheTraceNowReachesTheMember(t *testing.T) {
+	t.Parallel()
+	var calls atomic.Int32
+	server := refusingServer(t, &calls, firstPersonAnswer)
+	defer server.Close()
+
+	got, err := neutralClient(server.URL).Complete(
+		context.Background(),
+		TurnPrompt{System: "system", Message: "do you have access to the aos general knowledge base?"},
+		"request",
+	)
+	if err != nil {
+		t.Fatalf("a well-formed answer was discarded over voice: %v", err)
+	}
+	if got.Content != firstPersonAnswer {
+		t.Errorf("completion = %q", got.Content)
+	}
+	// Still repaired first. Shipping is the last rung, not the first.
+	if calls.Load() < 2 {
+		t.Errorf("the repair path ran %d model calls, so it did not try", calls.Load())
+	}
+}
+
+// exhaustRepair drives a neutral turn to repair exhaustion and returns the
+// error, so each assertion below reads one property of the same failure.
+func exhaustRepair(t *testing.T) error {
+	t.Helper()
+	var calls atomic.Int32
+	server := refusingServer(t, &calls, overlongAnswer)
+	defer server.Close()
+
+	_, err := neutralClient(server.URL).Complete(
 		context.Background(),
 		TurnPrompt{System: "system", Message: "do you have access to the aos general knowledge base?"},
 		"request",
 	)
 	if err == nil {
-		t.Fatal("a reply the neutral rule refuses was accepted")
+		t.Fatal("a reply over the transport bound was accepted")
 	}
 	// The premise: every call was answered. If the fixture ever fails a call
 	// this test stops being about criterion 1.
@@ -116,7 +149,7 @@ func TestTheLabelAgreesWithTheNotice(t *testing.T) {
 func TestTheRefusingCheckSurvivesTheWrapper(t *testing.T) {
 	t.Parallel()
 	err := exhaustRepair(t)
-	if !strings.Contains(err.Error(), "first-person") {
+	if !strings.Contains(err.Error(), "1800 characters") {
 		t.Errorf("the wrapped error no longer names what was refused: %v", err)
 	}
 }

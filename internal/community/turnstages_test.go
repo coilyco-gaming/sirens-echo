@@ -306,8 +306,9 @@ func TestARepairRecordsWhatItRefused(t *testing.T) {
 		Telemetry:     telemetry,
 	}.Complete(context.Background(), TurnPrompt{System: "system", Message: "can you read the kb"}, "request")
 
-	if err == nil {
-		t.Fatal("a first-person reply was accepted under the neutral profile")
+	// The reply ships now, and the repair still ran and still said why.
+	if err != nil {
+		t.Fatalf("a first-person reply was discarded under the neutral profile: %v", err)
 	}
 	logged := recorded.String()
 	repair := loggedLine(logged, "model.response.repair")
@@ -319,9 +320,14 @@ func TestARepairRecordsWhatItRefused(t *testing.T) {
 	if !strings.Contains(repair, "first-person or collective voice") {
 		t.Errorf("the repair does not say what it refused:\n%s", repair)
 	}
-	gaveUp := loggedLine(logged, "model.response.refused")
-	if !strings.Contains(gaveUp, "first-person or collective voice") {
-		t.Errorf("giving up recorded no reason:\n%s", logged)
+	// And on the line recording what happened to the reply, which is now that
+	// it shipped rather than that the turn gave up.
+	shipped := loggedLine(logged, "model.response.shipped")
+	if !strings.Contains(shipped, "first-person or collective voice") {
+		t.Errorf("shipping recorded no reason:\n%s", logged)
+	}
+	if !strings.Contains(shipped, `"check":"response_style"`) {
+		t.Errorf("shipping did not name the rule:\n%s", shipped)
 	}
 }
 

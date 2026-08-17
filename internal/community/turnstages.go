@@ -18,6 +18,17 @@ const (
 	replyCheckResponseStyle  = "response_style"
 )
 
+// qualityChecks are the rules about how an answer reads. A quality refusal is
+// recorded and the reply still ships. See docs/sirens-echo-delivery.md.
+var qualityChecks = map[string]bool{
+	replyCheckResponseStyle:  true,
+	replyCheckToolCallMarkup: true,
+}
+
+// checkGates reports a refusal that must not reach a member. Unlisted gates, so
+// a new rule fails closed rather than shipping. See sirens-echo#651.
+func checkGates(check string) bool { return !qualityChecks[check] }
+
 // The grounding rules. The family covers four independent checks, so its slug
 // narrowed nothing. See docs/sirens-echo-grounding.md.
 const (

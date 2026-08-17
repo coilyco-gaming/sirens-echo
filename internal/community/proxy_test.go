@@ -500,7 +500,9 @@ func TestProxyClientSocialRepairPreservesSelectedStyle(t *testing.T) {
 	}
 }
 
-func TestProxyClientRejectsPersistentStyleViolation(t *testing.T) {
+// A style rule is about how an answer reads, so it repairs once and then ships
+// rather than discarding a well-formed reply. See sirens-echo#651.
+func TestProxyClientShipsPersistentStyleViolation(t *testing.T) {
 	t.Parallel()
 	var round atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(
@@ -522,10 +524,14 @@ func TestProxyClientRejectsPersistentStyleViolation(t *testing.T) {
 		Attribution: "Sirens Echo",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 	}
-	_, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
-	if err == nil || !strings.Contains(err.Error(), "invalid response after 1 repair attempt") {
-		t.Fatalf("error = %v", err)
+	got, err := client.Complete(context.Background(), TurnPrompt{System: "system", Message: "user"}, "request")
+	if err != nil {
+		t.Fatalf("a well-formed reply was discarded over style: %v", err)
 	}
+	if got.Content != "Hey there! Happy to help." {
+		t.Fatalf("completion = %q", got.Content)
+	}
+	// Repaired first, and shipped only once the budget was spent.
 	if calls := round.Load(); calls != 2 {
 		t.Fatalf("model rounds = %d", calls)
 	}
