@@ -897,6 +897,19 @@ func (e modelHTTPError) Error() string {
 	return fmt.Sprintf("Agent Proxy returned HTTP %d", e.Status)
 }
 
+// rejectedByModel reports a request the backend refused as malformed. Retrying
+// rebuilds the same request, so it is never worth one. See sirens-echo#875.
+func rejectedByModel(err error) bool {
+	var status modelHTTPError
+	if !errors.As(err, &status) {
+		return false
+	}
+	// 4xx only, and not the two the harness can wait out.
+	return status.Status >= 400 && status.Status < 500 &&
+		status.Status != http.StatusTooManyRequests &&
+		status.Status != http.StatusRequestTimeout
+}
+
 // retryableModel reports a failure worth trying again. Availability only: a
 // 4xx is the request being wrong and retrying it fails identically.
 func retryableModel(err error) bool {

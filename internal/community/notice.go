@@ -70,6 +70,9 @@ var (
 	noticeTimedOut      = harnessNotice("turn timed out, retry shortly")
 	noticeHistoryFailed = harnessNotice("channel history unavailable")
 	noticeModelFailed   = harnessNotice("model backend unavailable, retry shortly")
+	// The backend answered, and refused the request this service built. Nothing
+	// about it is the member's to fix or worth retrying. See sirens-echo#875.
+	noticeModelRejected = harnessNotice("harness built a request the model refused")
 	// Distinct from the ceiling notice: nothing arrived at all, so retrying is
 	// the right advice where at the ceiling it is not. See sirens-echo#171.
 	noticeModelSilent  = harnessNotice("model backend went quiet, retry shortly")
@@ -103,8 +106,11 @@ const (
 	causeTimeout = "timeout"
 	// The backend sent no bytes at all, which the turn ceiling cannot express.
 	causeModelSilent = "model_silent"
-	causeToolFailed  = "tool_failed"
-	causeRoundsSpent = "rounds_spent"
+	// The backend rejected the request as malformed. Separate from every
+	// availability cause, because no retry and no fallback can satisfy it.
+	causeModelRejected = "model_rejected"
+	causeToolFailed    = "tool_failed"
+	causeRoundsSpent   = "rounds_spent"
 	// Named for what happened rather than where, because the stage is model
 	// and the model is not what failed. See sirens-echo#651.
 	causeReplyRefused = "reply_refused"
@@ -143,6 +149,8 @@ func failureCause(cause error) string {
 	// the ceiling bound was unalertable. See sirens-echo#549.
 	case errors.Is(cause, ErrBudgetExhausted):
 		return causeBudgetSpent
+	case rejectedByModel(cause):
+		return causeModelRejected
 	}
 	return causeStage
 }
@@ -172,6 +180,10 @@ func turnFailureNotice(stage string, cause error) string {
 	// Narrowing the question is the move that works. See sirens-echo#549.
 	case errors.Is(cause, ErrBudgetExhausted):
 		return noticeBudgetSpent
+	// Ahead of the stage switch, because this happens at the model stage and
+	// the backend was reachable the whole time. See sirens-echo#875.
+	case rejectedByModel(cause):
+		return noticeModelRejected
 	}
 	switch stage {
 	case stageHistory:
