@@ -154,6 +154,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		len(references) > 0 {
 		extras = append(extras, &SkillProvider{References: references})
 	}
+	// Unconditional, because it needs no configuration and a tool shipped dark
+	// behind an unset switch is a tool nobody has. See sirens-echo#916.
+	extras = append(extras, &CalculatorProvider{})
 	if cfg.RepoInventoryOrg != "" && cfg.RepoInventoryURL != "" {
 		extras = append(extras, &RepoInventoryProvider{
 			BaseURL: cfg.RepoInventoryURL,
@@ -204,6 +207,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	// read it. See docs/sirens-echo-reply-assembly.md.
 	proxy.ValidateReply = agent.repairableReplyChecks
 	agent.completions = proxy
+	// Attached after the agent exists, because the checks are model calls it
+	// makes. See docs/sirens-echo-issues.md.
+	tools.FilingCheck = agent.checkMemberFiling
 	agent.ensureRuntimeDefaults()
 	if err := agent.attachToolMirror(); err != nil {
 		return nil, err

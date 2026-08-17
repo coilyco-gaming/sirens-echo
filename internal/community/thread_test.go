@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"testing"
@@ -165,6 +166,12 @@ func TestASummaryIsCleanedLikeAName(t *testing.T) {
 
 // A title that comes back over-length is regenerated, not trimmed. See #753.
 
+// statedTitleLimit comes from the knob, so raising the bound cannot strand a
+// test on a sentence the code stopped writing. See sirens-echo#904.
+func statedTitleLimit() string {
+	return fmt.Sprintf("at most %d characters", threadTitleRunes)
+}
+
 // lengthAwareClient answers long until the request states the bound, so a test
 // can tell a regeneration from a retry of the same prompt.
 type lengthAwareClient struct {
@@ -177,7 +184,7 @@ func (c *lengthAwareClient) Complete(
 	_ context.Context, prompt TurnPrompt, _ string,
 ) (CompletionResult, error) {
 	c.prompts = append(c.prompts, prompt.System)
-	if strings.Contains(prompt.System, "at most 50 characters") {
+	if strings.Contains(prompt.System, statedTitleLimit()) {
 		return CompletionResult{Content: c.short}, nil
 	}
 	return CompletionResult{Content: c.long}, nil
@@ -200,10 +207,10 @@ func TestAnOverLongTitleIsRegeneratedWithTheLimitStated(t *testing.T) {
 	if len(client.prompts) != 2 {
 		t.Fatalf("made %d titling calls, want exactly one regeneration", len(client.prompts))
 	}
-	if strings.Contains(client.prompts[0], "50 characters") {
+	if strings.Contains(client.prompts[0], statedTitleLimit()) {
 		t.Error("the first request already stated the limit, so the second proves nothing")
 	}
-	if !strings.Contains(client.prompts[1], "at most 50 characters") {
+	if !strings.Contains(client.prompts[1], statedTitleLimit()) {
 		t.Errorf("the second request does not state the limit: %q", client.prompts[1])
 	}
 }
@@ -276,5 +283,34 @@ func TestATitleInsideTheBoundIsNotRegenerated(t *testing.T) {
 	}
 	if len(client.prompts) != 1 {
 		t.Errorf("made %d titling calls for a title already inside the bound", len(client.prompts))
+	}
+}
+
+// The reported clip was around 30 characters against a 50-rune bound, because
+// the bound was never what decided length. See sirens-echo#904.
+func TestTheTitlerIsAskedForTheLengthTheBoundAllows(t *testing.T) {
+	t.Parallel()
+	client := &lengthAwareClient{long: "market price comparison", short: "market price comparison"}
+
+	threadTitle(t.Context(), client, &discordgo.Message{Content: "prices?"}, "req-1", nil)
+
+	if len(client.prompts) == 0 {
+		t.Fatal("no titling call was made, so this test asserts nothing")
+	}
+	if !strings.Contains(client.prompts[0], fmt.Sprintf("at most %d words", threadTitleWords)) {
+		t.Errorf("the titler was not asked for the word budget: %q", client.prompts[0])
+	}
+	// A word averages about five characters plus its space, so the word budget
+	// has to be able to reach the range the issue asked for.
+	if reachable := threadTitleWords * 6; reachable < 40 {
+		t.Errorf("%d words reaches about %d characters, under the 40 floor",
+			threadTitleWords, reachable)
+	}
+	if threadTitleRunes < 40 || threadTitleRunes > 60 {
+		t.Errorf("the title bound is %d, outside the 40 to 60 range", threadTitleRunes)
+	}
+	// The room has to exist for the words to use, or the retry fires every time.
+	if threadTitleWords*6 > threadTitleRunes+6 {
+		t.Errorf("%d words overshoots a %d rune bound", threadTitleWords, threadTitleRunes)
 	}
 }

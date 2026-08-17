@@ -99,9 +99,10 @@ Every raise is recorded with its cause, because **a raise is only correct when t
 intended**: Echo to 21976 for composing the ops role; Deep to 12260 for
 `issue_tracker: forgejo`, 863 bytes of filing block Echo already carried; both by 315
 when Kai widened the filing trigger on #235; Echo to 23826 for object emoji (#203), 1535 bytes
-of `references/object-emoji.md`; both by 1951 for the shared org source (#806); and by 5
-when giving every agent one folder (#816) lengthened the definition path in each snapshot's header.
-**Recording a header change is pedantic, and that is the point.**
+of `references/object-emoji.md`; both by 1951 for the shared org source (#806); by 5
+when giving every agent one folder (#816) lengthened the definition path in each snapshot's header; and
+both by 203 for the calculate rule (#916).
+**Recording a header change is pedantic. That is the point.**
 
-**A drop is recorded too.** Echo fell to 18839 and Deep to 12649 when references left the prompt for
-`read_skill` (#859). A budget left high banks the saving and spends it again unnoticed.
+**A drop is recorded too.** Echo fell to 19042 and Deep to 12852 when references left for
+`read_skill` (#859). A budget left high banks the saving and spends it again.

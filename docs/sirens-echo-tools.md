@@ -12,9 +12,8 @@ authority.
 When a definition configures MCP servers, the harness opens every session, lists each published tool,
 description, and input schema, exposes each model name as `<server>__<tool>`, sends those schemas with
 the Agent Proxy request, executes valid model-requested tools, renders each result as text, appends the
-calls and results, then continues. **An empty roster skips discovery and sends no tools.** Final content
-can be an OpenAI-compatible string, text-part array, or text object, and **continuation stops after six
-tool rounds**.
+calls and results, then continues. **An empty roster skips discovery and sends no tools.** Final content can be an
+OpenAI-compatible string, text-part array, or text object.
 
 The harness rejects empty, colliding, or overlong model-facing tool names; tool calls missing an
 identifier or function name; calls to tools absent from the discovered roster; arguments that are not
@@ -24,34 +23,35 @@ the model so it reports the gap.** Only an unreachable roster stops the turn, a 
 fatal, an invocation failure ends the turn with the tool-failure notice, and an MCP error result is
 grounded data the model self-corrects from.
 
-The in-process MCP fixture proves schema discovery, a tool-call-only first model response, complete
-result continuation, a grounded reply, alternate content forms, and that **a tool which never answers
-fails on the call bound rather than on the turn's**. The live Echo evaluation requires an
-`eco__get_eco_server_status` call without sending Discord or Forgejo writes.
+The in-process MCP fixture proves schema discovery, a tool-call-only first response, continuation,
+alternate content forms, and that **a tool which never answers fails on the call bound rather than the
+turn's**. The live Echo evaluation requires an `eco__get_eco_server_status` call and no writes.
 
 ## Harness tools
 
 Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
-harness answers the call.** A tool listing is held for an hour, and **the thing best
+harness itself answers the call.** A tool listing is held for an hour, and **the thing best
 placed to notice it is wrong is the model that failed to find a tool it expected**, so
-`harness__refresh_tools` lets it say so. It marks every rostered server for re-reading and dials
-nothing, so twenty calls cost one listing.
+`harness__refresh_tools` lets it say so. It marks every rostered
+server for re-reading and dials nothing, so twenty calls cost one listing.
 
 ## The read_skill tool
 
-**The skill pointers were decorative.** `Read references/object-emoji.md` told the model to read
-something already above it in the prompt: `LoadSkillpack` concatenated every `SKILL.md` and reference
-into `<local-policy>` at boot, and references were 79% of Echo's prompt (#859).
+**A skill's references left the prompt**, read on demand (#859). `SKILL.md` stays inline as the index,
+and **a reference is fetchable unless it declares `inline: always`**, which the refusal-shaping ones do.
 
-`SKILL.md` stays inline as the index. **A reference is fetchable unless it declares `inline: always`**,
-which the three shaping refusals and the org source do, because a model that has to choose to read its
-own boundaries may not. The rest are listed under **Readable references** and read by path. Echo's
-prompt fell to 18839, Deep's to 12649.
+## The calculate tool
+
+**Every number Echo produced herself was predicted rather than calculated** (#916), fine for "roughly a
+third" and not for a total or a unit price. `calculate` evaluates `+ - * / ^`, parentheses and a
+trailing `%`, and **nothing else**: the grammar has no identifiers and no calls, so no expression
+reaches anything. **Exact rather than floating point**, so `0.1 + 0.2` is `0.3`, and a result that is
+not a decimal is rounded **and says so**, the exact fraction beside it. The expression is echoed with
+the answer. In process rather than a twelfth roster server, and registered unconditionally.
 
 ## The fetch tool
 
-A read-only HTTPS GET the model can call. **The fetching is the easy part, the allowlist is the
-feature.** The fetch runs inside the cluster, so without bounds it reaches the tailnet, other services'
+A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** The fetch runs inside the cluster, so without bounds it reaches the tailnet, other services'
 internal endpoints, and cloud metadata addresses, **and the model is precisely the component an attacker
 gets to talk to**: a tool that fetches any URL a model can be persuaded to fetch is server-side request
 forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated allowlist, and
@@ -68,7 +68,7 @@ forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-se
   never sees it. Loopback, private ranges, link-local, unspecified, and carrier-grade NAT are refused at
   connection time. **CGNAT is named separately because Go's `IsPrivate` is RFC1918 only**, so
   `100.64.0.0/10` reads as public to every other predicate, and that range is the tailnet.
-* **Redirects refused**: a redirect is a second destination the allowlist never saw.
+* **Redirects refused**: a redirect is a destination the allowlist never saw.
 * **A page over the cap is marked, not silently cut.** The read takes one byte past the limit, so a page
   that fits is distinguishable from one that does not, and an oversize body returns what it fetched plus
   a truncation line, seam repaired to a rune boundary. **A half document the model cannot tell from a
@@ -76,8 +76,7 @@ forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-se
 
 **GET only.** A tool that writes is a different authority and should be requested on its own terms. A
 fetched page is untrusted text entering the prompt, and **the allowlist bounds where it comes from and
-says nothing about what it says**, so an approved host serving hostile instructions is still an open
-question, the same boundary web search raises.
+says nothing about what it says**, so an approved host serving hostile instructions is still open.
 
 ## What happens to a large result
 
