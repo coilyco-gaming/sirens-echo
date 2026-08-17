@@ -647,11 +647,14 @@ func (c ProxyClient) Complete(
 			// flight rather than only the finished ones. See sirens-echo#111.
 			reportToolStarted(toolCtx, definition.Server, definition.Original)
 			reactFromContext(toolCtx, reactionTool)
+			calledAt := time.Now()
 			result, err := toolSession.Call(toolCtx, call.Function.Name, arguments)
+			elapsed := time.Since(calledAt)
 			if err != nil {
 				reportToolFinished(
 					toolCtx, definition.Server, definition.Original, ToolOutcomeFailed)
-				telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, "error")
+				telemetry.RecordToolCall(
+					toolCtx, definition.Server, definition.Original, "error", elapsed)
 				telemetry.MarkSpanError(toolSpan, exceptionMCPToolCallFailed)
 				toolSpan.End()
 				return CompletionResult{}, ToolFailure{
@@ -676,7 +679,8 @@ func (c ProxyClient) Complete(
 				slog.Int("result_bytes", len(result.Text)),
 				slog.Bool("tool_error", result.IsError),
 			)
-			telemetry.RecordToolCall(toolCtx, definition.Server, definition.Original, outcome)
+			telemetry.RecordToolCall(
+				toolCtx, definition.Server, definition.Original, outcome, elapsed)
 			// Bounded before the span ends, so a truncation reaches the trace
 			// rather than only a log. See sirens-echo#640.
 			toolBytes := budget.ToolResultBytesFor(definition.Name)

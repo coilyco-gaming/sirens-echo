@@ -24,6 +24,8 @@ const (
 
 // Agent owns the Sirens Echo Discord session and its outbound boundaries.
 type Agent struct {
+	// temporal is held only to close it. Nil when no mirror is configured.
+	temporal          interface{ Close() }
 	cfg               Config
 	session           *discordgo.Session
 	tools             *MCPProvider
@@ -197,6 +199,9 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	proxy.ValidateReply = agent.repairableReplyChecks
 	agent.completions = proxy
 	agent.ensureRuntimeDefaults()
+	if err := agent.attachToolMirror(); err != nil {
+		return nil, err
+	}
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err
 	}
@@ -372,6 +377,7 @@ func (a *Agent) Run(ctx context.Context) error {
 			return err
 		}
 		defer a.jobs.Stop()
+		defer a.closeToolMirror()
 		a.recoverJobs(ctx)
 	}
 	if a.session != nil {

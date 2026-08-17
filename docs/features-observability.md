@@ -16,10 +16,13 @@ answered stays in [response service features](features-response-service.md).
 - A gateway heartbeat counting observed, admitted, and replied, so a quiet
   guild and a stopped ingress differ
 - Metrics-only liveness and non-generating route readiness, bounded
+- A metadata-only tool-call trajectory mirrored into Temporal Cloud, off the
+  turn's path and counted when it drops
 
 ## See also
 
 See [observability](sirens-echo-observability.md) for the guided investigation,
 [turn identifiers](sirens-echo-turn-identifiers.md) for what a span may carry,
-[exceptions](sirens-echo-exceptions.md) for the catalog, and
+[exceptions](sirens-echo-exceptions.md) for the catalog,
+[the tool mirror](sirens-echo-tool-mirror.md) for the Temporal record, and
 [FEATURES.md](FEATURES.md) for the rest of the inventory.
