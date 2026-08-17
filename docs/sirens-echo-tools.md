@@ -32,10 +32,21 @@ fails on the call bound rather than on the turn's**. The live Echo evaluation re
 ## Harness tools
 
 Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
-harness itself answers the call**, and there is one today. A tool listing is held for an hour, which is
-a long time to be wrong about your own tools, and **the thing best placed to notice is the model that
-just failed to find one it expected**, so `harness__refresh_tools` lets it say so. It marks every
-rostered server for re-reading and dials nothing, so twenty calls in one turn cost one listing.
+harness answers the call.** A tool listing is held for an hour, and **the thing best
+placed to notice it is wrong is the model that failed to find a tool it expected**, so
+`harness__refresh_tools` lets it say so. It marks every rostered server for re-reading and dials
+nothing, so twenty calls cost one listing.
+
+## The read_skill tool
+
+**The skill pointers were decorative.** `Read references/object-emoji.md` told the model to read
+something already above it in the prompt: `LoadSkillpack` concatenated every `SKILL.md` and reference
+into `<local-policy>` at boot, and references were 79% of Echo's prompt (#859).
+
+`SKILL.md` stays inline as the index. **A reference is fetchable unless it declares `inline: always`**,
+which the three shaping refusals and the org source do, because a model that has to choose to read its
+own boundaries may not. The rest are listed under **Readable references** and read by path. Echo's
+prompt fell to 18839, Deep's to 12649.
 
 ## The fetch tool
 

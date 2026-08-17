@@ -148,6 +148,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if len(cfg.FetchHosts) > 0 {
 		extras = append(extras, &FetchProvider{Hosts: cfg.FetchHosts})
 	}
+	// The references the prompt no longer carries, read when the model decides
+	// one is relevant. See sirens-echo#859.
+	if references, err := LoadSkillReferences(cfg.Definition.LocalSkillRoots); err == nil &&
+		len(references) > 0 {
+		extras = append(extras, &SkillProvider{References: references})
+	}
 	if cfg.RepoInventoryOrg != "" && cfg.RepoInventoryURL != "" {
 		extras = append(extras, &RepoInventoryProvider{
 			BaseURL: cfg.RepoInventoryURL,
