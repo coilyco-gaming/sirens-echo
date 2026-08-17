@@ -19,11 +19,12 @@ read as two bots**. Restyling it is a contained change to `TurnProgressSink` onc
 * **Threshold** - nothing is posted until a turn has run long enough to be worth narrating, so **the
   fast path makes no Discord calls at all**.
 * **Edit rate** - edits are bounded, so a tool-heavy turn cannot spend its budget talking about itself,
-  and a stage that repeats is not re-sent.
-* **Advisory** - a failed post or edit is dropped rather than failing the turn, and a line that arrives
-  after the reply is deleted rather than left behind.
-* **Mention safety** - empty allowed mentions, as everywhere the harness speaks unprompted.
-* **Discord only** - HTTP and MCP answer synchronously, so the non-Discord path is a nil progress that
+  and a stage that repeats is not re-sent. **The clock column bounds height, not duration**, advancing
+  in place once full (#899).
+* **Advisory** - a failed post or edit is dropped rather than failing the turn, and a line arriving
+  after the reply is deleted.
+* **Mention safety** - empty allowed mentions, as everywhere the harness speaks.
+* **Discord only** - HTTP and MCP answer synchronously, so the non-Discord path is a nil progress
   every method accepts.
 
 **Stage transitions alone are not enough.** A turn changes stage twice in its first moments and then
@@ -47,17 +48,16 @@ however long the turn runs. **Landing exactly on a beat is on time**, since roun
 to a whole extra window would be the cadence working against the member.
 
 **An unnarrated turn is never held**, which is what keeps an ordinary reply fast: a reply before five
-seconds posts no line, so there is no grid to wait for, and a cancelled turn stops waiting rather than
-sitting on the member's answer. **The failure path holds too**, reaching the line through the turn
+seconds posts no line, so there is no grid to wait for, and a cancelled turn stops waiting rather than sitting on
+the answer. **The failure path holds too**, reaching the line through the turn
 context, since a notice replacing a just-posted line churns as much as a reply does. That means a dead
 turn can show a stale line for up to one window before the notice replaces it, and **a notice that
 jumped the grid would make failure the one thing that answers instantly**. Edits ride the same beat,
 with the post counting as the first, so the first edit lands with the first beat.
 
-**Every sink call is recorded.** A discarded failure made three states indistinguishable: too short to
-narrate, posted and missed, or refused in silence. Post, edit, and delete now record
-`discord.progress.posted` or `discord.progress.failed`, so a refused post is visible without being a
-turn failure.
+**Every sink call is recorded.** A discarded failure made too short to narrate, posted and missed, and
+refused in silence alike. Post, edit, and delete record `discord.progress.posted` or
+`discord.progress.failed`, so a refused post is visible without failing a turn.
 
 ## Reactions as harness state
 
