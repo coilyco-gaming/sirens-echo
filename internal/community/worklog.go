@@ -43,7 +43,7 @@ func worklogRow(row progressRow) string {
 	if row.done {
 		glyph = toolOutcomeGlyph(row.outcome)
 	}
-	return stageNotice(glyph, row.server+"."+row.tool, false)
+	return stageNotice(glyph, ExecutedTool{Server: row.server, Original: row.tool}.Label(), false)
 }
 
 // worklogRows renders the visible rows, newest last, with a count standing in

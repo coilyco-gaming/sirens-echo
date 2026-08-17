@@ -173,3 +173,58 @@ func TestTheFooterAndTheReactionsShareOneSpelling(t *testing.T) {
 		seen[g] = true
 	}
 }
+
+// The receipt and the worklog were two spellings of one call, so a member who
+// watched `scratchpad.write` run looked for it and found nothing. See #900.
+func TestTheReceiptNamesACallTheWayTheWorklogDid(t *testing.T) {
+	t.Parallel()
+	call := ExecutedTool{
+		Name:     "scratchpad__write",
+		Server:   "scratchpad",
+		Original: "write",
+		Outcome:  ToolOutcomeOK,
+	}
+
+	watched := worklogRow(progressRow{
+		server: call.Server, tool: call.Original, outcome: call.Outcome, done: true,
+	})
+	receipt := AppendToolDisclosure("Answered.", call)
+
+	if !strings.Contains(watched, call.Label()) {
+		t.Errorf("the worklog row does not carry the label: %q", watched)
+	}
+	if !strings.Contains(receipt, call.Label()) {
+		t.Errorf("the receipt does not carry the label: %q", receipt)
+	}
+	if strings.Contains(receipt, call.Name) {
+		t.Errorf("the receipt still uses the model-facing name: %q", receipt)
+	}
+}
+
+// A call the harness could not attribute to a server still gets named, rather
+// than rendering an empty pair of dots.
+func TestAnUnattributedCallFallsBackToItsModelName(t *testing.T) {
+	t.Parallel()
+	call := ExecutedTool{Name: "scratchpad__write", Outcome: ToolOutcomeOK}
+	if got := call.Label(); got != "scratchpad__write" {
+		t.Errorf("label = %q", got)
+	}
+}
+
+// Nothing is filtered out of the receipt. Consecutive identical calls collapse
+// with the count stated, which is not the same as being dropped.
+func TestEveryCallReachesTheReceiptEvenWhenCollapsed(t *testing.T) {
+	t.Parallel()
+	write := ExecutedTool{
+		Name: "scratchpad__write", Server: "scratchpad", Original: "write",
+		Outcome: ToolOutcomeOK,
+	}
+	receipt := AppendToolDisclosure("Answered.", write, write, write)
+
+	if !strings.Contains(receipt, "scratchpad.write") {
+		t.Errorf("the scratch calls are absent: %q", receipt)
+	}
+	if !strings.Contains(receipt, "×3") {
+		t.Errorf("the collapsed run does not state its count: %q", receipt)
+	}
+}
