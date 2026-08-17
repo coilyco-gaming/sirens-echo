@@ -160,6 +160,9 @@ var (
 var (
 	modelRetryAttempts int
 	modelRetryBackoff  time.Duration
+	// modelIdleTimeout bounds silence rather than the whole call, so a backend
+	// still sending heartbeats is not cut. See docs/sirens-echo-model-stream.md.
+	modelIdleTimeout time.Duration
 )
 
 // Turn timeouts
@@ -373,6 +376,7 @@ func knobs() []knob {
 
 		overridable(&modelRetryAttempts, "SIRENS_ECHO_MODEL_RETRY_ATTEMPTS", 4),
 		overridable(&modelRetryBackoff, "SIRENS_ECHO_MODEL_RETRY_BACKOFF", 250*time.Millisecond),
+		overridable(&modelIdleTimeout, "SIRENS_ECHO_MODEL_IDLE_TIMEOUT", 45*time.Second),
 
 		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
 		overridable(&defaultQueueTimeout, "SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second),
