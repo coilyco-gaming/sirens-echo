@@ -1,9 +1,11 @@
 package community
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -12,24 +14,66 @@ import (
 // The consolidation had nothing holding it, and three constants drifted back
 // out before anyone noticed. See sirens-echo#829.
 
-// tunableName matches the names docs/sirens-echo-tuning.md calls knobs: a
-// timeout, a cap, a bound, a retry count, a size limit.
-var tunableName = regexp.MustCompile(
-	`^(max|min|default)[A-Z]|` +
-		`(Timeout|Bytes|Limit|Rounds|Retries|Backoff|Grace|Interval|Cadence)$`,
-)
-
-// numericDeclaration matches `name = 6`, `name = 8 * 1024`, `name = 10 *
-// time.Second`, inside a block or as a top-level const or var.
-var numericDeclaration = regexp.MustCompile(
-	`^\s*(?:const\s+|var\s+)?([a-z][A-Za-z0-9_]*)\s*=\s*[0-9]+(\s*\*\s*[0-9A-Za-z_.]+)*\s*(//.*)?$`,
-)
+// Detection is by shape rather than by name, and the two failures that bought
+// that are in docs/sirens-echo-knob-guard.md.
 
 // elsewhereByDesign are numbers that read as knobs and are not. Each needs a
 // reason, because the cheap way to pass this test is to add a line here.
 var elsewhereByDesign = map[string]string{
-	"minNormalizedIDDigits": "an algorithm's collision floor, not a knob: lowering it changes what counts as an identifier",
-	"minEncodedGuardBytes":  "the same floor for the base64 reading: it decides what is a match, not how much of one to allow",
+	"minNormalizedIDDigits":  "an algorithm's collision floor, not a knob: lowering it changes what counts as an identifier",
+	"minEncodedGuardBytes":   "the same floor for the base64 reading: it decides what is a match, not how much of one to allow",
+	"opaqueSecretRunes":      "the same floor again, for the opaque reading: it decides what is a credential rather than a word",
+	"unboundedReply":         "a sentinel for a transport that declares no ceiling, so it is the absence of a bound rather than one",
+	"scratchPermissions":     "a file mode. Text-only is enforced by denying the execute bit, so a deployment must not be able to grant it",
+	"scratchFilePermissions": "a file mode, for the same reason: the partition is readable only by this process",
+	"workspacePermissions":   "a file mode, for the same reason as the scratchpad's",
+}
+
+// numericValue reports whether an expression is a literal number or literals
+// combined into one, so `10 * time.Second` counts and a call does not.
+func numericValue(expr ast.Expr) bool {
+	switch value := expr.(type) {
+	case *ast.BasicLit:
+		return value.Kind == token.INT || value.Kind == token.FLOAT
+	case *ast.BinaryExpr:
+		return numericValue(value.X) || numericValue(value.Y)
+	case *ast.UnaryExpr:
+		return numericValue(value.X)
+	case *ast.ParenExpr:
+		return numericValue(value.X)
+	}
+	return false
+}
+
+// packageNumbers returns every package-level const or var declared with a
+// numeric value. A number inside a function is a local and never a knob.
+func packageNumbers(t *testing.T, path string) map[string]token.Position {
+	t.Helper()
+	fileSet := token.NewFileSet()
+	parsed, err := parser.ParseFile(fileSet, path, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	found := make(map[string]token.Position)
+	for _, decl := range parsed.Decls {
+		general, ok := decl.(*ast.GenDecl)
+		if !ok || (general.Tok != token.CONST && general.Tok != token.VAR) {
+			continue
+		}
+		for _, spec := range general.Specs {
+			values, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for index, name := range values.Names {
+				if index >= len(values.Values) || !numericValue(values.Values[index]) {
+					continue
+				}
+				found[name.Name] = fileSet.Position(name.Pos())
+			}
+		}
+	}
+	return found
 }
 
 // A knob outside config.go is invisible to anyone asking what this service can
@@ -48,20 +92,12 @@ func TestEveryTuningNumberLivesInConfigGo(t *testing.T) {
 			strings.HasSuffix(name, "_test.go") || name == "config.go" {
 			continue
 		}
-		body, err := os.ReadFile(filepath.Join(".", name))
-		if err != nil {
-			t.Fatalf("read %s: %v", name, err)
-		}
-		for number, line := range strings.Split(string(body), "\n") {
-			match := numericDeclaration.FindStringSubmatch(line)
-			if match == nil || !tunableName.MatchString(match[1]) {
+		for number, at := range packageNumbers(t, filepath.Join(".", name)) {
+			if _, ok := elsewhereByDesign[number]; ok {
+				claimed[number] = true
 				continue
 			}
-			if _, ok := elsewhereByDesign[match[1]]; ok {
-				claimed[match[1]] = true
-				continue
-			}
-			strays = append(strays, name+":"+itoa(number+1)+" "+match[1])
+			strays = append(strays, name+":"+itoa(at.Line)+" "+number)
 		}
 	}
 	sort.Strings(strays)
@@ -82,23 +118,11 @@ func TestEveryTuningNumberLivesInConfigGo(t *testing.T) {
 // and left out of the table is settable by nobody.
 func TestEveryNumberInConfigGoIsInTheTable(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("config.go")
-	if err != nil {
-		t.Fatalf("read config.go: %v", err)
-	}
-	declared := make(map[string]bool)
-	for _, line := range strings.Split(string(body), "\n") {
-		match := numericDeclaration.FindStringSubmatch(line)
-		if match == nil || !tunableName.MatchString(match[1]) {
-			continue
-		}
-		declared[match[1]] = true
-	}
-	// Every knob-shaped number in the file is declared with a type and set by
-	// the table, so a plain `name = 6` here is one that escaped the helper.
-	for name := range declared {
-		t.Errorf("%s is assigned a literal in config.go rather than declared "+
-			"through overridable(), so no environment name reaches it", name)
+	// Every knob here is declared with a type and set by the table, so a
+	// package-level `name = 6` is one that escaped the helper.
+	for name, at := range packageNumbers(t, "config.go") {
+		t.Errorf("config.go:%d %s is assigned a literal rather than declared "+
+			"through overridable(), so no environment name reaches it", at.Line, name)
 	}
 }
 

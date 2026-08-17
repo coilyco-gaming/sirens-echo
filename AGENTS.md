@@ -39,7 +39,10 @@ it. See [tuning a deployment](docs/sirens-echo-tuning-overrides.md).
 
 A number that is part of an algorithm or a data structure is not a knob and
 stays where it is used. `TestEveryTuningNumberLivesInConfigGo` holds the line
-and takes a named exemption with a reason.
+and takes a named exemption with a reason. It parses the package rather than
+grepping it, so every package-level numeric `const` and `var` is a stray until
+`elsewhereByDesign` names it. Naming a number something other than `max*` no
+longer hides it.
 
 ## Repo boundaries
 

@@ -21,10 +21,6 @@ func ephemeralFlag(ephemeral bool) discordgo.MessageFlags {
 // /mcps reports the deployment's own tool surface. Names only: an address is an
 // identifier. See docs/sirens-echo-commands.md.
 
-// mcpsReplyBudget leaves room under the 1990-rune interaction bound for the
-// truncation notice, so a long roster is cut with a line saying so.
-const mcpsReplyBudget = 1800
-
 // renderMCPRoster groups discovered tools by server, naming every configured
 // one so a silent server is reported. See docs/sirens-echo-mcps-command.md.
 func renderMCPRoster(configured []MCPServerDefinition, tools []ToolDefinition, unavailable []string) string {
