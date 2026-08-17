@@ -10,10 +10,11 @@
 # comment rule keeps comments above the first content line.
 #
 # EVERY SUMMON PATH. A reader must be able to enumerate these here rather than
-# from the code. A direct mention, a reply to one of this service's messages,
-# an edit that adds a mention, an unmentioned follow-up inside a thread this
-# service is in, a slash command, and a direct message from a listed account.
-# All six pass the rules below. A path that did not would make this file read
+# from the code. A direct mention, a mention of a role this account holds, a
+# reply to one of this service's messages, an edit that adds a mention, an
+# unmentioned follow-up inside a thread this service is in, a slash command,
+# and a direct message from a listed account. All seven pass the rules
+# below. A path that did not would make this file read
 # as authoritative while not being it. See docs/sirens-echo-access.md.
 #
 # The first guild is one the operator moderates, so its channels and members
