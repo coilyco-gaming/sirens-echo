@@ -1174,6 +1174,23 @@ func (a *Agent) runTurn(
 			reply, redacted, err = kept, blocks, nil
 		}
 	}
+	// A quality rule annotates rather than gates: a correct answer discarded over
+	// voice is the worse outcome. See docs/sirens-echo-delivery.md.
+	shipped := ""
+	if err != nil && !checkGates(refused) {
+		validateSpan.SetAttributes(
+			attribute.String("response.check.shipped", refused),
+			attribute.String("response.check.reason", err.Error()),
+		)
+		a.telemetry.Info(
+			validateCtx,
+			"response.check.shipped",
+			slog.String("check", refused),
+			slog.String("refused", err.Error()),
+			slog.Int("reply_bytes", len(reply)),
+		)
+		shipped, err = refused, nil
+	}
 	if err != nil {
 		// The rule and its sentence. The catalog owns the exception fields, so
 		// the sentence stays beside them. See docs/sirens-echo-delivery.md.
@@ -1192,10 +1209,10 @@ func (a *Agent) runTurn(
 		validateSpan.End()
 		return a.failTurn(turnCtx, turn, stageValidation, err)
 	}
-	// A redacted reply names the rule it lost a block to. Absence of the count
-	// is not something a reader should have to interpret, so it is always set.
+	// A redacted reply names the rule it lost a block to, and a shipped one names
+	// the rule it broke. Always set, so absence needs no interpreting.
 	passed := replyCheckNone
-	if redacted > 0 {
+	if redacted > 0 || shipped != "" {
 		passed = refused
 	}
 	validateSpan.SetAttributes(

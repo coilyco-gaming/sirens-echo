@@ -521,22 +521,37 @@ func (c ProxyClient) Complete(
 		if len(message.ToolCalls) == 0 {
 			content := strings.TrimSpace(message.Content.Text)
 			reply, contractErr := ParseReply(content)
+			refused := replyCheckParse
 			if contractErr == nil {
-				contractErr = ValidateResponseStyle(c.ResponseStyle, reply)
+				if styleErr := ValidateResponseStyle(c.ResponseStyle, reply); styleErr != nil {
+					contractErr, refused = styleErr, replyCheckResponseStyle
+				}
 			}
 			// Advisory, and out of the way once the budget is spent, so the run
 			// after Complete still refuses. See docs/sirens-echo-reply-assembly.md.
 			if contractErr == nil && repairAttempts < maxResponseRepairs {
 				contractErr = c.harnessRefusal(reply, prompt, executed)
 			}
+			// A quality rule records rather than discards, because the reply is
+			// well formed and the model finished. See docs/sirens-echo-delivery.md.
+			if contractErr != nil && repairAttempts >= maxResponseRepairs && !checkGates(refused) {
+				telemetry.Info(
+					ctx,
+					"model.response.shipped",
+					slog.Int("attempts", repairAttempts),
+					slog.String("check", refused),
+					slog.String("refused", contractErr.Error()),
+					slog.Int("reply_bytes", len(content)),
+				)
+				contractErr = nil
+			}
 			if contractErr != nil {
 				if repairAttempts >= maxResponseRepairs {
-					// This ends the turn as a model failure and it is not one,
-					// so the reason is recorded here. See sirens-echo#651.
 					telemetry.Info(
 						ctx,
 						"model.response.refused",
 						slog.Int("attempts", repairAttempts),
+						slog.String("check", refused),
 						slog.String("refused", contractErr.Error()),
 					)
 					return CompletionResult{}, fmt.Errorf(

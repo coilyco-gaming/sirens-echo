@@ -38,12 +38,11 @@ defect rather than an absence**, and **a successful reply never carries one**.
 ## Why a ready reply did not land
 
 A turn that fails after the reply is composed has already spent its completions and its MCP calls.
-**The work was done and paid for, then dropped at the last step**, which is worse than failing early and
-invisible to every instrument that watches the model.
+**The work was done and paid for, then dropped at the last step**, invisible to every instrument that
+watches the model.
 
-`discord.turn.failed` carried one field, `error_type: turn_failed`, so rate limiting, an over-length
-message, a missing permission, and a dropped gateway all looked identical: **a count could be produced
-and a cause could not**. `discord.reply.failed` now records the send itself, with `discord_failure`
+`discord.turn.failed` carried one field, `error_type: turn_failed`, so rate limiting, over-length, a
+missing permission, and a dropped gateway looked identical: **a count without a cause**. `discord.reply.failed` now records the send itself, with `discord_failure`
 separating whether Discord answered at all, `discord_status` separating rate limiting from permissions
 from length, `discord_code` separating two failures sharing one status, and `reply_bytes` proving the
 length case. **`no_response` is a classification rather than a gap**, a dropped gateway producing no
@@ -71,11 +70,14 @@ deleted even when the edit fails too**.
 
 ## Why a check refused a reply
 
-A refused reply names the check that refused it, but did not say what that check saw, **and the sentence
-saying so was generated and then thrown away**. `ValidateGrounding` produces `model invented channel
-#general`, and nothing carried it. On #794 that one sentence was the entire answer, and reaching it took
-four steps and a source read (#795). Now `response.validate` carries `response.check.reason` and
+A refused reply names the check that refused it, and now says what that check saw. `ValidateGrounding`
+produces `model invented channel #general`, and that sentence was generated and thrown away, so reaching
+it took four steps and a source read (#795). `response.validate` carries `response.check.reason` and
 `response.check.refused` logs the same sentence under `refused`.
+
+**Not every refusal gates.** A rule about how an answer *reads* records and the reply still ships:
+`response_style` and `tool_call_markup` (#651). **An unlisted rule gates, so a new one fails closed**,
+and a shipped reply carries `response.check.shipped`.
 
 **The reason is not an exception field.** `MarkSpanError` still takes only a catalog code, so
 `exception.type`, `exception.message`, `error.stage`, `error.outcome`, and the span status stay the
@@ -85,10 +87,9 @@ attribute, so adding a rule needs no catalog entry and no reviewed cardinality i
 **Every refusal sentence is service-authored except one.** `grounding.invented_channel` names the
 `#token` the model wrote, deliberately, because **the token separates a channel missing from supplied
 context, which is a prompt problem, from a pure hallucination, which is not**. It is bounded twice:
-`channelPattern` constrains the shape to `#[A-Za-z_][A-Za-z0-9_-]*`, and it is truncated at 64 runes so
-a long hallucination cannot enlarge every refusal record. **The identifier check stays the
-counterexample**: its error names the class and never the value, because the value is the thing being
-kept out of a log.
+`channelPattern` constrains the shape, and 64 runes cap it so one long hallucination cannot enlarge every
+refusal record. **The identifier check stays the counterexample**: its error names the class and never
+the value, because the value is what is being kept out of a log.
 
 ## Exit paths
 
@@ -104,5 +105,4 @@ stderr, and the ingest pipeline parses a JSON body, so an unstructured line fail
 `level` attribute, and reaches neither the severity parser nor an alert filtering on `level`. **That
 makes a crash the one event no severity alert can see.** Known gap: a fatal path exits without running
 the deferred telemetry shutdown, so a crash does not flush its pending traces and metrics, though the
-log record still reaches stdout because the handler writes synchronously. Unchanged from the `log.Fatalf`
-behaviour it replaced, and recorded rather than fixed.
+log record still reaches stdout because the handler writes synchronously. Recorded rather than fixed.
