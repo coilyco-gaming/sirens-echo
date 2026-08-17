@@ -99,8 +99,8 @@ Every raise is recorded with its cause, because **a raise is only correct when t
 intended**: Echo to 21976 for composing the ops role; Deep to 12260 when it gained
 `issue_tracker: forgejo`, the whole 863 bytes being the filing block Echo already carried; both by 315
 when Kai widened the filing trigger on #235; Echo to 23826 for object emoji (#203), the whole 1535 bytes
-being `references/object-emoji.md` and its pointer, **most of it the five rules rather than a lookup
-table**; both by 1951 when the org relationship became a shared knowledge source (#806); and both by 5
-when giving every agent one folder (#816) lengthened the definition path in each snapshot's header.
-**Recording a header change is pedantic, and that is the point**: a raise nobody can account for is
-exactly what this catches.
+being `references/object-emoji.md`; both by 1951 when the org relationship became a shared knowledge source (#806); both by 5
+when giving every agent one folder (#816) lengthened the definition path in each snapshot's header; and
+both by 203 for the rule routing arithmetic through the calculate tool (#916), which is what makes
+that tool used rather than offered.
+**Recording a header change is pedantic, and that is the point.**
