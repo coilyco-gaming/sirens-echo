@@ -85,6 +85,15 @@ const (
 	ToolOutcomeFailed ToolOutcome = "failed"
 )
 
+// mcpCallFailure separates a deadline from every other transport failure, so a
+// trace can confirm a timeout. See sirens-echo#873.
+func mcpCallFailure(err error) exceptionCode {
+	if errors.Is(err, context.DeadlineExceeded) {
+		return exceptionMCPToolCallTimedOut
+	}
+	return exceptionMCPToolCallFailed
+}
+
 // outcomeOf classifies one completed call. A transport error never reaches
 // here, because it ends the turn instead.
 func outcomeOf(result ToolResult) ToolOutcome {
@@ -655,7 +664,7 @@ func (c ProxyClient) Complete(
 					toolCtx, definition.Server, definition.Original, ToolOutcomeFailed)
 				telemetry.RecordToolCall(
 					toolCtx, definition.Server, definition.Original, "error", elapsed)
-				telemetry.MarkSpanError(toolSpan, exceptionMCPToolCallFailed)
+				telemetry.MarkSpanError(toolSpan, mcpCallFailure(err))
 				toolSpan.End()
 				return CompletionResult{}, ToolFailure{
 					Server: definition.Server,
@@ -695,6 +704,11 @@ func (c ProxyClient) Complete(
 				attribute.Int("mcp.tool.limit_bytes", toolBytes),
 				attribute.Bool("mcp.tool.truncated", trimmed),
 			)
+			// Error status, or a tool reporting its own failure stays invisible
+			// to every query keyed on it. See sirens-echo#873.
+			if result.IsError {
+				telemetry.MarkSpanError(toolSpan, exceptionMCPToolReportedError)
+			}
 			// Ended before the spill, which writes a file. A disk write inside
 			// this span would report as tool latency.
 			toolSpan.End()
