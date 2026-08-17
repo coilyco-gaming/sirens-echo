@@ -564,7 +564,7 @@ func (p *turnProgress) Finish(ctx context.Context) {
 // narrateWait appends one elapsed line to the posted stage line. Called with
 // the lock held, and it releases before touching the sink.
 func (p *turnProgress) narrateWait(ctx context.Context) {
-	if p.carried || len(p.waits) >= maxProgressWaitLines {
+	if p.carried {
 		p.mu.Unlock()
 		return
 	}
@@ -574,7 +574,14 @@ func (p *turnProgress) narrateWait(ctx context.Context) {
 		p.mu.Unlock()
 		return
 	}
-	p.waits = append(p.waits, int(elapsed.Round(time.Second).Seconds()))
+	seconds := int(elapsed.Round(time.Second).Seconds())
+	// A full column advances its last line in place. The cap bounds how tall a
+	// stuck turn grows, never how long it reports. See sirens-echo#899.
+	if len(p.waits) >= maxProgressWaitLines {
+		p.waits[len(p.waits)-1] = seconds
+	} else {
+		p.waits = append(p.waits, seconds)
+	}
 	p.lastEdit = moment
 	existing, phrase := p.messageID, p.lastStage
 	waits := append([]int{}, p.waits...)

@@ -303,8 +303,8 @@ var (
 
 // Reply rendering bounds
 var (
-	// maxProgressWaitLines bounds the column a stuck turn can grow. The turn
-	// ceiling over the beat is the natural count. See sirens-echo#370.
+	// maxProgressWaitLines bounds how tall the column grows, not how long it
+	// reports: a full column advances in place. See sirens-echo#899.
 	maxProgressWaitLines int
 	// maxProxyToolNameBytes bounds one served tool name.
 	maxProxyToolNameBytes int
