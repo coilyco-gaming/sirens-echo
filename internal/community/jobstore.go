@@ -347,20 +347,38 @@ func (s *FileJobStore) persist(job Job) error {
 }
 
 // RecoverStrandedJobs moves jobs a crash left mid-flight to a terminal state.
-// Only running and cancelling can be stranded; queued is still accurate.
 func RecoverStrandedJobs(store JobStore, ids []string, outcome string) ([]Job, error) {
-	recovered := make([]Job, 0, len(ids))
+	return settleInterrupted(store, ids, outcome, map[JobState]JobState{
+		JobRunning:    JobFailed,
+		JobCancelling: JobCancelled,
+	})
+}
+
+// SettleDroppedJobs moves jobs a restart left queued to failed, because
+// nothing requeues one. See docs/sirens-echo-jobs.md.
+func SettleDroppedJobs(store JobStore, ids []string, outcome string) ([]Job, error) {
+	return settleInterrupted(store, ids, outcome, map[JobState]JobState{
+		JobQueued: JobFailed,
+	})
+}
+
+// settleInterrupted moves each id to the terminal state its current state maps
+// onto. An id that moved on since the listing is skipped, so a worker wins.
+func settleInterrupted(
+	store JobStore,
+	ids []string,
+	outcome string,
+	targets map[JobState]JobState,
+) ([]Job, error) {
+	settled := make([]Job, 0, len(ids))
 	for _, id := range ids {
 		job, err := store.Get(id)
 		if err != nil {
 			return nil, err
 		}
-		if job.State != JobRunning && job.State != JobCancelling {
+		next, wanted := targets[job.State]
+		if !wanted {
 			continue
-		}
-		next := JobFailed
-		if job.State == JobCancelling {
-			next = JobCancelled
 		}
 		moved, err := store.Transition(id, next, func(target *Job) {
 			target.Outcome = outcome
@@ -368,17 +386,30 @@ func RecoverStrandedJobs(store JobStore, ids []string, outcome string) ([]Job, e
 		if err != nil {
 			return nil, err
 		}
-		recovered = append(recovered, moved)
+		settled = append(settled, moved)
 	}
-	return recovered, nil
+	return settled, nil
 }
 
 // StrandedJobIDs lists the jobs a restart found mid-flight.
 func StrandedJobIDs(jobs []Job) []string {
+	return jobIDsInState(jobs, JobRunning, JobCancelling)
+}
+
+// DroppedJobIDs lists the jobs a restart found queued. They are dropped rather
+// than stranded, because no worker ever held one. See sirens-echo#878.
+func DroppedJobIDs(jobs []Job) []string {
+	return jobIDsInState(jobs, JobQueued)
+}
+
+func jobIDsInState(jobs []Job, states ...JobState) []string {
 	ids := make([]string, 0, len(jobs))
 	for _, job := range jobs {
-		if job.State == JobRunning || job.State == JobCancelling {
-			ids = append(ids, job.ID)
+		for _, state := range states {
+			if job.State == state {
+				ids = append(ids, job.ID)
+				break
+			}
 		}
 	}
 	sort.Strings(ids)
