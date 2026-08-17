@@ -33,7 +33,7 @@
 # mid-sentence behind a negation, RE2 has no lookbehind, and 2 false positives
 # in 33 correct replies is worse than the miss. "is now" and "will" are what
 # structurally exclude a denial, since a denial uses neither.
-# See docs/sirens-echo-capability-limits.md.
+# See docs/sirens-echo-config.md.
 #
 # no-fallibility-denial forbids the denial forms and requires no particular
 # admission. "Answers can be wrong" and "accuracy is not guaranteed here" are

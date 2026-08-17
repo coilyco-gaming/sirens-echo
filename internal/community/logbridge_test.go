@@ -11,7 +11,7 @@ import (
 )
 
 // One line reaches stdout and OTLP both, so neither destination can be the only
-// record of an event. See docs/sirens-echo-log-export.md and sirens-echo#810.
+// record of an event. See docs/sirens-echo-rate.md and sirens-echo#810.
 
 // recordingHandler stands in for the OTLP side, which needs a collector.
 type recordingHandler struct {

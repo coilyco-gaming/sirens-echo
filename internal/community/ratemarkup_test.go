@@ -6,10 +6,10 @@ import (
 )
 
 // A rate case blind to tool-call markup reports a rate over replies that were
-// never answers. See docs/sirens-echo-tool-call-markup.md and sirens-echo#301.
+// never answers. See docs/sirens-echo-tool-markup.md and sirens-echo#301.
 
 // The gate keeps the flag opt-in on purpose. A rate gates nothing, so that
-// reason does not reach it. See docs/sirens-echo-tool-call-markup.md.
+// reason does not reach it. See docs/sirens-echo-tool-markup.md.
 func TestEveryRateCaseChecksToolCallMarkup(t *testing.T) {
 	t.Parallel()
 	packs := globAll(t,

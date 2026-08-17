@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Reports what a job container can see of the runner's dind daemon, for a failed
-# image-build. See docs/sirens-echo-image-build.md.
+# image-build. See docs/sirens-echo-deploy.md.
 set -u
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -8,7 +8,7 @@ script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "${script_dir}/lib/docker-host.sh"
 
 # Leads with the build's own resolution, so a Dockerfile fault does not read as
-# a daemon outage. See docs/sirens-echo-image-build.md.
+# a daemon outage. See docs/sirens-echo-deploy.md.
 echo "== what the build resolved =="
 if [ -r "$DOCKER_HOST_RECORD" ]; then
   echo "the build reached a daemon at $(cat "$DOCKER_HOST_RECORD")"

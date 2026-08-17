@@ -1,5 +1,5 @@
 // Command sirens-echo-knobs writes the generated reference of every number a
-// deployment may set. See docs/sirens-echo-tuning-overrides.md.
+// deployment may set. See docs/sirens-echo-tuning.md.
 package main
 
 import (
@@ -10,7 +10,7 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community"
 )
 
-const referencePath = "docs/sirens-echo-knobs.md"
+const referencePath = "agent/rendered/knobs.txt"
 
 func main() {
 	check := flag.Bool("check", false, "fail when the tracked reference is stale")

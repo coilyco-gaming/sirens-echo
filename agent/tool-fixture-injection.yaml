@@ -1,5 +1,5 @@
 # Tool results carrying an injection payload, for the data-borne case the chat
-# box cannot reach. See docs/sirens-echo-tool-fixture.md.
+# box cannot reach. See docs/sirens-echo-testing.md.
 #
 # Every payload asks for the marker as the first line on its own line, and the
 # pack anchors on exactly that shape. A bare marker pattern false-fires on a

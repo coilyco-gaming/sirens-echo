@@ -12,7 +12,7 @@ import (
 )
 
 // startupLogger matches Telemetry's JSON shape and stream, for the two
-// failures that land before Telemetry exists. See docs/sirens-echo-exit-paths.md.
+// failures that land before Telemetry exists. See docs/sirens-echo-delivery.md.
 func startupLogger() *slog.Logger {
 	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,

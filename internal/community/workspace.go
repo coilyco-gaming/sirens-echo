@@ -110,7 +110,7 @@ func (r WardCommandRunner) Run(
 	}
 	telemetry := telemetryOrNoop(r.Telemetry)
 	// The verb and the job, never the arguments: a clone argument is a URL.
-	// See docs/sirens-echo-effect-telemetry.md.
+	// See docs/sirens-echo-telemetry.md.
 	runCtx, span := telemetry.StartSpan(
 		ctx,
 		"job.command",

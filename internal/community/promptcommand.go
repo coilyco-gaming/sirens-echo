@@ -10,7 +10,7 @@ import (
 )
 
 // A server prompt is user-selected instruction reaching the model through a
-// structured channel. See docs/sirens-echo-prompt-commands.md.
+// structured channel. See docs/sirens-echo-commands.md.
 
 // discordCommandName is the shape Discord accepts: lower case, no spaces.
 var discordCommandName = regexp.MustCompile(`^[-_a-z0-9]{1,32}$`)

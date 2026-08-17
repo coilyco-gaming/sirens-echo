@@ -39,7 +39,7 @@ type ToolResult struct {
 }
 
 // GroundingDocument is one resource a server marked for the assistant, already
-// read and bounded. See docs/sirens-echo-mcp-roster.md.
+// read and bounded. See docs/sirens-echo-mcp.md.
 type GroundingDocument struct {
 	Server string
 	URI    string
@@ -48,7 +48,7 @@ type GroundingDocument struct {
 }
 
 // ServerGuidance is one server's own statement of what it is for, taken from
-// the MCP handshake. See docs/sirens-echo-server-guidance.md.
+// the MCP handshake. See docs/sirens-echo-mcp.md.
 type ServerGuidance struct {
 	Server string
 	Text   string
@@ -77,7 +77,7 @@ const (
 )
 
 // refreshToolDescription is read by the model, so it states the bound rather
-// than leaving the model to discover it. See docs/sirens-echo-harness-tools.md.
+// than leaving the model to discover it. See docs/sirens-echo-tools.md.
 const refreshToolDescription = "Re-read which tools every configured server " +
 	"offers. Use it when a tool you expected is missing or a tool list looks " +
 	"stale. The new list applies to your next turn and not this one, so do not " +
@@ -155,7 +155,7 @@ type mcpToolSession struct {
 	// labels are attached to an issue this service files. See sirens-echo#208.
 	labels issueLabelPolicy
 	// refresh is the one tool that is not an MCP server's. Nil leaves it
-	// unoffered. See docs/sirens-echo-mcp-roster.md.
+	// unoffered. See docs/sirens-echo-mcp.md.
 	refresh func() int
 }
 
@@ -197,7 +197,7 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 		}
 	}
 	// Stated rather than inferred from the span's duration. See
-	// docs/sirens-echo-tool-discovery-telemetry.md.
+	// docs/sirens-echo-telemetry.md.
 	trace.SpanFromContext(ctx).SetAttributes(
 		attribute.Int("mcp.tools.configured", len(p.entries)),
 		attribute.Int("mcp.tools.reached", reached),
@@ -315,7 +315,7 @@ func (p *MCPProvider) readyLocked(
 		return false, false, nil
 	}
 	// From here a round trip happens, and it gets a span naming the server.
-	// See docs/sirens-echo-tool-discovery-telemetry.md.
+	// See docs/sirens-echo-telemetry.md.
 	discoveryCtx, span := p.startDiscoverySpan(base, entry.definition.Name)
 	defer span.End()
 	if connecting {
@@ -616,7 +616,7 @@ func resourcePriority(resource *mcp.Resource) float64 {
 }
 
 // serverGuidance reads the server's own instructions off the handshake.
-// See docs/sirens-echo-server-guidance.md.
+// See docs/sirens-echo-mcp.md.
 func serverGuidance(name string, session *mcp.ClientSession) (ServerGuidance, bool) {
 	if session == nil {
 		return ServerGuidance{}, false

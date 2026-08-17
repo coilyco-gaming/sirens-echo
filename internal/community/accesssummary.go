@@ -6,7 +6,7 @@ import (
 )
 
 // A policy is read as intent and applied as effect, and the two diverge
-// quietly. See docs/sirens-echo-access-check.md.
+// quietly. See docs/sirens-echo-access.md.
 
 // inheritedTier is what an unset guild tier resolves to: the deployment's own,
 // which this file cannot see and a reader must not assume is a bound.

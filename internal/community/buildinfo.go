@@ -1,7 +1,7 @@
 package community
 
 // buildRevision is set at build time with -X. An unset value means the binary
-// was built without one. See docs/sirens-echo-build-revision.md.
+// was built without one. See docs/sirens-echo-deploy.md.
 var buildRevision = ""
 
 // BuildRevision reports the commit this binary was built from, or an empty

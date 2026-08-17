@@ -203,7 +203,7 @@ func TestScratchEnforcesFileCeiling(t *testing.T) {
 }
 
 // The per-requester ceiling binds across sessions, because inside one the
-// smaller session cap evicts first. See docs/sirens-echo-session-workspace.md.
+// smaller session cap evicts first. See docs/sirens-echo-scratchpad.md.
 func TestScratchEnforcesRequesterCeilingAcrossSessions(t *testing.T) {
 	root := t.TempDir()
 	provider := &ScratchProvider{Root: root}

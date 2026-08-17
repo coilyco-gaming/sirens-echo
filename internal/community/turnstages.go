@@ -69,7 +69,7 @@ func (a *Agent) runReplyChecks(
 		run  func() error
 	}{
 		// Nothing else between the model and the member sees this, and a member
-		// reads it verbatim. See docs/sirens-echo-capability-limits.md.
+		// reads it verbatim. See docs/sirens-echo-config.md.
 		{replyCheckToolCallMarkup, func() error { return ValidateNoToolCallMarkup(reply) }},
 		{replyCheckGrounding, func() error {
 			return ValidateGrounding(reply, prompt.Supplied(), result.ToolCalls...)

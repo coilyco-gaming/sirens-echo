@@ -22,7 +22,7 @@ func ephemeralFlag(ephemeral bool) discordgo.MessageFlags {
 // identifier. See docs/sirens-echo-commands.md.
 
 // renderMCPRoster groups discovered tools by server, naming every configured
-// one so a silent server is reported. See docs/sirens-echo-mcps-command.md.
+// one so a silent server is reported. See docs/sirens-echo-commands.md.
 func renderMCPRoster(configured []MCPServerDefinition, tools []ToolDefinition, unavailable []string) string {
 	if len(configured) == 0 {
 		return "no MCP server is configured for this deployment"

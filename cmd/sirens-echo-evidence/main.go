@@ -1,5 +1,5 @@
 // Command sirens-echo-evidence counts a behaviour across committed run
-// records. See docs/sirens-echo-evidence-scan.md.
+// records. See docs/sirens-echo-grounding.md.
 package main
 
 import (
@@ -47,7 +47,7 @@ type finding struct {
 }
 
 // datasetStart finds the record inside a file that also carries the run's log
-// stream. See docs/sirens-echo-evidence-scan.md.
+// stream. See docs/sirens-echo-grounding.md.
 func datasetStart(body []byte) int {
 	marker := []byte("\nschema:")
 	if at := bytes.Index(body, marker); at >= 0 {
@@ -129,6 +129,6 @@ func main() {
 	fmt.Printf("%-32s %4d replies %4d with tool-call markup, %.2f%%\n",
 		"TOTAL", totalReplies, totalMarked, share)
 	// Zero is not proof of absence. The pattern set covers one measured model
-	// family. See docs/sirens-echo-tool-call-markup.md.
+	// family. See docs/sirens-echo-tool-markup.md.
 	fmt.Println("Counts cover the measured delimiter syntaxes only.")
 }

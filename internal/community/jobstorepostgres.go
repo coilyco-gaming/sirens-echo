@@ -13,7 +13,7 @@ import (
 )
 
 // PostgresJobStore keeps the record in a database, so durability outlives the
-// pod rather than its volume. See docs/sirens-echo-jobs-store.md.
+// pod rather than its volume. See docs/sirens-echo-jobs.md.
 type PostgresJobStore struct {
 	Now Clock
 
@@ -21,7 +21,7 @@ type PostgresJobStore struct {
 }
 
 // openJobStore picks the backend the deployment configured. Both variables set
-// is refused rather than resolved. See docs/sirens-echo-jobs-store.md.
+// is refused rather than resolved. See docs/sirens-echo-jobs.md.
 func openJobStore(cfg Config) (JobStore, error) {
 	switch {
 	case cfg.JobStoreDSN != "" && cfg.JobStoreDir != "":

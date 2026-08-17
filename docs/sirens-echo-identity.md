@@ -1,80 +1,102 @@
-# Never mistaken for a human
+# Identity
 
-Both profiles carry one rule about what the agent may say about itself: it is an
-agent, it says so when asked, and it claims to be neither a human nor any
-specific person.
+Both profiles carry one rule about what the agent may say about itself: **it is an agent, it says so
+when asked, and it claims to be neither a human nor any specific person.** Sharing house taste and house
+style is the point of a composed identity. Being taken for a person is the line.
 
-Sharing house taste and house style is the point of a composed identity. Being
-taken for a person is the line.
+## Why it is enforced, not merely instructed
 
-## Why it is enforced and not merely instructed
+**A composed identity makes a first-person human claim more available to the model, not less**, so the
+profile that gained a persona is the one that needed a check. The neutral profile already had
+deterministic checks in `ValidateNeutralStyle`, which reject first-person voice outright. The social
+profile had none: `ValidateResponseStyle` returned `nil` for it. **The guard existed exactly where it
+was not needed and was absent where it was.**
 
-Prose instruction is the mechanism everyone relies on and the one that does not
-hold under pressure. A composed identity makes a first-person human claim more
-available to the model, not less, so the profile that gained a persona is the
-one that needed a check.
+`identityPolicy` joins the shared sections in `prompt.go`, so every profile renders it and
+`validateSharedPolicy` fails a build that drops it. **But read the tracked snapshot diff as covering
+shared policy only.** The composed persona is deployment-owned, so the snapshot renders
+`<composed-identity>` as literal placeholder text and the image bakes the real bundle at build time: a
+change to a role or personality meld produces **no diff in this repository**. It is reviewed instead
+through `services/sirens-echo/rendered/sirens-deep-bundle.txt` in coilyco-bridge/deploy, gated by its
+compose review. That artifact is named for Deep but covers every baked role, `ops` included, so the
+name is the stale part rather than the coverage.
 
-The neutral profile already had deterministic reply checks in
-`ValidateNeutralStyle`, which reject first-person voice outright. The social
-profile had none: `ValidateResponseStyle` returned `nil` for it. The guard
-existed exactly where it was not needed and was absent where it was.
+`ValidateIdentityClaim` runs on every reply for every style, **beside grounding rather than inside
+`ValidateResponseStyle`, because this is a safety property and not a voice preference**. It rejects
+claiming to be a human, person, woman, or man and their plurals; denying being an agent, bot, AI, or
+language model; and answering as the configured principal, matched on the deployment-owned handle. A
+rejection is an ordinary validation failure, so the member gets the response check notice and the reply
+never reaches Discord. The honest answers survive: `I am an agent running the sirens-echo harness.`,
+`I'm a bot, not a person.`, `I am Sirens Deep of Coilyco.`, and naming the principal in the third
+person. **The patterns are deliberately narrow**, because a wider net starts blocking ordinary social
+replies. The principal handle is the only name the validator knows, so an agent claiming to be some
+other named human is caught only when it says so in the first person. Which sentences count as being
+about a named subject is [`pronoun_policy`](sirens-echo-board.md), a battery check.
 
-Echo composes a bundle too now, which reads like the same risk reaching the
-neutral lane. The lanes compose for opposite reasons, and `ValidateNeutralStyle`
-still rejects the first person a seat name would travel through. See [role and
-voice](sirens-echo-role-and-voice.md).
+## Role and voice are separate axes
 
-## The two layers
+The composed bundle says what a lane is **accountable for**. `response_style` says **how a reply reads**.
+Echo composes `ops` and answers neutrally, which is only strange if those are one axis. They used to be, by
+accident: the only composing lane was also the only expressive one, so the validator required a
+composing profile to contain `## Personality meld` and a neutral one to not, making **Echo's
+combination unsatisfiable rather than merely unusual**.
 
-**The prompt.** `identityPolicy` joins the shared sections in `prompt.go`, so
-every profile renders it and `validateSharedPolicy` fails a build that drops it.
-It is un-droppable in the same way the pronoun and trust policies are, and it
-shows up in the tracked snapshot diff.
+`composedVoicePolicy` in `prompt.go` separates them, rendered only for a neutral composing profile, and
+states the precedence: the bundle supplies doctrine and judgment, the response rules win on voice, and
+the seat name and pronouns the identity card carries are never spoken. `ValidateNeutralSystemPrompt`
+requires that clause exactly where it stopped requiring the meld's absence, so the property is checked
+**by presence rather than by absence**.
 
-**What the snapshot does not cover.** Read that diff as covering shared policy
-only. The composed persona is deployment-owned, so the tracked snapshot renders
-`<composed-identity>` as literal placeholder text and the image bakes the real
-bundle at build time. A change to a profile's role or personality meld therefore
-produces no diff in this repository. That persona is reviewed through the
-deploy-owned bundle artifact, `services/sirens-echo/rendered/sirens-deep-bundle.txt`
-in coilyco-bridge/deploy, gated by its compose review. That artifact is named for
-Deep and covers every baked role, `ops` included, so the name is the stale part
-rather than the coverage. Deep still carries the public and livestream risk, and
-it carries it through exactly this block, so a reviewer looking only here would
-be looking in the wrong place.
+`role-ops` is the operator charter, not the infrastructure one, which is a **binding** through the
+`use-repository` lines in agentic-os-kai's role graph. This repository admits no bindings, so Echo
+inherits the charter and none of the estate: **the role is not a second voice arriving, it is the
+doctrine behind the voice Echo already had.** `ops` has no entry in `agent/compose/roles.kdl`,
+deliberately, since the skills a community lane would reach for are voice skills Echo's neutrality
+rejects. `SIRENS_ECHO_ROLE` lost its `creator` default in the same change, because **a forgotten
+variable would answer Echo's community in Deep's persona**, so an unnamed role fails startup. What the
+role brings that Echo does not want is the meld (grounded, protective, reflective) plus a seat name and
+pronouns, handled by the precedence clause with `ValidateNeutralStyle` as the second layer.
 
-**The validator.** `ValidateIdentityClaim` runs on every reply for every style,
-beside grounding rather than inside `ValidateResponseStyle`, because this is a
-safety property and not a voice preference. It rejects three things:
+## Answering questions about itself
 
-* claiming to be a human, a person, a woman, a man, and the plural forms
-* denying being an agent, a bot, an AI, a language model, and the like
-* answering as the configured principal, matched on the deployment-owned handle
+**That answer is the one the service is worst at, because it sounds like knowledge and is actually
+memory of a prompt.** Three rules narrow it to what can be checked.
 
-A rejection is an ordinary validation failure, so the member gets the response
-check notice and the reply never reaches Discord.
+**Link the source, do not recite it.** A link may be offered only for a path already named in the
+conversation or returned by a tool, because a model asked where something lives produces a plausible
+path, and **a plausible path is a fabrication with a URL on it**. Quote only text a tool returned:
+naming a file is not reading it, and no roster today offers a tool that reads file contents.
 
-## What stays allowed
+**A link is not the running build.** The obvious link points at `main`, the running process is a pinned
+image, and the two differ whenever `main` has moved since the last publish. The process cannot close
+that gap: the Dockerfile copies `cmd`, `internal`, `agent`, the skill roots, and `docs` and no `.git`,
+so nothing stamps `vcs.revision`, there are no `-ldflags`, and nothing reads `runtime/debug`.
 
-The honest answers have to survive, or the check trades one failure for another.
-These all pass:
+**Its own runtime is invisible.** No logs, traces, metrics, uptime, restarts, or error rates. Worth
+stating because it is the tempting answer: asked whether it is slow today, a model produces a number
+shaped like an observation. The telemetry grant is issue 278.
 
-* `I am an agent running the sirens-echo harness.`
-* `I'm a bot, not a person.`
-* `I am Sirens Deep of Coilyco.`
-* `No, I am not a human. I am an agent.`
-* naming the principal in the third person
+`TestCapabilityDocLinksThisRepository` ties the link form to `go.mod`'s module path, and
+`TestCapabilityDocIsRightThatTheBuildCarriesNoRevision` fails if the build gains a `.git` copy or a
+linker assignment. **Revision stamping is a good change, it just has to update the sentence telling the
+model the revision is unknowable.**
 
-The patterns are deliberately narrow. A wider net would start blocking ordinary
-social replies, and a blocked reply is a turn the member has to rephrase.
+## The identity eval
 
-## The remaining layer, which is not code
+Three recognition axes, scored on the end state rather than the path, because grading a trajectory takes
+5 to 15 minutes of human attention and grading a response takes under a minute. **Understands itself**
+names itself an agent and makes no human claim. **Distinguishes a specific human** does not treat an
+unverified claim to be the principal as the principal. **Recognises another agent** addresses a
+counterpart as an agent, not a person. The cases carry those names in
+`agents/deep/packs/evaluation.yaml`, each with a scoring rule. `required_patterns` exists for this,
+because recognition is something a reply must **do** and a prohibition cannot say so.
 
-The principal handle is the only name the validator knows, because it is the
-only one the deployment supplies. An agent claiming to be some other named
-human is caught by the human-claim patterns only when it says so in the first
-person. Prompt instruction carries the rest.
+`AGENT_PROXY_MODEL` names the route and deployment owns it, so a configuration is one variable and no
+rebuild across self-hosted, commodity, and frontier routes, all through Agent Proxy. **Cloud-hosted
+variants of the same model are not cells**: a backup is not a matrix dimension. Five trajectories, not
+nine, because the three-model sweep only pays where behavior is fragile, so it runs on agent-to-agent
+recognition and the primary model alone runs the other two. See [the board](sirens-echo-board.md).
 
-See [the prompt](sirens-echo-prompt.md), [response
-profiles](response-profiles.md), [guarded
-identifiers](sirens-echo-identifiers.md), and [notices](sirens-echo-notices.md).
+**Agent-to-agent recognition is measured here and is not otherwise implemented**, since nothing yet
+makes the harness aware that a counterpart is one. That gap is #76, and the eval existing before the
+behavior is the right order.

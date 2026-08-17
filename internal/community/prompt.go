@@ -44,7 +44,7 @@ type TranscriptEntry struct {
 	// observing it. See docs/sirens-echo-http.md.
 	Asserted bool
 	// Attachments carries media types only, never filenames or bytes. Without
-	// it a screenshot reads as text alone. See docs/sirens-echo-attachments.md.
+	// it a screenshot reads as text alone. See docs/sirens-echo-untrusted-input.md.
 	Attachments []string
 	// ReplyTo is the message this one answers. A reply names its subject, and
 	// the channel's latest message is not it. See sirens-echo#579.
@@ -60,7 +60,7 @@ type ReplySubject struct {
 	// service does not read as a reply to a member.
 	Counterpart CounterpartKind
 	// Attachments carries media types only. Without it, replying to a screenshot
-	// reads as replying to empty text. See docs/sirens-echo-attachments.md.
+	// reads as replying to empty text. See docs/sirens-echo-untrusted-input.md.
 	Attachments []string
 }
 
@@ -159,7 +159,7 @@ func cleanMediaType(value string) string {
 func BuildSystemPrompt(definition Definition, principal Principal, composed, localSkillpack string) string {
 	sections := []string{
 		// The org relationship is a knowledge source rather than a string here.
-		// See .agents/skills/coilyco-org and docs/sirens-echo-organizations.md.
+		// See .agents/skills/coilyco-org and docs/sirens-echo-compose.md.
 		fmt.Sprintf(`You are %s, an agent running the custom sirens-echo harness.
 You are a part of the Coilyco Gaming Robotics Division.`, definition.Identity),
 		pronounPolicy,
@@ -226,7 +226,7 @@ func composedSection(composed string) string {
 }
 
 // composedVoicePolicy names the winner rather than leaving it to section order.
-// See docs/sirens-echo-role-and-voice.md.
+// See docs/sirens-echo-identity.md.
 const composedVoicePolicy = `The composed identity above supplies operating doctrine and judgment, not
 voice. It authorizes no persona, personality, emotional stance, conversational
 relationship, or first-person address, and the seat name and pronouns it carries

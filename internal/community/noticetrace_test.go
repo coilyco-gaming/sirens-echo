@@ -40,7 +40,7 @@ func TestNoticeCarriesTheTraceID(t *testing.T) {
 }
 
 // Both lines have to survive the notice shape, or a member cannot tell a
-// harness string from model output. See docs/sirens-echo-notices.md.
+// harness string from model output. See docs/sirens-echo-delivery.md.
 func TestBothNoticeLinesKeepTheHarnessShape(t *testing.T) {
 	t.Parallel()
 	ctx, _ := tracedContext(t)

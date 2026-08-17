@@ -9,7 +9,7 @@ import (
 )
 
 // Publishing the declared set to Discord, which is what makes a slash command
-// reachable at all. See docs/sirens-echo-command-registration.md.
+// reachable at all. See docs/sirens-echo-commands.md.
 
 // commandRegistrar is the write this needs, so a test can observe the
 // registration without a Discord session.
@@ -23,7 +23,7 @@ type commandRegistrar interface {
 }
 
 // registerCommands publishes the declared set to every admitted guild. Per
-// guild, not globally. See docs/sirens-echo-command-registration.md.
+// guild, not globally. See docs/sirens-echo-commands.md.
 func registerCommands(
 	ctx context.Context,
 	registrar commandRegistrar,

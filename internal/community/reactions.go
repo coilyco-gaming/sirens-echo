@@ -7,7 +7,7 @@ import (
 )
 
 // A reaction is harness state on the member's own message, not model output. It
-// never reaches reply validation. See docs/sirens-echo-reactions.md.
+// never reaches reply validation. See docs/sirens-echo-progress.md.
 
 const (
 	// reactionAccepted marks a message the harness took, before any model call.
@@ -34,7 +34,7 @@ type unreactor interface {
 }
 
 // transientReactions describe work in flight rather than an outcome, so they
-// stop being true when the turn ends. See docs/sirens-echo-reactions.md.
+// stop being true when the turn ends. See docs/sirens-echo-progress.md.
 var transientReactions = []string{reactionAccepted, reactionTool}
 
 // onceReactor applies each emoji once for the turn it belongs to. A turn that
@@ -46,7 +46,7 @@ type onceReactor struct {
 }
 
 // React drops a repeat before it reaches the transport, marking before the
-// attempt so a refused reaction is not retried. See docs/sirens-echo-reactions.md.
+// attempt so a refused reaction is not retried. See docs/sirens-echo-progress.md.
 func (o *onceReactor) React(ctx context.Context, emoji string) error {
 	o.mu.Lock()
 	repeat := o.applied[emoji]
@@ -128,7 +128,7 @@ func reactFromContext(ctx context.Context, emoji string) {
 }
 
 // clearTurnMarks removes the marks that described work in flight, leaving any
-// mark that describes the outcome. See docs/sirens-echo-reactions.md.
+// mark that describes the outcome. See docs/sirens-echo-progress.md.
 func (a *Agent) clearTurnMarks(ctx context.Context) {
 	once, ok := ctx.Value(reactionKey{}).(*onceReactor)
 	if !ok {

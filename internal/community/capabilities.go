@@ -6,7 +6,7 @@ import (
 )
 
 // A capability that was never switched on is indistinguishable from inside the
-// process from one that was never built. See docs/sirens-echo-capabilities.md.
+// process from one that was never built. See docs/sirens-echo.md.
 
 // These name the stores, so a reader learns which one holds jobs. The durable
 // two stay distinct: file survives a restart, postgres survives the pod.
@@ -38,7 +38,7 @@ func (a *Agent) logCapabilities(ctx context.Context) {
 		// the interesting part is which ones this deployment moved.
 		slog.Any("tuning_applied", a.cfg.TuningApplied),
 		// A name this service could not parse kept its default. Silence there
-		// reads as a working override. See docs/sirens-echo-tuning-overrides.md.
+		// reads as a working override. See docs/sirens-echo-tuning.md.
 		slog.Any("tuning_rejected", a.cfg.TuningRejected),
 	)
 }

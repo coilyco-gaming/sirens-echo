@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-// The HTTP surface is submit, poll, cancel. See docs/sirens-echo-jobs-lifecycle.md.
+// The HTTP surface is submit, poll, cancel. See docs/sirens-echo-jobs.md.
 
 const jobsPath = "/v1/jobs/"
 

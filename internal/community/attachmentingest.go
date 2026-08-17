@@ -14,7 +14,7 @@ import (
 )
 
 // An uploaded file is a large prompt body the turn reads through a tool rather
-// than one spliced into the prompt. See docs/sirens-echo-attachments.md.
+// than one spliced into the prompt. See docs/sirens-echo-untrusted-input.md.
 
 // attachmentHosts is the whole egress surface. The URL arrives on the Gateway
 // payload rather than from message text, and this bounds it anyway.

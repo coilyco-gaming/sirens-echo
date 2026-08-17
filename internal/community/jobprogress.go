@@ -8,7 +8,7 @@ import (
 )
 
 // Progress is advisory. It is rate limited and droppable, so a chatty job
-// cannot flood its origin. See docs/sirens-echo-jobs-lifecycle.md.
+// cannot flood its origin. See docs/sirens-echo-jobs.md.
 
 // JobProgressReporter delivers an intermediate update to a job's origin.
 type JobProgressReporter interface {

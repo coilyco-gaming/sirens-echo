@@ -9,7 +9,7 @@ import (
 )
 
 // FixtureSchema names the declared-results file an evaluation run may serve
-// instead of the live roster. See docs/sirens-echo-tool-fixture.md.
+// instead of the live roster. See docs/sirens-echo-testing.md.
 const FixtureSchema = "sirens-discord-ops.tool-fixture.v1"
 
 // FixtureTool is one tool the fixture offers and the single result it returns.

@@ -6,7 +6,7 @@ import (
 )
 
 // A turn's prompt must carry nothing from the turn before it. See
-// sirens-echo#265 and docs/sirens-echo-turn-isolation.md.
+// sirens-echo#265 and docs/sirens-echo-turn-stages.md.
 
 // The bleed a later change would most plausibly introduce is an accumulator or
 // a cache, added for a good reason, that survives one call into the next.
@@ -83,7 +83,7 @@ func TestRepeatingATurnProducesTheSamePrompt(t *testing.T) {
 }
 
 // The caller's history is the only conversation content a turn reads. See
-// docs/sirens-echo-turn-isolation.md for what that does and does not bound.
+// docs/sirens-echo-turn-stages.md for what that does and does not bound.
 func TestTheTurnContextHoldsOnlyTheSuppliedEntries(t *testing.T) {
 	t.Parallel()
 	supplied := []TranscriptEntry{

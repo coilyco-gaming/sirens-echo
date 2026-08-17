@@ -7,7 +7,7 @@ import (
 )
 
 // The org relationship is one source both agents read, so neither infers it.
-// See sirens-echo#806 and docs/sirens-echo-organizations.md.
+// See sirens-echo#806 and docs/sirens-echo-compose.md.
 
 const orgSkillRoot = ".agents/skills/coilyco-org"
 

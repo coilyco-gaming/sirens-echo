@@ -6,7 +6,7 @@ import (
 )
 
 // The reply path must reject a promise of work between turns, not only the
-// deployment gate. See docs/sirens-echo-continuing-work.md.
+// deployment gate. See docs/sirens-echo-execution.md.
 
 // The gate and the runtime hold one definition. Two copies drift quietly: the
 // gate keeps passing while the runtime stops matching, or the reverse.

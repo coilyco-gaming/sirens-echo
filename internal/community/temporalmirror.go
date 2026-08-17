@@ -9,7 +9,7 @@ import (
 	"go.temporal.io/sdk/workflow"
 )
 
-// The Temporal Cloud end of the mirror. See docs/sirens-echo-tool-mirror.md.
+// The Temporal Cloud end of the mirror. See docs/sirens-echo-tool-markup.md.
 
 const (
 	// TrajectoryWorkflow is the workflow type one turn's tool calls land in.
@@ -72,7 +72,7 @@ func (m temporalMirror) MirrorToolCall(ctx context.Context, record ToolCallRecor
 }
 
 // ToolTrajectoryWorkflow accumulates one turn's records and ends when they stop.
-// It performs no activity. See docs/sirens-echo-tool-mirror.md.
+// It performs no activity. See docs/sirens-echo-tool-markup.md.
 func ToolTrajectoryWorkflow(ctx workflow.Context) ([]ToolCallRecord, error) {
 	records := make([]ToolCallRecord, 0, 8)
 	signals := workflow.GetSignalChannel(ctx, TrajectorySignal)

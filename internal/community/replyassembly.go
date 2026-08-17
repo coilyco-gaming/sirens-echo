@@ -3,7 +3,7 @@ package community
 import "strings"
 
 // One step owns every service-authored suffix and the budget they share. See
-// docs/sirens-echo-tool-disclosure.md and sirens-echo#413.
+// docs/sirens-echo-tool-markup.md and sirens-echo#413.
 
 // serviceFacts is what the service knows about the turn and the answer does
 // not. See docs/sirens-echo-reply-assembly.md.

@@ -5,11 +5,11 @@ import (
 	"strings"
 )
 
-// The receipt a reader can see. See docs/sirens-echo-tool-disclosure.md.
+// The receipt a reader can see. See docs/sirens-echo-tool-markup.md.
 
 const (
 	// The two shared with the reaction set are references, not copies, so the
-	// surfaces cannot drift apart. See docs/sirens-echo-tool-disclosure.md.
+	// surfaces cannot drift apart. See docs/sirens-echo-tool-markup.md.
 	toolDisclosureGlyph = reactionTool
 	toolFailedGlyph     = reactionFailed
 	// These two have no reaction counterpart and are defined here, as escapes
@@ -53,7 +53,7 @@ func toolDisclosure(executed []ExecutedTool) string {
 	for index := 0; index < len(executed); {
 		current := executed[index]
 		// Consecutive only, and never across a status change. See
-		// docs/sirens-echo-tool-disclosure.md.
+		// docs/sirens-echo-tool-markup.md.
 		run := 1
 		for index+run < len(executed) &&
 			executed[index+run].Name == current.Name &&

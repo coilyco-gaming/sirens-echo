@@ -7,7 +7,7 @@ import (
 )
 
 // Logs go to stdout and over OTLP at once, so one line reaches both a kubectl
-// reader and SigNoz. See docs/sirens-echo-log-export.md.
+// reader and SigNoz. See docs/sirens-echo-rate.md.
 
 // multiHandler writes one record to every handler. slog offers no fan-out, and
 // swapping stdout for OTLP would cost kubectl logs during an incident.

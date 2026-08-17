@@ -78,7 +78,7 @@ func (p *ScratchProvider) Open(ctx context.Context) (ToolSession, error) {
 		return nil, ErrNoScratchSession
 	}
 	// Session over requester, so a thread is shared and the per-requester
-	// quota stays measurable. See docs/sirens-echo-session-workspace.md.
+	// quota stays measurable. See docs/sirens-echo-scratchpad.md.
 	sessionRoot := filepath.Join(p.Root, session.Directory())
 	partition := filepath.Join(sessionRoot, scratchPartitionName(requester))
 	if err := os.MkdirAll(partition, scratchPermissions); err != nil {
@@ -94,7 +94,7 @@ func (p *ScratchProvider) Open(ctx context.Context) (ToolSession, error) {
 }
 
 // scratchPartitionName derives a flat directory name from the requester, by
-// hashing rather than stripping. See docs/sirens-echo-scratchpad-partitions.md.
+// hashing rather than stripping. See docs/sirens-echo-scratchpad.md.
 func scratchPartitionName(requesterID string) string {
 	trimmed := strings.TrimSpace(requesterID)
 	if trimmed == "" {
@@ -248,7 +248,7 @@ func (s *scratchSession) resolve(relative string) (string, error) {
 }
 
 // resolveShared reads your own bare path first, then the rest of the session.
-// See docs/sirens-echo-session-workspace.md.
+// See docs/sirens-echo-scratchpad.md.
 func (s *scratchSession) resolveShared(relative string) (string, error) {
 	if strings.TrimSpace(s.sessionRoot) == "" {
 		return s.resolve(relative)
@@ -446,7 +446,7 @@ const scratchReservedDir = "tool-output"
 const scratchUploadDir = "uploads"
 
 // WriteReserved writes on the runtime's behalf, into the directory the model is
-// refused. See docs/sirens-echo-scratchpad-partitions.md.
+// refused. See docs/sirens-echo-scratchpad.md.
 func (s *scratchSession) WriteReserved(relative, content string) (ToolResult, error) {
 	return s.writeAt(relative, content, true)
 }
@@ -654,7 +654,7 @@ func (s *scratchSession) sessionFiles() ([]sessionFile, int64, error) {
 }
 
 // makeSessionRoom evicts oldest first until the write fits, inside this
-// session only. See docs/sirens-echo-session-workspace.md.
+// session only. See docs/sirens-echo-scratchpad.md.
 func (s *scratchSession) makeSessionRoom(delta int64) ([]string, error) {
 	files, total, err := s.sessionFiles()
 	if err != nil {

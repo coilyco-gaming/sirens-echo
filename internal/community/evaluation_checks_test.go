@@ -610,7 +610,7 @@ func TestToolNameMarkupMissesAnAliasedToolInTagContent(t *testing.T) {
 	// The French prose prefix is dropped; the markup form is the subject.
 	reply := `<tool_uri> <tool>issue-create</tool>`
 	if len(toolNameMarkupFailures(reply, "forgejo__create_issue")) != 0 {
-		t.Fatal("this form is now caught, so update docs/sirens-echo-tool-call-markup.md and this test")
+		t.Fatal("this form is now caught, so update docs/sirens-echo-tool-markup.md and this test")
 	}
 }
 

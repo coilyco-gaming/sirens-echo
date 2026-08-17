@@ -70,7 +70,7 @@ var subjectlessClaim = regexp.MustCompile(
 )
 
 // continuingWorkClaimPattern is shared verbatim with the
-// no-continuing-work-claim case. See docs/sirens-echo-continuing-work.md.
+// no-continuing-work-claim case. See docs/sirens-echo-execution.md.
 const continuingWorkClaimPattern = `(?i)\b(?:the system|the service|this service|sirens echo|sirens deep)\s+(?:is\s+now|will)\s+(?:continue\s+to\s+|keep\s+)?(?:process|processing|monitor|monitoring|watch|watching|track|tracking|check|checking|notify|notifying|update|updating|alert|search|searching|look\s+up|looking\s+up|query|querying|retrieve|retrieving|fetch|fetching)\b`
 
 // continuingWorkClaim is a promise of work between turns. This runtime holds
@@ -118,7 +118,7 @@ func ParseReply(raw string) (string, error) {
 }
 
 // ValidateNoToolCallMarkup refuses a reply carrying the model's own tool-call
-// syntax. See docs/sirens-echo-capability-limits.md for refuse over strip.
+// syntax. See docs/sirens-echo-config.md for refuse over strip.
 func ValidateNoToolCallMarkup(reply string) error {
 	// Deliberately not in ParseReply: the evaluation scorer and the repair loop
 	// both call that, and this must not reshape what those two measure.
@@ -189,7 +189,7 @@ func ValidateGrounding(reply string, suppliedContext string, executed ...Execute
 var channelToolName = regexp.MustCompile(`^[a-z]+_([a-z_][a-z0-9_-]*)-messages?$`)
 
 // channelsReachedByTool reads tool names only, never tool results. See
-// docs/sirens-echo-grounding-channels.md for why that asymmetry is the fix.
+// docs/sirens-echo-grounding.md for why that asymmetry is the fix.
 func channelsReachedByTool(executed []ExecutedTool) []string {
 	channels := make([]string, 0, len(executed))
 	for _, tool := range executed {
@@ -319,7 +319,7 @@ func ValidateNeutralStyle(reply string) error {
 		return fmt.Errorf("model reply used an exclamation mark")
 	}
 	// An object emoji names a thing and is legible. A face or a status dot
-	// carries tone or verdict. See docs/sirens-echo-object-emoji.md.
+	// carries tone or verdict. See docs/sirens-echo-phrases.md.
 	objects, refused := objectEmojiCount(reply)
 	if refused {
 		return fmt.Errorf("model reply used an emotive or indicator emoji")

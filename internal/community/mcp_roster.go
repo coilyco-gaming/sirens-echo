@@ -27,7 +27,7 @@ type rosterEntry struct {
 	Args      []string          `json:"args,omitempty" yaml:"args,omitempty"`
 	Env       map[string]string `json:"env,omitempty" yaml:"env,omitempty"`
 	// Headers reaches an authenticated hosted MCP, and is where a credential
-	// belongs. See docs/sirens-echo-mcp-roster-auth.md.
+	// belongs. See docs/sirens-echo-mcp.md.
 	Headers map[string]string `json:"headers,omitempty" yaml:"headers,omitempty"`
 }
 

@@ -2,7 +2,7 @@
 # Builds the Sirens Echo image without publishing, so a Dockerfile or build
 # script fault fails a pull request instead of the merge. The job container gets
 # no DOCKER_HOST and no mounted socket, so the daemon address is derived rather
-# than given. See docs/sirens-echo-image-build.md.
+# than given. See docs/sirens-echo-deploy.md.
 set -euo pipefail
 
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

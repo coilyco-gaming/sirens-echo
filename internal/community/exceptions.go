@@ -269,7 +269,7 @@ var exceptionCatalog = [exceptionCodeCount]exceptionSpec{
 		fault:    faultService,
 	},
 	// The jobs stage. Its own stage rather than http, because a job outlives
-	// the request that submitted it. See docs/sirens-echo-jobs-lifecycle.md.
+	// the request that submitted it. See docs/sirens-echo-jobs.md.
 	exceptionJobRequestInvalid: {
 		typeName: "sirens_echo.jobs.request_invalid",
 		message:  "The job request body is not valid JSON.",

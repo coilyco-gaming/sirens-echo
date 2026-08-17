@@ -5,7 +5,7 @@ import (
 )
 
 // A block is model text on a path the reply checks never run.
-// See docs/sirens-echo-block-response.md.
+// See docs/sirens-echo-content-gate.md.
 
 const (
 	// blockRedirect is the whole response for a sensitive class, and the

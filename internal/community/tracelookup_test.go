@@ -127,7 +127,7 @@ func TestTheDiscordTurnReadsTheReferencedMessage(t *testing.T) {
 }
 
 // The two have to keep agreeing, so a notice shape change fails here rather
-// than quietly in production. See docs/sirens-echo-trace-lookup.md.
+// than quietly in production. See docs/sirens-echo-rate.md.
 func TestTheHarnessNoticeIsStillReadableByThisDetector(t *testing.T) {
 	t.Parallel()
 	notice := harnessNotice("trace id " + sampleTraceID)

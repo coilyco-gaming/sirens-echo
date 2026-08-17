@@ -1,64 +1,97 @@
 # Runtime MCP tools
 
-Each source-controlled definition owns its MCP roster and optional issue tracker.
-
-The Sirens Echo community definition contains public Eco MCP and an
-environment-backed private Forgejo MCP URL. Eco needs no client credential or
-tailnet identity, Echo sends no credential to the private MCP, and the separate
-MCP workload holds its Forgejo token.
-
-The CoilyCo general-purpose definition selects a Steam reader and the same
-repository-fixed Forgejo MCP. It names no issue tracker, so a write happens
-because the model chose a tool. General-purpose describes topic scope, not
-universal mutation authority.
+Each source-controlled definition owns its MCP roster and optional issue tracker. The Echo community
+definition contains public Eco MCP and an environment-backed private Forgejo MCP URL: **Echo sends no
+credential to the private MCP**, and the separate MCP workload holds its Forgejo token. The CoilyCo
+definition selects a Steam reader and the same Forgejo MCP and names no issue tracker, **so a write
+happens because the model chose a tool**: general-purpose describes topic scope, not universal mutation
+authority.
 
 ## Tool loop
 
-When a definition configures MCP servers, the harness:
+When a definition configures MCP servers, the harness opens every session, lists each published tool,
+description, and input schema, exposes each model name as `<server>__<tool>`, sends those schemas with
+the Agent Proxy request, executes valid model-requested tools, renders each result as text, appends the
+calls and results, then continues. **An empty roster skips discovery and sends no tools.** Final content
+can be an OpenAI-compatible string, text-part array, or text object, and **continuation stops after six
+tool rounds**.
 
-1. Opens every configured MCP session.
-2. Lists each published tool, description, and input schema.
-3. Exposes each model name as `<server>__<tool>`.
-4. Sends those schemas with the Agent Proxy request.
-5. Executes valid model-requested tools.
-6. Renders each result as text, appends the calls and results, then continues.
+The harness rejects empty, colliding, or overlong model-facing tool names; tool calls missing an
+identifier or function name; calls to tools absent from the discovered roster; arguments that are not
+JSON objects; a response with neither tool calls nor usable content; and more than six rounds. **A
+server that fails to connect or list contributes no tools and the turn goes on with the rest, named to
+the model so it reports the gap.** Only an unreachable roster stops the turn, a name collision stays
+fatal, an invocation failure ends the turn with the tool-failure notice, and an MCP error result is
+grounded data the model self-corrects from.
 
-An empty roster skips discovery and sends no tools. Agent Proxy can return a
-response containing only tool calls when tools exist. Final content can use an
-OpenAI-compatible string, text-part array, or text object. Continuation stops
-after six tool rounds.
-
-## Validation and failure
-
-The harness rejects:
-
-- Empty, colliding, or overlong model-facing tool names
-- Tool calls missing an identifier or function name
-- Calls to tools absent from the discovered roster
-- Tool arguments that are not JSON objects
-- A response with neither tool calls nor usable content
-- More than six tool rounds
-
-A server that fails to connect or list contributes no tools and the turn goes on
-with the rest, named to the model so it reports the gap. Only an unreachable
-roster stops the turn, and a name collision stays fatal. An invocation failure
-ends the turn with the tool-failure notice, and an MCP error result is grounded
-data the model self-corrects from. See [notices](sirens-echo-notices.md).
-
-## Acceptance coverage
-
-The official in-process MCP fixture proves schema discovery, a tool-call-only
-first model response, complete tool result continuation, a grounded user-facing
-reply, alternate content forms, and that a tool which never answers fails on the
-call bound rather than on the turn's. Separate profile tests prove the CoilyCo
-definition selects exactly its Steam and Forgejo surfaces, resolves both
-addresses from deployment, and names no issue tracker.
-
-The live Echo evaluation selects only static MCP URLs, then requires an
+The in-process MCP fixture proves schema discovery, a tool-call-only first model response, complete
+result continuation, a grounded reply, alternate content forms, and that **a tool which never answers
+fails on the call bound rather than on the turn's**. The live Echo evaluation requires an
 `eco__get_eco_server_status` call without sending Discord or Forgejo writes.
 
-See [the tracker surface](sirens-echo-tracker-surface.md) for what the Forgejo
-server publishes and what selecting it as `issue_tracker` changes.
+## Harness tools
 
-See [the service](sirens-echo.md), [large results](sirens-echo-tool-results.md),
-and [observability](sirens-echo-observability.md).
+Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
+harness itself answers the call**, and there is one today. A tool listing is held for an hour, which is
+a long time to be wrong about your own tools, and **the thing best placed to notice is the model that
+just failed to find one it expected**, so `harness__refresh_tools` lets it say so. It marks every
+rostered server for re-reading and dials nothing, so twenty calls in one turn cost one listing.
+
+## The fetch tool
+
+A read-only HTTPS GET the model can call. **The fetching is the easy part, the allowlist is the
+feature.** The fetch runs inside the cluster, so without bounds it reaches the tailnet, other services'
+internal endpoints, and cloud metadata addresses, **and the model is precisely the component an attacker
+gets to talk to**: a tool that fetches any URL a model can be persuaded to fetch is server-side request
+forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated allowlist, and
+**empty offers no tool at all**: no schema in the prompt, nothing to be talked into.
+
+* **A wildcard covers subdomains and nothing else.** `*.mozilla.com` matches `www.mozilla.com` and
+  `a.b.mozilla.com`, **not** `mozilla.com`, which is a separate entry. It is not a suffix test: the
+  leading dot is part of the comparison, so `mozilla.com.evil.example` is refused, and a pattern with a
+  misplaced or missing star matches nothing rather than everything.
+* **Exact host match otherwise**, not a suffix, because `host.evil.example` is a different host a suffix
+  check would accept and registering that domain costs an attacker nothing. **HTTPS only.**
+* **Private addresses refused at dial time**, not by reading the URL. An allowlisted hostname can
+  resolve to an internal address, deliberately or by accident, and a check that only reads the hostname
+  never sees it. Loopback, private ranges, link-local, unspecified, and carrier-grade NAT are refused at
+  connection time. **CGNAT is named separately because Go's `IsPrivate` is RFC1918 only**, so
+  `100.64.0.0/10` reads as public to every other predicate, and that range is the tailnet.
+* **Redirects refused**: a redirect is a second destination the allowlist never saw.
+* **A page over the cap is marked, not silently cut.** The read takes one byte past the limit, so a page
+  that fits is distinguishable from one that does not, and an oversize body returns what it fetched plus
+  a truncation line, seam repaired to a rune boundary. **A half document the model cannot tell from a
+  whole one is answered from with ordinary confidence.**
+
+**GET only.** A tool that writes is a different authority and should be requested on its own terms. A
+fetched page is untrusted text entering the prompt, and **the allowlist bounds where it comes from and
+says nothing about what it says**, so an approved host serving hostile instructions is still an open
+question, the same boundary web search raises.
+
+## What happens to a large result
+
+One tool result is capped at 8 KiB before it re-enters the prompt, so a round of parallel calls cannot
+inflate the context past the model's budget. **The cap is not the interesting part, what happens to the
+rest is.** The full result stays on the executed-tool record for telemetry and grounding, but only the
+capped copy reaches the model, so everything past the cut used to be unreachable: **a large payload was
+silently beheaded and the model answered from its first 8 KiB with no way to know more existed.**
+
+Now, when a result is trimmed and the deployment mounts a scratchpad, the runtime writes the whole
+result to the requester's own scratchpad and appends a line naming the file and the true byte count, so
+the model can `scratch_read` or `scratch_search` it. **The save goes through the `scratch_write` tool
+rather than the filesystem**, so path confinement, the per-file limit, the per-requester quota, and
+attribution all apply as for a model-requested write, and saves are numbered per turn so a second call
+to the same tool cannot overwrite the first. **Every failure falls back rather than failing
+the turn**: no scratchpad, a result over the per-file limit, or a partition at quota each leave a
+trimmed result carrying the truncation marker, because **losing the remainder is much better than losing
+the answer**. The file name is built from the tool's own name with everything outside letters, digits,
+hyphen, and underscore removed, under a single `tool-output` directory, because **a tool name is
+server-supplied and can never reach the filesystem as a path**.
+
+**A spent tool budget answers rather than discards.** A turn reaching the tool-round ceiling used to
+fail outright, discarding every result the rounds returned and telling the member the backend was
+unavailable, and both halves were wrong. Now the tools are withdrawn once the last round's results are
+in and one further call asks for an answer from what was gathered, instructed to say plainly what could
+not be determined and to claim no result no tool returned. **Withdrawing after the results land rather
+than on the next request costs no extra model call and keeps the six-round ceiling exactly true.** If
+the outer model-call budget is also spent, the turn ends with the rounds-spent notice.

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Daemon addresses for the image-build job, shared so the probe cannot report on
-# an address the build never tried. See docs/sirens-echo-image-build.md.
+# an address the build never tried. See docs/sirens-echo-deploy.md.
 
 # Where the build records the address it settled on, for the probe to read. The
 # two steps share a container, so a step-temp file crosses between them.

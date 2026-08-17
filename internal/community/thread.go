@@ -50,7 +50,7 @@ func threadTitle(
 		return name
 	}
 	// Regenerated rather than trimmed: a cut title loses its subject, which is
-	// the one thing a title carries. See docs/sirens-echo-thread-title-length.md.
+	// the one thing a title carries. See docs/sirens-echo-threads.md.
 	retried := threadTitleAttempt(
 		ctx, completions, message, requestID, threadTitleRetryPrompt())
 	if withinTitleBound(retried) && retried != "" {
@@ -135,7 +135,7 @@ func threadNameFrom(raw string) string {
 }
 
 // threadCreationName is the name a thread is created with, bounded whatever it
-// came from. See docs/sirens-echo-thread-title-length.md.
+// came from. See docs/sirens-echo-threads.md.
 func threadCreationName(title string, message *discordgo.Message) string {
 	return hardTrimRunes(
 		valueOrDefault(title, threadNameFor(message)), threadTitleRunes)

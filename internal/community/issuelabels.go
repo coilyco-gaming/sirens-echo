@@ -6,7 +6,7 @@ import (
 )
 
 // Every issue this service files carries the labels the harness applies, never
-// ones the model supplied. See docs/sirens-echo-sandbox-label.md.
+// ones the model supplied. See docs/sirens-echo-issues.md.
 
 // issueLabelTool is the tracker verb the labels attach to. A different verb
 // files nothing, so nothing else is touched.
@@ -30,7 +30,7 @@ func positiveInt(raw string) int {
 type issueLabelPolicy struct {
 	Tracker string
 	// SandboxID marks the contents unverified and is the control this file
-	// exists for. See docs/sirens-echo-sandbox-label.md.
+	// exists for. See docs/sirens-echo-issues.md.
 	SandboxID int
 	// DestinationID is the move-to-repo label saying where the issue belongs.
 	// The deployment sets the unknown one unless it knows better. See #756.

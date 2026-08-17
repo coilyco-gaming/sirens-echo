@@ -1,11 +1,11 @@
 # THE JOB STORE SERVICE. `jobstore` is a scratch Postgres thrown away with the
 # job, never the deployed store: the test creates its table and drops it.
 # Without it the Postgres store's SQL has no coverage anywhere, which is the
-# silent-success shape docs/sirens-echo-test-skips.md exists to catch.
+# silent-success shape docs/sirens-echo-testing.md exists to catch.
 #
 # Its DSN is scoped to the `job store SQL` step rather than the job, so the
 # suite above it still skips those tests and scripts/test-skips.allow stays true
-# locally and in CI alike. See docs/sirens-echo-jobs-store.md.
+# locally and in CI alike. See docs/sirens-echo-jobs.md.
 #
 # That step runs through ci-job-store-sql.sh rather than a bare `go test`,
 # because go test prints ok for a skip: a service that never came up would
@@ -14,7 +14,7 @@
 #
 # ROLE SELECTION DRIFT runs here as well as at Dockerfile step 26. The image
 # build is what stops a bad image; this step is what says so in seconds rather
-# than two thirds of the way through a build. See docs/sirens-echo-role-record.md.
+# than two thirds of the way through a build. See docs/sirens-echo-compose.md.
 name: ci
 
 on:

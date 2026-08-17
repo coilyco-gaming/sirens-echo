@@ -13,7 +13,7 @@ import (
 )
 
 // An inventory of the org's public repositories, read without a credential. See
-// docs/sirens-echo-repo-inventory.md.
+// docs/sirens-echo-assets.md.
 
 const (
 	repoInventoryServer   = "repos"

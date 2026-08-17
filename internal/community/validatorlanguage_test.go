@@ -10,7 +10,7 @@ import (
 )
 
 // Which validators read words and which read values decides what still holds
-// when a channel answers in another language. See docs/sirens-echo-language.md.
+// when a channel answers in another language. See docs/sirens-echo-phrases.md.
 
 type validatorReach string
 
@@ -194,7 +194,7 @@ func TestTheWordAnchoredValidatorsStillLapseOnATranslation(t *testing.T) {
 // and the decision on sirens-echo#298 is priced by exactly this list.
 func TestTheLanguageDocStatesWhichValidatorsLapse(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-language.md"))
+	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-phrases.md"))
 	if err != nil {
 		t.Fatalf("read the language doc: %v", err)
 	}

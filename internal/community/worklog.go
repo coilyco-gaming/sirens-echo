@@ -37,7 +37,7 @@ type progressView struct {
 }
 
 // worklogRow renders one call in the notice shape, so harness text inside an
-// embed keeps the contract it has outside one. See docs/sirens-echo-notices.md.
+// embed keeps the contract it has outside one. See docs/sirens-echo-delivery.md.
 func worklogRow(row progressRow) string {
 	glyph := reactionTool
 	if row.done {

@@ -12,7 +12,7 @@ import (
 )
 
 // Reading the completion as a stream, so silence and slowness stop looking
-// alike. See docs/sirens-echo-model-stream.md.
+// alike. See docs/sirens-echo-model-call.md.
 
 // ErrModelSilent is a backend that sent nothing at all for the idle timeout. It
 // is a different fact from the turn running out of budget while work continued.

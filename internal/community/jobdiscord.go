@@ -11,7 +11,7 @@ import (
 )
 
 // Discord is the one origin with a durable place to answer in, so it is the
-// one transport that gets notified. See docs/sirens-echo-jobs-lifecycle.md.
+// one transport that gets notified. See docs/sirens-echo-jobs.md.
 
 // discordJobReporter delivers job notices back to the channel a job came from.
 type discordJobReporter struct {

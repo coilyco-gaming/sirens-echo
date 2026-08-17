@@ -6,7 +6,7 @@ import (
 )
 
 // The outbound hop was the one place a large payload was destroyed rather than
-// saved. See docs/sirens-echo-reply-overflow.md.
+// saved. See docs/sirens-echo-reply-assembly.md.
 
 const (
 	// overflowNotice names the file and the true size, the way the inbound and

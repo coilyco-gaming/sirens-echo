@@ -130,7 +130,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 	var payload httpTurnRequest
 	decoder := json.NewDecoder(request.Body)
 	// A field the contract does not define took no effect, and a 200 tells the
-	// caller it did. See docs/sirens-echo-http-contract.md.
+	// caller it did. See docs/sirens-echo-http.md.
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&payload); err != nil {
 		if oversizeBody(err) {
@@ -333,7 +333,7 @@ func (a *Agent) refuseHTTP(
 ) {
 	a.telemetry.MarkSpanError(trace.SpanFromContext(request.Context()), code)
 	// The span carried this and no log line did, so an alert reading logs saw
-	// nothing for a caller error. See docs/sirens-echo-exceptions.md.
+	// nothing for a caller error. See docs/sirens-echo-config.md.
 	spec := exceptionFor(code)
 	a.telemetry.Error(
 		request.Context(),
@@ -357,7 +357,7 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 // through a different ingress. Only the transport label differs.
 type httpTurn struct {
 	// trusted records whether the caller authenticated. Only telemetry reads
-	// it. See docs/sirens-echo-http-identity.md.
+	// it. See docs/sirens-echo-http.md.
 	trusted   bool
 	requestID string
 	requester string

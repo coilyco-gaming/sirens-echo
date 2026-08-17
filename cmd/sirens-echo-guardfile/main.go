@@ -10,7 +10,7 @@ import (
 )
 
 // Generates the agent's own-authority skill from the deployed guardfile. See
-// docs/sirens-echo-guardfile.md.
+// docs/sirens-echo-config.md.
 const skillTarget = ".agents/skills/coilyco-general/references/guardfile.md"
 
 func main() {

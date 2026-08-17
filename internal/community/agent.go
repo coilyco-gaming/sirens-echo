@@ -117,7 +117,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	telemetry = telemetryOrNoop(telemetry)
 	httpClient := &http.Client{
 		// No total timeout: it would cut a streaming completion on schedule
-		// however many heartbeats arrived. See docs/sirens-echo-model-stream.md.
+		// however many heartbeats arrived. See docs/sirens-echo-model-call.md.
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
 			otelhttp.WithTracerProvider(telemetry.traceProvider),
@@ -195,7 +195,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	agent.identifiers = NewIdentifierGuard(cfg, roster)
 	// Offered to the repair loop only after the guard exists, because the checks
-	// read it. See docs/sirens-echo-reply-repair.md.
+	// read it. See docs/sirens-echo-reply-assembly.md.
 	proxy.ValidateReply = agent.repairableReplyChecks
 	agent.completions = proxy
 	agent.ensureRuntimeDefaults()
@@ -316,7 +316,7 @@ func loadRoster(cfg Config) ([]MCPServerDefinition, error) {
 }
 
 // buildJobRunner wires durable work when the deployment asked for it. See
-// docs/sirens-echo-jobs-store.md for which variable selects which store.
+// docs/sirens-echo-jobs.md for which variable selects which store.
 func (a *Agent) buildJobRunner() error {
 	store, err := openJobStore(a.cfg)
 	if err != nil {
@@ -386,7 +386,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		}
 		defer a.session.Close()
 		// A positive signal, so a quiet guild and a stopped gateway stop
-		// producing the same telemetry. See docs/sirens-echo-heartbeat.md.
+		// producing the same telemetry. See docs/sirens-echo-observability.md.
 		a.beats = &heartbeat{}
 		defer a.watchGateway(ctx)()
 	}
@@ -427,7 +427,7 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("discord_user", ready.User.Username),
 		slog.String("channel", a.cfg.Definition.Channel),
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
-		// The count, never the values. See docs/sirens-echo-identifiers.md.
+		// The count, never the values. See docs/sirens-echo-boundaries.md.
 		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
 		// The admission allowlist, sized at boot. It outlived the thread-prefill
 		// toggle it was added for, which no longer has a default to observe.
@@ -476,7 +476,7 @@ func (a *Agent) onMessageEdit(session *discordgo.Session, event *discordgo.Messa
 }
 
 // editSummons decides whether an update is a member edit that newly names this
-// service. See docs/sirens-echo-summons.md for why each gate is here.
+// service. See docs/sirens-echo-mentions.md for why each gate is here.
 func editSummons(session *discordgo.Session, event *discordgo.MessageUpdate) bool {
 	if event == nil || event.Message == nil {
 		return false
@@ -503,7 +503,7 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 	a.beats.observe()
 	if !eligibleMessage(session, message, a.access) {
 		// A misconfigured allowlist and a quiet channel looked identical, since
-		// this path recorded nothing at all. See docs/sirens-echo-counterparts.md.
+		// this path recorded nothing at all. See docs/sirens-echo-compose.md.
 		if counterpartOf(message) == CounterpartAgent {
 			a.telemetry.Info(
 				context.Background(),
@@ -567,7 +567,7 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		return
 	}
 	// Last, because a summon refused for a restart was otherwise admissible and
-	// the count should say so. See docs/sirens-echo-shutdown.md.
+	// the count should say so. See docs/sirens-echo-execution.md.
 	if !a.drain.enter() {
 		a.telemetry.RecordAccess(context.Background(), string(accessDeniedDraining))
 		a.onDraining(session, message)
@@ -594,7 +594,7 @@ func (a *Agent) onDraining(session *discordgo.Session, message *discordgo.Messag
 }
 
 // eligibleMessage rejects payloads that can never be a summon. A bot author
-// passes only when named. See docs/sirens-echo-counterparts.md.
+// passes only when named. See docs/sirens-echo-compose.md.
 func eligibleMessage(
 	session *discordgo.Session,
 	message *discordgo.Message,
@@ -721,7 +721,7 @@ func summonedLocally(
 	message *discordgo.Message,
 ) (summoned bool, referenceLookup bool) {
 	// A direct message is addressed to this service by definition. See
-	// docs/sirens-echo-contexts.md for what that costs.
+	// docs/sirens-echo-threads.md for what that costs.
 	if message.GuildID == "" {
 		return true, false
 	}
@@ -812,7 +812,7 @@ func (a *Agent) handleMessage(
 				slog.String("error_type", "turn_panicked"),
 			)
 			// A crashed turn told the member nothing, which reads as being
-			// ignored. See docs/sirens-echo-notices.md.
+			// ignored. See docs/sirens-echo-delivery.md.
 			_ = a.notifyFailure(
 				context.Background(),
 				&discordMessageTurn{session: session, message: message},
@@ -854,7 +854,7 @@ func (a *Agent) handleMessage(
 		replyTo:   a.resolveReplyTo(session, message, origin),
 		telemetry: a.telemetry,
 		// Every thread, because a thread is the conversation rather than a
-		// window into one. See docs/sirens-echo-thread-prefill.md.
+		// window into one. See docs/sirens-echo-threads.md.
 		wholeThread: at.ThreadID != "",
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
@@ -927,7 +927,7 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 // silently left a queued member with no reply at all.
 func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO, contextKey string) {
 	// Marked before the throttle, the way a denial is, so a member who gets no
-	// notice still gets something. See docs/sirens-echo-reactions.md.
+	// notice still gets something. See docs/sirens-echo-progress.md.
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
 	}
@@ -981,7 +981,7 @@ type turnIO interface {
 }
 
 // replyBudget is an optional turn capability, like the reactor: a transport
-// with a send ceiling declares it. See docs/sirens-echo-tool-disclosure.md.
+// with a send ceiling declares it. See docs/sirens-echo-tool-markup.md.
 type replyBudget interface {
 	ReplyLimit() int
 }
@@ -1046,7 +1046,7 @@ func (a *Agent) runTurn(
 		turnSpan.SetAttributes(attribute.String("discord.channel", a.cfg.Definition.Channel))
 	}
 	// So a trace id in a member's hands resolves to the message that produced
-	// it. See docs/sirens-echo-turn-identifiers.md.
+	// it. See docs/sirens-echo-turn-stages.md.
 	if tagger, ok := turn.(spanTagger); ok {
 		turnSpan.SetAttributes(tagger.SpanAttributes()...)
 	}
@@ -1057,10 +1057,10 @@ func (a *Agent) runTurn(
 	turnCtx = WithTurnProgress(turnCtx, progress)
 	defer progress.Watch(turnCtx)()
 	// Recorded before the fetch exists, so the demand is measured rather than
-	// assumed. See docs/sirens-echo-trace-lookup.md.
+	// assumed. See docs/sirens-echo-rate.md.
 	a.recordTraceLookup(turnCtx, turn)
 	// The mark lands before any model call, so a turn that dies silently is
-	// still visible. See docs/sirens-echo-reactions.md.
+	// still visible. See docs/sirens-echo-progress.md.
 	if target, ok := turn.(reactor); ok {
 		turnCtx = WithReactor(turnCtx, target)
 		a.react(turnCtx, target, reactionAccepted)
@@ -1100,7 +1100,7 @@ func (a *Agent) runTurn(
 	}
 	historySpan.SetAttributes(attribute.Int("history.count", len(history)))
 	// The prefill size a long thread produces, which is what bounds the cost of
-	// turning this on anywhere. See docs/sirens-echo-thread-prefill.md.
+	// turning this on anywhere. See docs/sirens-echo-threads.md.
 	if note := prefillNoteOf(turn); note.Read > 0 {
 		historySpan.SetAttributes(
 			attribute.Int("history.thread.read", note.Read),
@@ -1162,7 +1162,7 @@ func (a *Agent) runTurn(
 	redacted := 0
 	if err != nil {
 		// The last rung: repair could not fix the block, so the block goes and
-		// the rest is delivered. See docs/sirens-echo-reply-redaction.md.
+		// the rest is delivered. See docs/sirens-echo-reply-assembly.md.
 		if kept, blocks, ok := a.redactRefusedBlocks(reply, refused, prompt, result); ok {
 			a.telemetry.Info(
 				validateCtx,
@@ -1176,7 +1176,7 @@ func (a *Agent) runTurn(
 	}
 	if err != nil {
 		// The rule and its sentence. The catalog owns the exception fields, so
-		// the sentence stays beside them. See docs/sirens-echo-refusal-reason.md.
+		// the sentence stays beside them. See docs/sirens-echo-delivery.md.
 		validateSpan.SetAttributes(
 			attribute.String("response.check", refused),
 			attribute.String("response.check.reason", err.Error()),
@@ -1246,7 +1246,7 @@ func (a *Agent) deliverOrReport(ctx context.Context, turn turnIO, reply, whole s
 }
 
 // reportUndelivered tells a member the answer existed and did not arrive. One
-// attempt, never a retry. See docs/sirens-echo-delivery-failures.md.
+// attempt, never a retry. See docs/sirens-echo-delivery.md.
 func (a *Agent) reportUndelivered(ctx context.Context, turn turnIO) error {
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
@@ -1345,7 +1345,7 @@ func withoutThreading(ctx context.Context) context.Context {
 }
 
 // sendReply delivers one message. whole is the complete reply when the
-// transport's budget cut it. See docs/sirens-echo-reply-overflow.md.
+// transport's budget cut it. See docs/sirens-echo-reply-assembly.md.
 func (a *Agent) sendReply(ctx context.Context, turn turnIO, content, whole string) error {
 	replyCtx, replySpan := a.telemetry.StartSpan(ctx, "community.reply")
 	a.telemetry.Info(
@@ -1363,7 +1363,7 @@ func (a *Agent) sendReply(ctx context.Context, turn turnIO, content, whole strin
 		if err != nil {
 			a.telemetry.MarkSpanError(discordSpan, exceptionDiscordReplyFailed)
 			// The reply was composed and paid for, so why it did not land is the
-			// whole diagnosis. See docs/sirens-echo-delivery-failures.md.
+			// whole diagnosis. See docs/sirens-echo-delivery.md.
 			a.telemetry.Error(discordCtx, "discord.reply.failed", append(
 				[]slog.Attr{slog.Int("reply_bytes", len(content))},
 				discordFailureAttrs(err)...,
@@ -1436,7 +1436,7 @@ func (t *discordMessageTurn) Requester() string {
 func (t *discordMessageTurn) Transport() string { return transportDiscord }
 
 // SessionID shares a workspace with everyone in the thread, and falls back to
-// the channel pairing outside one. See docs/sirens-echo-session-workspace.md.
+// the channel pairing outside one. See docs/sirens-echo-scratchpad.md.
 func (t *discordMessageTurn) SessionID() SessionID {
 	if t.message == nil {
 		return SessionID{}
@@ -1451,7 +1451,7 @@ func (t *discordMessageTurn) SessionID() SessionID {
 }
 
 // SpanAttributes places a turn. The account id is here by an explicit
-// reversal, recorded in docs/sirens-echo-turn-identifiers.md.
+// reversal, recorded in docs/sirens-echo-turn-stages.md.
 func (t *discordMessageTurn) SpanAttributes() []attribute.KeyValue {
 	// A DM contributes nothing, because a DM never enters the turn logger and
 	// this is not the change that should be its first exception.
@@ -1470,7 +1470,7 @@ func (t *discordMessageTurn) SpanAttributes() []attribute.KeyValue {
 }
 
 // discordLocation is where a turn happened, with the thread separated from the
-// channel it hangs under. See docs/sirens-echo-turn-identifiers.md.
+// channel it hangs under. See docs/sirens-echo-turn-stages.md.
 type discordLocation struct {
 	GuildID   string
 	ChannelID string
@@ -1616,7 +1616,7 @@ func (t *discordMessageTurn) Reply(ctx context.Context, content string) error {
 }
 
 // ReplyWithOverflow sends the message with the whole reply beside it. See
-// docs/sirens-echo-reply-overflow.md.
+// docs/sirens-echo-reply-assembly.md.
 func (t *discordMessageTurn) ReplyWithOverflow(ctx context.Context, content, whole string) error {
 	return t.send(ctx, content, []*discordgo.File{{
 		Name:        overflowFileName,

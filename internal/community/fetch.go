@@ -12,7 +12,7 @@ import (
 )
 
 // A read-only fetch, bounded by an allowlist the deployment supplies. See
-// docs/sirens-echo-fetch.md.
+// docs/sirens-echo-tools.md.
 
 const (
 	fetchToolServer = "fetch"
@@ -91,7 +91,7 @@ func (s *fetchSession) Call(
 	}
 	defer func() { _ = response.Body.Close() }()
 	// One byte past the cap, so a page that fits is distinguishable from one
-	// that does not. See docs/sirens-echo-fetch.md.
+	// that does not. See docs/sirens-echo-tools.md.
 	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxFetchBytes)+1))
 	if err != nil {
 		return ToolResult{Text: "that response could not be read", IsError: true}, nil
@@ -134,7 +134,7 @@ func (s *fetchSession) allowedURL(raw string) (string, error) {
 }
 
 // hostAllowed matches an entry against a hostname. A leading *. covers
-// subdomains and nothing else. See docs/sirens-echo-fetch.md.
+// subdomains and nothing else. See docs/sirens-echo-tools.md.
 func hostAllowed(host, allowed string) bool {
 	// Both ends, rather than trusting the caller. This decides whether a request
 	// leaves the process, so it must not depend on where it is called from.
@@ -194,7 +194,7 @@ func validHostLabel(label string) bool {
 }
 
 // newFetchClient refuses a private destination at dial time. Checking the
-// hostname is not enough. See docs/sirens-echo-fetch.md.
+// hostname is not enough. See docs/sirens-echo-tools.md.
 func newFetchClient() *http.Client {
 	dialer := &net.Dialer{
 		Timeout: fetchTimeout,
@@ -213,7 +213,7 @@ func newFetchClient() *http.Client {
 }
 
 // tailnetRange is carrier-grade NAT, which Tailscale assigns from and which
-// IsPrivate does not cover. See docs/sirens-echo-fetch.md.
+// IsPrivate does not cover. See docs/sirens-echo-tools.md.
 var tailnetRange = func() *net.IPNet {
 	_, network, _ := net.ParseCIDR("100.64.0.0/10")
 	return network

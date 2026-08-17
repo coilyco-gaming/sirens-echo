@@ -7,7 +7,7 @@ import (
 )
 
 // A trusted caller on the tailnet, not on the internet. See
-// docs/sirens-echo-http-identity.md.
+// docs/sirens-echo-http.md.
 
 // httpTrustHeader carries the deployment's token. It is deliberately not
 // X-Sirens-Caller, which is self-asserted and stays a rate-limit key.

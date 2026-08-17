@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Reports whether main's tip is deployable, from outside any push's run.
-# See docs/features-release-tooling.md.
+# See docs/FEATURES.md.
 #
 # The in-run publish-observed job cannot see a cancelled publish, because a
 # cancelled run cancels the observer with it. This asks the package registry

@@ -8,7 +8,7 @@ import (
 )
 
 // Absence of logs is not evidence, and it is indistinguishable from absence of
-// work. See docs/sirens-echo-heartbeat.md.
+// work. See docs/sirens-echo-observability.md.
 
 // heartbeatEvery is short enough that a five minute alert window sees several
 // beats, and long enough that a quiet night costs almost nothing.

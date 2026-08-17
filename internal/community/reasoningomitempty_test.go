@@ -12,7 +12,7 @@ import (
 )
 
 // An assistant message echoes the reasoning key exactly when the response
-// carried it. See docs/sirens-echo-reasoning-roundtrip.md and sirens-echo#717.
+// carried it. See docs/sirens-echo-reasoning.md and sirens-echo#717.
 
 // assistantKeys returns the JSON keys of the first assistant message in a raw
 // request body. Decoding first would erase the absent-against-empty difference.

@@ -12,7 +12,7 @@ import (
 )
 
 // A model that deliberates past its ceiling and emits nothing is not a backend
-// outage. See docs/sirens-echo-budget-exhaustion.md and sirens-echo#549.
+// outage. See docs/sirens-echo-model-call.md and sirens-echo#549.
 
 // The failure carried no sentinel, so every consumer saw an opaque string and
 // the condition collapsed into stage_failed.

@@ -15,7 +15,7 @@ import (
 // out before anyone noticed. See sirens-echo#829.
 
 // Detection is by shape rather than by name, and the two failures that bought
-// that are in docs/sirens-echo-knob-guard.md.
+// that are in docs/sirens-echo-tuning.md.
 
 // elsewhereByDesign are numbers that read as knobs and are not. Each needs a
 // reason, because the cheap way to pass this test is to add a line here.
@@ -167,12 +167,12 @@ func TestEveryKnobStartsOnItsDeclaredDefault(t *testing.T) {
 // Derive an inventory from its owner rather than keeping a second copy.
 func TestTheKnobReferenceIsCurrent(t *testing.T) {
 	t.Parallel()
-	tracked, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-knobs.md"))
+	tracked, err := os.ReadFile(filepath.Join("..", "..", "agent", "rendered", "knobs.txt"))
 	if err != nil {
 		t.Fatalf("read the reference: %v", err)
 	}
 	if string(tracked) != RenderKnobReference() {
-		t.Error("docs/sirens-echo-knobs.md is stale. Run `just knobs`.")
+		t.Error("agent/rendered/knobs.txt is stale. Run `just knobs`.")
 	}
 }
 
@@ -180,11 +180,11 @@ func TestTheKnobReferenceIsCurrent(t *testing.T) {
 // there rather than from the source.
 func TestTheOverrideDocPointsAtTheReference(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-tuning-overrides.md"))
+	body, err := os.ReadFile(filepath.Join("..", "..", "docs", "sirens-echo-tuning.md"))
 	if err != nil {
 		t.Fatalf("read the overrides doc: %v", err)
 	}
-	if !strings.Contains(string(body), "sirens-echo-knobs.md") {
+	if !strings.Contains(string(body), "agent/rendered/knobs.txt") {
 		t.Error("the overrides doc never links the generated reference, so a " +
 			"deployment cannot find the list of names")
 	}

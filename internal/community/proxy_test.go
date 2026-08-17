@@ -43,7 +43,7 @@ func TestProxyClientSendsBoundedCommunityRequest(t *testing.T) {
 			t.Errorf("metadata identity = %#v", body.Metadata)
 		}
 		// Streaming is what carries the heartbeats the idle timeout reads.
-		// See sirens-echo#171 and docs/sirens-echo-model-stream.md.
+		// See sirens-echo#171 and docs/sirens-echo-model-call.md.
 		if !body.Stream {
 			t.Error("stream must be true")
 		}
@@ -609,7 +609,7 @@ func Example_proxyToolName() {
 }
 
 // Reproduces the reported failure: the whole budget goes to reasoning_content
-// and content comes back empty. See docs/sirens-echo-budget.md.
+// and content comes back empty. See docs/sirens-echo-model-call.md.
 func TestCompleteRaisesTheBudgetOnTruncatedEmptyContent(t *testing.T) {
 	t.Parallel()
 	var budgets []int

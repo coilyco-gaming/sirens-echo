@@ -6,7 +6,7 @@
 // It carries no `identity` node for the same reason: one template bakes every
 // roster role, so a seat name here would rename all of them. The stage script
 // injects one per role, and only ops has one, because only Echo brings its own
-// identity. See docs/sirens-echo-role-and-voice.md.
+// identity. See docs/sirens-echo-identity.md.
 //
 // Every source uses `declaration=`, never `root=`. With `root=` the source
 // repository's own .agents/roles.kdl decides, and agentic-os-kai's roles

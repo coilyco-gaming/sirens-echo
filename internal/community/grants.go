@@ -8,7 +8,7 @@ import (
 )
 
 // Filtered grants over one credential: the harness narrows what a principal may
-// cause, and the pod keeps its own identity. See docs/sirens-echo-grants.md.
+// cause, and the pod keeps its own identity. See docs/sirens-echo-access.md.
 
 // PrincipalGrant is one requester's permitted job kinds. It is a document
 // entry, so the grant model is reviewable rather than inferred from code.

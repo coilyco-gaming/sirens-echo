@@ -184,7 +184,7 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 }
 
 // Echo composes ops and still answers neutrally, a pair the validator used to
-// make unsatisfiable. See docs/sirens-echo-role-and-voice.md.
+// make unsatisfiable. See docs/sirens-echo-identity.md.
 func TestNeutralProfileComposesARoleWithoutTakingItsVoice(t *testing.T) {
 	t.Parallel()
 	definition := Definition{
