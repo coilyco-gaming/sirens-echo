@@ -1687,6 +1687,7 @@ func (t *discordMessageTurn) Current() TranscriptEntry {
 		Counterpart: counterpartOf(t.message),
 		Attachments: t.currentAttachmentTypes(),
 		ReplyTo:     replyTarget(t.message, t.replyTo),
+		Comments:    len(t.folded) + 1,
 	}
 }
 

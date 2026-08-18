@@ -228,3 +228,51 @@ func TestTwoMembersInOneChannelDoNotShareAShard(t *testing.T) {
 		t.Fatal("two members in one channel serialize behind each other")
 	}
 }
+
+// A folded ask is multi-part, and nothing else in the prompt says so. Without
+// this the model may answer the last comment and drop the ones before it.
+
+func TestAFoldedAskTellsTheModelToCoverEveryComment(t *testing.T) {
+	t.Parallel()
+	prompt := BuildTurnPrompt("system", nil, TranscriptEntry{
+		Author:   "ana",
+		Content:  "what is iron worth\n\nand copper",
+		Comments: 3,
+	})
+	if !strings.Contains(prompt.Context, "3 comments") {
+		t.Fatalf("context %q does not say how many comments it carries", prompt.Context)
+	}
+	if !strings.Contains(prompt.Context, "answering every one of them") {
+		t.Fatalf("context %q does not ask for every comment to be answered", prompt.Context)
+	}
+	// A count, never a channel, author id, or surface: the identifier guard
+	// refuses a reply carrying any value this process holds.
+	if strings.Contains(prompt.Context, "discord") || strings.Contains(prompt.Context, "c-1") {
+		t.Fatalf("context %q leaked a transport identifier", prompt.Context)
+	}
+}
+
+func TestAnUnfoldedAskSaysNothingAboutCoverage(t *testing.T) {
+	t.Parallel()
+	for _, comments := range []int{0, 1} {
+		prompt := BuildTurnPrompt("system", nil, TranscriptEntry{
+			Author:   "ana",
+			Content:  "what is iron worth",
+			Comments: comments,
+		})
+		if strings.Contains(prompt.Context, "comments") {
+			t.Fatalf("a turn of %d comments framed itself as several: %q", comments, prompt.Context)
+		}
+	}
+}
+
+func TestTheFoldedTurnReportsHowManyCommentsItCarries(t *testing.T) {
+	t.Parallel()
+	if got := foldedTurn("first", "second", "third").Current().Comments; got != 3 {
+		t.Fatalf("the ask carries %d comments, want all 3", got)
+	}
+	plain := &discordMessageTurn{message: comment("m-1", "only one")}
+	if got := plain.Current().Comments; got != 1 {
+		t.Fatalf("an unfolded ask carries %d comments, want 1", got)
+	}
+}

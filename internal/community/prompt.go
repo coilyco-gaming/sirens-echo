@@ -49,6 +49,9 @@ type TranscriptEntry struct {
 	// ReplyTo is the message this one answers. A reply names its subject, and
 	// the channel's latest message is not it. See sirens-echo#579.
 	ReplyTo *ReplySubject
+	// Comments is how many of the author's comments this entry carries. More
+	// than one is a coalesced turn. See docs/sirens-echo-admission.md.
+	Comments int
 }
 
 // ReplySubject is what a reply answers. Deliberately not a TranscriptEntry: a
@@ -108,6 +111,19 @@ func (e TranscriptEntry) assertedSuffix() string {
 		return " (asserted by the caller, not observed)"
 	}
 	return ""
+}
+
+// foldedSuffix says the request is several comments rather than one, so a
+// complete answer covers all of them. A count, never an identifier.
+func (e TranscriptEntry) foldedSuffix() string {
+	if e.Comments < 2 {
+		return ""
+	}
+	return fmt.Sprintf(
+		" It carries %d comments from that person, and answering it means"+
+			" answering every one of them.",
+		e.Comments,
+	)
 }
 
 // attachmentSuffix reports what was attached without claiming to have read it.
@@ -442,8 +458,9 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 			return ""
 		}
 		return strings.TrimLeft(current.replyLine(speaker), "\n") +
-			fmt.Sprintf("The request that follows is from %s%s.%s",
-				speaker, current.agentSuffix(), current.attachmentSuffix())
+			fmt.Sprintf("The request that follows is from %s%s.%s%s",
+				speaker, current.agentSuffix(), current.attachmentSuffix(),
+				current.foldedSuffix())
 	}
 	var output strings.Builder
 	output.WriteString("Recent conversation, oldest first:\n")
@@ -460,8 +477,9 @@ func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string
 	}
 	if speaker != "" {
 		output.WriteString(current.replyLine(speaker))
-		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.%s",
-			speaker, current.agentSuffix(), current.attachmentSuffix())
+		fmt.Fprintf(&output, "\nThe request that follows is from %s%s.%s%s",
+			speaker, current.agentSuffix(), current.attachmentSuffix(),
+			current.foldedSuffix())
 	}
 	return strings.TrimRight(output.String(), "\n")
 }

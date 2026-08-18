@@ -331,3 +331,19 @@ cases:
     current:
       author: "member"
       content: "Sirens Deep, which file in your codebase decides whether a reply gets sent? link it if you can"
+
+  - id: coalesced-ask-answers-every-comment
+    shape: conversational
+    observed: "NOT YET MEASURED. Added with the coverage line in sirens-echo#977 and never run, so this row is a target rather than a rate. Read it as unmeasured until someone replaces this line with a run."
+    runs: 10
+    max_failure_rate: 0.0
+    forbid_tool_call_markup: true
+    history: []
+    current:
+      author: "member"
+      content: "what is 17 * 3\n\nand 200 - 45\n\nalso 12 + 12"
+      comments: 3
+    required_patterns:
+      - "\\b51\\b"
+      - "\\b155\\b"
+      - "\\b24\\b"
