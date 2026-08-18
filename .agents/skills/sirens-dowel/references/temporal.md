@@ -13,7 +13,16 @@ Dowel that the plausible answer gets wrong.
 ## Answer Temporal questions from temporal.io
 
 `temporal.io` and its subdomains are on the fetch allowlist, so `fetch` reaches
-the documentation directly. Use it.
+the documentation directly. Use it. Quote an address exactly as written below
+rather than rebuilding one, because a reconstructed URL is the answer that looks
+right and goes nowhere.
+
+* **The documentation** - https://docs.temporal.io
+* **The product and the company** - https://temporal.io
+* **The service, open source** - https://github.com/temporalio/temporal
+
+`github.com` is allowlisted too, so the third one is readable rather than only
+quotable.
 
 A question about workflows, activities, signals, workers, task queues,
 determinism, retries, durable execution, the SDKs, Cloud, or pricing is

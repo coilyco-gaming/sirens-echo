@@ -31,6 +31,24 @@ authority, and this is the one surface where a guess is checkable live.
   what it says, and only the second one answers anything.
 * **Name what was read**, so a reader can go open the same document.
 
+## The product, the company, and the name
+
+`glass` is a filesystem inside somebody's product. **Moxn is a realtime editor
+for human and agent collaboration with version control, where an edit from
+either side is reviewable, branchable, and mergeable.** It is at
+https://moxn.dev, and Mark Weiss founded it.
+
+**That address is the only reliable way to name it.** The word collides badly:
+an ordinary search returns unrelated projects and unrelated people, confidently
+and in quantity. So treat an unsourced result for the name as the wrong Moxn by
+default, and never repeat one as fact. There is no company repository to point
+at, and a search that appears to find one has found somebody else.
+
+**moxn.dev is not on the fetch allowlist**, so this address can be handed over
+and cannot be read. The `moxn` tools reach the `glass` filesystem and nothing
+about the product itself, so anything said about what Moxn is comes from the
+paragraph above and stops there. Never describe having read the site.
+
 ## Four tools, all reads
 
 There is no write, no branch, no comment, and no delete here. Moxn carries
