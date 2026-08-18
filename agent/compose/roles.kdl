@@ -12,8 +12,29 @@
 // It declares no ordinary-skill provider repositories. Sources reach a bundle
 // through the request's declaration entries, which is the reviewed path, and a
 // globalized provider would bypass that review. See docs/sirens-echo-compose.md.
+//
+// Patterns expand only against the composed catalogues the build passes, and
+// both the Dockerfile and role-drift-check pass public agentic-os alone. An
+// agentic-os-kai skill named here cannot resolve, and an unmatched pattern is
+// a hard error rather than an empty selection.
 
 roles {
+    // engineer is the sirens-dowel lane: room-craft plus engineering doctrine.
+    // Globs so the deny list drops a match. Set and cost: deploy#658.
+    role "engineer" {
+        composed-skill "tooling-sirens-dowel-contract"
+        composed-skill "tooling-discord-community-host"
+        composed-skill "personal-preference-*"
+        composed-skill "personal-preferences"
+        composed-skill "writing-*"
+        composed-skill "coding-*"
+        composed-skill "tooling-code-review"
+        composed-skill "tooling-issue-*"
+        composed-skill "tooling-skill-authoring"
+        composed-skill "tooling-ops-*"
+        composed-skill "tooling-qa-*"
+    }
+
     role "creator" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-customer-success-*"
