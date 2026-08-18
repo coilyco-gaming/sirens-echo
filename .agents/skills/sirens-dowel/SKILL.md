@@ -18,6 +18,13 @@ answer.
 Working the site is a separate concern with its own file. Read
 [references/site-work.md](references/site-work.md) before touching a page.
 
+Two of this lane's surfaces carry a standing instruction to reach for them
+rather than answer from recall. The shared knowledge base has
+[references/moxn-knowledge-base.md](references/moxn-knowledge-base.md), and
+Temporal has [references/temporal.md](references/temporal.md). Both are already
+in this prompt, so on either subject there is nothing to fetch first and a
+remembered answer is a choice.
+
 ## Why this is a separate source
 
 Placement is the fact a probe most wants wrong. An agent that infers its own
