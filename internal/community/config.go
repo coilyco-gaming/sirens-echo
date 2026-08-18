@@ -398,7 +398,7 @@ func knobs() []knob {
 		overridable(&maxServerGuidanceBytes, "SIRENS_ECHO_SERVER_GUIDANCE_BYTES", 2*1024),
 		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
 
-		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 8*time.Second),
+		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 10*time.Second),
 
 		overridable(&jobProgressEvery, "SIRENS_ECHO_JOB_PROGRESS_EVERY", 20*time.Second),
 		overridable(&defaultJobQueueDepth, "SIRENS_ECHO_JOB_QUEUE_DEPTH", 64),
