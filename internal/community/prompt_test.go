@@ -3,6 +3,7 @@ package community
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -328,6 +329,44 @@ var promptBudgets = map[string]int{
 	"agents/deep/rendered/prompt.txt": 12852,
 }
 
+// shippedProfiles lists the in-image agent profiles from disk, so a new one is
+// covered by the checks below without an edit here.
+func shippedProfiles(t *testing.T, leaf ...string) []string {
+	t.Helper()
+	pattern := filepath.Join(append([]string{"..", "..", "agents", "*"}, leaf...)...)
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		t.Fatalf("glob %s: %v", pattern, err)
+	}
+	if len(matches) == 0 {
+		t.Fatalf("%s matched no profile, so the checks below assert nothing", pattern)
+	}
+	sort.Strings(matches)
+	return matches
+}
+
+// repoRelative renames a globbed path back to how promptBudgets spells it.
+func repoRelative(t *testing.T, path string) string {
+	t.Helper()
+	relative, err := filepath.Rel(filepath.Join("..", ".."), path)
+	if err != nil {
+		t.Fatalf("relativize %s: %v", path, err)
+	}
+	return filepath.ToSlash(relative)
+}
+
+// The numbers stay hand-set, because a raise is a decision someone writes down.
+// The SET does not: an unbudgeted prompt grows unwatched, which is the silent half.
+func TestEveryRenderedPromptHasABudget(t *testing.T) {
+	t.Parallel()
+	for _, match := range shippedProfiles(t, "rendered", "prompt.txt") {
+		name := repoRelative(t, match)
+		if _, budgeted := promptBudgets[name]; !budgeted {
+			t.Errorf("%s has no promptBudgets entry, so nothing watches it grow", name)
+		}
+	}
+}
+
 // Every turn ships the whole prompt, so growth is a per-turn cost paid forever.
 // This makes growing it a decision someone writes down. Issue 162 tracks caching.
 func TestRenderedPromptsStayInsideTheirBudget(t *testing.T) {
@@ -355,8 +394,9 @@ func TestRenderedPromptsStayInsideTheirBudget(t *testing.T) {
 // not to rely on it, and Deep recited it. See issue 166.
 func TestThePrincipalUserIDNeverReachesThePrompt(t *testing.T) {
 	t.Parallel()
-	for _, path := range []string{"agents/echo/definition.yaml", "agents/deep/definition.yaml"} {
-		definition, err := LoadDefinition(filepath.Join("..", "..", path))
+	for _, match := range shippedProfiles(t, "definition.yaml") {
+		path := repoRelative(t, match)
+		definition, err := LoadDefinition(match)
 		if err != nil {
 			t.Fatalf("load %s: %v", path, err)
 		}
