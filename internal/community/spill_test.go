@@ -21,7 +21,7 @@ func spillSession(t *testing.T, requester string) ToolSession {
 func TestSpillToolResultSavesTheRemainder(t *testing.T) {
 	t.Parallel()
 	session := spillSession(t, "member-1")
-	full := strings.Repeat("t", maxToolResultBytes*2)
+	full := strings.Repeat("t", maxToolResultBytes+1)
 
 	path := spillToolResult(context.Background(), session, "get_trades", 0, full)
 	if path != "tool-output/get_trades-1.txt" {
@@ -186,5 +186,16 @@ func TestTheSpillNoticeNamesBothWaysBackToTheResult(t *testing.T) {
 		if !strings.Contains(notice, tool) {
 			t.Errorf("the spill notice does not name %s: %q", tool, notice)
 		}
+	}
+}
+
+// A result a scratch file cannot hold is refused by the write and falls back to
+// plain truncation, so the remainder is lost rather than saved.
+func TestASpilledResultFitsAScratchFile(t *testing.T) {
+	t.Parallel()
+	if maxToolResultBytes >= maxScratchFileBytes {
+		t.Errorf("a tool result is bounded at %d and a scratch file at %d, so spilling "+
+			"one over the bound is refused and the remainder is dropped",
+			maxToolResultBytes, maxScratchFileBytes)
 	}
 }
