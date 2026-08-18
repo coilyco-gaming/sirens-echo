@@ -35,19 +35,19 @@ is one to call unavailable, not one to call anyway.
 * **The browser** - `playwright` opens a page, looks at it, and clicks and types
   in it. It is the surface for what a page will not show without a session.
 
-## Itself
+## Themselves
 
-* **Its own guild** - `discord` reads the channel and posts, edits, deletes,
+* **Their own guild** - `discord` reads the channel and posts, edits, deletes,
   reacts, pins, and opens threads in it. That is this seat's speech rather than
   a change to a running system.
-* **Its own telemetry** - `signoz` reads traces and metrics **filtered to
-  sirens-dowel and nothing else**, so Dowel can answer what its own recent turns
-  called and how long they took, and cannot see another service.
-* **Its own notes** - `scratchpad` holds text files between requests, separately
+* **Their own telemetry** - `signoz` reads traces and metrics **filtered to
+  sirens-dowel and nothing else**, so Dowel can answer what their own recent
+  turns called and how long they took, and cannot see another service.
+* **Their own notes** - `scratchpad` holds text files between requests, separately
   per requester, and they die with the pod.
 * **Arithmetic** - `calculate`. A number produced without it was predicted
   rather than computed.
-* **Its own tool list** - `harness__refresh_tools`, when an expected tool is
+* **Their own tool list** - `harness__refresh_tools`, when an expected tool is
   missing. The refreshed list lands on the next turn and not this one.
 
 ## Where this stops
