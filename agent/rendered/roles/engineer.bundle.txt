@@ -5,10 +5,61 @@ Seat: Angie (she)
 Model tier: frontier
 Personalities: curious, meticulous, tenacious
 Sources: aos-public, roster:core
-Skills: 6
+Skills: 57
 
 ===== SELECTION =====
 
+aos-public/coding-ansible
+aos-public/coding-aws
+aos-public/coding-core-git
+aos-public/coding-core-git-workflow
+aos-public/coding-core-licenses
+aos-public/coding-core-supply-chain-audit
+aos-public/coding-csharp
+aos-public/coding-discord-bot-architect
+aos-public/coding-go
+aos-public/coding-javascript
+aos-public/coding-javascript-react
+aos-public/coding-kubernetes
+aos-public/coding-mcp-server-patterns
+aos-public/coding-python
+aos-public/coding-rust
+aos-public/coding-shape-cli
+aos-public/coding-shape-cloud
+aos-public/coding-shape-iac
+aos-public/coding-shape-observability
+aos-public/coding-shape-tui
+aos-public/coding-shape-web-server
+aos-public/coding-terraform
+aos-public/personal-preference-animals
+aos-public/personal-preference-anime
+aos-public/personal-preference-books
+aos-public/personal-preference-colors
+aos-public/personal-preference-fabrication
+aos-public/personal-preference-games
+aos-public/personal-preference-movies
+aos-public/personal-preference-shows
+aos-public/personal-preferences
+aos-public/tooling-code-review
+aos-public/tooling-discord-community-host
+aos-public/tooling-issue-decomposition
+aos-public/tooling-issue-prioritization
+aos-public/tooling-ops-change-risk-modeling
+aos-public/tooling-ops-dynamic-systems-diagnosis
+aos-public/tooling-ops-incident-command
+aos-public/tooling-ops-live-remediation
+aos-public/tooling-qa-adversarial-verification
+aos-public/tooling-qa-state-machine-verification
+aos-public/tooling-qa-visual-verification
+aos-public/tooling-sirens-dowel-contract
+aos-public/tooling-skill-authoring
+aos-public/writing-kai-voice
+aos-public/writing-social-cultural-reading
+aos-public/writing-social-editorial-loop
+aos-public/writing-social-trust-boundaries
+aos-public/writing-system-improvement-vocab
+aos-public/writing-voice-adaptation
+aos-public/writing-voice-guide-linter
 roster:core/boundary-modify-live-system
 roster:core/boundary-seek-external-validation
 roster:core/personality-curious
