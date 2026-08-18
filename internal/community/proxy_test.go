@@ -532,8 +532,8 @@ func TestProxyClientShipsPersistentStyleViolation(t *testing.T) {
 		t.Fatalf("completion = %q", got.Content)
 	}
 	// Repaired first, and shipped only once the budget was spent.
-	if calls := round.Load(); calls != 2 {
-		t.Fatalf("model rounds = %d", calls)
+	if calls, want := round.Load(), int32(1+maxResponseRepairs); calls != want {
+		t.Fatalf("model rounds = %d, want %d", calls, want)
 	}
 }
 
@@ -677,8 +677,8 @@ func TestCompleteStopsRaisingAfterTheAllowedAttempts(t *testing.T) {
 	if !strings.Contains(err.Error(), "truncated the completion") {
 		t.Fatalf("error = %v, want it to name the truncation", err)
 	}
-	if calls != budgetRaisesAllowed+1 {
-		t.Fatalf("model calls = %d, want %d", calls, budgetRaisesAllowed+1)
+	if want := modelCallsBeforeBudgetSpent((ProxyClient{}).budget()); calls != want {
+		t.Fatalf("model calls = %d, want %d", calls, want)
 	}
 }
 

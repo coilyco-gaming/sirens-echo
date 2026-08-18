@@ -1,6 +1,7 @@
 package community
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -85,18 +86,19 @@ func TestTheTraceSaysWhetherAResultWasTruncated(t *testing.T) {
 	span := toolCallSpan(t, FixtureTool{
 		Name:   "find_trade",
 		Server: "eco",
-		Result: strings.Repeat("row\n", 4096),
+		Result: strings.Repeat("row\n", maxToolResultBytes/2),
 	})
 
 	if got := recordedAttribute(span, "mcp.tool.truncated"); got != "true" {
 		t.Errorf("mcp.tool.truncated = %q, want true", got)
 	}
-	if got := recordedAttribute(span, "mcp.tool.limit_bytes"); got != "8192" {
-		t.Errorf("mcp.tool.limit_bytes = %q, want the packaged 8192", got)
+	want := strconv.Itoa(maxToolResultBytes)
+	if got := recordedAttribute(span, "mcp.tool.limit_bytes"); got != want {
+		t.Errorf("mcp.tool.limit_bytes = %q, want the packaged %s", got, want)
 	}
 	// The bound and the bytes that arrived are different numbers, which is the
 	// confusion the attribute exists to end.
-	if got := recordedAttribute(span, "mcp.tool.result_bytes"); got == "8192" {
+	if got := recordedAttribute(span, "mcp.tool.result_bytes"); got == want {
 		t.Error("result_bytes and limit_bytes agree, so the case is not truncating")
 	}
 }
@@ -112,7 +114,8 @@ func TestAnUntruncatedResultSaysSoOnTheTrace(t *testing.T) {
 	if got := recordedAttribute(span, "mcp.tool.truncated"); got != "false" {
 		t.Errorf("mcp.tool.truncated = %q, want false", got)
 	}
-	if got := recordedAttribute(span, "mcp.tool.limit_bytes"); got != "8192" {
-		t.Errorf("mcp.tool.limit_bytes = %q, want the bound named either way", got)
+	if want := strconv.Itoa(maxToolResultBytes); recordedAttribute(span, "mcp.tool.limit_bytes") != want {
+		t.Errorf("mcp.tool.limit_bytes = %q, want the bound %s named either way",
+			recordedAttribute(span, "mcp.tool.limit_bytes"), want)
 	}
 }
