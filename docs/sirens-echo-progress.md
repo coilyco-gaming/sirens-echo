@@ -61,9 +61,9 @@ refused in silence alike. Post, edit, and delete record `discord.progress.posted
 
 ## Reactions as harness state
 
-A reaction is applied to the member's own message and reports what the harness is doing with it. **It is
-not model output, so it never passes through reply validation**, and the neutral response contract
-governs the words the model writes, of which a reaction contains none.
+A reaction is applied to the member's own message and reports what the harness is doing. **It is
+not model output, so it never passes reply validation**, and the neutral contract governs words, which a
+reaction has none of. One is an answer ([phrases](sirens-echo-phrases.md)).
 
 * **eyes** - accepted at harness level, as the turn starts, before any model call.
 * **hammer** - the turn called a tool, in the tool round.

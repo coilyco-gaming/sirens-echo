@@ -116,6 +116,12 @@ func withinBudget(fitted string, limit int, facts serviceFacts) string {
 	return truncateRunes(fitted, limit)
 }
 
+// hasServiceSuffix reports whether the turn has service-authored text to
+// append. Derived from the order above, so a new suffix needs no second edit.
+func hasServiceSuffix(facts serviceFacts) bool {
+	return appendServiceSuffixes("", unboundedReply, facts) != ""
+}
+
 func appendServiceSuffixes(
 	reply string, limit int, facts serviceFacts,
 ) string {

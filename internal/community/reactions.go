@@ -6,8 +6,8 @@ import (
 	"sync"
 )
 
-// A reaction is harness state on the member's own message, not model output. It
-// never reaches reply validation. See docs/sirens-echo-progress.md.
+// A reaction is harness state on the member's own message, not model output,
+// except in reactreply.go. See docs/sirens-echo-progress.md.
 
 const (
 	// reactionAccepted marks a message the harness took, before any model call.

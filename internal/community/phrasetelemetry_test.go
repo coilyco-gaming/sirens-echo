@@ -85,7 +85,10 @@ func TestTheEvaluationPromptCarriesThePhrasePolicy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("evaluationSystemPrompt: %v", err)
 	}
-	plain := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "policy")
+	// The reaction policy is compiled in rather than configured, so it is part
+	// of the baseline an unconfigured registry is measured against.
+	plain := withReactionPolicy(
+		BuildSystemPrompt(definition, PlaceholderPrincipal, "", "policy"))
 	if built != plain {
 		t.Error("an unconfigured registry changed the prompt, so every snapshot moves")
 	}

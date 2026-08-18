@@ -91,12 +91,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			return nil, err
 		}
 	}
-	// Appended rather than built in, so a caller with no registry renders the
-	// prompt it renders today. See docs/sirens-echo-phrases.md.
-	systemPrompt := withPhrasePolicy(
+	// Both appended rather than built in, so a caller with no phrase registry
+	// still renders what it rendered. See docs/sirens-echo-phrases.md.
+	systemPrompt := withReactionPolicy(withPhrasePolicy(
 		BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack),
 		phrases,
-	)
+	))
 	if err := ValidateSystemPrompt(cfg.Definition, cfg.Principal, systemPrompt); err != nil {
 		return nil, err
 	}
@@ -1361,6 +1361,23 @@ func (a *Agent) runTurn(
 	// and nothing else can express that. See docs/sirens-echo-reply-assembly.md.
 	if reply == "" {
 		return a.finishSilently(turnCtx, progress, result)
+	}
+
+	// A mark is the whole answer for a turn that needs no words. See
+	// docs/sirens-echo-progress.md and docs/sirens-echo-phrases.md.
+	if reactInvoked(reply) {
+		glyph, err := a.resolveReaction(turnCtx, reply)
+		if err != nil {
+			return a.failTurn(turnCtx, turn, stageValidation, err)
+		}
+		facts := serviceFacts{executed: result.ToolCalls, prefill: prefillNoteOf(turn)}
+		target, markable := turn.(reactor)
+		// A receipt outranks a mark, and a transport that cannot mark has only
+		// words. Both send the glyph instead. See docs/sirens-echo-phrases.md.
+		if markable && !hasServiceSuffix(facts) {
+			return a.finishByReacting(turnCtx, turn, progress, target, glyph)
+		}
+		reply = glyph
 	}
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it

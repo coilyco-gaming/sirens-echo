@@ -34,6 +34,16 @@ not. Adding a phrase is a pull request, which is the point: **what members read 
 reviewable rather than emergent.** It does not force the model to use a key, which is a separate
 question and where the prompt still has a job.
 
+## A reaction instead of a reply
+
+`{{react:agree}}` marks the member's own message and posts nothing. The keys are `acknowledge`,
+`agree`, and `disagree`, compiled in and **keyed, not spelled as an emoji**, so no literal rune reaches
+a member past the checks. The terminal and unknown-key rules hold, and **a mark is an answer**, earning
+silence with no tool call.
+
+Three cases send the glyph as text: a turn owing a receipt a mark cannot carry, a transport that cannot
+mark, and a mark Discord refuses. None loses the answer.
+
 ## Counting and scoring a phrase
 
 `sirens_echo.phrase.invocations` carries a `phrase.key` label, and an invocation also emits

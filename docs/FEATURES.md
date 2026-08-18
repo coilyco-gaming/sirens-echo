@@ -32,8 +32,8 @@ the end.
   results**. Reply refusal for any identifier the process holds, derived from configuration at boot,
   **admitted by shape and matched by value rather than spelling**.
 - Caller-supplied history marked as asserted rather than observed, on both private ingresses. Harness
-  reactions for acceptance, a tool round, a failure, and a refusal, **applied before the model call and
-  unable to fail a turn**.
+  reactions for acceptance, a tool round, a failure, and a refusal, plus a keyed reaction as a reply's
+  whole answer, **falling back to text where a receipt is owed or nothing can mark**.
 - A worklog element on a long Discord turn, one row per tool call resolving in place, **degrading to
   stacked notice lines where the embed permission is absent**.
 - Oversized tool results saved to the requester's scratchpad instead of being truncated away, and
