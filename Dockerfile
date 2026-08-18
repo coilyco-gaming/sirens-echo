@@ -29,10 +29,23 @@ RUN CGO_ENABLED=0 go build -trimpath \
 # See docs/sirens-echo-compose.md.
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release AS compose
 ARG AOS_CATALOG_REF=main
+# The clone below caches on this instruction's text, which never changes, so the
+# floating ref froze. This is the resolved commit, and it is what keys the layer.
+ARG AOS_CATALOG_HEAD
 USER root
 WORKDIR /src
-RUN git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
-    https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog
+RUN set -eu; \
+    if [ -z "${AOS_CATALOG_HEAD:-}" ]; then \
+      echo "AOS_CATALOG_HEAD is required; resolve it with scripts/lib/catalog-head.sh" >&2; \
+      exit 1; \
+    fi; \
+    git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
+      https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog; \
+    cloned=$(git -C /tmp/aos-catalog rev-parse HEAD); \
+    if [ "${cloned}" != "${AOS_CATALOG_HEAD}" ]; then \
+      echo "catalogue ${AOS_CATALOG_REF} cloned ${cloned}, caller resolved ${AOS_CATALOG_HEAD}" >&2; \
+      exit 1; \
+    fi
 COPY agent ./agent
 COPY agents ./agents
 COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
