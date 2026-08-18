@@ -5,8 +5,8 @@ the end.
 
 ## Admission
 
-- Mention-or-reply invocation with channel, thread, guild, author, and duplicate gates, plus summoning
-  by an edit that newly names the service, **gated on a member edit rather than a link preview**.
+- Mention, reply, own-thread, and edit invocation with channel, thread, guild, author, and duplicate
+  gates, **the edit gated on a member edit and the thread on cached state, not a lookup**.
 - Git-tracked access policy stacking guild, channel, user, and role grants with a deny list, per-guild
   rate overrides, and CI validation.
 - Per-user, per-context, and global admission control with a bounded queue, **one cooldown notice per

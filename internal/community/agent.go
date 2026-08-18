@@ -787,6 +787,11 @@ func summonedLocally(
 		return true, false
 	}
 	botID := session.State.User.ID
+	// A thread this service opened is its own conversation, so every message in
+	// it is addressed here. See docs/sirens-echo-mentions.md and sirens-echo#750.
+	if threadOwnedBy(session, message.ChannelID, botID) {
+		return true, false
+	}
 	if message.ReferencedMessage != nil && message.ReferencedMessage.Author != nil {
 		return message.ReferencedMessage.Author.ID == botID, false
 	}
@@ -794,6 +799,19 @@ func summonedLocally(
 		return false, false
 	}
 	return false, true
+}
+
+// threadOwnedBy reports whether a channel is a thread the given account
+// created. State only, so it costs no call. See docs/sirens-echo-mentions.md.
+func threadOwnedBy(session *discordgo.Session, channelID, ownerID string) bool {
+	if session.State == nil {
+		return false
+	}
+	channel, err := session.State.Channel(channelID)
+	if err != nil || channel == nil {
+		return false
+	}
+	return channel.IsThread() && channel.OwnerID == ownerID
 }
 
 // mentionsBot reads an explicit mention off the Gateway payload, which is the

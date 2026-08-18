@@ -4,9 +4,15 @@ What addresses this service, and what a reply may reach back to.
 
 ## What counts as a summon
 
-Four things address this service in a guild: an explicit mention, a mention of a role this account
-holds, a reply to one of its own messages, and an edit that adds a mention to a message that did not
-have one. A direct message is addressed to it by definition.
+Five things address this service in a guild: an explicit mention, a mention of a role this account
+holds, a reply to one of its own messages, an edit that adds a mention to a message that did not have
+one, and any message at all in a thread this service created. A direct message is addressed to it by
+definition.
+
+**A thread this service opened is its own conversation, so every message in it summons**, for the
+thread's life and from any member, not only the one it was opened for (#750). `Channel.OwnerID` is the
+signal and cached gateway state answers it, so a channel the state has never seen reports unowned
+rather than costing a lookup per message. A thread a member opened keeps the mention gate.
 
 **A role mention summons, because a member who @s the role is addressing what holds it** (#866).
 Discord delivers the mentioned role ids on the payload, and the account's own roles come from the
