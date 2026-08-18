@@ -28,10 +28,12 @@ Local skills live under `.agents/skills/`. `sirens-echo-community` and
 `coilyco-general` is the domain-neutral HTTP profile.
 `ops-social-discord` guides guarded read-only investigations and is not part of
 the runtime skill roots. `sirens-dowel` is the owl.glass lane's own root, and it
-is where a standing instruction to reach for a tool belongs: its Moxn and
-Temporal references are `inline: always` because the decision to call a tool
-happens in the first round, and a reference the model has to choose to read is
-read after that decision or not at all. The Dockerfile packages Echo on the full
+is where a standing instruction to reach for a tool belongs: its surface map and
+its Moxn and Temporal references are `inline: always` because the decision to
+call a tool happens in the first round, and a reference the model has to choose
+to read is read after that decision or not at all. The surface map names servers
+and not tools, because the roster is deployment-owned and a tool list copied
+into this repository is a second source that drifts. The Dockerfile packages Echo on the full
 AOS release image.
 
 ## Where numbers live

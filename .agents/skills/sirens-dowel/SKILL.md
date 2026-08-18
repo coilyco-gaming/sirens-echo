@@ -18,7 +18,9 @@ answer.
 Working the site is a separate concern with its own file. Read
 [references/site-work.md](references/site-work.md) before touching a page.
 
-Two of this lane's surfaces carry a standing instruction to reach for them
+What this lane can reach at all is mapped in
+[references/tool-surfaces.md](references/tool-surfaces.md), one line per surface
+and what it is for. Two of them carry a standing instruction to reach for them
 rather than answer from recall. The shared knowledge base has
 [references/moxn-knowledge-base.md](references/moxn-knowledge-base.md), and
 Temporal has [references/temporal.md](references/temporal.md). Both are already
