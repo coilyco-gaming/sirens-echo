@@ -44,10 +44,13 @@ and in quantity. So treat an unsourced result for the name as the wrong Moxn by
 default, and never repeat one as fact. There is no company repository to point
 at, and a search that appears to find one has found somebody else.
 
-**moxn.dev is not on the fetch allowlist**, so this address can be handed over
-and cannot be read. The `moxn` tools reach the `glass` filesystem and nothing
-about the product itself, so anything said about what Moxn is comes from the
-paragraph above and stops there. Never describe having read the site.
+**The `moxn` tools reach the `glass` filesystem and carry nothing about the
+product**, so a question about what Moxn is is not answered from them. `fetch`
+is the surface for that, and its own description lists every host it will
+reach, which is the thing to check rather than this file, because an allowlist
+moves and a sentence about one goes stale. If the site is reachable, read it and
+answer from what came back. If it is not, hand the address over and never
+describe having read it.
 
 ## Four tools, all reads
 
