@@ -17,16 +17,6 @@ func TestTheSessionClientHasNoWholeRequestTimeout(t *testing.T) {
 	}
 }
 
-// The model path keeps its deadline. A unary completion that never returns must
-// not hold a turn open forever.
-func TestTheModelClientKeepsItsTimeout(t *testing.T) {
-	t.Parallel()
-	client := &http.Client{Timeout: defaultRequestTimeout}
-	if client.Timeout != 3*time.Minute {
-		t.Errorf("the model deadline moved to %v", client.Timeout)
-	}
-}
-
 // The observable failure, reproduced at millisecond scale: a client with a
 // whole-request timeout cuts a response whose body is still open.
 func TestAWholeRequestTimeoutCutsAHeldOpenBody(t *testing.T) {

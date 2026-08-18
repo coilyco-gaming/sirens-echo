@@ -737,12 +737,16 @@ func (b ModelBudget) validate() error {
 	return nil
 }
 
-// ladderTop is where the raises stop climbing, by the same doubling
-// nextCompletionBudget performs. Stops early, so a large count cannot overflow.
+// ladderTop is where the raises stop climbing. It walks nextCompletionBudget
+// rather than repeating it, which also clamps to the ceiling as the proxy does.
 func (b ModelBudget) ladderTop() int {
 	reached := b.BaseCompletionTokens
-	for raise := 0; raise < b.BudgetRaises && reached < b.MaxCompletionTokens; raise++ {
-		reached *= completionBudgetStep
+	for raise := 0; raise < b.BudgetRaises; raise++ {
+		next, canRaise := nextCompletionBudget(reached, b.MaxCompletionTokens)
+		if !canRaise {
+			break
+		}
+		reached = next
 	}
 	return reached
 }

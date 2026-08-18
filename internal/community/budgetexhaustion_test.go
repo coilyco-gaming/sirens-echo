@@ -121,7 +121,7 @@ func TestAnAlwaysTruncatingProxyEndsTheTurnAsBudgetSpent(t *testing.T) {
 		t.Fatalf("the turn failed as %v, which no consumer can classify", err)
 	}
 	// It climbed before giving up, or the ceiling was never the thing that bound it.
-	if want := (ProxyClient{}).budget().BudgetRaises + 1; calls != want {
+	if want := modelCallsBeforeBudgetSpent((ProxyClient{}).budget()); calls != want {
 		t.Errorf("made %d model calls, want %d", calls, want)
 	}
 	if got := failureCause(err); got != causeBudgetSpent {

@@ -154,9 +154,9 @@ func TestAnUnrepairedReplyIsStillRefusedByTheSameRule(t *testing.T) {
 	if err != nil {
 		t.Fatalf("an unrepaired reply ended the turn inside the completion layer: %v", err)
 	}
-	if model.calls() != 2 {
-		t.Errorf("the loop made %d model calls, want one repair attempt and no more",
-			model.calls())
+	if want := 1 + maxResponseRepairs; model.calls() != want {
+		t.Errorf("the loop made %d model calls, want %d: the first and every allowed repair",
+			model.calls(), want)
 	}
 	_, refused, checkErr := checkingAgent().runReplyChecks(
 		content, TurnPrompt{}, CompletionResult{},
