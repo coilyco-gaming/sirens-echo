@@ -359,6 +359,30 @@ var (
 	maxSkillpackBytes int
 )
 
+// The coalescing lane, which is off until SIRENS_ECHO_COALESCE_ENABLED turns it
+// on. See docs/sirens-echo-admission.md.
+var (
+	// coalesceCapacity bounds the asks waiting for the window. Past it the
+	// oldest is shed, because a gateway handler must never block on a turn.
+	coalesceCapacity int
+	// coalesceWindow and coalesceBatch are the narrow window: a member's rapid
+	// follow-ups share a turn without a first comment waiting on a slow one.
+	coalesceWindow time.Duration
+	coalesceBatch  int
+	// The wide pair coalesces harder once the backlog says the narrow window is
+	// not keeping up.
+	coalesceWideWindow time.Duration
+	coalesceWideBatch  int
+	// coalesceAgeCap is the oldest an ask may be before it forces the window
+	// shut, so a steady stream cannot postpone the comment that opened it.
+	coalesceAgeCap time.Duration
+	// coalesceWorkers drain batches concurrently, one writer per member.
+	coalesceWorkers int
+	// coalesceHighWater is where widening starts. Derived, so it is set by
+	// setting the pool and the narrow batch.
+	coalesceHighWater int
+)
+
 // Evaluation. These gate nothing in production and shape the packs only
 var (
 	// DefaultBoardEpochs repeats every case so the grader reads epoch 1 and the
@@ -469,6 +493,14 @@ func knobs() []knob {
 		overridable(&maxRepoInventoryEntries, "SIRENS_ECHO_REPO_INVENTORY_ENTRIES", 100),
 		overridable(&maxRepoFileBytes, "SIRENS_ECHO_REPO_FILE_BYTES", 64*1024),
 
+		overridable(&coalesceCapacity, "SIRENS_ECHO_COALESCE_CAPACITY", 200),
+		overridable(&coalesceWindow, "SIRENS_ECHO_COALESCE_WINDOW", 25*time.Second),
+		overridable(&coalesceBatch, "SIRENS_ECHO_COALESCE_BATCH", 4),
+		overridable(&coalesceWideWindow, "SIRENS_ECHO_COALESCE_WIDE_WINDOW", 45*time.Second),
+		overridable(&coalesceWideBatch, "SIRENS_ECHO_COALESCE_WIDE_BATCH", 8),
+		overridable(&coalesceAgeCap, "SIRENS_ECHO_COALESCE_AGE_CAP", 90*time.Second),
+		overridable(&coalesceWorkers, "SIRENS_ECHO_COALESCE_WORKERS", 3),
+
 		overridable(&DefaultBoardEpochs, "SIRENS_ECHO_BOARD_EPOCHS", 5),
 		overridable(&DefaultVerbatimWords, "SIRENS_ECHO_VERBATIM_WORDS", 8),
 		overridable(&defaultEvaluationCaseTimeout, "SIRENS_ECHO_EVALUATION_CASE_TIMEOUT", 5*time.Minute),
@@ -499,6 +531,10 @@ func deriveKnobs() {
 	// spent against the same window, so they move together.
 	maxGroundingBytes = maxToolResultBytes
 	maxServerGuidanceBytes = maxToolResultBytes / 4
+
+	// Widening starts exactly where the window stopped keeping up, which is the
+	// pool holding a narrow batch each rather than a number of its own.
+	coalesceHighWater = coalesceWorkers * coalesceBatch
 
 	// A skillpack is a scratch file, and a partition holds sixteen of them.
 	maxSkillpackBytes = maxScratchFileBytes
@@ -832,6 +868,9 @@ type Config struct {
 	// DiscordCommandsEnabled registers and serves application commands. Off by
 	// default because registering is a write to Discord's API.
 	DiscordCommandsEnabled bool
+	// CoalesceEnabled batches a member's rapid comments onto a worker pool in
+	// place of the execution slot. See docs/sirens-echo-admission.md.
+	CoalesceEnabled bool
 	// TemporalMirror is the Temporal Cloud mirror's connection. Empty disables
 	// it entirely. See docs/sirens-echo-tool-markup.md.
 	TemporalMirror TemporalMirrorConfig

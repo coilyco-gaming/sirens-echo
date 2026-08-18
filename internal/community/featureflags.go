@@ -45,6 +45,12 @@ func featureFlags(cfg *Config) []featureFlag {
 			fallback: false,
 			summary:  "Register and serve Discord application commands.",
 		},
+		{
+			env:      "SIRENS_ECHO_COALESCE_ENABLED",
+			target:   &cfg.CoalesceEnabled,
+			fallback: false,
+			summary:  "Batch a member's rapid comments into one turn on a worker pool.",
+		},
 	}
 }
 

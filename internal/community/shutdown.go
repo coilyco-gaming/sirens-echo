@@ -103,6 +103,11 @@ func (d *drainState) stop() {
 // answer, then cancels the rest so they can say why they stopped.
 func (a *Agent) drainTurns(ctx context.Context, httpServer *http.Server) error {
 	a.drain.begin()
+	// Closed first, so what the queue already holds still becomes batches. Each
+	// ask keeps a drain slot until it is answered, which is what waits below.
+	if a.lane != nil {
+		a.lane.stop()
+	}
 	grace := a.cfg.ShutdownGrace
 	if grace <= 0 {
 		grace = defaultShutdownGrace

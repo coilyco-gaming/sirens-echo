@@ -12,7 +12,7 @@ the end.
 - Per-user, per-context, and global admission control with a bounded queue, **one cooldown notice per
   window**, and bounded lookups.
 - Coalescing lane folding a member's rapid comments into one turn behind **an acknowledgment per
-  comment**, drained by three workers with one writer per member and a per-batch escalation ladder.
+  comment**, one writer per member, **selectable on the Discord summon path and off by default**.
 
 ## The response service
 

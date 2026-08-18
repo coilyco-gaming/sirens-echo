@@ -27,7 +27,8 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/ingest"
 )
 
-// TODO(prong-c): every default below is a knob config.go does not carry yet.
+// The bridge takes its tuning as flags. The service takes the same numbers as
+// SIRENS_ECHO_COALESCE_* knobs, so neither reads the other's configuration.
 type options struct {
 	smoke    time.Duration
 	rate     time.Duration

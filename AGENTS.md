@@ -15,9 +15,11 @@ Their policy, MCP, evaluation, telemetry, and boundaries live here.
 ## Project shape
 
 Community code lives in `cmd/sirens-echo`, `cmd/sirens-echo-eval`, and
-`internal/community`. The coalescing lane is separate: `internal/ingest`
-acknowledges and queues asks, `internal/coalesce` batches and drains them, and
-`cmd/sirens-echo-bridge` runs the two together. See
+`internal/community`. The coalescing lane is its own pair of packages:
+`internal/ingest` acknowledges and queues asks and `internal/coalesce` batches
+and drains them. `cmd/sirens-echo-bridge` runs the two on their own, and
+`internal/community/coalescing.go` is the Discord half the summon path takes
+when `SIRENS_ECHO_COALESCE_ENABLED` is on. See
 [admission](docs/sirens-echo-admission.md). Everything belonging to one agent lives under
 `agents/<name>/`, see [agent folders](docs/sirens-echo-scratchpad.md);
 `agent/` keeps only what both share.
