@@ -4,6 +4,7 @@ is the default, and an unparsable value is fatal at startup rather than ignored.
 Why the switches live where they do: docs/sirens-echo-tuning.md
 
 NAME                               ON?   WHAT IT TURNS ON
+COALESCE_ENABLED                   off   Batch a member's rapid comments into one turn on a worker pool.
 DISCORD_COMMANDS                   off   Register and serve Discord application commands.
 DISCORD_DM_ENABLED                 off   Admit direct messages, which carry no guild moderation.
 DISCORD_ENABLED                    on    Open the Discord gateway session at all.

@@ -59,6 +59,9 @@ type Agent struct {
 	// drain holds the Discord turns in flight, so a restart can wait for them
 	// and then tell the rest why they stopped.
 	drain drainState
+	// lane batches a member's comments into one turn and drains batches across
+	// a pool. Nil is the serial execution slot, which is the shipped default.
+	lane *coalesceLane
 }
 
 // NewAgent builds the independently deployable Sirens Echo runtime.
@@ -228,6 +231,10 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err
+	}
+	// After the handlers would need it and before Open can deliver anything.
+	if cfg.CoalesceEnabled && session != nil {
+		agent.buildCoalesceLane()
 	}
 	if session != nil {
 		session.AddHandler(agent.onReady)
@@ -427,6 +434,11 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.recoverJobs(ctx)
 	}
 	if a.session != nil {
+		// Started before the gateway opens, so no summon arrives at a pool that
+		// is not yet draining batches.
+		if a.lane != nil {
+			a.lane.start(a.drain.root())
+		}
 		if err := a.session.Open(); err != nil {
 			return fmt.Errorf("Discord open: %w", err)
 		}
@@ -913,14 +925,18 @@ func (a *Agent) handleMessage(
 	decision := a.limiter.Admit(admissionRequest{
 		UserKey:    message.Author.ID,
 		ContextKey: origin.Key(),
-		Queued:     true,
-		Override:   override,
+		// The pending cap bounds the wait for the execution slot. The lane has
+		// no slot to wait for, and its own bounded queue sheds in place of it.
+		Queued:   a.lane == nil,
+		Override: override,
 	})
 	if decision.Outcome.denied() {
 		a.onDenied(session, message, origin, decision)
 		return
 	}
-	defer a.limiter.Release()
+	if a.lane == nil {
+		defer a.limiter.Release()
+	}
 	a.telemetry.RecordAdmission(context.Background(), string(admissionAccepted), transportDiscord)
 
 	receiveCtx, receiveSpan := a.telemetry.StartSpan(
@@ -945,6 +961,10 @@ func (a *Agent) handleMessage(
 		// Every thread, because a thread is the conversation rather than a
 		// window into one. See docs/sirens-echo-threads.md.
 		wholeThread: at.ThreadID != "",
+	}
+	if a.lane != nil {
+		a.submitSummon(receiveCtx, turn, message)
+		return
 	}
 	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
@@ -998,7 +1018,12 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 		return fmt.Errorf("turn waited longer than %s for the execution slot", a.cfg.QueueTimeout)
 	}
 	defer func() { <-a.slots }()
+	return a.runAdmitted(ctx, turn)
+}
 
+// runAdmitted runs one turn under the request budget. It is what the execution
+// slot guards, and what a coalescing worker runs in place of taking one.
+func (a *Agent) runAdmitted(ctx context.Context, turn turnIO) error {
 	turnCtx, cancel := context.WithTimeout(ctx, a.cfg.RequestTimeout)
 	defer cancel()
 	// Typing starts when the turn runs. Started at queue time it would expire
@@ -1545,6 +1570,9 @@ type discordMessageTurn struct {
 	// partial window. Off is the shipped default. See sirens-echo#769.
 	wholeThread bool
 	prefill     prefillNote
+	// folded are the member's earlier comments this turn also answers, oldest
+	// first. Empty unless the lane built it. See docs/sirens-echo-admission.md.
+	folded []*discordgo.Message
 }
 
 // PrefillNote reports what the context budget dropped, which is zero for every
@@ -1554,7 +1582,11 @@ func (t *discordMessageTurn) PrefillNote() prefillNote { return t.prefill }
 // Attachments lets the completion layer reach a turn's uploads without taking
 // a transport argument, the same route the reactions take.
 func (t *discordMessageTurn) Attachments() []AttachmentSource {
-	return attachmentSources(t.message)
+	sources := make([]AttachmentSource, 0, len(t.folded)+1)
+	for _, folded := range t.folded {
+		sources = append(sources, attachmentSources(folded)...)
+	}
+	return append(sources, attachmentSources(t.message)...)
 }
 
 func (t *discordMessageTurn) RequestID() string {
@@ -1648,11 +1680,41 @@ func (t *discordMessageTurn) TraceLookup() (traceLookup, bool) {
 func (t *discordMessageTurn) Current() TranscriptEntry {
 	return TranscriptEntry{
 		Author:      displayName(t.message),
-		Content:     t.message.ContentWithMentionsReplaced(),
+		Content:     t.currentContent(),
 		Counterpart: counterpartOf(t.message),
-		Attachments: attachmentTypes(t.message),
+		Attachments: t.currentAttachmentTypes(),
 		ReplyTo:     replyTarget(t.message, t.replyTo),
 	}
+}
+
+// currentContent is every comment this turn answers, in arrival order and in
+// the member's own words. A batched ask reads as somebody saying several things.
+func (t *discordMessageTurn) currentContent() string {
+	parts := make([]string, 0, len(t.folded)+1)
+	for _, folded := range t.folded {
+		parts = append(parts, folded.ContentWithMentionsReplaced())
+	}
+	parts = append(parts, t.message.ContentWithMentionsReplaced())
+	return strings.Join(parts, "\n\n")
+}
+
+// currentAttachmentTypes covers the whole batch, so an upload on a folded
+// comment is as visible as one on the comment that carried the reply.
+func (t *discordMessageTurn) currentAttachmentTypes() []string {
+	types := make([]string, 0, len(t.folded)+1)
+	for _, folded := range t.folded {
+		types = append(types, attachmentTypes(folded)...)
+	}
+	return append(types, attachmentTypes(t.message)...)
+}
+
+// historyBefore anchors the transcript at the oldest comment this turn answers,
+// so a folded comment is not read as context for itself.
+func (t *discordMessageTurn) historyBefore() string {
+	if len(t.folded) > 0 {
+		return t.folded[0].ID
+	}
+	return t.message.ID
 }
 
 // replyTarget is the message a reply answers. Discord supplies it inline for
@@ -1678,7 +1740,7 @@ func replyTarget(message, resolved *discordgo.Message) *ReplySubject {
 
 func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, error) {
 	messages, capped, err := readTurnHistory(
-		t.session, t.wholeThread, t.message.ChannelID, t.message.ID, t.limit,
+		t.session, t.wholeThread, t.message.ChannelID, t.historyBefore(), t.limit,
 	)
 	if err != nil {
 		return nil, err
@@ -1695,6 +1757,9 @@ func (t *discordMessageTurn) History(_ context.Context) ([]TranscriptEntry, erro
 			Attachments: attachmentTypes(message),
 		})
 		t.recordMentionable(message)
+	}
+	for _, folded := range t.folded {
+		t.recordMentionable(folded)
 	}
 	t.recordMentionable(t.message)
 	if !t.wholeThread {

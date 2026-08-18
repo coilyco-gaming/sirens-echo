@@ -95,25 +95,22 @@ inventing a default with no evidence would be the certifying-rather-than-measuri
 place.
 
 ## Coalescing
+Admission bounds spend by refusing. Coalescing bounds it by **answering several comments in one turn**,
+the only lever that lowers the turn rate without turning anyone away.
+`SIRENS_ECHO_COALESCE_ENABLED` puts the summon path on it and **defaults off**, so the execution slot
+is still the shipped behaviour and the flag is the rollback. `SIRENS_ECHO_COALESCE_*` in
+[the reference](sirens-echo-tuning.md) tunes it, and `just smoke` drives it with no backend.
 
-Admission bounds spend by refusing. Coalescing bounds it by **answering several comments in one
-turn**, the only lever that lowers the turn rate without turning anyone away. Two a minute against a 33
-second serial turn is a utilization above one, so the queue never recovers.
+**Ingress acknowledges every comment before any batching decision exists**, so folding work never folds
+the ack, and the buffer **sheds its oldest rather than blocking the gateway**, retracting that mark.
+The window opens on the first pending ask rather than the newest, so no stream postpones it forever.
 
-**Ingress acknowledges every comment before any batching decision exists**, so folding work never
-folds the ack. The buffer **sheds its oldest rather than blocking the gateway**, and a shed ask has
-its mark retracted, because that ack promised what nobody will do.
+**The shard is the member, not the channel**, so two members talking in one place are answered at once
+and one member's three rapid comments once, by workers holding **one writer per member**. **The comment
+that arrives last carries the reply**, the earlier ones folding into what it asks in arrival order and
+in the member's own words, read from before the oldest so no comment is history for itself.
 
-The window opens on the first pending ask and closes at `W` or `K` comments, whichever comes first.
-Measuring from the first rather than the newest makes this coalescing rather than a debounce **a
-steady stream could postpone forever**. It widens past a high-water backlog, and the age cap forces
-it shut, so nothing starves.
-
-**The shard is the member, not the channel.** Guild and channel already group a conversation, so
-sharding on either serializes two members talking in one place, which it may answer at once. One
-member's three rapid comments are one it must answer once.
-
-Three workers drain batches with **one writer per member**. Each turn has a hard deadline and a ladder:
-retry with thinking off, escalate that batch, then dead-letter it as still queued, so one poisoned
-batch never costs the pool a worker. Both retries pick a route alias, since Agent Proxy owns inference
-tuning. `sirens-echo-bridge -smoke` drives the lane with no backend.
+Two bounds move while it is on. With no execution slot to wait for,
+**`SIRENS_ECHO_COALESCE_CAPACITY` is the backlog bound** `SIRENS_ECHO_MAX_PENDING` was, the rate tiers
+unchanged. The ladder does not fire either: **the turn owns its retry and its own failure notice**, and
+only a shutdown dead-letters, marking and saying nothing.

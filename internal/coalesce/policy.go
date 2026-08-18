@@ -10,8 +10,8 @@ package coalesce
 
 import "time"
 
-// Named local defaults. Every one of these is a knob that does not exist yet.
-// TODO(prong-c): move the set to config.go, whose knobs Prong C owns.
+// Named local defaults, which a caller supplying no Policy gets. The service
+// builds its own from SIRENS_ECHO_COALESCE_*, so these are the bridge's.
 const (
 	// DefaultWindow and DefaultBatch are the narrow window: a member's rapid
 	// follow-ups land in one turn without a first ask waiting on a slow one.

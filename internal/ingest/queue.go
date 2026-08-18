@@ -5,8 +5,8 @@ import (
 	"sync"
 )
 
-// DefaultCapacity bounds the asks waiting for the coalescer.
-// TODO(prong-c): move to SIRENS_ECHO_COALESCE_CAPACITY, whose file Prong C owns.
+// DefaultCapacity bounds the asks waiting for the coalescer. A deployment sets
+// it through SIRENS_ECHO_COALESCE_CAPACITY, which arrives as NewQueue's argument.
 const DefaultCapacity = 200
 
 // Queue is a bounded ask buffer that sheds its oldest rather than blocking
