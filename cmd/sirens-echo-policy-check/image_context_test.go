@@ -13,10 +13,7 @@ import (
 var imageContextPaths = []string{
 	"agent",
 	"agents",
-	filepath.Join(".agents", "skills", "sirens-echo-community"),
-	filepath.Join(".agents", "skills", "sirens-echo-knowledge"),
-	filepath.Join(".agents", "skills", "coilyco-general"),
-	filepath.Join(".agents", "skills", "coilyco-org"),
+	filepath.Join(".agents", "skills"),
 	"docs",
 }
 
