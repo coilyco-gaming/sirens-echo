@@ -150,8 +150,20 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	}
 	// The references the prompt no longer carries, read when the model decides
 	// one is relevant. See sirens-echo#859.
-	if references, err := LoadSkillReferences(cfg.Definition.LocalSkillRoots); err == nil &&
-		len(references) > 0 {
+	references, err := LoadSkillReferences(cfg.Definition.LocalSkillRoots)
+	if err != nil {
+		return nil, err
+	}
+	// The bundle indexes its own references in the pack above, so they reach the
+	// tool too, or the prompt names paths read_skill then refuses.
+	if cfg.Definition.Composed {
+		bundled, bundleErr := LoadBundleReferences(cfg.BundlePath)
+		if bundleErr != nil {
+			return nil, bundleErr
+		}
+		references = append(references, bundled...)
+	}
+	if len(references) > 0 {
 		extras = append(extras, &SkillProvider{References: references})
 	}
 	// Unconditional, because it needs no configuration and a tool shipped dark

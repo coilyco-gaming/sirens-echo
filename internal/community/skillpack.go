@@ -171,17 +171,13 @@ func composedForRun(definition Definition) (bundle string, recorded string, err 
 	return loaded, fmt.Sprintf("bundle %s (%d bytes)", dir, len(loaded)), nil
 }
 
-// LoadBundle reads one materialized agent-compose bundle: the identity card
-// plus every selected skill as its own policy root. See docs/sirens-echo-compose.md.
-func LoadBundle(dir string) (string, error) {
-	card, err := os.ReadFile(filepath.Join(dir, "content", "instructions.md"))
-	if err != nil {
-		return "", fmt.Errorf("read bundle identity card: %w", err)
-	}
+// bundleRoots lists a bundle's skill roots. Shared so the pack and the
+// references it defers come from one list rather than two walks that can drift.
+func bundleRoots(dir string) ([]string, error) {
 	skillsDir := filepath.Join(dir, "content", "skills")
 	sources, err := os.ReadDir(skillsDir)
 	if err != nil {
-		return "", fmt.Errorf("read bundle skills: %w", err)
+		return nil, fmt.Errorf("read bundle skills: %w", err)
 	}
 	roots := make([]string, 0)
 	for _, source := range sources {
@@ -190,7 +186,7 @@ func LoadBundle(dir string) (string, error) {
 		}
 		skills, err := os.ReadDir(filepath.Join(skillsDir, source.Name()))
 		if err != nil {
-			return "", fmt.Errorf("read bundle source %s: %w", source.Name(), err)
+			return nil, fmt.Errorf("read bundle source %s: %w", source.Name(), err)
 		}
 		for _, skill := range skills {
 			if skill.IsDir() {
@@ -199,9 +195,23 @@ func LoadBundle(dir string) (string, error) {
 		}
 	}
 	if len(roots) == 0 {
-		return "", fmt.Errorf("bundle %s selected no skills", dir)
+		return nil, fmt.Errorf("bundle %s selected no skills", dir)
 	}
 	sort.Strings(roots)
+	return roots, nil
+}
+
+// LoadBundle reads one materialized agent-compose bundle: the identity card
+// plus every selected skill as its own policy root. See docs/sirens-echo-compose.md.
+func LoadBundle(dir string) (string, error) {
+	card, err := os.ReadFile(filepath.Join(dir, "content", "instructions.md"))
+	if err != nil {
+		return "", fmt.Errorf("read bundle identity card: %w", err)
+	}
+	roots, err := bundleRoots(dir)
+	if err != nil {
+		return "", err
+	}
 	pack, err := LoadSkillpack(roots)
 	if err != nil {
 		return "", err
@@ -211,6 +221,16 @@ func LoadBundle(dir string) (string, error) {
 		return "", fmt.Errorf("bundle identity card is empty")
 	}
 	return body + "\n\n" + pack, nil
+}
+
+// LoadBundleReferences serves what LoadBundle's pack left out, whose index
+// names these paths, so read_skill has to hold them. See sirens-echo#859.
+func LoadBundleReferences(dir string) ([]SkillReference, error) {
+	roots, err := bundleRoots(dir)
+	if err != nil {
+		return nil, err
+	}
+	return LoadSkillReferences(roots)
 }
 
 func isSkillEntrypoint(slashed string) bool {
