@@ -93,3 +93,27 @@ whether or not the reader can see that 3 attempts vanished, and the promotion ar
 what rate is acceptable, which is a live-operations judgement rather than a measurement one, and
 inventing a default with no evidence would be the certifying-rather-than-measuring failure in a new
 place.
+
+## Coalescing
+
+Admission bounds spend by refusing. Coalescing bounds it by **answering several comments in one
+turn**, the only lever that lowers the turn rate without turning anyone away. Two a minute against a 33
+second serial turn is a utilization above one, so the queue never recovers.
+
+**Ingress acknowledges every comment before any batching decision exists**, so folding work never
+folds the ack. The buffer **sheds its oldest rather than blocking the gateway**, and a shed ask has
+its mark retracted, because that ack promised what nobody will do.
+
+The window opens on the first pending ask and closes at `W` or `K` comments, whichever comes first.
+Measuring from the first rather than the newest makes this coalescing rather than a debounce **a
+steady stream could postpone forever**. It widens past a high-water backlog, and the age cap forces
+it shut, so nothing starves.
+
+**The shard is the member, not the channel.** Guild and channel already group a conversation, so
+sharding on either serializes two members talking in one place, which it may answer at once. One
+member's three rapid comments are one it must answer once.
+
+Three workers drain batches with **one writer per member**. Each turn has a hard deadline and a ladder:
+retry with thinking off, escalate that batch, then dead-letter it as still queued, so one poisoned
+batch never costs the pool a worker. Both retries pick a route alias, since Agent Proxy owns inference
+tuning. `sirens-echo-bridge -smoke` drives the lane with no backend.

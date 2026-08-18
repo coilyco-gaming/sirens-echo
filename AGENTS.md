@@ -15,7 +15,10 @@ Their policy, MCP, evaluation, telemetry, and boundaries live here.
 ## Project shape
 
 Community code lives in `cmd/sirens-echo`, `cmd/sirens-echo-eval`, and
-`internal/community`. Everything belonging to one agent lives under
+`internal/community`. The coalescing lane is separate: `internal/ingest`
+acknowledges and queues asks, `internal/coalesce` batches and drains them, and
+`cmd/sirens-echo-bridge` runs the two together. See
+[admission](docs/sirens-echo-admission.md). Everything belonging to one agent lives under
 `agents/<name>/`, see [agent folders](docs/sirens-echo-scratchpad.md);
 `agent/` keeps only what both share.
 Local skills live under `.agents/skills/`. `sirens-echo-community` and

@@ -15,6 +15,9 @@ Discord. That description is correct for those two and wrong for this one. Where
 the two sources disagree about this deployment, the Dowel reference is the
 answer.
 
+Working the site is a separate concern with its own file. Read
+[references/site-work.md](references/site-work.md) before touching a page.
+
 ## Why this is a separate source
 
 Placement is the fact a probe most wants wrong. An agent that infers its own

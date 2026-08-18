@@ -2,8 +2,8 @@
 
 Every tuning number this package has lives in `internal/community/config.go`, beside what the deployment
 supplies. **The generated list of names and defaults is `agent/rendered/knobs.txt`**, written by
-`just knobs` from the table itself so it cannot fall behind what the code offers, with `just
-knobs-check` failing when it has.
+`just knobs` from the table itself, and rewritten by the test that reads it, so a moved number
+carries its own update.
 
 **Every enabled/disabled switch takes the same treatment**, in `internal/community/featureflags.go`
 and generated into `agent/rendered/flags.txt` by `just flags` (#854). One difference: a knob that does
@@ -25,7 +25,7 @@ Change one here, and **read the neighbours first**: a number in a group usually 
 **and that relationship is the thing most likely to break**. Where one exists, **prefer writing it down
 over restating a value**. The progress cadence is the worked example:
 the beat is twice the wait and the long-reply window is the wait plus two beats, so one edit moves all
-three and a test pins both the values and the derivation.
+three and a test holds that derivation while the values follow.
 
 **Collapsing numbers that are close but not equal changes behaviour, sometimes by a large fraction.**
 That is a decision rather than a refactor, and it does not belong in a commit described as mechanical.

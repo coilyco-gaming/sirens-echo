@@ -79,6 +79,8 @@ func TestTheDerivedValuesAreRecomputed(t *testing.T) {
 // named rather than swallowed.
 func TestAMalformedOrNonPositiveValueIsRejectedAndNamed(t *testing.T) {
 	restoreKnobs(t)
+	applyKnobs(func(string) string { return "" })
+	declared := defaultRequestTimeout
 	for name, raw := range map[string]string{
 		"not a duration": "soon",
 		"bare number":    "90",
@@ -88,7 +90,7 @@ func TestAMalformedOrNonPositiveValueIsRejectedAndNamed(t *testing.T) {
 		applied, rejected := applyKnobs(fixedLookup(map[string]string{
 			"SIRENS_ECHO_REQUEST_TIMEOUT": raw,
 		}))
-		if defaultRequestTimeout != 3*time.Minute {
+		if defaultRequestTimeout != declared {
 			t.Errorf("%s (%q) changed the timeout to %s", name, raw, defaultRequestTimeout)
 		}
 		for _, got := range applied {
@@ -118,10 +120,12 @@ func TestAnUnsetNameIsNeitherAppliedNorRejected(t *testing.T) {
 // one left behind, or a rejected value inherits an earlier override.
 func TestApplyingTwiceIsNotCumulative(t *testing.T) {
 	restoreKnobs(t)
+	applyKnobs(func(string) string { return "" })
+	declared := maxToolRounds
 	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_TOOL_ROUNDS": "3"}))
 	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_REQUEST_TIMEOUT": "9s"}))
-	if maxToolRounds != 6 {
-		t.Errorf("tool rounds = %d, want the default 6 back", maxToolRounds)
+	if maxToolRounds != declared {
+		t.Errorf("tool rounds = %d, want the declared default %d back", maxToolRounds, declared)
 	}
 	if defaultRequestTimeout != 9*time.Second {
 		t.Errorf("request timeout = %s, want 9s", defaultRequestTimeout)

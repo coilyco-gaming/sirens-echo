@@ -3,6 +3,7 @@ package community
 import (
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -167,6 +168,10 @@ func TestAMalformedBudgetIsRefusedAtLoad(t *testing.T) {
 // the argument the raise itself was made on. See sirens-echo#522.
 func TestACeilingTheLadderCannotReachIsRefused(t *testing.T) {
 	t.Parallel()
+	// Rungs rather than tokens, because the step is a knob and 14400 is only
+	// two rungs above 3600 while it is 2.
+	const base = 3600
+	twoRungs := base * completionBudgetStep * completionBudgetStep
 	for _, testCase := range []struct {
 		name    string
 		budget  ModelBudget
@@ -174,12 +179,12 @@ func TestACeilingTheLadderCannotReachIsRefused(t *testing.T) {
 	}{
 		{
 			"the reported case, a raised ceiling without a rung",
-			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 1},
+			ModelBudget{BaseCompletionTokens: base, MaxCompletionTokens: twoRungs, BudgetRaises: 1},
 			true,
 		},
 		{
 			"Deep's shipped budget",
-			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 2},
+			ModelBudget{BaseCompletionTokens: base, MaxCompletionTokens: twoRungs, BudgetRaises: 2},
 			false,
 		},
 		{
@@ -189,17 +194,25 @@ func TestACeilingTheLadderCannotReachIsRefused(t *testing.T) {
 		},
 		{
 			"slack upward, where the ceiling binds below the rung",
-			ModelBudget{BaseCompletionTokens: 1800, MaxCompletionTokens: 5000, BudgetRaises: 2},
+			ModelBudget{
+				BaseCompletionTokens: base,
+				MaxCompletionTokens:  twoRungs - 1,
+				BudgetRaises:         2,
+			},
 			false,
 		},
 		{
 			"a ladder with nowhere to climb, which is how never-raise is written",
-			ModelBudget{BaseCompletionTokens: 3600, MaxCompletionTokens: 3600, BudgetRaises: 1},
+			ModelBudget{BaseCompletionTokens: base, MaxCompletionTokens: base, BudgetRaises: 1},
 			false,
 		},
 		{
 			"one token above the rung",
-			ModelBudget{BaseCompletionTokens: 1800, MaxCompletionTokens: 3601, BudgetRaises: 1},
+			ModelBudget{
+				BaseCompletionTokens: base,
+				MaxCompletionTokens:  base*completionBudgetStep + 1,
+				BudgetRaises:         1,
+			},
 			true,
 		},
 	} {
@@ -217,13 +230,17 @@ func TestACeilingTheLadderCannotReachIsRefused(t *testing.T) {
 // wrong without saying what would be right.
 func TestTheUnreachableCeilingErrorNamesWhereTheLadderStops(t *testing.T) {
 	t.Parallel()
+	const base = 3600
+	ceiling := base * completionBudgetStep * completionBudgetStep
 	err := ModelBudget{
-		BaseCompletionTokens: 3600, MaxCompletionTokens: 14400, BudgetRaises: 1,
+		BaseCompletionTokens: base, MaxCompletionTokens: ceiling, BudgetRaises: 1,
 	}.validate()
 	if err == nil {
 		t.Fatal("accepted")
 	}
-	for _, want := range []string{"14400", "7200", "unreachable"} {
+	for _, want := range []string{
+		strconv.Itoa(ceiling), strconv.Itoa(base * completionBudgetStep), "unreachable",
+	} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("error does not carry %q: %v", want, err)
 		}

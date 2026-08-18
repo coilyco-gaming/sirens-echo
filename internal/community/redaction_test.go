@@ -1,6 +1,7 @@
 package community
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -127,8 +128,8 @@ func TestTwoBlocksOnTheSameRuleBothGo(t *testing.T) {
 func TestRedactionStopsAtTheCap(t *testing.T) {
 	t.Parallel()
 	bad := ""
-	for _, channel := range []string{"#one", "#two", "#three"} {
-		bad += "\n- server - answered, posted in " + channel + "."
+	for over := 0; over < maxRedactedBlocks+1; over++ {
+		bad += fmt.Sprintf("\n- server - answered, posted in #channel%d.", over)
 	}
 
 	if _, _, ok := redact(t, groundedBlocks+bad); ok {

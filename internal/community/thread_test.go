@@ -96,11 +96,11 @@ func TestATurnWithNoProgressLineGetsNoThread(t *testing.T) {
 	}
 }
 
-// The window is the wait plus two beats, and it moved with the wait on
-// sirens-echo#375. See docs/sirens-echo-progress.md.
+// The window is the wait plus two beats, whatever the wait is set to. See
+// docs/sirens-echo-progress.md and sirens-echo#375.
 func TestTheThreadWindowIsTheOneThatWasAskedFor(t *testing.T) {
 	t.Parallel()
-	if turnLongReplyAfter != wantLongReplyAfter {
+	if turnLongReplyAfter != turnProgressAfter+turnProgressEvery*2 {
 		t.Errorf("the thread window is %s, want the wait plus two beats", turnLongReplyAfter)
 	}
 	if turnLongReplyAfter <= turnProgressAfter {

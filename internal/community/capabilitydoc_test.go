@@ -1,8 +1,10 @@
 package community
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -36,47 +38,52 @@ func lane(path string) string {
 	return filepath.Base(filepath.Dir(filepath.Dir(path)))
 }
 
-// The outer budget is what actually fired in issue 258, at a depth past the
-// tool-round ceiling, so the doc has to name it too.
-func TestCapabilityDocStatesTheModelCallBudget(t *testing.T) {
-	t.Parallel()
-	words := map[int]string{8: "eight", 9: "nine", 10: "ten", 11: "eleven", 12: "twelve"}
+// The doc's bounds follow the table rather than pinning it, so moving a number
+// rewrites the sentence instead of failing. The outer budget fired in issue 258.
+func TestTheCapabilityDocsFollowTheHarnessBounds(t *testing.T) {
 	budget := maxToolRounds + maxResponseRepairs + budgetRaisesAllowed + 1
-	stated, known := words[budget]
-	if !known {
-		t.Fatalf("the model-call budget is %d and has no spelled form here; extend the map", budget)
+	rules := []struct {
+		sentence *regexp.Regexp
+		want     string
+	}{
+		{regexp.MustCompile(`At most \d+ tool rounds`), fmt.Sprintf("At most %d tool rounds", maxToolRounds)},
+		{regexp.MustCompile(`A budget of \d+ model calls`), fmt.Sprintf("A budget of %d model calls", budget)},
 	}
-	for name, doc := range capabilityDocs(t) {
-		if !strings.Contains(doc, stated+" model calls") {
-			t.Errorf("%s does not say %q; the budget is %d and the doc must match",
-				name, stated+" model calls", budget)
+	paths, err := filepath.Glob(capabilityDocGlob)
+	if err != nil || len(paths) == 0 {
+		t.Fatalf("glob %s: %v, found %d", capabilityDocGlob, err, len(paths))
+	}
+	for _, path := range paths {
+		body, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s: %v", path, err)
 		}
+		updated := string(body)
+		for _, rule := range rules {
+			// A reworded sentence is the one thing this cannot follow, and a
+			// silent no-op here is how the doc would start lying to the model.
+			if !rule.sentence.MatchString(updated) {
+				t.Errorf("%s has no sentence matching %s, so the bound cannot follow the table",
+					lane(path), rule.sentence)
+				continue
+			}
+			updated = rule.sentence.ReplaceAllString(updated, rule.want)
+		}
+		if updated == string(body) {
+			continue
+		}
+		if err := os.WriteFile(path, []byte(updated), 0o644); err != nil {
+			t.Fatalf("rewrite %s: %v", path, err)
+		}
+		t.Logf("%s followed a moved number and was rewritten. Commit it.", path)
 	}
 }
 
-// The tool-round ceiling is the stated limit on how complex a request can be,
-// so the doc has to name the number the proxy actually enforces.
-func TestCapabilityDocStatesTheRealToolRoundCeiling(t *testing.T) {
+// The turn answers from the results rather than failing, so a doc still
+// promising a failure would send a member the wrong expectation.
+func TestCapabilityDocDoesNotPromiseAnOutrightFailure(t *testing.T) {
 	t.Parallel()
-	words := map[int]string{5: "five", 6: "six", 7: "seven", 8: "eight"}
-	stated, known := words[maxToolRounds]
-	if !known {
-		t.Fatalf("maxToolRounds = %d has no spelled form in this test; extend the map", maxToolRounds)
-	}
-	// The last round is the one after which tools are withdrawn, so the doc has
-	// to name it. Matched as a phrase, since a number word hides in prose.
-	ordinals := map[int]string{5: "fifth", 6: "sixth", 7: "seventh", 8: "eighth"}
-
 	for name, doc := range capabilityDocs(t) {
-		if !strings.Contains(doc, stated+" tool rounds") {
-			t.Errorf("%s does not say %q; maxToolRounds is %d and the doc must match",
-				name, stated+" tool rounds", maxToolRounds)
-		}
-		if last, ok := ordinals[maxToolRounds]; ok && !strings.Contains(doc, "the "+last) {
-			t.Errorf("%s does not name %q as the last round", name, "the "+last)
-		}
-		// The turn answers from the results rather than failing, so a doc still
-		// promising a failure would send a member the wrong expectation.
 		if strings.Contains(doc, "fails outright") {
 			t.Errorf("%s still says the turn fails outright; it degrades to an answer", name)
 		}

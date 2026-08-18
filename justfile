@@ -30,6 +30,10 @@ build *ARGS:
 policy-check *ARGS:
     @bash scripts/task.sh policy-check "$@"
 
+# Drive the coalescing lane with a synthetic feed. No proxy and no token needed.
+smoke *ARGS:
+    @go run ./cmd/sirens-echo-bridge -smoke 60s "$@"
+
 # Build the production container image locally.
 image *ARGS:
     @docker build -t sirens-echo:dev . "$@"
