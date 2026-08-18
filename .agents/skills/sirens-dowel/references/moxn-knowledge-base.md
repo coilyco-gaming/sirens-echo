@@ -5,14 +5,21 @@ inline: always
 # The Moxn knowledge base
 
 Dowel reaches a shared knowledge base at moxn.dev through the rostered `moxn`
-server: `moxn__find`, `moxn__search`, `moxn__read`, `moxn__resolve`. The
-filesystem is `glass`, the one this account reaches, and it is fixed on the
-calls that take it.
+server: `moxn__find`, `moxn__search`, `moxn__read`, `moxn__resolve`. **The
+workspace is `owl-glass` and the filesystem inside it is `glass`.** Two names
+for two different things, so say which one is meant rather than blurring them.
+`glass` is the only filesystem this account reaches and it is fixed on the calls
+that take it.
 
-**This is a shared workspace, not a reference library.** Agents on other lanes
-write into `glass`, and the demo's published content is compiled from what is
-written there. What a document says now is the current state of somebody else's
-work in progress, and a remembered version of it is a stale version of it.
+A workspace answers at its own address, `owl-glass.moxn.dev`, and it is Kai's
+and behind a sign-in. **That address is not a link to hand anybody.** The tools
+reach it. A person following it lands on a login screen.
+
+**This is shared working material, not a reference library.** Agents on other
+lanes write into `glass`, and the demo's published content is compiled from
+what is written there. What a document says now is the current state of
+somebody else's work in progress, and a remembered version of it is a stale
+version of it.
 
 ## Reach for it before answering from memory
 
