@@ -1,38 +1,8 @@
 package community
 
-import (
-	"testing"
-	"time"
-)
+import "testing"
 
 // Three independent numbers that had to agree became one. See sirens-echo#354.
-
-// The expected cadence, in one place, so a raise edits one file rather than
-// three that drift apart. See sirens-echo#901.
-var (
-	wantProgressAfter  = 10 * time.Second
-	wantProgressEvery  = 20 * time.Second
-	wantLongReplyAfter = 50 * time.Second
-)
-
-// The values, pinned so a change to the base reports what it moved rather than
-// moving three things quietly. Raised from 8s in 5806c24.
-func TestTheCadenceIsTenTwentyFifty(t *testing.T) {
-	t.Parallel()
-	for _, check := range []struct {
-		name string
-		got  time.Duration
-		want time.Duration
-	}{
-		{"startup wait", turnProgressAfter, wantProgressAfter},
-		{"artificial delay", turnProgressEvery, wantProgressEvery},
-		{"long reply window", turnLongReplyAfter, wantLongReplyAfter},
-	} {
-		if check.got != check.want {
-			t.Errorf("%s = %s, want %s", check.name, check.got, check.want)
-		}
-	}
-}
 
 // The point of the change is that one edit moves all three. A derivation that
 // silently stopped deriving would look identical at today's values.

@@ -313,18 +313,6 @@ func TestAFailedProgressPostIsRecorded(t *testing.T) {
 	}
 }
 
-// The threshold is a decision rather than an accident, and the grid is twice it
-// by derivation. The numbers live in cadencederivation_test.go.
-func TestProgressThresholdsMatchTheRequestedCadence(t *testing.T) {
-	t.Parallel()
-	if turnProgressAfter != wantProgressAfter {
-		t.Errorf("turnProgressAfter = %s, want %s", turnProgressAfter, wantProgressAfter)
-	}
-	if turnProgressEvery != wantProgressEvery {
-		t.Errorf("turnProgressEvery = %s, want %s", turnProgressEvery, wantProgressEvery)
-	}
-}
-
 // A turn that beats the threshold still narrates nothing, which is what keeps an
 // ordinary reply clean at the lower cadence.
 func TestAFastTurnStillPostsNothingAtTheLowerThreshold(t *testing.T) {

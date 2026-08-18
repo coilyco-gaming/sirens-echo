@@ -60,7 +60,7 @@ type BoardProvenance struct {
 }
 
 // BoardResponse is one subject run. Structural carries the deployed validators'
-// verdict as evidence rather than as a score. See docs/sirens-echo-board.md.
+// verdict as evidence rather than as a score. See docs/sirens-echo-eval.md.
 type BoardResponse struct {
 	Epoch      int      `yaml:"epoch"`
 	Text       string   `yaml:"text"`
@@ -170,7 +170,7 @@ func validateBoardPairsComplete(halves map[string]map[string]string) error {
 }
 
 // RunBoard executes every case for the requested epochs and writes the dataset
-// a human annotates. It reports no verdict. See docs/sirens-echo-board.md.
+// a human annotates. It reports no verdict. See docs/sirens-echo-eval.md.
 func RunBoard(
 	ctx context.Context,
 	definition Definition,
@@ -319,7 +319,7 @@ func runBoardEpoch(
 }
 
 // boardStructuralNote records what the deployed validators say. It never
-// decides the case, for the measured reason in docs/sirens-echo-board.md.
+// decides the case, for the measured reason in docs/sirens-echo-eval.md.
 func boardStructuralNote(
 	boardCase BoardCase,
 	responseStyle string,

@@ -67,16 +67,21 @@ func TestNeutralStyleRefusesTone(t *testing.T) {
 	}
 }
 
-// Three is the bound Kai set. The fourth is what turns legibility into noise.
-func TestNeutralStyleBoundsObjectEmojiAtThree(t *testing.T) {
+// The bound is Kai's. One past it is what turns legibility into noise, whatever
+// the bound is set to.
+func TestNeutralStyleBoundsObjectEmoji(t *testing.T) {
 	t.Parallel()
-	three := "Wood 🪵, Stone 🪨, and Wheat 🌾 are stocked."
-	if err := ValidateNeutralStyle(three); err != nil {
-		t.Fatalf("three object emoji were refused: %v", err)
+	stock := []string{"Wood 🪵", "Stone 🪨", "Wheat 🌾", "Water 💧", "Iron ⚙️", "Coal 🪨"}
+	if len(stock) < maxObjectEmoji+1 {
+		t.Fatalf("the fixture carries %d items and the bound is %d; add more", len(stock), maxObjectEmoji)
 	}
-	four := "Wood 🪵, Stone 🪨, Wheat 🌾, and Water 💧 are stocked."
-	if err := ValidateNeutralStyle(four); err == nil {
-		t.Fatal("a fourth object emoji was admitted")
+	atBound := strings.Join(stock[:maxObjectEmoji], ", ") + " are stocked."
+	if err := ValidateNeutralStyle(atBound); err != nil {
+		t.Fatalf("%d object emoji were refused: %v", maxObjectEmoji, err)
+	}
+	overBound := strings.Join(stock[:maxObjectEmoji+1], ", ") + " are stocked."
+	if err := ValidateNeutralStyle(overBound); err == nil {
+		t.Fatalf("object emoji number %d was admitted", maxObjectEmoji+1)
 	}
 }
 

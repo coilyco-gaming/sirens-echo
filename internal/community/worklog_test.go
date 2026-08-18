@@ -3,6 +3,7 @@ package community
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -116,8 +117,9 @@ func TestEachOutcomeHasItsOwnGlyph(t *testing.T) {
 // the dropped ones from vanishing silently.
 func TestTheWorklogIsCapped(t *testing.T) {
 	t.Parallel()
-	rows := make([]progressRow, 0, 10)
-	for index := 0; index < 10; index++ {
+	over := maxWorklogRows + 4
+	rows := make([]progressRow, 0, over)
+	for index := 0; index < over; index++ {
 		rows = append(rows, progressRow{server: "eco", tool: "get_market", done: true})
 	}
 
@@ -127,8 +129,8 @@ func TestTheWorklogIsCapped(t *testing.T) {
 		t.Fatalf("rendered %d lines, want %d rows and one count",
 			len(rendered), maxWorklogRows)
 	}
-	if !strings.Contains(rendered[0], "4 earlier calls") {
-		t.Errorf("the dropped rows are not counted: %q", rendered[0])
+	if dropped := fmt.Sprintf("%d earlier calls", over-maxWorklogRows); !strings.Contains(rendered[0], dropped) {
+		t.Errorf("the dropped rows are not counted as %q: %q", dropped, rendered[0])
 	}
 }
 
