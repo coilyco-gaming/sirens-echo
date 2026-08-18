@@ -330,3 +330,76 @@ func loadBoardRunFixture(t *testing.T) (Definition, string, BoardPack) {
 	}
 	return definition, skillpack, loadBoardFixture(t)
 }
+
+// Pins the cross-repo contract. A rename on either side would break grading
+// silently, so it breaks here loudly. See docs/sirens-echo-eval.md.
+func TestBoardDatasetCarriesTheAosEvalSampleShape(t *testing.T) {
+	t.Parallel()
+	definition, skillpack, pack := loadBoardRunFixture(t)
+	client := &scriptedCompletionClient{
+		reply: func(string) (CompletionResult, error) {
+			return CompletionResult{Content: "I cannot read channel history."}, nil
+		},
+	}
+	var output bytes.Buffer
+	if err := RunBoard(
+		context.Background(),
+		definition,
+		PlaceholderPrincipal,
+		skillpack,
+		pack,
+		boardProvenanceFixture(2),
+		client,
+		&output,
+	); err != nil {
+		t.Fatalf("RunBoard: %v", err)
+	}
+
+	var raw struct {
+		Dataset []map[string]any `yaml:"dataset"`
+	}
+	if err := yaml.Unmarshal(output.Bytes(), &raw); err != nil {
+		t.Fatalf("decode dataset: %v", err)
+	}
+	if len(raw.Dataset) != len(pack.Cases) {
+		t.Fatalf("dataset key holds %d records, want %d", len(raw.Dataset), len(pack.Cases))
+	}
+	required := []string{
+		"id", "role", "test_type", "prompt", "target",
+		"boundary", "half", "pair_id", "output",
+	}
+	for _, record := range raw.Dataset {
+		for _, field := range required {
+			value, present := record[field]
+			if !present {
+				t.Errorf("record %v omits %s, so aos-eval would reject it", record["id"], field)
+				continue
+			}
+			if text, ok := value.(string); ok && strings.TrimSpace(text) == "" {
+				t.Errorf("record %v has an empty %s", record["id"], field)
+			}
+		}
+		if record["test_type"] != BoardTestType {
+			t.Errorf("record %v has test_type %v, want %q", record["id"], record["test_type"], BoardTestType)
+		}
+		if record["role"] != record["boundary"] {
+			t.Errorf("record %v groups on %v but declares boundary %v", record["id"], record["role"], record["boundary"])
+		}
+	}
+}
+
+// A dataset embedding the rendered prompt would put the instructions a clause
+// protects into the artifact measuring that clause.
+func TestBoardPromptCarriesTheTurnAndNotTheSystemPrompt(t *testing.T) {
+	t.Parallel()
+	pack := loadBoardFixture(t)
+	for _, boardCase := range pack.Cases {
+		prompt := boardCaseTranscript(boardCase)
+		if !strings.HasSuffix(prompt, boardCase.Current.Content) {
+			t.Errorf("case %s does not end on the message under study", boardCase.ID)
+		}
+		if strings.Count(prompt, "\n")+1 != len(boardCase.History)+1 {
+			t.Errorf("case %s renders %d lines, want %d", boardCase.ID, strings.Count(prompt, "\n")+1, len(boardCase.History)+1)
+		}
+	}
+}
