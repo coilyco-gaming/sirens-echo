@@ -14,6 +14,21 @@
 // globalized provider would bypass that review. See docs/sirens-echo-compose.md.
 
 roles {
+    // engineer is the sirens-dowel lane. Globs let the deny list drop a match
+    // rather than error on an exact name. Set, cost, and reasoning: deploy#658.
+    role "engineer" {
+        composed-skill "coding-*"
+        composed-skill "tooling-code-review"
+        composed-skill "tooling-issue-*"
+        composed-skill "tooling-skill-authoring"
+        composed-skill "tooling-ops-*"
+        composed-skill "tooling-qa-*"
+        composed-skill "tooling-repo-baseline"
+        composed-skill "tooling-browser-routing"
+        composed-skill "tooling-forgejo-issue-counts"
+        composed-skill "tooling-triage-cascade"
+    }
+
     role "creator" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-customer-success-*"
