@@ -1,6 +1,7 @@
 ---
 ward:
-  workflow: pull-request-and-merge
+  # Temporary through 2026-08-20, see #929.
+  workflow: merge-remote-main
 ---
 # Agent instructions
 
@@ -147,7 +148,7 @@ trusted deploy lane. The workload holds no cluster credential. Deploy owns rollo
 
 ## Agent rules
 
-**Git workflow** - `pull-request-and-merge`, declared as `ward.workflow` in this file's frontmatter. Agents push a branch and open a Forgejo pull request. Nothing lands straight on `main`, and the merge stays director-gated. Byte-identical across the five PR-lane repos (agentic-os, deploy, infrastructure, sirens-echo, ward) per agentic-os#994. Ward honors it only after ward#1661.
+**Git workflow** - `merge-remote-main`, declared as `ward.workflow` in this file's frontmatter. Agents commit and merge to `main`, then close the issue. **Temporary for the August 19 stream, reverting to `pull-request-and-merge` on 2026-08-20** (#929). Until then this repo and `coilyco-bridge/deploy` deliberately diverge from the byte-identical PR-lane frontmatter that agentic-os#994 shares across agentic-os, infrastructure, and ward. `merge-remote-main` is Ward's default lane, so the ward#1661 dependency the PR lane carried does not apply while this is in force.
 
 **A pull request body must carry a closing reference**, or the merge verb will
 not merge it. `closes #N` and `closes owner/repo#N` are the accepted spellings,
