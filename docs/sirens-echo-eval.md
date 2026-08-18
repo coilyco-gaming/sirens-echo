@@ -12,8 +12,8 @@ eval-deep`. It hard-fails and needs no human. **Layer 2 is the human-graded boar
 dataset and reports no verdict, **so a non-zero exit means the run did not happen rather than that Deep
 failed**.
 
-The split exists because **judgment and gating want opposite things**. A gate has to be mechanical and
-cheap enough to run on every deployment, while judgment has to be able to say "this reply is technically
+The split exists because **judgment and gating want opposite things**. A gate must be mechanical and
+cheap enough to run on every deployment, while judgment must be able to say "this reply is technically
 compliant and still wrong", **which no pattern can say**.
 
 **The board holds only what a human has to decide.** Anything a scoped or anchored check can decide
@@ -35,12 +35,12 @@ fail, **and the remaining epochs stay in the dataset as a failure-spread estimat
 
 ## The pair is the scoring unit
 
-**Every clause is paired**, the in half where the clause requires Deep to act and the out half where it
-requires Deep to decline, **and the pair is the scoring unit, not the case**. **The in half is a
-negative control**: six of the eight clauses on the full board are refusals, **so a Deep that refused
-everything would score near-perfect on out halves alone**, and `LoadBoardPack` rejects a pair holding
-one half. **In the sibling agent-compose suite the only real boundary failure on the first graded board
-was an in-half failure that its earlier filter would have deleted before a human saw it.**
+**Every clause is paired**, the in half requiring Deep to act and the out half requiring it to decline,
+**and the pair is the scoring unit, not the case**. **The in half is a negative control**: six of the
+eight clauses on the full board are refusals, **so a Deep that refused everything would score
+near-perfect on out halves alone**, and `LoadBoardPack` rejects a pair holding one half. **In the
+sibling agent-compose suite the only real boundary failure on the first graded board was an in-half
+failure that its earlier filter would have deleted before a human saw it.**
 
 **A clause is an obligation the rendered prompt actually states**, cited by line against the tracked
 snapshot, and `just prompt-check` fails when that snapshot drifts, **so a doctrine edit surfaces as a
@@ -57,7 +57,8 @@ and the board is **derived** from it, every boundary producing two cases. Format
 
 `just boundaries` prints the paired case list and `just boundaries-check` fails when a declared boundary
 no longer resolves against the source it names. **No case, boundary, or baseline names a bot**: identity
-is a deployment concern (aos#778). Derived-board shape is tracked by #846.
+is a deployment concern (aos#778) and naming either would violate #836's acceptance test. Existing run
+records are historical provenance and stay as they are. Derived-board shape is tracked by #846.
 
 ## Where `aos-eval` fits
 
@@ -68,15 +69,15 @@ token. Run `aos-eval help` for its reference.
 
 **Shared today**: the boundary declaration. `eval/boundaries.yaml` is already in `aos-eval`'s
 declaration shape, so `aos-eval boundaries derive` reads it as-is and prints the slots the board must
-contain. **The pairing rule is the thing worth sharing**, and both repositories reached it independently
+hold. **The pairing rule is the thing worth sharing**, and both repositories reached it independently
 before the layer existed.
 
 **Not shared yet**: the board dataset. `board-deep` emits `cases:` keyed on `clause`, `history`, and
 `current`, where `aos-eval` reads `dataset:` keyed on `role`, `test_type`, and `prompt`, so `annotate`,
-`taxonomy`, and `export` cannot read a board record until that shape is reconciled through a profile.
-**Grading here is still local.** Two things stay local on purpose: the source-drift check in
-`scripts/boundaries.sh`, which verifies an `origin#fragment` still resolves and `aos-eval` does not do,
-and the battery, which is a deployment gate rather than a grading surface.
+`taxonomy`, and `export` cannot read a board record until a profile reconciles them. **Grading here is
+still local.** Two things stay local on purpose: the source-drift check in `scripts/boundaries.sh`,
+which verifies an `origin#fragment` still resolves and `aos-eval` does not do, and the battery, which
+gates a deployment rather than grading it.
 
 ## Running the board
 
@@ -85,8 +86,7 @@ and the battery, which is a deployment gate rather than a grading surface.
 `SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a
 reason that is not the agent's**.
 
-**Anchor a deduction to a verbatim span from the response**, so a critique is auditable rather than
-impressionistic, and **a dataset is evidence**: keep it by date and seat and archive a retired result
+**Anchor a deduction to a verbatim span**, the rule `aos-eval` enforces, and treat **a dataset as evidence**: keep it by date and seat and archive a retired result
 rather than deleting it, **because the before-and-after is the argument that a doctrine change worked**.
 
 **There is no mechanical scorer on the board.** It records what the deployed validators say in a
@@ -104,8 +104,8 @@ identifier guard is replaced by the narrower `checkUserIDEcho` under `forbid_pri
 **A check has to be an invariant, not a guess at phrasing.** Every one has a closed target set, and **a
 closed target set makes the miss rate knowable**. A forbidden-phrase list has an open one: **the ways to
 fabricate an authority are unbounded, so listing four of them has an unknowable miss rate and a green
-run reads as a property it did not check.** That cut `"official calendar"` and the whole
-`no-promised-write` case. **It must also not fire on a plausible correct reply to its own case**, judged
+run reads as a property it did not check.** That cut `"official calendar"`,
+`"staff confirmed"`, and the whole `no-promised-write` case. **It must also not fire on a plausible correct reply to its own case**, judged
 per case, **because the same string is fabrication in one turn and an accurate refusal in another**.
 
 * `forbidden_patterns` - whole reply, regex, when anchoring or a scheme closes the target.
