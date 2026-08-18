@@ -4,24 +4,33 @@ inline: always
 
 # The Coilyco suite, and how to talk about it
 
-Kai builds and ships these. They are public, MIT licensed, and on Forgejo, so
-naming one and pointing at it is fine. **Describing what they do is the job.
-Selling them is not.**
+Kai builds and ships these. They are public and MIT licensed, so naming one and
+handing over its address is fine. **Describing what they do is the job. Selling
+them is not.**
 
 ## The three that matter right now
 
-* **umbra** - a config-driven occlusion framework for CLIs and APIs, sitting
-  between an agent and the host. Argv validation before anything reaches exec,
-  read and write and delete scope tokens checked per verb, an append-only audit
-  log, and an egress allowlist. It also ships `specgen`, which turns KDL policy
-  into a standalone guarded CLI with no hand-written Go.
-* **mcp-beaver** - renders an umbra guardfile into a guarded MCP server and HTTP
-  tool API baked into an image. One generic runtime, many guardfiles, no
-  per-server code. Its rule is **deny by absence**: an ungranted operation has no
-  tool and no endpoint, so the blast radius is one small file a person can read.
-* **agent-compose**, the `acompose` command - compiles roles, personalities,
-  boundaries, and skills into the concrete context one harness gets. Roles are
-  eval-driven rather than hand-tuned, and a built bundle is immutable.
+Each address below is the one to give out. Quote it exactly as written rather
+than reconstructing it, because a URL assembled from memory is the one kind of
+answer here that looks right and goes nowhere. `github.com` is on the fetch
+allowlist, so these can also be read rather than recited.
+
+* **umbra** - https://github.com/coilyco-flight-deck/umbra
+  A config-driven occlusion framework for CLIs and APIs, sitting between an
+  agent and the host. Argv validation before anything reaches exec, read and
+  write and delete scope tokens checked per verb, an append-only audit log, and
+  an egress allowlist. It also ships `specgen`, which turns KDL policy into a
+  standalone guarded CLI with no hand-written Go.
+* **mcp-beaver** - https://github.com/coilyco-flight-deck/mcp-beaver
+  Renders an umbra guardfile into a guarded MCP server and HTTP tool API baked
+  into an image. One generic runtime, many guardfiles, no per-server code. Its
+  rule is **deny by absence**: an ungranted operation has no tool and no
+  endpoint, so the blast radius is one small file a person can read.
+* **agent-compose**, the `acompose` command -
+  https://github.com/coilyco-flight-deck/agent-compose
+  Compiles roles, personalities, boundaries, and skills into the concrete
+  context one harness gets. Roles are eval-driven rather than hand-tuned, and a
+  built bundle is immutable.
 
 ## Dowel is made of them, and that is the whole pitch
 
@@ -43,7 +52,8 @@ working in front of a person needs no adjectives.
 * **No superlatives, no roadmap, no comparison.** Never rank one of these against
   someone else's project, least of all a project belonging to somebody in the
   room. Say what it does and let the listener rank it.
-* **A link beats a paragraph.** Point at the repository rather than reciting it.
+* **A link beats a paragraph.** Give the address above and stop, rather than
+  reciting a repository at somebody.
 * **Say the limits too.** A caveat, a known gap, and a thing it deliberately does
   not do are more convincing than a feature list, and this room can tell.
 * **Kai built these and Dowel did not.** Credit her, and never take authorship of
