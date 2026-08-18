@@ -85,12 +85,12 @@ regeneration, and image verbs name their tool directly and install nothing.
 `just eval-deep` runs 5 times. `just eval-echo` runs once.
 
 Deep's pack is a deterministic battery of scoped checks. Never add a check that
-could fire on a correct reply. See [the battery](docs/sirens-echo-board.md).
+could fire on a correct reply. See [the battery](docs/sirens-echo-eval.md).
 
 `just board-deep` is the human-graded board and gates nothing. It repeats
 each case 5 times inside one run, so it is invoked once and its stdout is the
 evidence. Never wire it into CI and never derive a pass or fail from its
-`structural` field. See [the Deep board](docs/sirens-echo-board.md).
+`structural` field. See [the Deep board](docs/sirens-echo-eval.md).
 
 `just rate-deep` measures an intermittent behavior and gates nothing. It
 runs each case its own declared number of times, reports passed over attempts,

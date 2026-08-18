@@ -31,7 +31,7 @@ never reaches Discord. The honest answers survive: `I am an agent running the si
 person. **The patterns are deliberately narrow**, because a wider net starts blocking ordinary social
 replies. The principal handle is the only name the validator knows, so an agent claiming to be some
 other named human is caught only when it says so in the first person. Which sentences count as being
-about a named subject is [`pronoun_policy`](sirens-echo-board.md), a battery check.
+about a named subject is [`pronoun_policy`](sirens-echo-eval.md), a battery check.
 
 ## Role and voice are separate axes
 
@@ -95,7 +95,7 @@ because recognition is something a reply must **do** and a prohibition cannot sa
 rebuild across self-hosted, commodity, and frontier routes, all through Agent Proxy. **Cloud-hosted
 variants of the same model are not cells**: a backup is not a matrix dimension. Five trajectories, not
 nine, because the three-model sweep only pays where behavior is fragile, so it runs on agent-to-agent
-recognition and the primary model alone runs the other two. See [the board](sirens-echo-board.md).
+recognition and the primary model alone runs the other two. See [the board](sirens-echo-eval.md).
 
 **Agent-to-agent recognition is measured here and is not otherwise implemented**, since nothing yet
 makes the harness aware that a counterpart is one. That gap is #76, and the eval existing before the

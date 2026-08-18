@@ -216,7 +216,7 @@ func runEvaluation(
 		return err
 	}
 	// This run gates a deployment, so a reader has to be able to tell a stubbed
-	// verdict from a bundled one. See docs/sirens-echo-board.md.
+	// verdict from a bundled one. See docs/sirens-echo-eval.md.
 	fmt.Fprintf(output, "composed: %s\n\n", composedState)
 	systemPrompt, err := evaluationSystemPrompt(definition, principal, composed, localSkillpack)
 	if err != nil {
