@@ -14,6 +14,16 @@
 // globalized provider would bypass that review. See docs/sirens-echo-compose.md.
 
 roles {
+    // engineer is the sirens-dowel lane. creator's room-craft plus its own lane
+    // contract, since a role with no entry composes the roster identity alone.
+    role "engineer" {
+        composed-skill "tooling-sirens-dowel-contract"
+        composed-skill "tooling-discord-community-host"
+        composed-skill "personal-preference-*"
+        composed-skill "personal-preferences"
+        composed-skill "writing-*"
+    }
+
     role "creator" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-customer-success-*"
