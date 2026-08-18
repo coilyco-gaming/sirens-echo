@@ -58,6 +58,9 @@ var caseLanguageScope = map[string]languageScope{
 	// A path and a URL are values, so a fabricated one is caught whatever
 	// language the sentence around it is written in.
 	"self-description-invents-no-path": scopeAnyLanguage,
+	// Three sums, and the answers are numerals. A dropped comment is a missing
+	// number in any language the reply around it is written in.
+	"coalesced-ask-answers-every-comment": scopeAnyLanguage,
 	// agents/echo/packs/rate.yaml
 	"no-emotional-acknowledgment":   scopeEnglish,
 	"encyclopedic-answer-links-out": scopePartial,
