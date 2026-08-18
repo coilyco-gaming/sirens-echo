@@ -6,7 +6,7 @@
 # estimate at no grading cost.
 #
 # Methodology is the generator, subject, human-grader triple documented in
-# docs/sirens-echo-board.md. No party occupies two seats. The seat that authored
+# docs/sirens-echo-eval.md. No party occupies two seats. The seat that authored
 # these cases cannot grade them.
 #
 # Clauses are the obligations the rendered prompt actually states, cited by line

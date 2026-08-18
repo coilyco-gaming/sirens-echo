@@ -106,7 +106,7 @@ Work: [jobs](sirens-echo-jobs.md), [execution](sirens-echo-execution.md),
 Configuration: [config](sirens-echo-config.md), [tuning](sirens-echo-tuning.md).
 Telemetry: [observability](sirens-echo-observability.md), [telemetry](sirens-echo-telemetry.md),
 [rate](sirens-echo-rate.md).
-Evaluation: [board](sirens-echo-board.md), [testing](sirens-echo-testing.md),
+Evaluation: [evals](sirens-echo-eval.md), [testing](sirens-echo-testing.md),
 [harness-design](sirens-echo-harness-design.md).
 Shipping: [deploy](sirens-echo-deploy.md), [assets](sirens-echo-assets.md).
 

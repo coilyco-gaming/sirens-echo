@@ -55,7 +55,7 @@ func (p PronounPolicy) validate(caseID string) error {
 }
 
 // check walks sentences from the first subject mention and reports the first
-// disallowed pronoun. See docs/sirens-echo-board.md for the scoping rule.
+// disallowed pronoun. See docs/sirens-echo-eval.md for the scoping rule.
 func (p PronounPolicy) check(reply string) error {
 	active := false
 	for _, sentence := range sentenceSplit.Split(reply, -1) {
