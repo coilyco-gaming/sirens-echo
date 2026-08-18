@@ -150,7 +150,7 @@ func TestQueueTimeoutTellsTheCallerInsteadOfReturningSilently(t *testing.T) {
 	agent := queueBlockedAgent(t)
 	turn := &httpTurn{requestID: "queued", transport: transportHTTP}
 
-	err := agent.runSerialized(context.Background(), turn, transportHTTP)
+	err := agent.runSerialized(context.Background(), turn)
 	if err == nil {
 		t.Fatal("a turn that never got the slot must still fail")
 	}
@@ -160,31 +160,26 @@ func TestQueueTimeoutTellsTheCallerInsteadOfReturningSilently(t *testing.T) {
 	}
 }
 
-func TestQueueTimeoutNoticeIsThrottledForDiscordOnly(t *testing.T) {
+func TestEveryDroppedTurnIsToldRegardlessOfHowManyDropTogether(t *testing.T) {
 	t.Parallel()
-	agent := queueBlockedAgent(t)
 
-	// A shared channel gets one notice per window, matching the pending-cap
-	// denial, so saturation cannot become an amplifier.
-	if !agent.limiter.notifyQueueTimeout("guild-1") {
-		t.Fatal("the first Discord notice was suppressed")
-	}
-	if agent.limiter.notifyQueueTimeout("guild-1") {
-		t.Fatal("a second Discord notice was allowed inside the window")
-	}
-	// A different context keeps its own notice.
-	if !agent.limiter.notifyQueueTimeout("guild-2") {
-		t.Fatal("one guild's saturation muted another")
-	}
-
-	// A synchronous caller is never throttled: its reply reaches only itself.
-	for attempt := 0; attempt < 3; attempt++ {
-		turn := &httpTurn{requestID: "queued", transport: transportHTTP}
-		if err := agent.runSerialized(context.Background(), turn, transportHTTP); err == nil {
-			t.Fatal("expected a queue timeout")
-		}
-		if turn.reply != noticeQueueTimeout {
-			t.Fatalf("attempt %d reply = %q", attempt, turn.reply)
-		}
+	// Replaces a test that pinned the opposite. #939 measured the throttle's
+	// cost: three drops in one second, one told, two silent. See that issue.
+	for _, transport := range []string{transportDiscord, transportHTTP} {
+		t.Run(transport, func(t *testing.T) {
+			t.Parallel()
+			agent := queueBlockedAgent(t)
+			for attempt := 0; attempt < 3; attempt++ {
+				turn := &httpTurn{requestID: "queued", transport: transport}
+				if err := agent.runSerialized(context.Background(), turn); err == nil {
+					t.Fatal("expected a queue timeout")
+				}
+				if turn.reply != noticeQueueTimeout {
+					t.Fatalf(
+						"drop %d on %s replied %q, want the queue timeout notice",
+						attempt, transport, turn.reply)
+				}
+			}
+		})
 	}
 }

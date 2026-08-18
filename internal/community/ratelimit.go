@@ -190,16 +190,6 @@ func (l *rateLimiter) Release() {
 	}
 }
 
-// notifyQueueTimeout reports whether this context is due a notice that its turn
-// gave up waiting. It shares the pending-cap denial's bucket and window.
-func (l *rateLimiter) notifyQueueTimeout(contextKey string) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	now := l.now()
-	state := l.bucketFor("queue:"+contextKey, RateLimit{Burst: 1, Every: time.Second}, now)
-	return l.denyLocked(state, RateLimit{}, admissionQueue, now).Notify
-}
-
 // denyLocked builds a denial and decides whether this key is due a notice.
 // The caller must hold l.mu.
 func (l *rateLimiter) denyLocked(

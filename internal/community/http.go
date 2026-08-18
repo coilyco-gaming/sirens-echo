@@ -264,7 +264,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 	defer a.limiter.Release()
 	a.telemetry.RecordAdmission(request.Context(), string(admissionAccepted), transportHTTP)
 
-	if err := a.runSerialized(request.Context(), turn, transportHTTP); err != nil {
+	if err := a.runSerialized(request.Context(), turn); err != nil {
 		writeJSON(writer, http.StatusBadGateway, httpTurnResponse{
 			Reply: turn.reply,
 			Error: "turn failed",
