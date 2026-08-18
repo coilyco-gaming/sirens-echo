@@ -8,7 +8,7 @@ COPY cmd ./cmd
 COPY internal ./internal
 COPY agent ./agent
 COPY agents ./agents
-COPY .agents/skills/* ./.agents/skills/
+COPY .agents/skills ./.agents/skills
 COPY docs ./docs
 ARG SIRENS_ECHO_REVISION=
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -45,7 +45,7 @@ RUN set -eu; \
     fi
 COPY agent ./agent
 COPY agents ./agents
-COPY .agents/skills/* ./.agents/skills/
+COPY .agents/skills ./.agents/skills
 COPY scripts/stage-compose-sources.sh ./scripts/
 # The expander comes from the build stage, so this stage needs no Go toolchain
 # work and the binary is the one the suite already exercised.
@@ -71,10 +71,15 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 agents /app/agents
-COPY --chown=1000:1000 .agents/skills/* /app/.agents/skills/
-# A root named by a definition and absent here is a startup crash, not a gap.
-# sirens-dowel shipped in the repo and not the image, which is deploy#666.
-COPY --chown=1000:1000 .agents/skills/sirens-dowel /app/.agents/skills/sirens-dowel
+COPY --chown=1000:1000 .agents/skills /app/.agents/skills
+# A wildcard here copies each root's contents rather than the root, flattening
+# the tree, and a definition naming a root then crashes at startup. deploy#666.
+RUN set -eu; \
+    for root in /app/.agents/skills/*/; do \
+      [ -f "${root}SKILL.md" ] || { echo "skill root ${root} lost its SKILL.md" >&2; exit 1; }; \
+    done; \
+    [ ! -e /app/.agents/skills/SKILL.md ] || \
+      { echo "a SKILL.md landed at the skills root, so the tree was flattened" >&2; exit 1; }
 COPY --from=compose --chown=1000:1000 /out/bundles /app/agent/bundles
 USER 1000:1000
 ENTRYPOINT ["/usr/local/bin/sirens-echo"]
