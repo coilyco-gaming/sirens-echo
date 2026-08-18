@@ -15,13 +15,12 @@ The split exists because **judgment and gating want opposite things**: a gate mu
 cheap enough for every deployment, while judgment has to be able to say "this reply is technically
 compliant and still wrong", **which no pattern can say**.
 
-**The board holds only what a human has to decide.** Anything a scoped or anchored check can decide
-belongs in the battery, which is why `pronoun-defaults` moved there and stopped being a board pair:
-**a graded copy alongside a mechanical one is two guards over one behavior**. The reverse move is
-expected too, and a battery check that fires on a correct reply is **deleted rather than tuned**. The
-battery's own rule, its assumed validators, and each live check kind are in that pack's header,
-which is where they stay current: `max_verbatim_words` retired there (#406) while this page still
-listed it.
+**The board holds only what a human has to decide.** Anything a scoped or anchored check can decide belongs
+in the battery, which is why `pronoun-defaults` moved there: **a graded copy alongside a mechanical one is
+two guards over one behavior**. The reverse move is expected too, and a battery check that fires on a
+correct reply is **deleted rather than tuned**. That pack's header carries its own rule, its assumed
+validators, and each live check kind, and it stays current where this page did not: `max_verbatim_words`
+retired there (#406) while this page still listed it.
 
 ## The triple
 
@@ -42,10 +41,10 @@ on this board are refusals, **so a Deep that refused everything would score near
 alone**, and `LoadBoardPack` rejects a pair holding one half.
 
 **A clause is an obligation the rendered prompt actually states**, cited by line against the tracked
-snapshot. `just prompt-check` fails when that snapshot drifts and
+snapshot. `just prompt-check` fails when that snapshot drifts, and
 `TestBoardClauseCitationsStillPointAtTheirClause` fails when a citation no longer lands on its clause,
-because three had drifted by up to fifteen lines before that check existed. Deep has no roles,
-personalities, or adjacency, **so the prompt is the axis** where agent-compose uses its roster.
+because three had drifted by up to fifteen lines before it existed. Deep has no roles, personalities, or
+adjacency, **so the prompt is the axis** where agent-compose uses its roster.
 
 The pilot slice is five clauses, ten cases. `no-invented-surface` reproduces issue 88, **which gives the
 board a validity check the sibling suite never had**: if its out half does not reproduce that against
@@ -74,13 +73,13 @@ just grade agents/deep/evaluations/<date>-<seat>.yaml
 just taxonomy <dataset> <annotations>
 ```
 
-`board-deep` needs `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL`, and `OTEL_EXPORTER_OTLP_ENDPOINT`, plus
-`SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a
-reason that is not the agent's**. `AOS_EVAL_REF` pins a tag when a grading run has to be reproducible.
+`board-deep` needs `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and
+`SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a reason
+that is not the agent's**. `AOS_EVAL_REF` pins a tag when a run must be reproducible.
 
-**Anchor a deduction to a verbatim span**, which aos-eval checks against the output rather than taking
-on trust, and treat **a dataset as evidence**: keep it by date and seat and archive a retired result
-rather than deleting it, **because the before-and-after is the argument that a doctrine change worked**.
+**Anchor a deduction to a verbatim span**, which aos-eval checks against the output rather than taking on
+trust, and treat **a dataset as evidence**: keep it by date and seat and archive rather than delete a
+retired one, **because the before-and-after is the argument that a doctrine change worked**.
 
 ## What the shared tool measured first
 
@@ -109,3 +108,12 @@ same responses and it agreed with the grader on nothing that mattered, one false
 negatives, and six agreements where nothing happened. **It was deleted rather than tuned.** The battery
 survives that argument because its checks have closed target sets, which is a different claim from a
 phrase list, and the pack header carries it.
+
+## The rest of the stack
+
+* [aos-eval](https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os/src/branch/main/docs/aos-eval.md) -
+  the shared layer this grades through, plus the probe layer under it.
+* [agent-compose evaluation](https://forgejo.coilysiren.me/coilyco-flight-deck/agent-compose/src/branch/main/docs/evaluation.md) -
+  the other consumer: same pairing rule, a composed prompt rather than a live harness.
+* [Deleting the Mechanical Scorer](https://coilysiren.me/posts/deleting-the-mechanical-scorer/) - why both
+  boards are hand-graded and how the shared layer was extracted.
