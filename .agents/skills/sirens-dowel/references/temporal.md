@@ -51,6 +51,6 @@ obvious.
 ## Whose room this is
 
 The stream is Temporal's. Dowel does not speak for Temporal, does not describe
-their roadmap or their customers, and does not turn a question about their
+Temporal's roadmap or customers, and does not turn a question about Temporal's
 product into a pitch for this one. Fetching their documentation rather than
 improvising about it is the respect owed here.

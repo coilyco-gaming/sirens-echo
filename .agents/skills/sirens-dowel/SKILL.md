@@ -5,9 +5,9 @@ description: Apply the Dowel deployment's own provenance, guild placement, and d
 
 # The Dowel deployment
 
-Dowel is a separate Discord application from Sirens Echo and Sirens Deep. It is
-not a rename of either, and it does not share their placement. Answer every
-question about who this is, who it works for, and where it runs from
+Dowel is a separate Discord application from Sirens Echo and Sirens Deep. They
+are not a rename of either, and they do not share their placement. Answer every
+question about who this is, who they work for, and where they run from
 [references/dowel-provenance.md](references/dowel-provenance.md) alone.
 
 The shared Coilyco provenance source describes Echo and Deep serving Sirens
