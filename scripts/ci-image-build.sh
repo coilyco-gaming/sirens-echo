@@ -8,6 +8,8 @@ set -euo pipefail
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 # shellcheck source=scripts/lib/docker-host.sh
 . "${script_dir}/lib/docker-host.sh"
+# shellcheck source=scripts/lib/catalog-head.sh
+. "${script_dir}/lib/catalog-head.sh"
 
 # resolve_docker_host returns the first candidate that answers a version call.
 resolve_docker_host() {
@@ -31,7 +33,14 @@ export DOCKER_HOST
 printf '%s\n' "$DOCKER_HOST" >"$DOCKER_HOST_RECORD" || true
 echo "building against ${DOCKER_HOST}"
 
+catalog_ref="${AOS_CATALOG_REF:-main}"
+catalog_sha=$(catalog_head "${catalog_ref}")
+echo "baking catalogue ${catalog_ref} at ${catalog_sha}"
+
 # No tag anyone can push and no --push. This proves the build, nothing else.
 # The publisher on the deploy runner remains the only thing that ships an image.
-docker build --pull=false -t sirens-echo:pr-check .
+docker build --pull=false \
+  --build-arg AOS_CATALOG_REF="${catalog_ref}" \
+  --build-arg AOS_CATALOG_HEAD="${catalog_sha}" \
+  -t sirens-echo:pr-check .
 echo "image build succeeded"

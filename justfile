@@ -36,7 +36,7 @@ smoke *ARGS:
 
 # Build the production container image locally.
 image *ARGS:
-    @docker build -t sirens-echo:dev . "$@"
+    @bash scripts/build-image-local.sh "$@"
 
 # Parse the trusted Forgejo OCI publisher shell contract.
 image-publish-check *ARGS:

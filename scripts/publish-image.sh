@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=scripts/lib/catalog-head.sh
+. "${script_dir}/lib/catalog-head.sh"
+
 registry="forgejo.coilysiren.me"
 image_name="coilyco-gaming/sirens-echo"
 
@@ -34,12 +38,17 @@ export DOCKER_CONFIG="${docker_config}"
 printf '%s' "${REGISTRY_TOKEN}" \
   | docker login "${registry}" --username coilyco-ops --password-stdin
 
-echo "==> building ${image}"
+catalog_ref="${AOS_CATALOG_REF:-main}"
+catalog_sha=$(catalog_head "${catalog_ref}")
+
+echo "==> building ${image} against catalogue ${catalog_ref} at ${catalog_sha}"
 docker build \
   --pull \
   --build-arg HTTP_PROXY="${FORGEJO_EGRESS_PROXY}" \
   --build-arg HTTPS_PROXY="${FORGEJO_EGRESS_PROXY}" \
   --build-arg SIRENS_ECHO_REVISION="${sha}" \
+  --build-arg AOS_CATALOG_REF="${catalog_ref}" \
+  --build-arg AOS_CATALOG_HEAD="${catalog_sha}" \
   -t "${image}" \
   .
 
