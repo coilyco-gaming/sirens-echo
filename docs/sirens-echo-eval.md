@@ -1,25 +1,27 @@
 # Evaluation
 
 Deep answers strangers in a guild the operator does not moderate, **so what it refuses matters as much
-as what it answers**. This page is how that is measured: the two layers, the declaration they derive
-from, and where the shared `aos-eval` grading layer fits.
+as what it answers**. This page is how that is measured: the two layers, the triple, the pairing rule,
+and the shared `aos-eval` this deployment now grades through.
 
 ## Two layers that never share a file
 
-**Layer 1 is the deterministic battery**, `agents/deep/packs/evaluation.yaml`, run with `just
-eval-deep`. It hard-fails and needs no human. **Layer 2 is the human-graded board**,
-`agents/deep/packs/board.yaml`, run with `just board-deep`, which **gates nothing**: the runner emits a
-dataset and reports no verdict, **so a non-zero exit means the run did not happen rather than that Deep
-failed**.
+**Layer 1 is the deterministic battery**, `agents/deep/packs/evaluation.yaml`, run with `just eval-deep`.
+It hard-fails and needs no human. **Layer 2 is the human-graded board**, `agents/deep/packs/board.yaml`,
+run with `just board-deep`, which **gates nothing**: it emits a dataset and reports no verdict, **so a
+non-zero exit means the run did not happen rather than that Deep failed**.
 
-The split exists because **judgment and gating want opposite things**. A gate has to be mechanical and
-cheap enough to run on every deployment, while judgment has to be able to say "this reply is technically
+The split exists because **judgment and gating want opposite things**: a gate must be mechanical and
+cheap enough for every deployment, while judgment has to be able to say "this reply is technically
 compliant and still wrong", **which no pattern can say**.
 
 **The board holds only what a human has to decide.** Anything a scoped or anchored check can decide
-belongs in the battery: `pronoun-defaults` was a board pair and is now a battery case, **because a
-graded copy alongside it would be two guards over one behavior**. The reverse move is expected too, and
-a battery check that collides with a correct reply is **deleted rather than tuned**.
+belongs in the battery, which is why `pronoun-defaults` moved there and stopped being a board pair:
+**a graded copy alongside a mechanical one is two guards over one behavior**. The reverse move is
+expected too, and a battery check that fires on a correct reply is **deleted rather than tuned**. The
+battery's own rule, its assumed validators, and each live check kind are in that pack's header,
+which is where they stay current: `max_verbatim_words` retired there (#406) while this page still
+listed it.
 
 ## The triple
 
@@ -27,93 +29,83 @@ Three seats, **and no party occupies two of them**: a **generator**, a frontier 
 interactive with Kai, which **cannot grade what it authored**; a **subject**, the commodity tier pinned
 to `deepseek-v4-flash` on the deployed route; and a **grader**, Kai, ground truth rather than something
 validated against a rubric. **A weaker subject removes the ceiling effect that makes a gate certify
-rather than measure**, and a human grader removes self-judging and the unvalidated-judge problem at
-once.
+rather than measure**, and a human grader removes self-judging and the unvalidated-judge problem at once.
 
-`SIRENS_ECHO_BOARD_EPOCHS` defaults to 5. The grader reads epoch 1 of each record and scores pass or
-fail, **and the remaining epochs stay in the dataset as a failure-spread estimate at no grading cost**.
+`SIRENS_ECHO_BOARD_EPOCHS` defaults to 5. The grader reads epoch 1 and scores pass or fail, **and the
+rest stay in the dataset as a failure-spread estimate at no grading cost**.
 
 ## The pair is the scoring unit
 
-**Every clause is paired**, the in half where the clause requires Deep to act and the out half where it
-requires Deep to decline, **and the pair is the scoring unit, not the case**. **The in half is a
-negative control**: six of the eight clauses on the full board are refusals, **so a Deep that refused
-everything would score near-perfect on out halves alone**, and `LoadBoardPack` rejects a pair holding
-one half. **In the sibling agent-compose suite the only real boundary failure on the first graded board
-was an in-half failure that its earlier filter would have deleted before a human saw it.**
+**Every clause is paired**, the in half requiring Deep to act and the out half requiring it to decline,
+**and the pair is the scoring unit, not the case**. **The in half is a negative control**: most clauses
+on this board are refusals, **so a Deep that refused everything would score near-perfect on out halves
+alone**, and `LoadBoardPack` rejects a pair holding one half.
 
 **A clause is an obligation the rendered prompt actually states**, cited by line against the tracked
-snapshot, and `just prompt-check` fails when that snapshot drifts, **so a doctrine edit surfaces as a
-board whose citations no longer match**. Deep has no roles, personalities, or adjacency, **so the prompt
-is the axis** where agent-compose uses its roster.
+snapshot. `just prompt-check` fails when that snapshot drifts and
+`TestBoardClauseCitationsStillPointAtTheirClause` fails when a citation no longer lands on its clause,
+because three had drifted by up to fifteen lines before that check existed. Deep has no roles,
+personalities, or adjacency, **so the prompt is the axis** where agent-compose uses its roster.
 
-## The board is derived from one declaration
+The pilot slice is five clauses, ten cases. `no-invented-surface` reproduces issue 88, **which gives the
+board a validity check the sibling suite never had**: if its out half does not reproduce that against
+the pre-fix bundle, **the board is not measuring**. The rest wait on the first graded result, because
+the generator's predictions about which cases discriminate are not yet a measured quantity.
 
-**The reference board has three boundaries across its roles. This repository has tens**: 13 content
-classes, 9 reply validators, and prose clauses across five policy skill roots, **so the case list cannot
-be hand-maintained**. Boundaries are declared once in [`eval/boundaries.yaml`](../eval/boundaries.yaml)
-and the board is **derived** from it, every boundary producing two cases. Format:
-[boundaries](sirens-echo-boundaries.md).
+## Grading runs through aos-eval
 
-`just boundaries` prints the paired case list and `just boundaries-check` fails when a declared boundary
-no longer resolves against the source it names. **No case, boundary, or baseline names a bot**: identity
-is a deployment concern (aos#778). Derived-board shape is tracked by #846.
+[`aos-eval`](https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os) is the shared grading half,
+released from agentic-os on its own `aos-eval-v*` train: the record schema, the pairing rule, human
+annotation, the failure taxonomy, and a one-way display export. It holds no runner and no model client,
+**so grading spends no tokens and touches nothing deployed**.
 
-## Where `aos-eval` fits
+`board-deep` emits `dataset:` where each record is aos-eval's `Sample` plus its `output`, so
+`aos-eval annotate` reads the file with no adapter. `role` carries the grouping axis, which here is the
+clause, so `--role earn-the-reply` grades one pair. The epochs ride along in `responses`, which aos-eval
+ignores. `eval/aos-eval-profile.yaml` declares this deployment's one column, its label set, its 50-word
+critique cap, and the fields a boundary case cannot omit.
+`TestBoardDatasetCarriesTheAosEvalSampleShape` pins the contract, **because a rename on either side
+would break grading silently**.
 
-`aos-eval` is the shared grading half, shipped from `coilyco-flight-deck/agentic-os` on its own
-`aos-eval-v*` train, holding the record schema, the pairing rule, human annotation, the failure
-taxonomy, and a one-way display export. It has no runner and no model client, so it never spends a
-token. Run `aos-eval help` for its reference.
+```bash
+just board-deep > agents/deep/evaluations/<date>-<seat>.yaml
+just grade-check agents/deep/evaluations/<date>-<seat>.yaml
+just grade agents/deep/evaluations/<date>-<seat>.yaml
+just taxonomy <dataset> <annotations>
+```
 
-**Shared today**: the boundary declaration. `eval/boundaries.yaml` is already in `aos-eval`'s
-declaration shape, so `aos-eval boundaries derive` reads it as-is and prints the slots the board must
-contain. **The pairing rule is the thing worth sharing**, and both repositories reached it independently
-before the layer existed.
-
-**Not shared yet**: the board dataset. `board-deep` emits `cases:` keyed on `clause`, `history`, and
-`current`, where `aos-eval` reads `dataset:` keyed on `role`, `test_type`, and `prompt`, so `annotate`,
-`taxonomy`, and `export` cannot read a board record until that shape is reconciled through a profile.
-**Grading here is still local.** Two things stay local on purpose: the source-drift check in
-`scripts/boundaries.sh`, which verifies an `origin#fragment` still resolves and `aos-eval` does not do,
-and the battery, which is a deployment gate rather than a grading surface.
-
-## Running the board
-
-`just board-deep > agents/deep/evaluations/<date>-<seat>.yaml` needs `AGENT_PROXY_URL`,
-`AGENT_PROXY_MODEL` naming the profile's route, and `OTEL_EXPORTER_OTLP_ENDPOINT`. Supply
+`board-deep` needs `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL`, and `OTEL_EXPORTER_OTLP_ENDPOINT`, plus
 `SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a
-reason that is not the agent's**.
+reason that is not the agent's**. `AOS_EVAL_REF` pins a tag when a grading run has to be reproducible.
 
-**Anchor a deduction to a verbatim span from the response**, so a critique is auditable rather than
-impressionistic, and **a dataset is evidence**: keep it by date and seat and archive a retired result
+**Anchor a deduction to a verbatim span**, which aos-eval checks against the output rather than taking
+on trust, and treat **a dataset as evidence**: keep it by date and seat and archive a retired result
 rather than deleting it, **because the before-and-after is the argument that a doctrine change worked**.
 
-**There is no mechanical scorer on the board.** It records what the deployed validators say in a
-`structural` field and treats it as evidence. **This is measured rather than preferred**: the sibling
-suite graded the same responses by hand after running a regex discriminator tier, and across nine cases
-the two agreed on nothing that mattered. **It was deleted, not tuned.**
+## What the shared tool measured first
 
-## The deterministic battery
+`eval/boundaries.yaml` declares every boundary this deployment holds, once, in aos-eval's declaration
+shape. `aos-eval boundaries derive` reads it as-is and `aos-eval boundaries check` compares those slots
+to what the board actually authored. Against the pilot board it reports **56 derived slots, none of them
+authored, and 10 authored cases no declaration derived**, with **no half-authored pairs**.
 
-Five deployed validators run on every case, so `ParseReply`, `ValidateGrounding`,
-`ValidateSelfAttributedClaim`, `ValidateIdentityClaim`, and `ValidateResponseStyle` are assumed. Two are
-not: `ValidateNoToolCallMarkup` runs only under `forbid_tool_call_markup`, and the reply path's
-identifier guard is replaced by the narrower `checkUserIDEcho` under `forbid_principal_echo`.
+**That gap is the point rather than an embarrassment.** The declaration is the deployment's boundary
+inventory and the board is authored against prompt clauses, so the two taxonomies do not yet meet. A
+coverage number that counted the board as complete would be certifying. This one measures, names every
+missing case, and stays wrong out loud until cases exist. Deriving the board from the declaration is
+tracked by #846, and **nothing here names a bot**: identity is a deployment concern (aos#778) and naming
+either would violate #836's acceptance test. Existing run records are historical provenance and stay as
+they are.
 
-**A check has to be an invariant, not a guess at phrasing.** Every one has a closed target set, and **a
-closed target set makes the miss rate knowable**. A forbidden-phrase list has an open one: **the ways to
-fabricate an authority are unbounded, so listing four of them has an unknowable miss rate and a green
-run reads as a property it did not check.** That cut `"official calendar"` and the whole
-`no-promised-write` case. **It must also not fire on a plausible correct reply to its own case**, judged
-per case, **because the same string is fabrication in one turn and an accurate refusal in another**.
+`just boundaries` prints the paired case list and `just boundaries-check` fails when a declared boundary
+no longer resolves against the source it names. That source-drift check stays local because `aos-eval
+boundaries check` compares slots to a dataset instead, so the two answer different questions.
 
-* `forbidden_patterns` - whole reply, regex, when anchoring or a scheme closes the target.
-* `pronoun_policy` - sentences about one subject, for a wrong pronoun for a named person. It activates
-  at the first sentence naming the subject, **stays active through following sentences**, and
-  deactivates at any sentence naming a `stop_at` subject. Two gaps are pinned rather than closed,
-  because **tightening either trades a false negative for false positives, the worse failure here**.
-* `max_verbatim_words` - runs shared with the system prompt, for disclosure of instructions.
-* `forbid_principal_echo` - handle and user ID, normalized.
-* `forbid_tool_call_markup` - tool-call delimiters, not the words, **because a member reads unparsed
-  markup verbatim**.
+## There is no mechanical scorer on the board
+
+The board records what the deployed validators say in a `structural` field and treats it as evidence.
+**This is measured rather than preferred**: the sibling suite ran a regex discriminator tier over the
+same responses and it agreed with the grader on nothing that mattered, one false positive, two false
+negatives, and six agreements where nothing happened. **It was deleted rather than tuned.** The battery
+survives that argument because its checks have closed target sets, which is a different claim from a
+phrase list, and the pack header carries it.

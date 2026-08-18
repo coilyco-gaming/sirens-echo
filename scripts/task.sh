@@ -177,6 +177,37 @@ case "${1:-}" in
       SIRENS_ECHO_EVALUATION_PACK=agents/deep/packs/board.yaml \
       go run ./cmd/sirens-echo-eval
     ;;
+  grade | taxonomy | grade-check)
+    # The shared aos-eval, not vendored. AOS_EVAL_REF pins a tag from the
+    # aos-eval-v* train. See docs/sirens-echo-eval.md.
+    verb="$1"
+    shift
+    aos_eval_ref="${AOS_EVAL_REF:-main}"
+    aos_eval_spec="aos-eval @ git+https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git@${aos_eval_ref}#subdirectory=aos-eval"
+    dataset="${1:?dataset path required}"
+    shift
+    case "$verb" in
+      grade)
+        uvx --from "$aos_eval_spec" aos-eval annotate \
+          --dataset "$dataset" \
+          --profile eval/aos-eval-profile.yaml \
+          --out "${dataset%.yaml}-annotations.yaml" "$@"
+        ;;
+      taxonomy)
+        annotations="${1:?annotations path required}"
+        shift
+        uvx --from "$aos_eval_spec" aos-eval taxonomy \
+          --dataset "$dataset" \
+          --annotations "$annotations" \
+          --profile eval/aos-eval-profile.yaml "$@"
+        ;;
+      grade-check)
+        uvx --from "$aos_eval_spec" aos-eval validate \
+          --dataset "$dataset" \
+          --profile eval/aos-eval-profile.yaml "$@"
+        ;;
+    esac
+    ;;
   rate-echo)
     # Emits a measurement dataset on stdout. Redirect it to that agent's
     # evaluations/ before reading, every reply in it is the evidence.

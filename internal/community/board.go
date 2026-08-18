@@ -69,22 +69,31 @@ type BoardResponse struct {
 	Error      string   `yaml:"error,omitempty"`
 }
 
-// BoardRecord is one case carrying the responses a grader annotates.
+// BoardRecord is aos-eval's Sample plus its output, then fields it ignores.
+// Role is its grouping axis, the clause here. See docs/sirens-echo-eval.md.
 type BoardRecord struct {
 	ID           string          `yaml:"id"`
-	Clause       string          `yaml:"clause"`
+	Role         string          `yaml:"role"`
+	TestType     string          `yaml:"test_type"`
+	Prompt       string          `yaml:"prompt"`
+	Target       string          `yaml:"target"`
+	Boundary     string          `yaml:"boundary"`
 	Half         string          `yaml:"half"`
 	PairID       string          `yaml:"pair_id"`
-	Target       string          `yaml:"target"`
+	Output       string          `yaml:"output"`
 	RequiredTool string          `yaml:"required_tool,omitempty"`
 	Responses    []BoardResponse `yaml:"responses"`
 }
 
-// BoardDataset is the annotation input. Go emits it and a grader consumes it.
+// BoardTestType is the one CheckList column here: clause conformance.
+const BoardTestType = "boundary"
+
+// BoardDataset is the annotation input. The key is `dataset` because that is
+// what aos-eval reads, and schema and provenance ride along ignored.
 type BoardDataset struct {
 	Schema     string          `yaml:"schema"`
 	Provenance BoardProvenance `yaml:"provenance"`
-	Records    []BoardRecord   `yaml:"records"`
+	Records    []BoardRecord   `yaml:"dataset"`
 }
 
 // LoadBoardPack reads and validates the human-graded board.
@@ -229,11 +238,15 @@ func runBoard(
 	for _, boardCase := range pack.Cases {
 		prompt := BuildTurnPrompt(systemPrompt, boardCase.History, boardCase.Current)
 		record := BoardRecord{
-			ID:           boardCase.ID,
-			Clause:       boardCase.Clause,
+			ID:       boardCase.ID,
+			Role:     boardCase.Clause,
+			TestType: BoardTestType,
+			// The turn only. The rendered prompt is provenance, not graded input.
+			Prompt:       boardCaseTranscript(boardCase),
+			Target:       boardCase.Target,
+			Boundary:     boardCase.Clause,
 			Half:         boardCase.Half,
 			PairID:       boardCase.PairID,
-			Target:       boardCase.Target,
 			RequiredTool: boardCase.RequiredTool,
 			Responses:    make([]BoardResponse, 0, epochs),
 		}
@@ -256,6 +269,8 @@ func runBoard(
 		if !answered {
 			silent = append(silent, boardCase.ID)
 		}
+		// Epoch 1 grades. The rest stay in Responses as failure spread.
+		record.Output = graderOutput(record.Responses)
 		dataset.Records = append(dataset.Records, record)
 	}
 	encoded, err := yaml.Marshal(dataset)
@@ -316,6 +331,27 @@ func runBoardEpoch(
 		result,
 	)
 	return response
+}
+
+// boardCaseTranscript renders the graded turn, last line the message studied.
+func boardCaseTranscript(boardCase BoardCase) string {
+	lines := make([]string, 0, len(boardCase.History)+1)
+	for _, entry := range boardCase.History {
+		lines = append(lines, fmt.Sprintf("%s: %s", entry.Author, entry.Content))
+	}
+	lines = append(lines, fmt.Sprintf("%s: %s", boardCase.Current.Author, boardCase.Current.Content))
+	return strings.Join(lines, "\n")
+}
+
+// graderOutput is epoch 1, falling back to the first epoch that produced text
+// so a case whose first epoch lost transport is still gradeable.
+func graderOutput(responses []BoardResponse) string {
+	for _, response := range responses {
+		if response.Text != "" {
+			return response.Text
+		}
+	}
+	return ""
 }
 
 // boardStructuralNote records what the deployed validators say. It never
