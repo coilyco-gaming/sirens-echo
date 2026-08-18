@@ -140,10 +140,10 @@ func TestATemporalErrorIsReturnedToTheDispatch(t *testing.T) {
 // fails on every call.
 func TestAnUnconfiguredTemporalMirrorIsNil(t *testing.T) {
 	t.Parallel()
-	if NewTemporalMirror(nil, "sirens-deep") != nil {
+	if NewTemporalMirror(nil, "sirens-deep", "sirens-deep") != nil {
 		t.Error("a nil client produced a mirror")
 	}
-	if NewTemporalMirror(nil, "") != nil {
+	if NewTemporalMirror(nil, "", "sirens-deep") != nil {
 		t.Error("an empty queue produced a mirror")
 	}
 }
@@ -167,5 +167,74 @@ func TestAPartlyConfiguredMirrorIsRefused(t *testing.T) {
 	}
 	if _, mirror, err := DialTemporalMirror(TemporalMirrorConfig{}); err != nil || mirror != nil {
 		t.Errorf("dialling an unconfigured mirror returned %v, %v", mirror, err)
+	}
+}
+
+// Finding a turn should be pasting the message id a member already has, rather
+// than reading a trace out of a failure notice first. See #977.
+func TestTheWorkflowIDCarriesTheSummoningMessage(t *testing.T) {
+	t.Parallel()
+	starter := &recordingStarter{}
+	mirror := temporalMirror{
+		starter: starter, taskQueue: "sirens-dowel-tool-mirror", instance: "sirens-dowel",
+	}
+	if err := mirror.MirrorToolCall(context.Background(), ToolCallRecord{
+		Server: "discord", Tool: "list_channel-message", Outcome: "ok",
+		TraceID: "7c1d5e0f2331d19046769e7041a00181", RequestID: "1536447620116127784",
+	}); err != nil {
+		t.Fatalf("MirrorToolCall: %v", err)
+	}
+	want := "sirens-dowel-turn-1536447620116127784"
+	if starter.calls[0].workflowID != want {
+		t.Errorf("workflow id = %q, want %q", starter.calls[0].workflowID, want)
+	}
+	// The id the signal is keyed on and the id the workflow is started with are
+	// one value, or a retry opens a second trajectory for the same turn.
+	if starter.calls[0].options.ID != want {
+		t.Errorf("options.ID = %q, want %q", starter.calls[0].options.ID, want)
+	}
+}
+
+// The lane is in the id because one namespace holds every lane, and a bare
+// message id would not say which agent answered it.
+func TestTheWorkflowIDNamesTheLane(t *testing.T) {
+	t.Parallel()
+	for instance, want := range map[string]string{
+		"sirens-dowel": "sirens-dowel-turn-42",
+		"sirens-deep":  "sirens-deep-turn-42",
+		"":             "sirens-turn-42",
+	} {
+		got := trajectoryID(instance, ToolCallRecord{RequestID: "42", TraceID: "t"})
+		if got != want {
+			t.Errorf("instance %q produced %q, want %q", instance, got, want)
+		}
+	}
+}
+
+// An HTTP turn carries no Discord message, so it keys on the trace and stays
+// distinguishable from a message id rather than colliding with one.
+func TestATurnWithNoRequestIDFallsBackToTheTrace(t *testing.T) {
+	t.Parallel()
+	got := trajectoryID("sirens-dowel", ToolCallRecord{TraceID: "7c1d5e0f"})
+	want := "sirens-dowel-turn-trace-7c1d5e0f"
+	if got != want {
+		t.Errorf("workflow id = %q, want %q", got, want)
+	}
+}
+
+// The id reaches the record through the context, so a turn that never attached
+// one degrades to the trace rather than to a blank key.
+func TestTheRequestIDRoundTripsThroughTheContext(t *testing.T) {
+	t.Parallel()
+	if got := RequestIDFromContext(context.Background()); got != "" {
+		t.Errorf("a bare context carried %q", got)
+	}
+	ctx := ContextWithRequestID(context.Background(), "1536447620116127784")
+	if got := RequestIDFromContext(ctx); got != "1536447620116127784" {
+		t.Errorf("request id = %q", got)
+	}
+	// An empty id must not shadow an outer one with a blank value.
+	if got := RequestIDFromContext(ContextWithRequestID(ctx, "")); got != "1536447620116127784" {
+		t.Errorf("an empty id overwrote the turn's: %q", got)
 	}
 }

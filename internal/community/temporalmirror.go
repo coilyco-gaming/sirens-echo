@@ -13,11 +13,10 @@ import (
 
 const (
 	// TrajectoryWorkflow is the workflow type one turn's tool calls land in.
-	TrajectoryWorkflow = "SirensDeepToolTrajectory"
+	// Lane-neutral: one type serves every lane and the id says which.
+	TrajectoryWorkflow = "ToolTrajectory"
 	// TrajectorySignal carries one ToolCallRecord.
 	TrajectorySignal = "tool-call"
-	// trajectoryPrefix keeps the workflow id readable and namespaced.
-	trajectoryPrefix = "sirens-deep-trajectory-"
 )
 
 // temporalStarter is the one client call this needs, so a test substitutes it.
@@ -38,14 +37,31 @@ type temporalStarter interface {
 type temporalMirror struct {
 	starter   temporalStarter
 	taskQueue string
+	instance  string
 }
 
-// NewTemporalMirror builds the mirror over a connected client.
-func NewTemporalMirror(temporal client.Client, taskQueue string) ToolCallMirror {
+// NewTemporalMirror builds the mirror over a connected client. The instance
+// names the lane in every workflow id, so one namespace can hold several.
+func NewTemporalMirror(temporal client.Client, taskQueue, instance string) ToolCallMirror {
 	if temporal == nil || strings.TrimSpace(taskQueue) == "" {
 		return nil
 	}
-	return temporalMirror{starter: temporal, taskQueue: taskQueue}
+	return temporalMirror{starter: temporal, taskQueue: taskQueue, instance: instance}
+}
+
+// trajectoryID keys the turn on the thing a human already has. On Discord that
+// is the summoning message id, so finding a turn is pasting it into the id.
+func trajectoryID(instance string, record ToolCallRecord) string {
+	lane := strings.TrimSpace(instance)
+	if lane == "" {
+		lane = "sirens"
+	}
+	if request := strings.TrimSpace(record.RequestID); request != "" {
+		return lane + "-turn-" + request
+	}
+	// A turn with no request id is still one trajectory, so it keys on the
+	// trace and stays distinguishable from a message id at a glance.
+	return lane + "-turn-trace-" + record.TraceID
 }
 
 // MirrorToolCall records one call. SignalWithStart is one action whether the
@@ -54,13 +70,14 @@ func (m temporalMirror) MirrorToolCall(ctx context.Context, record ToolCallRecor
 	if strings.TrimSpace(record.TraceID) == "" {
 		return fmt.Errorf("tool call record carries no trace id")
 	}
+	id := trajectoryID(m.instance, record)
 	_, err := m.starter.SignalWithStartWorkflow(
 		ctx,
-		trajectoryPrefix+record.TraceID,
+		id,
 		TrajectorySignal,
 		record,
 		client.StartWorkflowOptions{
-			ID:        trajectoryPrefix + record.TraceID,
+			ID:        id,
 			TaskQueue: m.taskQueue,
 			// The turn is over long before this. A trajectory that never sees a
 			// second call must not sit open forever.
@@ -103,6 +120,9 @@ type TemporalMirrorConfig struct {
 	// APIKey is read from the pod environment and never logged. Provisioning is
 	// sirens-echo#444.
 	APIKey string
+	// Instance names the lane in every workflow id. Not part of the connection,
+	// so a missing one is not a half-filled config.
+	Instance string
 }
 
 // configured reports a connection worth dialling. A partial one is a
@@ -146,5 +166,5 @@ func DialTemporalMirror(cfg TemporalMirrorConfig) (client.Client, ToolCallMirror
 	if err != nil {
 		return nil, nil, fmt.Errorf("dial Temporal: %w", err)
 	}
-	return temporal, NewTemporalMirror(temporal, cfg.TaskQueue), nil
+	return temporal, NewTemporalMirror(temporal, cfg.TaskQueue, cfg.Instance), nil
 }
