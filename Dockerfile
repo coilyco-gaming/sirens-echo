@@ -8,10 +8,7 @@ COPY cmd ./cmd
 COPY internal ./internal
 COPY agent ./agent
 COPY agents ./agents
-COPY .agents/skills/sirens-echo-community ./.agents/skills/sirens-echo-community
-COPY .agents/skills/sirens-echo-knowledge ./.agents/skills/sirens-echo-knowledge
-COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
-COPY .agents/skills/coilyco-org ./.agents/skills/coilyco-org
+COPY .agents/skills ./.agents/skills
 COPY docs ./docs
 ARG SIRENS_ECHO_REVISION=
 RUN CGO_ENABLED=0 go build -trimpath \
@@ -48,8 +45,7 @@ RUN set -eu; \
     fi
 COPY agent ./agent
 COPY agents ./agents
-COPY .agents/skills/coilyco-general ./.agents/skills/coilyco-general
-COPY .agents/skills/coilyco-org ./.agents/skills/coilyco-org
+COPY .agents/skills ./.agents/skills
 COPY scripts/stage-compose-sources.sh ./scripts/
 # The expander comes from the build stage, so this stage needs no Go toolchain
 # work and the binary is the one the suite already exercised.
@@ -75,10 +71,15 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 agents /app/agents
-COPY --chown=1000:1000 .agents/skills/sirens-echo-community /app/.agents/skills/sirens-echo-community
-COPY --chown=1000:1000 .agents/skills/sirens-echo-knowledge /app/.agents/skills/sirens-echo-knowledge
-COPY --chown=1000:1000 .agents/skills/coilyco-general /app/.agents/skills/coilyco-general
-COPY --chown=1000:1000 .agents/skills/coilyco-org /app/.agents/skills/coilyco-org
+COPY --chown=1000:1000 .agents/skills /app/.agents/skills
+# A wildcard here copies each root's contents rather than the root, flattening
+# the tree, and a definition naming a root then crashes at startup. deploy#666.
+RUN set -eu; \
+    for root in /app/.agents/skills/*/; do \
+      [ -f "${root}SKILL.md" ] || { echo "skill root ${root} lost its SKILL.md" >&2; exit 1; }; \
+    done; \
+    [ ! -e /app/.agents/skills/SKILL.md ] || \
+      { echo "a SKILL.md landed at the skills root, so the tree was flattened" >&2; exit 1; }
 COPY --from=compose --chown=1000:1000 /out/bundles /app/agent/bundles
 USER 1000:1000
 ENTRYPOINT ["/usr/local/bin/sirens-echo"]
