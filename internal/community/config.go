@@ -381,7 +381,6 @@ func knobs() []knob {
 		overridable(&maxAgentProxyResponseBytes, "SIRENS_ECHO_PROXY_RESPONSE_BYTES", 2*1024*1024),
 		overridable(&maxAssemblyPasses, "SIRENS_ECHO_ASSEMBLY_PASSES", 8),
 		overridable(&baseCompletionTokens, "SIRENS_ECHO_BASE_COMPLETION_TOKENS", 1800),
-		overridable(&maxCompletionTokens, "SIRENS_ECHO_MAX_COMPLETION_TOKENS", 3600),
 		overridable(&completionBudgetStep, "SIRENS_ECHO_COMPLETION_BUDGET_STEP", 2),
 		overridable(&budgetRaisesAllowed, "SIRENS_ECHO_BUDGET_RAISES", 1),
 
@@ -393,9 +392,6 @@ func knobs() []knob {
 		overridable(&mcpListTimeout, "SIRENS_ECHO_MCP_LIST", 15*time.Second),
 		overridable(&mcpBackoffMin, "SIRENS_ECHO_MCP_BACKOFF_MIN", 5*time.Second),
 		overridable(&mcpBackoffMax, "SIRENS_ECHO_MCP_BACKOFF_MAX", 2*time.Minute),
-		overridable(&defaultCallTimeout, "SIRENS_ECHO_TOOL_CALL", 45*time.Second),
-		overridable(&maxGroundingBytes, "SIRENS_ECHO_GROUNDING_BYTES", 8*1024),
-		overridable(&maxServerGuidanceBytes, "SIRENS_ECHO_SERVER_GUIDANCE_BYTES", 2*1024),
 		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
 
 		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 10*time.Second),
@@ -408,7 +404,6 @@ func knobs() []knob {
 
 		overridable(&modelRetryAttempts, "SIRENS_ECHO_MODEL_RETRY_ATTEMPTS", 4),
 		overridable(&modelRetryBackoff, "SIRENS_ECHO_MODEL_RETRY_BACKOFF", 250*time.Millisecond),
-		overridable(&modelIdleTimeout, "SIRENS_ECHO_MODEL_IDLE_TIMEOUT", 45*time.Second),
 
 		overridable(&mirrorQueueDepth, "SIRENS_ECHO_MIRROR_QUEUE_DEPTH", 256),
 		overridable(&mirrorTimeout, "SIRENS_ECHO_MIRROR_TIMEOUT", 5*time.Second),
@@ -416,7 +411,6 @@ func knobs() []knob {
 		overridable(&trajectoryLifetime, "SIRENS_ECHO_TRAJECTORY_LIFETIME", time.Hour),
 
 		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
-		overridable(&defaultQueueTimeout, "SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second),
 		overridable(&defaultShutdownGrace, "SIRENS_ECHO_SHUTDOWN_GRACE", 15*time.Second),
 		overridable(&shutdownNoticeGrace, "SIRENS_ECHO_SHUTDOWN_NOTICE_GRACE", 3*time.Second),
 		overridable(&failureNoticeTimeout, "SIRENS_ECHO_FAILURE_NOTICE_TIMEOUT", 10*time.Second),
@@ -438,7 +432,6 @@ func knobs() []knob {
 		overridable(&maxScratchEntries, "SIRENS_ECHO_SCRATCH_ENTRIES", 200),
 		overridable(&maxScratchMatches, "SIRENS_ECHO_SCRATCH_MATCHES", 100),
 		overridable(&maxScratchDepth, "SIRENS_ECHO_SCRATCH_DEPTH", 8),
-		overridable(&maxScratchPartitionBytes, "SIRENS_ECHO_SCRATCH_PARTITION_BYTES", 4*1024*1024),
 		overridable(&maxSessionBytes, "SIRENS_ECHO_SESSION_BYTES", 1024*1024),
 		overridable(&threadSessionRetention, "SIRENS_ECHO_THREAD_SESSION_RETENTION", 7*24*time.Hour),
 		overridable(&directSessionRetention, "SIRENS_ECHO_DIRECT_SESSION_RETENTION", time.Hour),
@@ -475,7 +468,6 @@ func knobs() []knob {
 		overridable(&maxHTTPBody, "SIRENS_ECHO_HTTP_BODY_BYTES", 64<<10),
 		overridable(&maxRepoInventoryEntries, "SIRENS_ECHO_REPO_INVENTORY_ENTRIES", 100),
 		overridable(&maxRepoFileBytes, "SIRENS_ECHO_REPO_FILE_BYTES", 64*1024),
-		overridable(&maxSkillpackBytes, "SIRENS_ECHO_SKILLPACK_BYTES", 256*1024),
 
 		overridable(&DefaultBoardEpochs, "SIRENS_ECHO_BOARD_EPOCHS", 5),
 		overridable(&DefaultVerbatimWords, "SIRENS_ECHO_VERBATIM_WORDS", 8),
@@ -489,6 +481,28 @@ func deriveKnobs() {
 	turnProgressEvery = turnProgressAfter * 2
 	turnLongReplyAfter = turnProgressAfter + turnProgressEvery*2
 	replyAttachmentBytes = maxScratchFileBytes
+
+	// The turn budget is the parent of every wait inside a turn, so one number
+	// moves the whole shape and no child can outlive its turn. sirens-echo#942.
+	defaultQueueTimeout = defaultRequestTimeout / 6
+	defaultCallTimeout = defaultRequestTimeout / 4
+	modelIdleTimeout = defaultRequestTimeout / 4
+
+	// The ceiling IS the escalation run to its end, so the two cannot disagree
+	// the way a separately-set ceiling could.
+	maxCompletionTokens = baseCompletionTokens
+	for range budgetRaisesAllowed {
+		maxCompletionTokens *= completionBudgetStep
+	}
+
+	// One context-injection budget. A grounding document and a tool result are
+	// spent against the same window, so they move together.
+	maxGroundingBytes = maxToolResultBytes
+	maxServerGuidanceBytes = maxToolResultBytes / 4
+
+	// A skillpack is a scratch file, and a partition holds sixteen of them.
+	maxSkillpackBytes = maxScratchFileBytes
+	maxScratchPartitionBytes = maxScratchFileBytes * 16
 }
 
 // applyKnobs resets every number to its default and then applies what the

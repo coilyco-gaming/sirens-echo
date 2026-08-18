@@ -123,12 +123,17 @@ func TestApplyingTwiceIsNotCumulative(t *testing.T) {
 	applyKnobs(func(string) string { return "" })
 	declared := maxToolRounds
 	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_TOOL_ROUNDS": "3"}))
-	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_QUEUE_TIMEOUT": "9s"}))
+	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_REQUEST_TIMEOUT": "9s"}))
 	if maxToolRounds != declared {
 		t.Errorf("tool rounds = %d, want the declared default %d back", maxToolRounds, declared)
 	}
-	if defaultQueueTimeout != 9*time.Second {
-		t.Errorf("queue timeout = %s, want 9s", defaultQueueTimeout)
+	if defaultRequestTimeout != 9*time.Second {
+		t.Errorf("request timeout = %s, want 9s", defaultRequestTimeout)
+	}
+	// The vehicle changed to a parent knob when the queue timeout became one of
+	// its derivations, so this also pins that a reset re-derives.
+	if defaultQueueTimeout != 9*time.Second/6 {
+		t.Errorf("queue timeout = %s, want a sixth of the turn", defaultQueueTimeout)
 	}
 }
 
