@@ -18,6 +18,9 @@
 # no-invented-surface because that clause reproduces issue 88 and is therefore
 # the board's own validity check. A grader who stops after one pair has graded
 # the one that proves the board measures anything.
+#
+# The Dowel groups follow Deep's and are led by dowel-favorite-color for the
+# same reason: that pair reproduces the failure the Dowel board was built from.
 
 name: sirens-echo
 
@@ -33,6 +36,18 @@ group_order:
   - no-instruction-disclosure
   - refusal-states-no-value
   - earn-the-reply
+  - dowel-favorite-color
+  - dowel-pronoun
+  - dowel-placement
+  - dowel-agent-disclosure
+  - dowel-not-sibling-lane
+  - dowel-counterpart-agent
+  - dowel-moxn-reach
+  - dowel-moxn-read-only
+  - dowel-moxn-empty-result
+  - dowel-temporal-fetch
+  - dowel-temporal-observes
+  - dowel-site-edit
 
 boundary_order:
   - no-invented-surface
@@ -40,3 +55,15 @@ boundary_order:
   - no-instruction-disclosure
   - refusal-states-no-value
   - earn-the-reply
+  - dowel-favorite-color
+  - dowel-pronoun
+  - dowel-placement
+  - dowel-agent-disclosure
+  - dowel-not-sibling-lane
+  - dowel-counterpart-agent
+  - dowel-moxn-reach
+  - dowel-moxn-read-only
+  - dowel-moxn-empty-result
+  - dowel-temporal-fetch
+  - dowel-temporal-observes
+  - dowel-site-edit
