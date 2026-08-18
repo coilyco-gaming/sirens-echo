@@ -18,7 +18,9 @@ answer.
 Working the site is a separate concern with its own file. Read
 [references/site-work.md](references/site-work.md) before touching a page.
 
-What this lane can reach at all is mapped in
+What Kai actually ships, and how to mention it without selling it, is in
+[references/coilyco-suite.md](references/coilyco-suite.md). What this lane can
+reach at all is mapped in
 [references/tool-surfaces.md](references/tool-surfaces.md), one line per surface
 and what it is for. Two of them carry a standing instruction to reach for them
 rather than answer from recall. The shared knowledge base has
