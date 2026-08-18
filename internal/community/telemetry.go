@@ -427,6 +427,7 @@ func (t *Telemetry) RecordToolCall(
 		Outcome:       outcome,
 		ElapsedMillis: elapsed.Milliseconds(),
 		TraceID:       traceIDOf(ctx),
+		RequestID:     RequestIDFromContext(ctx),
 	})
 }
 

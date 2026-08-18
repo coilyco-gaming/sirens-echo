@@ -1026,6 +1026,9 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey strin
 func (a *Agent) runAdmitted(ctx context.Context, turn turnIO) error {
 	turnCtx, cancel := context.WithTimeout(ctx, a.cfg.RequestTimeout)
 	defer cancel()
+	// Both transports reach here, so the mirror keys on one id rather than on
+	// whichever the caller happened to have. See docs/sirens-echo-tool-markup.md.
+	turnCtx = ContextWithRequestID(turnCtx, turn.RequestID())
 	// Typing starts when the turn runs. Started at queue time it would expire
 	// before the reply.
 	if notifier, ok := turn.(typingNotifier); ok {

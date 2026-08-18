@@ -22,6 +22,9 @@ type ToolCallRecord struct {
 	// TraceID correlates the record with the trace. It names no person, and a
 	// member is already handed one in a failure notice.
 	TraceID string `json:"trace_id"`
+	// RequestID is the turn's own id, which on Discord is the summoning
+	// message. It identifies a message rather than its author or its text.
+	RequestID string `json:"request_id"`
 }
 
 // ToolCallMirror receives one record. Implementations must be safe to call
@@ -132,7 +135,9 @@ func (a *Agent) attachToolMirror() error {
 	if err := a.cfg.TemporalMirror.Validate(); err != nil {
 		return err
 	}
-	temporal, mirror, err := DialTemporalMirror(a.cfg.TemporalMirror)
+	mirrorConfig := a.cfg.TemporalMirror
+	mirrorConfig.Instance = a.cfg.InstanceName
+	temporal, mirror, err := DialTemporalMirror(mirrorConfig)
 	if err != nil {
 		a.telemetry.Error(context.Background(), "mirror.dial.failed",
 			slog.String("error", err.Error()))

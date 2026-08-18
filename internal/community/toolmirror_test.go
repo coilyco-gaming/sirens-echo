@@ -91,9 +91,11 @@ func TestAToolCallIsMirroredWithItsMetadata(t *testing.T) {
 func TestTheMirroredPayloadCarriesNothingButMetadata(t *testing.T) {
 	t.Parallel()
 	shape := reflect.TypeOf(ToolCallRecord{})
+	// RequestID was added on #977 as a disclosure decision, not an oversight. It
+	// identifies a message, never its author, its text, or the account behind it.
 	allowed := map[string]bool{
 		"Server": true, "Tool": true, "Outcome": true,
-		"ElapsedMillis": true, "TraceID": true,
+		"ElapsedMillis": true, "TraceID": true, "RequestID": true,
 	}
 	for index := range shape.NumField() {
 		name := shape.Field(index).Name
@@ -109,7 +111,7 @@ func TestTheMirroredPayloadCarriesNothingButMetadata(t *testing.T) {
 	// And the encoded form, because that is what actually travels.
 	encoded, err := json.Marshal(ToolCallRecord{
 		Server: "eco", Tool: "get_market", Outcome: "ok",
-		ElapsedMillis: 7, TraceID: "abc123",
+		ElapsedMillis: 7, TraceID: "abc123", RequestID: "1536447620116127784",
 	})
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
