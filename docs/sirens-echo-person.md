@@ -11,8 +11,10 @@ so the script fails on the collision instead.
 The package uses agent-compose's sectioned person layout (`roles/`, `personalities/`, `definitions/`),
 because the flat `data/` layout documented upstream is wired for the embedded roster alone. The
 personalities restate the core bodies verbatim, since agent-compose never merges entities across
-packages. A drift between a restated body and its core original is deliberate divergence or a missed
-sync, and either way it is reviewed here, where the copy lives.
+packages. The bake compares each restated body against the same
+skill as delivered from the embedded roster and fails on a byte difference, so the copies are checked
+mirrors rather than silent forks. A package-native personality with no core counterpart is skipped
+with a note, which is the trade: drift is caught only while some core role still delivers the body.
 
 `librarian` is the first package role: custodian of the community record, composed for a future fourth
 lane. Provenance-first retrieval is the charter: answers read from a named source with the citation

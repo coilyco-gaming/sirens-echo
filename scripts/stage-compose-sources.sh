@@ -130,3 +130,19 @@ done
 for role in $community_roles; do
     bake_role "$role" "    person-source \"$person_rel\""
 done
+
+# A vendored core personality is a checked mirror, not a fork: each body must
+# match what the embedded roster bakes. See docs/sirens-echo-person.md.
+for vendored in "$person_dir"/definitions/skills/personality-*/SKILL.md; do
+    [ -e "$vendored" ] || continue
+    slug=$(basename "$(dirname "$vendored")")
+    baked=$(find "$bundles" -path "*/content/skills/roster%3Acore/$slug/SKILL.md" | head -1)
+    if [ -z "$baked" ]; then
+        echo "stage-compose-sources: $slug has no core counterpart in this bake, drift unchecked"
+        continue
+    fi
+    if ! cmp -s "$vendored" "$baked"; then
+        echo "stage-compose-sources: $vendored drifted from the embedded core body ($baked)" >&2
+        exit 1
+    fi
+done
