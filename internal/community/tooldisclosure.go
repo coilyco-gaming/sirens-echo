@@ -71,10 +71,12 @@ func toolDisclosure(executed []ExecutedTool) string {
 }
 
 func toolDisclosureLine(call ExecutedTool, run int) string {
+	// The first glyph is the kind of call, the second its outcome: a hammer
+	// for a tool, a book for a delivered skill read. Kai's order, #1067 review.
 	glyphs := toolDisclosureGlyph + " " + toolOutcomeGlyph(call.Outcome)
 	label := call.Label()
 	if call.Detail != "" {
-		glyphs += " " + skillReadGlyph
+		glyphs = skillReadGlyph + " " + toolOutcomeGlyph(call.Outcome)
 		label = noticeBody(call.Detail)
 	}
 	line := fmt.Sprintf("> %s `%s`", glyphs, label)

@@ -53,7 +53,7 @@ func TestWorklogRowNamesResolvedSkillRead(t *testing.T) {
 		outcome: ToolOutcomeOK, done: true, detail: "astronomy",
 	}
 	rendered := worklogRow(row)
-	want := "> " + toolOKGlyph + " " + skillReadGlyph + " `astronomy`"
+	want := "> " + skillReadGlyph + " " + toolOKGlyph + " `astronomy`"
 	if rendered != want {
 		t.Fatalf("row = %q, want %q", rendered, want)
 	}
@@ -62,10 +62,14 @@ func TestWorklogRowNamesResolvedSkillRead(t *testing.T) {
 	}
 }
 
-func TestWorklogRowInFlightStaysPlain(t *testing.T) {
+func TestWorklogRowInFlightWearsTheBook(t *testing.T) {
 	row := progressRow{server: skillToolServer, tool: skillToolName, detail: "astronomy"}
-	if rendered := worklogRow(row); strings.Contains(rendered, "astronomy") {
+	rendered := worklogRow(row)
+	if strings.Contains(rendered, "astronomy") {
 		t.Fatalf("an unresolved row must not carry a detail, got %q", rendered)
+	}
+	if want := "> " + skillReadGlyph + " `skills.read_skill`"; rendered != want {
+		t.Fatalf("in-flight skill row = %q, want %q", rendered, want)
 	}
 }
 
@@ -74,7 +78,7 @@ func TestDisclosureNamesSkillRead(t *testing.T) {
 		Name: skillToolName, Server: skillToolServer,
 		Original: skillToolName, Outcome: ToolOutcomeOK, Detail: "astronomy",
 	}})
-	want := "> " + toolDisclosureGlyph + " " + toolOKGlyph + " " + skillReadGlyph + " `astronomy`"
+	want := "> " + skillReadGlyph + " " + toolOKGlyph + " `astronomy`"
 	if footer != want {
 		t.Fatalf("footer = %q, want %q", footer, want)
 	}

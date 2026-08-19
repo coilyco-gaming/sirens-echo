@@ -5,7 +5,7 @@ A long turn shows what it is doing, one row per tool call, resolving in place:
 ```
 Working on it
 > ✅ `eco.get_market`
-> ✅ 📖 `astronomy`
+> 📖 ✅ `astronomy`
 > ❌ `forgejo.list_issue`
 > 🔨 `eco.find_trade`
 4 tools, 14 seconds elapsed
