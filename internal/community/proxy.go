@@ -192,6 +192,9 @@ type ProxyClient struct {
 	ValidateReply func(reply string, prompt TurnPrompt, executed []ExecutedTool) error
 	// Now is the turn's only clock. Nil is the wall clock. See sirens-echo#855.
 	Now Clock
+	// Admission states who this deployment may answer, rendered from the access
+	// policy. Empty says nothing. See docs/sirens-echo-access.md.
+	Admission string
 }
 
 func (c ProxyClient) now() time.Time {
@@ -475,6 +478,11 @@ func (c ProxyClient) Complete(
 		// Directly under the local policy, because it is a fact about this turn
 		// rather than reference material. See docs/sirens-echo-prompt.md.
 		{Role: "system", Content: clockMessage(c.now())},
+	}
+	// A turn fact like the clock, so the agent stops inferring its own reach
+	// from the policy files. See sirens-echo#909.
+	if c.Admission != "" {
+		messages = append(messages, chatMessage{Role: "system", Content: c.Admission})
 	}
 	// What each surface is for, in the server's own words, so the model knows
 	// which one to reach for. See docs/sirens-echo-mcp.md.

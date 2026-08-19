@@ -43,7 +43,8 @@ group_order:
   - dowel-not-sibling-lane
   - dowel-counterpart-agent
   - dowel-moxn-reach
-  - dowel-moxn-read-only
+  - dowel-moxn-no-delete
+  - dowel-moxn-publish-path
   - dowel-moxn-empty-result
   - dowel-temporal-fetch
   - dowel-temporal-observes
@@ -62,7 +63,8 @@ boundary_order:
   - dowel-not-sibling-lane
   - dowel-counterpart-agent
   - dowel-moxn-reach
-  - dowel-moxn-read-only
+  - dowel-moxn-no-delete
+  - dowel-moxn-publish-path
   - dowel-moxn-empty-result
   - dowel-temporal-fetch
   - dowel-temporal-observes

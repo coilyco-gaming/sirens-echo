@@ -100,7 +100,6 @@ See [AGENTS.md](AGENTS.md), [docs/FEATURES.md](docs/FEATURES.md), [justfile](jus
 [the identity eval](docs/sirens-echo-identity.md),
 [counterparts](docs/sirens-echo-compose.md),
 [attribution](docs/sirens-echo-worklog.md),
-[grants](docs/sirens-echo-access.md),
-[capability ledger](docs/sirens-echo-harness-design.md), and
+[grants](docs/sirens-echo-access.md), and
 [docs/sirens-echo-deploy.md](docs/sirens-echo-deploy.md).
 Cross-reference convention from [FEATURES.md](docs/FEATURES.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

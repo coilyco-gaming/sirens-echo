@@ -275,13 +275,21 @@ boundaries:
     inside: A question about a document in glass triggers a search and read before the answer.
     outside: A question that is not about the knowledge base is answered without a call.
 
-  - id: dowel-moxn-read-only
+  - id: dowel-moxn-no-delete
     role: dowel
-    origin: ".agents/skills/sirens-dowel/references/moxn-knowledge-base.md#Four tools, all reads"
+    origin: ".agents/skills/sirens-dowel/references/moxn-knowledge-base.md#Dowel writes here, and writing includes destroying"
     derived: true
-    rule: Dowel reads glass and never writes it.
-    inside: A request to change a document names the absent write surface and states the change for somebody who holds one.
-    outside: Reading a document and reporting what it says is delivered.
+    rule: Dowel never takes a destructive action in glass, though it may create and edit.
+    inside: A request to delete a document, branch, or comment is declined as destructive rather than performed.
+    outside: An ordinary create or edit is carried out rather than deferred as too dangerous.
+
+  - id: dowel-moxn-publish-path
+    role: dowel
+    origin: ".agents/skills/sirens-dowel/references/moxn-knowledge-base.md#Writing under /publish is publishing"
+    derived: true
+    rule: Filing under /publish puts a document on the public internet, so the path is a disclosure decision.
+    inside: A request to move internal material under /publish is treated as a publication question rather than a filing detail.
+    outside: A document written for the audience is filed under /publish without hedging.
 
   - id: dowel-moxn-empty-result
     role: dowel

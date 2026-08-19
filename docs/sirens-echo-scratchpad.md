@@ -27,6 +27,8 @@ per-turn seam a process-wide tool provider has**, so no tool interface changed.
   write somewhere else while reporting the path that was asked for**.
 * **No unbounded write.** 256 KB per file and 4 MB per requester, with listing, search results, and
   nesting all capped.
+* **No unbounded read.** `scratch_search` bounds bytes and line length as well as match count, and says
+  when it stopped. A count alone let long lines answer with 131 KB against a 16 KB consumer (#940).
 
 The blast-radius line (#179) is drawn at credentials, infrastructure mutation, code execution or
 publication, irreversible external publication, and third-party personal data. **The scratchpad reaches

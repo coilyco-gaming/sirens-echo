@@ -124,6 +124,9 @@ var (
 	// server writes and this prompt carries. See sirens-echo#647.
 	maxServerGuidanceBytes int
 	maxGroundingDocuments  int
+	// reexportRefreshInterval bounds staleness for the roster advertised over
+	// /mcp. See docs/sirens-echo-http.md and sirens-echo#1025.
+	reexportRefreshInterval time.Duration
 )
 
 // Turn progress cadence. Only the wait is a knob. The pair below it is derived,
@@ -246,6 +249,9 @@ var (
 	maxScratchEntries int
 	// maxScratchMatches bounds a search result for the same reason.
 	maxScratchMatches int
+	// maxScratchMatchRunes bounds one hit, since a minified file is one line
+	// and a single match could otherwise be the whole result.
+	maxScratchMatchRunes int
 	// maxScratchDepth bounds nesting so a walk stays cheap.
 	maxScratchDepth int
 	// maxSessionBytes bounds one shared workspace, which is the bound that
@@ -420,6 +426,7 @@ func knobs() []knob {
 		overridable(&mcpBackoffMin, "SIRENS_ECHO_MCP_BACKOFF_MIN", 5*time.Second),
 		overridable(&mcpBackoffMax, "SIRENS_ECHO_MCP_BACKOFF_MAX", 2*time.Minute),
 		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
+		overridable(&reexportRefreshInterval, "SIRENS_ECHO_REEXPORT_REFRESH", time.Minute),
 
 		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 10*time.Second),
 
@@ -458,6 +465,7 @@ func knobs() []knob {
 		overridable(&maxScratchFileBytes, "SIRENS_ECHO_SCRATCH_FILE_BYTES", 256*1024),
 		overridable(&maxScratchEntries, "SIRENS_ECHO_SCRATCH_ENTRIES", 200),
 		overridable(&maxScratchMatches, "SIRENS_ECHO_SCRATCH_MATCHES", 100),
+		overridable(&maxScratchMatchRunes, "SIRENS_ECHO_SCRATCH_MATCH_RUNES", 240),
 		overridable(&maxScratchDepth, "SIRENS_ECHO_SCRATCH_DEPTH", 8),
 		overridable(&maxSessionBytes, "SIRENS_ECHO_SESSION_BYTES", 1024*1024),
 		overridable(&threadSessionRetention, "SIRENS_ECHO_THREAD_SESSION_RETENTION", 7*24*time.Hour),
@@ -857,6 +865,9 @@ type Config struct {
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
 	// nobody. See docs/sirens-echo-http.md.
 	HTTPTrustToken string
+	// MCPReexport offers the roster's tools over /mcp beside turn. False serves
+	// turn alone, because re-export moves a security boundary. sirens-echo#1025.
+	MCPReexport bool
 	// FetchHosts is the allowlist the fetch tool may reach. Empty offers no
 	// tool. See docs/sirens-echo-tools.md.
 	FetchHosts []string

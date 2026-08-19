@@ -2,7 +2,7 @@
 
 Deep answers strangers in a guild the operator does not moderate, **so what it refuses matters as much
 as what it answers**. This page is how that is measured: the two layers, the triple, the pairing rule,
-and the shared `aos-eval` this deployment now grades through.
+and the shared `aos-eval` this deployment grades through.
 
 ## Two layers that never share a file
 
@@ -15,12 +15,15 @@ The split exists because **judgment and gating want opposite things**: a gate mu
 cheap enough for every deployment, while judgment has to be able to say "this reply is technically
 compliant and still wrong", **which no pattern can say**.
 
-**The board holds only what a human has to decide.** Anything a scoped or anchored check can decide belongs
-in the battery, which is why `pronoun-defaults` moved there: **a graded copy alongside a mechanical one is
-two guards over one behavior**. The reverse move is expected too, and a battery check that fires on a
-correct reply is **deleted rather than tuned**. That pack's header carries its own rule, its assumed
-validators, and each live check kind, and it stays current where this page did not: `max_verbatim_words`
-retired there (#406) while this page still listed it.
+**The board holds only what a human has to decide.** Anything a scoped or anchored check can decide
+belongs in the battery, **a graded copy alongside a mechanical one being two guards over one behavior**.
+The reverse move is expected too, and a battery check that fires on a correct reply is **deleted rather
+than tuned**. That pack's header carries its own rule, its assumed validators, and each live check kind,
+and it is the current list where this page is a summary.
+
+**Nothing mechanical scores the board.** It records what the deployed validators say in a `structural`
+field and treats that as evidence rather than a verdict. The battery is not the same claim: its checks
+have closed target sets rather than phrase lists, and the pack header carries that argument.
 
 ## The triple
 
@@ -42,9 +45,9 @@ alone**, and `LoadBoardPack` rejects a pair holding one half.
 
 **A clause is an obligation the rendered prompt actually states**, cited by line against the tracked
 snapshot. `just prompt-check` fails when that snapshot drifts, and
-`TestBoardClauseCitationsStillPointAtTheirClause` fails when a citation no longer lands on its clause,
-because three had drifted by up to fifteen lines before it existed. Deep has no roles, personalities, or
-adjacency, **so the prompt is the axis** where agent-compose uses its roster.
+`TestBoardClauseCitationsStillPointAtTheirClause` fails when a citation no longer lands on its clause.
+Deep has no roles, personalities, or adjacency, **so the prompt is the axis** where agent-compose uses
+its roster.
 
 The pilot slice is five clauses, ten cases. `no-invented-surface` reproduces issue 88, **which gives the
 board a validity check the sibling suite never had**: if its out half does not reproduce that against
@@ -74,40 +77,28 @@ just taxonomy <dataset> <annotations>
 ```
 
 `board-deep` needs `AGENT_PROXY_URL`, `AGENT_PROXY_MODEL`, `OTEL_EXPORTER_OTLP_ENDPOINT`, and
-`SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a reason
-that is not the agent's**. `AOS_EVAL_REF` pins a tag when a run must be reproducible.
+`SIRENS_ECHO_MCP_ROSTER` when a case requires a tool, **because without one a tool case fails for a
+reason that is not the agent's**. `AOS_EVAL_REF` pins a tag when a run must be reproducible.
 
 **Anchor a deduction to a verbatim span**, which aos-eval checks against the output rather than taking on
 trust, and treat **a dataset as evidence**: keep it by date and seat and archive rather than delete a
 retired one, **because the before-and-after is the argument that a doctrine change worked**.
 
-## What the shared tool measured first
+## The boundary declaration
 
 `eval/boundaries.yaml` declares every boundary this deployment holds, once, in aos-eval's declaration
-shape. `aos-eval boundaries derive` reads it as-is and `aos-eval boundaries check` compares those slots
-to what the board actually authored. Against the pilot board it reports **56 derived slots, none of them
-authored, and 10 authored cases no declaration derived**, with **no half-authored pairs**.
+shape. `aos-eval boundaries derive` reads it as-is, and `aos-eval boundaries check` compares the slots it
+derives to what the board actually authored.
 
-**That gap is the point rather than an embarrassment.** The declaration is the deployment's boundary
-inventory and the board is authored against prompt clauses, so the two taxonomies do not yet meet. A
-coverage number that counted the board as complete would be certifying. This one measures, names every
-missing case, and stays wrong out loud until cases exist. Deriving the board from the declaration is
-tracked by #846, and **nothing here names a bot**: identity is a deployment concern (aos#778) and naming
-either would violate #836's acceptance test. Existing run records are historical provenance and stay as
-they are.
+**That coverage number is meant to read low.** The declaration is the deployment's boundary inventory
+while the board is authored against prompt clauses, so the two taxonomies do not yet meet, and a number
+that counted the board as complete would be certifying rather than measuring. It names every missing case
+and stays wrong out loud until those cases exist. Deriving the board from the declaration is tracked by
+#846. **Nothing here names a bot**, identity being a deployment concern.
 
-`just boundaries` prints the paired case list and `just boundaries-check` fails when a declared boundary
+`just boundaries` prints the paired case list, and `just boundaries-check` fails when a declared boundary
 no longer resolves against the source it names. That source-drift check stays local because `aos-eval
 boundaries check` compares slots to a dataset instead, so the two answer different questions.
-
-## There is no mechanical scorer on the board
-
-The board records what the deployed validators say in a `structural` field and treats it as evidence.
-**This is measured rather than preferred**: the sibling suite ran a regex discriminator tier over the
-same responses and it agreed with the grader on nothing that mattered, one false positive, two false
-negatives, and six agreements where nothing happened. **It was deleted rather than tuned.** The battery
-survives that argument because its checks have closed target sets, which is a different claim from a
-phrase list, and the pack header carries it.
 
 ## The rest of the stack
 

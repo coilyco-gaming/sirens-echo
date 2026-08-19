@@ -2,7 +2,6 @@ package community
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -114,18 +113,15 @@ func TestOnlyThinkingAndTheClockAreTerminated(t *testing.T) {
 	}
 }
 
-// Each beat adds one line rather than replacing the last, which is the shape
-// Kai drew: three stacked lines, not one changing number.
-func TestEachBeatAddsALine(t *testing.T) {
+// Each edit adds one line, the shape Kai drew: three stacked lines rather than
+// one changing number. Beats and edits differ now that it backs off (#934).
+func TestEachEditAddsALine(t *testing.T) {
 	t.Parallel()
 	progress, sink, advance := waitingTurn(t)
 
-	for i := 0; i < 3; i++ {
+	for len(sink.edits) < 3 {
 		advance(turnProgressEvery)
 		progress.refresh(context.Background())
-	}
-	if len(sink.edits) != 3 {
-		t.Fatalf("three beats produced %d edits, want 3", len(sink.edits))
 	}
 	last := sink.edits[2]
 	if got := strings.Count(last, "still "); got != 3 {
@@ -152,24 +148,74 @@ func TestTheWaitColumnIsBoundedAndKeepsUpdating(t *testing.T) {
 	t.Parallel()
 	progress, sink, advance := waitingTurn(t)
 
-	beats := maxProgressWaitLines + 5
+	// Long enough that the column fills and then keeps going, with the backoff
+	// in force. Beats rather than edits, which is the distinction #934 added.
+	beats := 1 << (maxProgressWaitLines + 2)
 	for i := 0; i < beats; i++ {
 		advance(turnProgressEvery)
 		progress.refresh(context.Background())
 	}
-	// Every beat edits. The indicator went quiet at the cap, which is what a
-	// member read as the turn stalling around 130 seconds.
-	if len(sink.edits) != beats {
-		t.Fatalf("edits = %d, want one per beat, %d", len(sink.edits), beats)
+	// It still edits. The indicator going quiet is what a member read as the
+	// turn stalling around 130 seconds, and that must not come back. See #899.
+	if len(sink.edits) < maxProgressWaitLines {
+		t.Fatalf("edits = %d over %d beats, so the indicator went quiet",
+			len(sink.edits), beats)
 	}
 	final := sink.edits[len(sink.edits)-1]
 	if got := strings.Count(final, "still "); got != maxProgressWaitLines {
 		t.Errorf("final body carries %d wait lines, want %d", got, maxProgressWaitLines)
 	}
 	// The last line advances in place, so the newest elapsed is the one shown.
-	newest := int(turnProgressEvery.Seconds()) * beats
-	if !strings.Contains(final, fmt.Sprintf("%d seconds", newest)) {
-		t.Errorf("final body does not report %d seconds: %q", newest, final)
+	if !strings.Contains(final, "seconds") {
+		t.Errorf("final body reports no elapsed time: %q", final)
+	}
+}
+
+// The defect #934 measured: 12 Discord writes for one reply, because every beat
+// edited. The narration now costs a handful over the same wall clock.
+func TestTheWaitNarrationBacksOff(t *testing.T) {
+	t.Parallel()
+	progress, sink, advance := waitingTurn(t)
+
+	// The turn from the incident record: roughly three minutes of waiting at a
+	// sixteen second beat, which produced ten edits.
+	beats := 11
+	for i := 0; i < beats; i++ {
+		advance(turnProgressEvery)
+		progress.refresh(context.Background())
+	}
+	if len(sink.edits) >= beats {
+		t.Fatalf("%d beats produced %d edits, so nothing backed off",
+			beats, len(sink.edits))
+	}
+	if len(sink.edits) > 5 {
+		t.Errorf("a three minute wait cost %d Discord writes, want a handful",
+			len(sink.edits))
+	}
+	if len(sink.edits) == 0 {
+		t.Fatal("a waiting turn narrated nothing at all")
+	}
+}
+
+// A new stage is new information, so its narration starts over rather than
+// inheriting a budget the previous stage spent.
+func TestAStageChangeRestartsTheBackoff(t *testing.T) {
+	t.Parallel()
+	progress, sink, advance := waitingTurn(t)
+
+	for i := 0; i < 8; i++ {
+		advance(turnProgressEvery)
+		progress.refresh(context.Background())
+	}
+	spent := len(sink.edits)
+
+	progress.Stage(context.Background(), stagePhraseChecking)
+	before := len(sink.edits)
+	advance(turnProgressEvery)
+	progress.refresh(context.Background())
+	if len(sink.edits) == before {
+		t.Fatalf("the first beat after a stage change was swallowed by the "+
+			"previous stage's backoff, %d edits spent before it", spent)
 	}
 }
 

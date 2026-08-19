@@ -2,6 +2,8 @@ package community
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -162,6 +164,10 @@ type mcpToolSession struct {
 	// refresh is the one tool that is not an MCP server's. Nil leaves it
 	// unoffered. See docs/sirens-echo-mcp.md.
 	refresh func() int
+	// failed records the error each tool already reported this turn, so the
+	// second call answers from it. See docs/sirens-echo-tools.md.
+	mu     sync.Mutex
+	failed map[string]string
 }
 
 // refuseFiling runs the harness checks over what the model proposed to file.
@@ -213,12 +219,14 @@ func (p *MCPProvider) Open(ctx context.Context) (ToolSession, error) {
 			opened.guidance = append(opened.guidance, guidance)
 		}
 	}
-	// Stated rather than inferred from the span's duration. See
-	// docs/sirens-echo-telemetry.md.
+	// Stated rather than inferred from the span's duration, and unavailable
+	// tells a warm roster from a dead one. See docs/sirens-echo-telemetry.md.
 	trace.SpanFromContext(ctx).SetAttributes(
 		attribute.Int("mcp.tools.configured", len(p.entries)),
 		attribute.Int("mcp.tools.reached", reached),
 		attribute.Int("mcp.tools.listed", listed),
+		attribute.Int("mcp.tools.unavailable", len(opened.unavailable)),
+		attribute.Int("mcp.tools.registered", len(opened.registered)),
 		attribute.Bool("mcp.tools.cached", len(p.entries) > 0 && reached == 0),
 	)
 	if len(p.entries) > 0 && len(opened.unavailable) == len(p.entries) {
@@ -792,6 +800,12 @@ func (s *mcpToolSession) Call(
 	if !exists {
 		return ToolResult{}, fmt.Errorf("model requested unavailable MCP tool %q", name)
 	}
+	// One failure per identical call per turn. Keyed on the arguments too, so a
+	// corrected retry still runs. See docs/sirens-echo-tools.md.
+	attempt := callKey(name, arguments)
+	if recorded, spent := s.alreadyFailed(attempt); spent {
+		return ToolResult{Text: repeatedFailureNotice(recorded), IsError: true}, nil
+	}
 	// Bounded below the turn budget, so a server that never answers fails as a
 	// tool failure with time left to report it. See docs/sirens-echo-tools.md.
 	bound := s.callTimeout
@@ -824,7 +838,52 @@ func (s *mcpToolSession) Call(
 			"render MCP tool result %s/%s: %w", tool.serverName, tool.toolName, err,
 		)
 	}
+	if result.IsError {
+		s.recordFailure(attempt, text)
+	}
 	return ToolResult{Text: text, IsError: result.IsError}, nil
+}
+
+// callKey identifies one attempt. Arguments that will not marshal fall back to
+// the tool alone, which breaks wider rather than not at all.
+func callKey(name string, arguments map[string]any) string {
+	encoded, err := json.Marshal(arguments)
+	if err != nil {
+		return name
+	}
+	sum := sha256.Sum256(append([]byte(name+"\x00"), encoded...))
+	return hex.EncodeToString(sum[:16])
+}
+
+// alreadyFailed reports the error this exact call gave earlier in the turn.
+func (s *mcpToolSession) alreadyFailed(name string) (string, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	recorded, spent := s.failed[name]
+	return recorded, spent
+}
+
+// recordFailure remembers the first failure only, since it is the one the
+// breaker replays and a later one would describe a call that never ran.
+func (s *mcpToolSession) recordFailure(name, text string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.failed == nil {
+		s.failed = make(map[string]string, 1)
+	}
+	if _, seen := s.failed[name]; !seen {
+		s.failed[name] = text
+	}
+}
+
+// repeatedFailureNotice hands back the recorded error and says the call was not
+// made, so the model can answer the part that does not need the tool.
+func repeatedFailureNotice(recorded string) string {
+	notice := "This tool already failed this turn and was not called again."
+	if strings.TrimSpace(recorded) == "" {
+		return notice
+	}
+	return notice + " It reported: " + recorded
 }
 
 // toolResultText renders a result as text. A non-text part keeps its JSON form

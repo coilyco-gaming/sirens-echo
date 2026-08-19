@@ -55,11 +55,11 @@ with `yq '.data."access-policy.yaml"' access-policy.yml | sirens-echo-access-che
 the boundary rather than a workaround**: deploy owns the manifest format, this repository owns the
 schema, and deploy never reimplements a parser for a format another repository owns.
 
-Deploy's pre-commit parses the file as YAML, which catches a syntax error and nothing else, so until
-this existed **the first thing to evaluate a policy was pod boot**. `check` calls
-`community.LoadAccessPolicy`, the same function the agent calls at startup, and that is the whole
-design: **a second implementation would be a worse gate than none**, passing policies the pod rejects
-and rejecting ones it accepts, with the divergence appearing as a rollout failure CI called green.
+A plain YAML parse catches a syntax error and nothing else, so before this existed **the first thing to
+evaluate a policy was pod boot**. `check` calls `community.LoadAccessPolicy`, the same function the
+agent calls at startup, and that is the whole design: **a second implementation would be a worse gate
+than none**, passing policies the pod rejects and rejecting ones it accepts, with the divergence
+appearing as a rollout failure CI called green.
 
 The bound that matters most is a guild opened to every member without a real per-user rate limit.
 Strict decoding catches the quieter one, where a misspelled key like `ratelimit` fails rather than being
@@ -103,12 +103,11 @@ remain out of scope, and it does not decide who may **reach** the agent.
 
 **A grant this deployment does not hold is permanent.** Retrying cannot satisfy it, so every surface
 reporting one has to say so. `GrantTable.Permits` returns a `GrantDenial` and `IsGrantDenial` tells it
-from anything else an error path carries, and both submit surfaces call it. HTTP answers `403` with
-`sirens_echo.jobs.not_permitted`; before, it fell to the `default` arm and answered `400` with
-`sirens_echo.jobs.rejected`, **the same answer an unknown kind or a malformed body gets**, so a caller
-could not tell a request it should fix from an authority it does not have. Discord says the caller is
-not permitted to start that job kind, rather than the generic notice that reads as an invitation to try
-again. `503` for a full queue remains the one job refusal that is this service's fault.
+from anything else an error path carries, and both submit surfaces call it. HTTP answers `403` with `sirens_echo.jobs.not_permitted` rather than the `400`
+`sirens_echo.jobs.rejected` an unknown kind or a malformed body gets, **so a caller can tell a request
+it should fix from an authority it does not have**. Discord says the caller is not permitted to start
+that job kind, rather than a generic notice that reads as an invitation to try again.
+`503` for a full queue remains the one job refusal that is this service's fault.
 
 **A refused submission still creates a job record**, moved to `failed` with the outcome `not permitted`,
 so a denial appears in the principal's listing, carries a reason, and can be asked about afterwards. A

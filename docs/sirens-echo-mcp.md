@@ -61,10 +61,10 @@ before writing**, because a `RoundTripper` must not modify the request it is han
 ## What each surface is for
 
 The model receives every tool's schema on every turn but not **which server to reach for**, the question
-members actually pose. `InitializeResult.Instructions` answers it, read off the handshake the harness
-already performs and rendered beside the roster, rather than generated into skill files at build time as
-sirens-echo#647 asked: **that generator failed open**, an unreachable server producing a file saying no
-schema was available. **Absence is nothing**, so a server publishing no
+members actually pose. `InitializeResult.Instructions` answers it, read off the handshake the harness already performs and
+rendered beside the roster rather than generated into skill files at build time, **because that
+generator failed open**: an unreachable server produced a file saying no schema was available.
+**Absence is nothing**, so a server publishing no
 instructions produces no entry, and **it describes, it does not authorise**, which the message says in
 the same breath as the text. `SIRENS_ECHO_SERVER_GUIDANCE_BYTES` caps one entry: **a bound
 supplied by the thing bounded is not a bound**.
@@ -97,15 +97,14 @@ selection surface yet.
 
 `mcp.tool.call` carries `mcp.tool.outcome` and `mcp.tool.result_bytes`, so a reader holding one trace
 can tell a call that returned rows from one that returned none, the outcome being the same three-state
-`ToolOutcome` the disclosure footer renders. Before that it reached only a metric and a log line, **so
-an investigation into a reply asserting absence stopped one step short of what the tool returned**
-(#570). `mcp.tool.limit_bytes` and `mcp.tool.truncated` sit on the same span, **on every call
-rather than only the truncated ones**, so a filter on `truncated=false` answers how often the cap does
-not bind (#640). `limit_bytes` is the cap, not the bytes delivered: those differ by the truncation and
-spill notices appended afterwards, which made the cap look like it had moved (#635).
+`ToolOutcome` the disclosure footer renders. **Without them an investigation into a reply asserting
+absence stops one step short of what the tool returned.** `mcp.tool.limit_bytes` and
+`mcp.tool.truncated` sit on the same span, **on every call rather than only the truncated ones**, so a
+filter on `truncated=false` answers how often the cap does not bind. `limit_bytes` is the cap rather
+than the bytes delivered, the two differing by the truncation and spill notices appended afterwards.
 
 **A session is not a request.** The MCP transport's client spans are named `mcp.session` plus the verb
 rather than `HTTP POST`, because a connection that exists to stay open has a lifetime rather than a
-latency, and **percentiles group on the span name, so two long sessions set a whole service's `HTTP
-POST` p99** (#560). Expect those sessions to get longer now they are no longer cut at the old
-whole-request timeout, which is #160 working rather than a regression.
+latency, and **percentiles group on the span name, so two long sessions would set a whole service's
+`HTTP POST` p99**. Expect those sessions to be long: they are no longer cut at the old whole-request
+timeout.

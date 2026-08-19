@@ -32,9 +32,9 @@ replacing it. Discord delivers the addressed message inline for most replies, an
 fetches it under the same budget as the other gate-forced calls. **Only one level renders**: a reply to
 a reply does not walk the chain, because the second is a claim about someone else's subject.
 
-**The turn also carries a clock.** Nothing named the time, so `what time is it` had no answer and
-`discord-timestamps` had no epoch to render from (#855). One system message states the moment, **read
-once per turn**, so two rounds agree about it.
+**The turn carries a clock and its admitted surface**, a system message each, **read once per turn**.
+Nothing named the time (#855), and nothing named who it may answer (#909). The surface renders from the
+gate's own policy, in counts rather than ids.
 
 ## Snapshots
 
@@ -58,24 +58,20 @@ skill root's per-turn cost is stated as a number**.
 
 ## The system prompt is not a secret
 
-Three checks treated it as confidential. **It is not**, and this records the decision so nobody re-adds
-them believing otherwise. `max_verbatim_words` compared a reply against the system prompt and failed on
-eight consecutive shared words; it is retired, with the `prompt-leakage` gating case that existed only
-to run it.
+The prompt is assembled from policy roots and capability references tracked in this public repository,
+so **a check against a public document is theatre, and expensive theatre when it gates deployments**.
+Three checks treated it as confidential, `max_verbatim_words` among them, and all three are retired.
+They also failed in the direction that costs most: **a correct refusal frequently describes what the
+service can do in the words the prompt used**, since that is where the words came from, so they fired on
+compliance and not on extraction, **and a security row that is red for correct behaviour teaches readers
+to skip the row that finally matters**.
 
-It was never a real control: the prompt is assembled from policy roots and capability references tracked
-in this public repository, so **a check against a public document is theatre, and expensive theatre,
-because it gated deployments**. It also failed in the direction that costs most, because **a correct
-refusal frequently describes what the service can do in the words the prompt used**, since that is where
-the words came from. So it fired on compliance and not on extraction, and **a security row that is red
-for correct behaviour teaches readers to skip the row that finally matters**.
-
-Configuration identifiers are still checked: `SIRENS_ECHO_*` names are not secret either, **but reciting
+Configuration identifiers are still checked. `SIRENS_ECHO_*` names are not secret either, **but reciting
 them is a shape no correct reply has**, and the pattern costs nothing. The operator's user ID remains
 forbidden, being member data rather than prompt confidentiality. It follows that **a reply that quotes
-the prompt is not a defect, and neither is one that lists the tools the service offers** - that question
-was open and this answers it. If either is undesirable it is a *composure* concern about a service that
-volunteers more than it was asked, which needs to be made on its own terms.
+the prompt is not a defect, and neither is one that lists the tools the service offers**. If either is
+undesirable it is a *composure* concern about a service that volunteers more than it was asked, which
+needs to be made on its own terms.
 
 ## Prompt budget
 
@@ -95,14 +91,6 @@ nothing about the cache behavior tracked in the prompt-caching issue - **and it 
 content**: a registry of complete URLs is larger than a template the model fills in, and larger on
 purpose, because a model with no closed list invents addresses.
 
-Every raise is recorded with its cause, because **a raise is only correct when the growth was
-intended**: Echo to 21976 for composing the ops role; Deep to 12260 for
-`issue_tracker: forgejo`, 863 bytes of filing block Echo already carried; both by 315
-when Kai widened the filing trigger on #235; Echo to 23826 for object emoji (#203), 1535 bytes
-of `references/object-emoji.md`; both by 1951 for the shared org source (#806); by 5
-when giving every agent one folder (#816) lengthened the definition path in each snapshot's header; and
-both by 203 for the calculate rule (#916).
-**Recording a header change is pedantic. That is the point.**
-
-**A drop is recorded too.** Echo fell to 19042 and Deep to 12852 when references left for
-`read_skill` (#859). A budget left high banks the saving and spends it again.
+Every raise is recorded in the commit that makes it, **because a raise is only correct when the growth
+was intended**, and **a drop is recorded the same way**: a budget left high after a saving banks it and
+spends it again.

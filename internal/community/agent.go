@@ -25,10 +25,12 @@ const (
 // Agent owns the Sirens Echo Discord session and its outbound boundaries.
 type Agent struct {
 	// temporal is held only to close it. Nil when no mirror is configured.
-	temporal          interface{ Close() }
-	cfg               Config
-	session           *discordgo.Session
-	tools             *MCPProvider
+	temporal interface{ Close() }
+	cfg      Config
+	session  *discordgo.Session
+	tools    *MCPProvider
+	// reexport caches the roster advertised over /mcp. Zero value is ready.
+	reexport          reexportCache
 	completions       CompletionClient
 	systemPrompt      string
 	telemetry         *Telemetry
@@ -39,8 +41,11 @@ type Agent struct {
 	slots             chan struct{}
 	seen              *seenMessages
 	scope             *channelScope
-	access            *AccessPolicy
-	limiter           *rateLimiter
+	// threads caches thread ownership, so a state miss costs one REST lookup
+	// per channel rather than one per message. See sirens-echo#750.
+	threads *channelScope
+	access  *AccessPolicy
+	limiter *rateLimiter
 	// lookups bounds Discord REST calls forced during gate evaluation, so an
 	// unscoped channel cannot make the process call the API per message.
 	lookups *rateLimiter
@@ -192,6 +197,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Tools:         modelTools,
 		Telemetry:     telemetry,
 		Budget:        cfg.Definition.ModelBudget,
+		Admission:     AdmissionBound(accessPolicy),
 	}
 	agent := &Agent{
 		cfg:               cfg,
@@ -293,6 +299,9 @@ func (a *Agent) ensureRuntimeDefaults() {
 	}
 	if a.scope == nil {
 		a.scope = newChannelScope(256)
+	}
+	if a.threads == nil {
+		a.threads = newChannelScope(256)
 	}
 	if a.seen == nil {
 		a.seen = newSeenMessages(1024)
@@ -596,6 +605,13 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		return
 	}
 	summoned, referenceLookup := summonedLocally(session, message)
+	if !summoned {
+		// summonedLocally reads cached state alone. An archived thread, and
+		// after a restart any thread GUILD_CREATE did not carry, misses it.
+		if a.resolveThreadOwnership(session, origin) {
+			summoned, referenceLookup = true, false
+		}
+	}
 	if !summoned && !referenceLookup {
 		return
 	}
@@ -757,6 +773,38 @@ func (a *Agent) resolveScope(
 	allowed := channel.IsThread() && guild.PermitsChannel(channel.ParentID)
 	a.scope.Set(origin.ChannelID, allowed)
 	return allowed
+}
+
+// resolveThreadOwnership answers ownership when cached state cannot, at one
+// REST lookup per channel. See docs/sirens-echo-mentions.md.
+func (a *Agent) resolveThreadOwnership(
+	session *discordgo.Session,
+	origin summonContext,
+) bool {
+	if session.State == nil || session.State.User == nil || origin.ChannelID == "" {
+		return false
+	}
+	if owned, known := a.threads.Get(origin.ChannelID); known {
+		return owned
+	}
+	botID := session.State.User.ID
+	if channel, err := session.State.Channel(origin.ChannelID); err == nil && channel != nil {
+		owned := channel.IsThread() && channel.OwnerID == botID
+		a.threads.Set(origin.ChannelID, owned)
+		return owned
+	}
+	// Shares the budget the other gate-forced REST calls draw on.
+	if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
+		a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
+		return false
+	}
+	channel, err := session.Channel(origin.ChannelID)
+	if err != nil || channel == nil {
+		return false
+	}
+	owned := channel.IsThread() && channel.OwnerID == botID
+	a.threads.Set(origin.ChannelID, owned)
+	return owned
 }
 
 func resolveChannel(session *discordgo.Session, channelID string) *discordgo.Channel {

@@ -41,13 +41,14 @@ A turn that fails after the reply is composed has already spent its completions 
 **The work was done and paid for, then dropped at the last step**, invisible to every instrument that
 watches the model.
 
-`discord.turn.failed` carried one field, `error_type: turn_failed`, so rate limiting, over-length, a
-missing permission, and a dropped gateway looked identical: **a count without a cause**. `discord.reply.failed` now records the send itself, with `discord_failure`
-separating whether Discord answered at all, `discord_status` separating rate limiting from permissions
-from length, `discord_code` separating two failures sharing one status, and `reply_bytes` proving the
-length case. **`no_response` is a classification rather than a gap**, a dropped gateway producing no
-HTTP exchange, and `abandoned` is separate because **our own budget ending a send is not an outage**.
-**No channel, no member, no reply body**: status and code separate every cause without an identifier.
+A single `error_type: turn_failed` would make rate limiting, over-length, a missing permission, and a
+dropped gateway identical: **a count without a cause**. `discord.reply.failed` records the send itself,
+with `discord_failure` separating whether Discord answered at all, `discord_status` separating rate
+limiting from permissions from length, `discord_code` separating two failures sharing one status, and
+`reply_bytes` proving the length case. **`no_response` is a classification rather than a gap**, a
+dropped gateway producing no HTTP exchange, and `abandoned` is separate because **our own budget ending
+a send is not an outage**. **No channel, no member, no reply body**: status and code separate every
+cause without an identifier.
 
 **A stage is not a cause.** `error_type` is the stage, so a timeout and a backend outage at the model
 stage collapse into one value while showing a member two different notices, countable only through the
@@ -70,10 +71,10 @@ deleted even when the edit fails too**.
 
 ## Why a check refused a reply
 
-A refused reply names the check that refused it, and now says what that check saw. `ValidateGrounding`
-produces `model invented channel #general`, and that sentence was generated and thrown away, so reaching
-it took four steps and a source read (#795). `response.validate` carries `response.check.reason` and
-`response.check.refused` logs the same sentence under `refused`.
+A refused reply names the check that refused it, and says what that check saw. `ValidateGrounding`
+produces `model invented channel #general`, a sentence that used to be generated and thrown away.
+`response.validate` carries `response.check.reason` and `response.check.refused` logs the same sentence
+under `refused`.
 
 **Not every refusal gates.** A rule about how an answer *reads* records and the reply still ships:
 `response_style` and `tool_call_markup` (#651). **An unlisted rule gates, so a new one fails closed**,
