@@ -94,10 +94,12 @@ checks rules rather than reasoning, so the mark is the mitigation. `response.che
 redaction appears in the refusal rates, `response.redacted.blocks` carries the count on every turn
 including zero, and `response.check.redacted` logs the rule, the sentence, and the count.
 
-## A turn may be silent
+## Silence is a choice, a blank is a defect
 
-**An agent holding a write tool aimed at its own reply channel answered twice**, because every accepted
-turn had to produce text (#895). `ParseReply` reads empty as silence and a silent turn posts nothing.
-**Silence is a choice only once the turn has done something**: a turn that ran no tool and said nothing
-is the failure it always was. `RequireReply` keeps the strict parse for the scorer and job content, and
-`turn.reply.silent` records the choice, **so chosen silence and a broken turn never read alike**.
+`ParseReply` reads empty as silence and a silent turn posts nothing (#895). **Silence is a choice only
+once the turn has done something.** `RequireReply` keeps the strict parse for the scorer and job
+content, and `turn.reply.silent` records the choice.
+
+So **a blank arriving at `sendReply` is a defect** (#1035): nothing is sent, `turn.reply.blank` records
+it, and the message is marked `acknowledge` instead. **A mark that fails to land is not a message.**
+mcp-beaver#87 covers the tool path.

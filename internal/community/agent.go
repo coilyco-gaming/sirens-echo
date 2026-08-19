@@ -1600,6 +1600,13 @@ func (a *Agent) sendReply(ctx context.Context, turn turnIO, content, whole strin
 		// Zero rather than absent, so no attachment and an old pod stay apart.
 		slog.Int("attached_bytes", len(whole)),
 	)
+	// Every reply funnels through here, so this is where "nothing to say" stops
+	// being a message. See docs/sirens-echo-reply-assembly.md and #1035.
+	if strings.TrimSpace(content) == "" {
+		err := a.finishBlankReply(replyCtx, turn)
+		replySpan.End()
+		return err
+	}
 	var err error
 	if turn.Transport() == transportDiscord {
 		discordCtx, discordSpan := a.telemetry.StartSpan(replyCtx, "discord.reply")
