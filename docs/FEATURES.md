@@ -16,8 +16,8 @@ the end.
 
 ## The response service
 
-- Deploy-selected verified role bundle for Deep, none for Echo. Neutral Sirens Echo and social CoilyCo
-  profiles with independent policy roots, **a Kai-only trust boundary**, and build-time checks.
+- Deploy-selected verified role bundle per lane, from the Core Roster plus the community person package.
+  Neutral and social profiles with independent policy roots, **a Kai-only trust boundary**, build-time checks.
 - Definition-selected history budget, skill roots, MCP roster, and issue tracker. Serialized turns with
   bounded Discord-history continuity, and whole-thread prefill inside a thread **dropping oldest first
   with the loss stated in the reply**.
