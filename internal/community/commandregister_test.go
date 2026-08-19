@@ -42,14 +42,14 @@ func TestRegistrationPublishesEveryDeclaredCommandToEveryAdmittedGuild(t *testin
 	guilds := []string{"1024000000000000001", "1024000000000000002"}
 
 	if err := registerCommands(
-		context.Background(), registrar, "app-1", guilds, nil,
+		context.Background(), registrar, "app-1", guilds, nil, nil,
 	); err != nil {
 		t.Fatalf("registerCommands: %v", err)
 	}
 	if len(registrar.guilds) != len(guilds) {
 		t.Fatalf("registered in %v, want %v", registrar.guilds, guilds)
 	}
-	declared, err := discordCommands()
+	declared, err := discordCommands(nil)
 	if err != nil {
 		t.Fatalf("discordCommands: %v", err)
 	}
@@ -77,7 +77,7 @@ func TestRegistrationPublishesEveryDeclaredCommandToEveryAdmittedGuild(t *testin
 func TestRegistrationRefusesWhenNoGuildIsAdmitted(t *testing.T) {
 	t.Parallel()
 	registrar := &recordingRegistrar{}
-	err := registerCommands(context.Background(), registrar, "app-1", nil, nil)
+	err := registerCommands(context.Background(), registrar, "app-1", nil, nil, nil)
 	if err == nil {
 		t.Fatal("registering with no admitted guild succeeded")
 	}
@@ -92,7 +92,7 @@ func TestRegistrationRefusesWithoutAnApplicationID(t *testing.T) {
 	t.Parallel()
 	registrar := &recordingRegistrar{}
 	err := registerCommands(
-		context.Background(), registrar, "", []string{"1024000000000000001"}, nil,
+		context.Background(), registrar, "", []string{"1024000000000000001"}, nil, nil,
 	)
 	if err == nil {
 		t.Fatal("registering without an application id succeeded")
@@ -109,7 +109,7 @@ func TestOneGuildFailingDoesNotStopTheRegistration(t *testing.T) {
 	registrar := &recordingRegistrar{err: errors.New("missing access")}
 	err := registerCommands(
 		context.Background(), registrar, "app-1",
-		[]string{"1024000000000000001", "1024000000000000002"}, nil,
+		[]string{"1024000000000000001", "1024000000000000002"}, nil, nil,
 	)
 	if err == nil {
 		t.Fatal("a failed registration reported success")

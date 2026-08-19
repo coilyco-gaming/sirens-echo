@@ -40,7 +40,7 @@ func (stalledExecutor) Execute(ctx context.Context, _ Job, _ func(string)) (stri
 // submitInThread runs the submitting command as if it were typed in threadID.
 func submitInThread(t *testing.T, agent *Agent, threadID string) string {
 	t.Helper()
-	command, declared := LookupCommand("echo")
+	command, declared := LookupCommand("echo", nil)
 	if !declared {
 		t.Fatal("the echo command is not declared, so this test asserts nothing")
 	}
@@ -181,7 +181,7 @@ func TestThreadOriginNeedsASessionAndAChannel(t *testing.T) {
 
 func mustCommand(t *testing.T, name string) CommandDefinition {
 	t.Helper()
-	command, declared := LookupCommand(name)
+	command, declared := LookupCommand(name, nil)
 	if !declared {
 		t.Fatalf("the %s command is not declared", name)
 	}

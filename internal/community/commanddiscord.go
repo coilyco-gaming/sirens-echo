@@ -13,8 +13,8 @@ import (
 
 // discordCommands renders the declared set for registration. Registration
 // itself is a write to Discord and is deployment-gated.
-func discordCommands() ([]*discordgo.ApplicationCommand, error) {
-	declared := JobCommands()
+func discordCommands(mcpServers []string) ([]*discordgo.ApplicationCommand, error) {
+	declared := JobCommands(mcpServers)
 	rendered := make([]*discordgo.ApplicationCommand, 0, len(declared))
 	for _, command := range declared {
 		if err := command.Validate(); err != nil {
@@ -72,7 +72,7 @@ func (a *Agent) onInteraction(
 	}
 	ctx := context.Background()
 	data := event.ApplicationCommandData()
-	command, declared := LookupCommand(data.Name)
+	command, declared := LookupCommand(data.Name, a.mcpServerNames())
 	if !declared {
 		a.respondToCommand(session, event, harnessNotice("unknown command"), false)
 		return
@@ -151,8 +151,11 @@ func (a *Agent) runCommand(ctx context.Context, request commandRequest) string {
 	command := request.Command
 	// Answered above the jobs guard: reporting the tool surface needs no job
 	// system, and a deployment running with jobs off still has one.
-	if command.Name == "mcps" {
+	switch command.Name {
+	case "mcps":
 		return a.mcpRoster(ctx)
+	case "mcp":
+		return a.mcpServer(ctx, request.Arguments["server"])
 	}
 	if a.jobs == nil {
 		return harnessNotice("jobs are not enabled")

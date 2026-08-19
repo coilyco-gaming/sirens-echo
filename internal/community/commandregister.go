@@ -29,10 +29,11 @@ func registerCommands(
 	registrar commandRegistrar,
 	appID string,
 	guilds []string,
+	mcpServers []string,
 	telemetry *Telemetry,
 ) error {
 	telemetry = telemetryOrNoop(telemetry)
-	commands, err := discordCommands()
+	commands, err := discordCommands(mcpServers)
 	if err != nil {
 		return fmt.Errorf("render commands: %w", err)
 	}
@@ -86,7 +87,7 @@ func (a *Agent) registerCommandsOnReady(ctx context.Context, ready *discordgo.Re
 		return
 	}
 	if err := registerCommands(
-		ctx, a.session, ready.User.ID, a.admittedGuilds(), a.telemetry,
+		ctx, a.session, ready.User.ID, a.admittedGuilds(), a.mcpServerNames(), a.telemetry,
 	); err != nil {
 		a.telemetry.Error(ctx, "discord.commands.registration_failed",
 			slog.String("error", err.Error()))

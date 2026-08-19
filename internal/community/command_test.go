@@ -9,7 +9,7 @@ import (
 func TestEveryDeclaredCommandIsValid(t *testing.T) {
 	t.Parallel()
 	names := make(map[string]struct{})
-	for _, command := range JobCommands() {
+	for _, command := range JobCommands(nil) {
 		if err := command.Validate(); err != nil {
 			t.Errorf("command %s: %v", command.Name, err)
 		}
@@ -18,7 +18,7 @@ func TestEveryDeclaredCommandIsValid(t *testing.T) {
 		}
 		names[command.Name] = struct{}{}
 	}
-	if _, err := discordCommands(); err != nil {
+	if _, err := discordCommands(nil); err != nil {
 		t.Errorf("rendering for Discord: %v", err)
 	}
 }
@@ -27,7 +27,7 @@ func TestEveryDeclaredCommandIsValid(t *testing.T) {
 // rather than ignored. Ignoring lets a caller believe it took effect. See #147.
 func TestUndeclaredArgumentsAreRefusedNotIgnored(t *testing.T) {
 	t.Parallel()
-	command, ok := LookupCommand("echo")
+	command, ok := LookupCommand("echo", nil)
 	if !ok {
 		t.Fatal("echo is not declared")
 	}
