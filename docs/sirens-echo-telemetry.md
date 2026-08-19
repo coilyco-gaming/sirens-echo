@@ -67,6 +67,25 @@ the truncation honest, because a cap that stopped truncating would not fail a ce
 not measure token count, bytes being a proxy that is checkable offline with no model and no network, and
 it does not measure tool results.
 
+## Histogram boundaries a turn actually fits in
+
+The OpenTelemetry SDK's default explicit boundaries top out at **10,000 ms**, and a turn's p50 sits
+above that. So every turn landed in the overflow bucket, and a p50 or p99 over `sirens_echo.turn.duration`
+returned the 10,000 boundary rather than a duration, **for every lane, on both sides of any comparison**.
+That reads as a working metric holding steady, which is why it survived so long: **the failure of a
+histogram whose range is wrong is a plausible number, not an empty one** (#976).
+
+`sirens_echo.turn.duration` and `sirens_echo.coalesce.turn.duration` take boundaries running to 300,000
+ms, the request ceiling, so a turn that ran the clock out is distinguishable from one that nearly did.
+`sirens_echo.coalesce.batch.size` takes small-integer boundaries, because a batch is bounded by the wide
+batch size and the default first bucket held every batch alike, **so a lane batching nothing read exactly
+like a lane batching four**. Every other histogram keeps the defaults, its recorded range being one they
+fit.
+
+Boundaries are a view on the meter provider rather than a knob. A deployment that changed them would
+make its own history unreadable against everyone else's, and a bucket edge is not a thing to tune under
+pressure.
+
 ## Tool discovery telemetry
 
 **The span is the lookup, not the round trip.** `mcp.tools.list` wraps the call site, so it is emitted

@@ -134,6 +134,7 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 			sdkmetric.WithInterval(15*time.Second),
 		)),
 		sdkmetric.WithResource(res),
+		sdkmetric.WithView(histogramViews()...),
 	)
 	logSDK := sdklog.NewLoggerProvider(
 		sdklog.WithProcessor(sdklog.NewBatchProcessor(logExporter)),
@@ -168,6 +169,38 @@ func NewTelemetry(ctx context.Context, cfg Config) (*Telemetry, error) {
 	telemetry.metricSDK = metricSDK
 	telemetry.logSDK = logSDK
 	return telemetry, nil
+}
+
+// The SDK default boundaries top out at 10s, and a turn's p50 is above that, so
+// every turn landed in the overflow bucket. See docs/sirens-echo-telemetry.md.
+var turnDurationBoundaries = []float64{
+	250, 500, 1000, 2500, 5000, 10000, 15000, 30000,
+	45000, 60000, 90000, 120000, 180000, 240000, 300000,
+}
+
+// A batch is bounded by the narrow and wide batch sizes, so every batch fell in
+// the default first bucket and 1 was indistinguishable from 4.
+var batchSizeBoundaries = []float64{1, 2, 3, 4, 5, 6, 8, 10, 16}
+
+// histogramViews replaces the default boundaries where the recorded range does
+// not fit them. An instrument named here keeps the defaults deliberately.
+func histogramViews() []sdkmetric.View {
+	views := make([]sdkmetric.View, 0, 3)
+	for name, boundaries := range map[string][]float64{
+		"sirens_echo.turn.duration":          turnDurationBoundaries,
+		"sirens_echo.coalesce.turn.duration": turnDurationBoundaries,
+		"sirens_echo.coalesce.batch.size":    batchSizeBoundaries,
+	} {
+		views = append(views, sdkmetric.NewView(
+			sdkmetric.Instrument{Name: name},
+			sdkmetric.Stream{
+				Aggregation: sdkmetric.AggregationExplicitBucketHistogram{
+					Boundaries: boundaries,
+				},
+			},
+		))
+	}
+	return views
 }
 
 func newMetricExporter(
