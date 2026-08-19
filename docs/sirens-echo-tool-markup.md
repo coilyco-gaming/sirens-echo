@@ -68,6 +68,7 @@ change breaks it too, because a failure is never counted inside a run of success
 * **No tools, no footer.** A refusal calls nothing and stays short.
 * **Names only, never arguments.** Names come from the roster and are safe; arguments can carry member
   text, and reflecting that back would build a surface into the data-borne injection vector.
+  The skill-read 📖 carve-out is in [the worklog doc](sirens-echo-worklog.md).
 * **Service-authored**, appended after the reply checks rather than passed through them, alongside issue
   references, because the harness wrote it and the checks police what the model wrote.
 * **Inside the send budget.** A transport with a ceiling declares it, and the answer is shortened to

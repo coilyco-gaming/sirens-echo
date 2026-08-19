@@ -17,6 +17,9 @@ const (
 	toolOKGlyph    = "\u2705"
 	toolEmptyGlyph = "\U0001F4ED"
 	toolEmptyNote  = " — no results"
+	// skillReadGlyph marks a row naming the reference a skill read delivered,
+	// on both member surfaces. See docs/sirens-echo-worklog.md.
+	skillReadGlyph = "\U0001F4D6"
 )
 
 // toolOutcomeGlyph is the status vocabulary, shared with the reaction set and
@@ -57,7 +60,8 @@ func toolDisclosure(executed []ExecutedTool) string {
 		run := 1
 		for index+run < len(executed) &&
 			executed[index+run].Name == current.Name &&
-			executed[index+run].Outcome == current.Outcome {
+			executed[index+run].Outcome == current.Outcome &&
+			executed[index+run].Detail == current.Detail {
 			run++
 		}
 		index += run
@@ -67,10 +71,13 @@ func toolDisclosure(executed []ExecutedTool) string {
 }
 
 func toolDisclosureLine(call ExecutedTool, run int) string {
-	line := fmt.Sprintf(
-		"> %s %s `%s`",
-		toolDisclosureGlyph, toolOutcomeGlyph(call.Outcome), call.Label(),
-	)
+	glyphs := toolDisclosureGlyph + " " + toolOutcomeGlyph(call.Outcome)
+	label := call.Label()
+	if call.Detail != "" {
+		glyphs += " " + skillReadGlyph
+		label = noticeBody(call.Detail)
+	}
+	line := fmt.Sprintf("> %s `%s`", glyphs, label)
 	if run > 1 {
 		line += fmt.Sprintf(" ×%d", run)
 	}

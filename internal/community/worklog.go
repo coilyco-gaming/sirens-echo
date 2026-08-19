@@ -24,6 +24,9 @@ type progressRow struct {
 	tool    string
 	outcome ToolOutcome
 	done    bool
+	// detail names what a resolved skill read delivered. Session-validated,
+	// so it is never the argument. See docs/sirens-echo-worklog.md.
+	detail string
 }
 
 // progressView is one rendering of the worklog, already reduced to text so a
@@ -42,6 +45,9 @@ func worklogRow(row progressRow) string {
 	glyph := reactionTool
 	if row.done {
 		glyph = toolOutcomeGlyph(row.outcome)
+	}
+	if row.done && row.detail != "" {
+		return stageNotice(glyph+" "+skillReadGlyph, row.detail, false)
 	}
 	return stageNotice(glyph, ExecutedTool{Server: row.server, Original: row.tool}.Label(), false)
 }

@@ -78,7 +78,7 @@ func TestTheWorklogRowsResolveInPlace(t *testing.T) {
 		t.Errorf("an in-flight row does not carry the tool glyph: %q", got)
 	}
 
-	progress.ToolFinished("eco", "get_market", ToolOutcomeOK)
+	progress.ToolFinished("eco", "get_market", ToolOutcomeOK, "")
 	advance(turnProgressEvery)
 	progress.refresh(context.Background())
 	last := sink.views[len(sink.views)-1].Rows[0]

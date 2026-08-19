@@ -80,7 +80,17 @@ func (s *skillSession) Call(
 			"no reference at %q. The readable ones are: %s",
 			path, strings.Join(s.paths(), ", "))
 	}
-	return ToolResult{Text: reference.Body}, nil
+	return ToolResult{Text: reference.Body, Detail: skillDisplayName(reference.Path)}, nil
+}
+
+// skillDisplayName is the reference as a member sees it: the file's own name,
+// taken from the validated path rather than from the argument.
+func skillDisplayName(path string) string {
+	base := path[strings.LastIndex(path, "/")+1:]
+	if dot := strings.LastIndex(base, "."); dot > 0 {
+		base = base[:dot]
+	}
+	return base
 }
 
 func (s *skillSession) paths() []string {
