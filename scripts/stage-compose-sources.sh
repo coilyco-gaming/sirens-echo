@@ -62,8 +62,8 @@ seat_identity() {
     esac
 }
 
-# One agent alone in a guild has no seat to defer to. Engineer only, because
-# that is Dowel. See docs/sirens-echo-boundaries.md and agent-compose#304.
+# One agent alone in a guild has no seat to defer to, so Dowel's role drops
+# what it defers. Engineer only, because that is Dowel. agent-compose#304.
 seat_boundary_omissions() {
     case "$1" in
         engineer) printf '    boundary-omit "modify-live-system" "seek-external-validation"\n' ;;
