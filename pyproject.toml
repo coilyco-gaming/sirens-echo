@@ -17,6 +17,9 @@ org = "coilyco-gaming"
 band = "large"
 excludes = [
     "agent/bundles/**",
+    # agent-compose person-package entities, not this repository's docs. See
+    # docs/sirens-echo-person.md.
+    "agent/compose/person/**",
 ]
 
 [tool.agentic-os.dead-cross-links]

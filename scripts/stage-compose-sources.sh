@@ -53,6 +53,30 @@ if [ -z "$roles" ]; then
 fi
 echo "stage-compose-sources: baking $(echo "$roles" | wc -w | tr -d ' ') roster roles"
 
+# Community person-package roles bake beside the core roster ones, each from a
+# request gaining a person-source node. See docs/sirens-echo-compose.md.
+person_dir=${SIRENS_ECHO_PERSON_DIR:-agent/compose/person}
+community_roles=""
+person_rel=""
+if [ -d "$person_dir" ]; then
+    person_out=$(mktemp -d "$scratch_home/person.XXXXXX")
+    HOME=$scratch_home agent-compose roster --person-source "$person_dir" --out "$person_out" >/dev/null
+    community_roles=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("\n".join(d.get("role_order") or sorted(d["roles"])))' "$person_out/person.json")
+    if [ -z "$community_roles" ]; then
+        echo "stage-compose-sources: $person_dir declares no role" >&2
+        exit 1
+    fi
+    # A slug owned by both rosters would silently overwrite a core bundle.
+    for role in $community_roles; do
+        if echo "$roles" | grep -qx "$role"; then
+            echo "stage-compose-sources: role $role exists in both rosters" >&2
+            exit 1
+        fi
+    done
+    person_rel=$(python3 -c 'import os,sys; print(os.path.relpath(os.path.abspath(sys.argv[1]), os.path.abspath(sys.argv[2])))' "$person_dir" "$compose_dir")
+    echo "stage-compose-sources: baking $(echo "$community_roles" | wc -w | tr -d ' ') community roles from $person_dir"
+fi
+
 # Per-role seat names, because one request template bakes every roster role and
 # an identity in it would rename all of them. See docs/sirens-echo-identity.md.
 seat_identity() {
@@ -71,18 +95,23 @@ seat_boundary_omissions() {
     esac
 }
 
-for role in $roles; do
+# person carries a request person-source node for community-package roles, so
+# agent-compose selects the package instead of the embedded Core Roster.
+bake_role() {
+    role=$1
+    person=${2:-}
     "$generator" "${catalog_flags[@]}" --role "$role" --compose-dir "$compose_dir"
     out=$bundles/$role
     rm -rf "$out"
     mkdir -p "$out"
     identity=$(seat_identity "$role")
     omissions=$(seat_boundary_omissions "$role")
-    awk -v role="$role" -v identity="$identity" -v omissions="$omissions" '
+    awk -v role="$role" -v identity="$identity" -v omissions="$omissions" -v person="$person" '
         /^    role "/ {
             print "    role \"" role "\""
             if (identity != "") { print identity }
             if (omissions != "") { print omissions }
+            if (person != "") { print person }
             next
         }
         { print }
@@ -93,4 +122,11 @@ for role in $roles; do
     tree=$(find "$out" -mindepth 1 -maxdepth 1 -type d | head -1)
     mv "$tree"/* "$out"/ && rmdir "$tree"
     HOME=$scratch_home agent-compose verify "$out"
+}
+
+for role in $roles; do
+    bake_role "$role"
+done
+for role in $community_roles; do
+    bake_role "$role" "    person-source \"$person_rel\""
 done
