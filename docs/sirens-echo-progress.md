@@ -18,9 +18,9 @@ read as two bots**. Restyling it is a contained change to `TurnProgressSink` onc
 
 * **Threshold** - nothing is posted until a turn has run long enough to be worth narrating, so **the
   fast path makes no Discord calls at all**.
-* **Edit rate** - edits are bounded, so a tool-heavy turn cannot spend its budget talking about itself,
-  and a stage that repeats is not re-sent. **The clock column bounds height, not duration**, advancing
-  in place once full (#899).
+* **Edit rate** - edits are bounded and a repeated stage is not re-sent. **The column bounds height
+  not duration**, advancing in place once full (#899), and **the wait narration doubles its interval
+  per edit**, never going quiet (#934).
 * **Advisory** - a failed post or edit is dropped rather than failing the turn, and a line arriving
   after the reply is deleted.
 * **Mention safety** - empty allowed mentions, as everywhere the harness speaks.

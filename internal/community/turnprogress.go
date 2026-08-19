@@ -77,6 +77,9 @@ type turnProgress struct {
 	// waits is the elapsed seconds of each line appended while one stage runs.
 	// Reset on a stage change, because the new line restarts the narration.
 	waits []int
+	// waitEdits counts the timer-driven edits this turn spent, which is what
+	// the backoff doubles against. See docs/sirens-echo-progress.md.
+	waitEdits int
 	// rows is the worklog, one entry per tool call, kept whole so the cap is a
 	// rendering decision rather than a lossy one.
 	rows []progressRow
@@ -297,6 +300,9 @@ func (p *turnProgress) Stage(ctx context.Context, phrase string) {
 		return
 	}
 	existing := p.messageID
+	// A new stage is new information, so the narration and its budget both
+	// start again rather than inheriting a spent one.
+	p.waitEdits = 0
 	p.lastStage = phrase
 	p.lastEdit = moment
 	// A new stage restarts the narration, so the previous stage's waits go.
@@ -561,6 +567,16 @@ func (p *turnProgress) Finish(ctx context.Context) {
 	p.record(ctx, "delete", p.sink.Delete(ctx, messageID))
 }
 
+// waitBackoff doubles per timer edit and never stops, so a long wait costs a
+// handful of writes. See docs/sirens-echo-progress.md.
+func (p *turnProgress) waitBackoff() time.Duration {
+	backoff := turnProgressEvery
+	for range p.waitEdits {
+		backoff *= 2
+	}
+	return backoff
+}
+
 // narrateWait appends one elapsed line to the posted stage line. Called with
 // the lock held, and it releases before touching the sink.
 func (p *turnProgress) narrateWait(ctx context.Context) {
@@ -570,7 +586,7 @@ func (p *turnProgress) narrateWait(ctx context.Context) {
 	}
 	moment := p.now()
 	elapsed := moment.Sub(p.postedAt)
-	if elapsed < turnProgressEvery {
+	if elapsed < turnProgressEvery || moment.Sub(p.lastEdit) < p.waitBackoff() {
 		p.mu.Unlock()
 		return
 	}
@@ -583,6 +599,7 @@ func (p *turnProgress) narrateWait(ctx context.Context) {
 		p.waits = append(p.waits, seconds)
 	}
 	p.lastEdit = moment
+	p.waitEdits++
 	existing, phrase := p.messageID, p.lastStage
 	waits := append([]int{}, p.waits...)
 	view := p.view()
