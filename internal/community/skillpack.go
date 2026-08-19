@@ -3,6 +3,7 @@ package community
 import (
 	"fmt"
 	"io/fs"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -25,20 +26,20 @@ type SkillReference struct {
 // LoadSkillpack loads what every turn carries: each root's entrypoint, plus the
 // references that must not be optional. See docs/sirens-echo-prompt.md.
 func LoadSkillpack(roots []string) (string, error) {
-	pack, _, err := loadSkills(roots)
+	pack, _, err := loadSkills(roots, nil)
 	return pack, err
 }
 
 // LoadSkillReferences returns what read_skill serves, which is everything the
 // pack left out.
 func LoadSkillReferences(roots []string) ([]SkillReference, error) {
-	_, references, err := loadSkills(roots)
+	_, references, err := loadSkills(roots, nil)
 	return references, err
 }
 
 // loadSkills partitions the roots once, so the pack and the catalog cannot
 // disagree about which file is in which.
-func loadSkills(roots []string) (string, []SkillReference, error) {
+func loadSkills(roots []string, eager map[string]bool) (string, []SkillReference, error) {
 	files, err := skillFiles(roots)
 	if err != nil {
 		return "", nil, err
@@ -61,7 +62,7 @@ func loadSkills(roots []string) (string, []SkillReference, error) {
 		slashed := filepath.ToSlash(path)
 		// The contract, restored. A description is the cheap always-on index and
 		// the body is what gets fetched, for an entrypoint as for a reference.
-		if !inlineAlways(text) {
+		if !inlineAlways(text) && !eager[rootOf(path, eager)] {
 			references = append(references, SkillReference{
 				Path: slashed, Title: skillSummary(text, body), Body: body,
 			})
@@ -73,6 +74,17 @@ func loadSkills(roots []string) (string, []SkillReference, error) {
 		}
 	}
 	return strings.TrimSpace(output.String() + skillIndex(references)), references, nil
+}
+
+// rootOf reports which eager root a path sits under, so a file inherits its
+// root's eagerness without every caller threading the root down to it.
+func rootOf(path string, eager map[string]bool) string {
+	for root := range eager {
+		if strings.HasPrefix(filepath.ToSlash(path), filepath.ToSlash(root)+"/") {
+			return root
+		}
+	}
+	return ""
 }
 
 // skillFiles lists every entrypoint and one-level reference, in deterministic
@@ -182,34 +194,50 @@ func composedForRun(definition Definition) (bundle string, recorded string, err 
 	return loaded, fmt.Sprintf("bundle %s (%d bytes)", dir, len(loaded)), nil
 }
 
+// rosterSource holds the composer's own identity doctrine, which stays eager
+// whatever those files declare. See docs/sirens-echo-compose.md.
+const rosterSource = "roster:core"
+
 // bundleRoots lists a bundle's skill roots. Shared so the pack and the
 // references it defers come from one list rather than two walks that can drift.
-func bundleRoots(dir string) ([]string, error) {
+func bundleRoots(dir string) ([]string, map[string]bool, error) {
 	skillsDir := filepath.Join(dir, "content", "skills")
 	sources, err := os.ReadDir(skillsDir)
 	if err != nil {
-		return nil, fmt.Errorf("read bundle skills: %w", err)
+		return nil, nil, fmt.Errorf("read bundle skills: %w", err)
 	}
 	roots := make([]string, 0)
+	eager := make(map[string]bool)
 	for _, source := range sources {
 		if !source.IsDir() {
 			continue
 		}
+		// The directory is the escaped source name, so unescape rather than
+		// matching the escaping, which is the encoder's business and not ours.
+		name, unescapeErr := url.PathUnescape(source.Name())
+		if unescapeErr != nil {
+			name = source.Name()
+		}
 		skills, err := os.ReadDir(filepath.Join(skillsDir, source.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("read bundle source %s: %w", source.Name(), err)
+			return nil, nil, fmt.Errorf("read bundle source %s: %w", source.Name(), err)
 		}
 		for _, skill := range skills {
-			if skill.IsDir() {
-				roots = append(roots, filepath.Join(skillsDir, source.Name(), skill.Name()))
+			if !skill.IsDir() {
+				continue
+			}
+			root := filepath.Join(skillsDir, source.Name(), skill.Name())
+			roots = append(roots, root)
+			if name == rosterSource {
+				eager[root] = true
 			}
 		}
 	}
 	if len(roots) == 0 {
-		return nil, fmt.Errorf("bundle %s selected no skills", dir)
+		return nil, nil, fmt.Errorf("bundle %s selected no skills", dir)
 	}
 	sort.Strings(roots)
-	return roots, nil
+	return roots, eager, nil
 }
 
 // LoadBundle reads one materialized agent-compose bundle: the identity card
@@ -219,11 +247,11 @@ func LoadBundle(dir string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("read bundle identity card: %w", err)
 	}
-	roots, err := bundleRoots(dir)
+	roots, eager, err := bundleRoots(dir)
 	if err != nil {
 		return "", err
 	}
-	pack, err := LoadSkillpack(roots)
+	pack, _, err := loadSkills(roots, eager)
 	if err != nil {
 		return "", err
 	}
@@ -237,11 +265,12 @@ func LoadBundle(dir string) (string, error) {
 // LoadBundleReferences serves what LoadBundle's pack left out, whose index
 // names these paths, so read_skill has to hold them. See sirens-echo#859.
 func LoadBundleReferences(dir string) ([]SkillReference, error) {
-	roots, err := bundleRoots(dir)
+	roots, eager, err := bundleRoots(dir)
 	if err != nil {
 		return nil, err
 	}
-	return LoadSkillReferences(roots)
+	_, references, err := loadSkills(roots, eager)
+	return references, err
 }
 
 func isSkillEntrypoint(slashed string) bool {
