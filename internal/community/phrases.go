@@ -191,10 +191,10 @@ func evaluationSystemPrompt(
 	if err != nil {
 		return "", err
 	}
-	return withPhrasePolicy(
+	return withReactionPolicy(withPhrasePolicy(
 		BuildSystemPrompt(definition, principal, composed, localSkillpack),
 		phrases,
-	), nil
+	)), nil
 }
 
 // withPhrasePolicy names the keys a reply may invoke. A prompt with no registry

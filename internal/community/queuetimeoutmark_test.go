@@ -48,7 +48,7 @@ func queueTimeoutAgent() *Agent {
 func TestAQueueTimeoutMarksTheMessage(t *testing.T) {
 	t.Parallel()
 	turn := &reactingTurn{transport: transportDiscord}
-	queueTimeoutAgent().replyQueueTimeout(context.Background(), turn, "guild:1")
+	queueTimeoutAgent().replyQueueTimeout(context.Background(), turn)
 
 	if len(turn.applied) != 1 || turn.applied[0] != reactionFailed {
 		t.Errorf("applied = %v, want one %q", turn.applied, reactionFailed)
@@ -58,24 +58,23 @@ func TestAQueueTimeoutMarksTheMessage(t *testing.T) {
 	}
 }
 
-// The sharper half. The notice is one per window, so a second member inside
-// that window gets no notice, and without the mark would get nothing at all.
-func TestAThrottledQueueTimeoutStillMarksTheMessage(t *testing.T) {
+// The sharper half, inverted by #939: a second drop in the same window now gets
+// the notice too, not only the mark that was added to soften the throttle.
+func TestASecondDropInTheSameWindowIsAlsoTold(t *testing.T) {
 	t.Parallel()
 	agent := queueTimeoutAgent()
 	first := &reactingTurn{transport: transportDiscord}
-	agent.replyQueueTimeout(context.Background(), first, "guild:1")
+	agent.replyQueueTimeout(context.Background(), first)
 
 	second := &reactingTurn{transport: transportDiscord}
-	agent.replyQueueTimeout(context.Background(), second, "guild:1")
+	agent.replyQueueTimeout(context.Background(), second)
 
-	if len(second.replies) != 0 {
-		t.Fatalf("the throttle did not suppress the second notice: %v, so this "+
-			"case did not arise", second.replies)
+	if len(second.replies) != 1 {
+		t.Errorf("the second drop replied %v, want the busy notice", second.replies)
 	}
 	if len(second.applied) != 1 || second.applied[0] != reactionFailed {
-		t.Errorf("a throttled member got %v, so the turn left no trace at all",
-			second.applied)
+		t.Errorf("the second drop applied %v, want one %q",
+			second.applied, reactionFailed)
 	}
 }
 
@@ -84,7 +83,7 @@ func TestAThrottledQueueTimeoutStillMarksTheMessage(t *testing.T) {
 func TestAQueueTimeoutOnATransportWithNoReactions(t *testing.T) {
 	t.Parallel()
 	turn := &httpTurn{requestID: "req-1"}
-	queueTimeoutAgent().replyQueueTimeout(context.Background(), turn, "http")
+	queueTimeoutAgent().replyQueueTimeout(context.Background(), turn)
 	// Reaching here is the assertion. The HTTP turn implements no reactor.
 }
 

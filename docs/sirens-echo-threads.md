@@ -25,9 +25,9 @@ rejected for repeating**.
 Deploying to a guild the operator does not moderate: add the bot with the narrowest permissions that
 still work (view channel, read message history, send messages, send messages in threads), name the exact
 channels the guild's owner agreed to, grant members by role rather than by listing accounts, consider a
-tighter `rate_limit` than the deployment default, and leave direct messages off. **In a guild the
-service answers only a mention or a reply to its own message**, with no moderation, role, announcement,
-or account surface.
+tighter `rate_limit` than the deployment default, and leave direct messages off. **In a guild channel
+the service answers a mention or a reply to its own message**, and everything inside a thread it opened,
+with no moderation, role, announcement, or account surface.
 
 **A direct message needs no mention**, because it is addressed to the service by definition and the
 mention gate exists to keep a busy channel quiet. So every direct message from an allowlisted account
@@ -103,5 +103,7 @@ the whole thread.
 
 A whole-thread read is one Discord call per hundred messages instead of one, on every thread turn. Read
 `history.thread.read` and `history.thread.dropped` on the `community.history` span for what real threads
-produce, and note that sirens-echo#750 raises the number of turns taken inside threads. Outside a
+produce, and note that sirens-echo#750 raises the number of turns taken inside threads, deliberately: two
+members talking in a thread this service opened each summon a turn, throttled by the rate tiers rather
+than bounded, and no quiet period ends it. Outside a
 thread the prefill is the same partial window, and a turn that drops nothing adds nothing to the reply.

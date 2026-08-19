@@ -91,12 +91,12 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 			return nil, err
 		}
 	}
-	// Appended rather than built in, so a caller with no registry renders the
-	// prompt it renders today. See docs/sirens-echo-phrases.md.
-	systemPrompt := withPhrasePolicy(
+	// Both appended rather than built in, so a caller with no phrase registry
+	// still renders what it rendered. See docs/sirens-echo-phrases.md.
+	systemPrompt := withReactionPolicy(withPhrasePolicy(
 		BuildSystemPrompt(cfg.Definition, cfg.Principal, composed, localSkillpack),
 		phrases,
-	)
+	))
 	if err := ValidateSystemPrompt(cfg.Definition, cfg.Principal, systemPrompt); err != nil {
 		return nil, err
 	}
@@ -787,6 +787,11 @@ func summonedLocally(
 		return true, false
 	}
 	botID := session.State.User.ID
+	// A thread this service opened is its own conversation, so every message in
+	// it is addressed here. See docs/sirens-echo-mentions.md and sirens-echo#750.
+	if threadOwnedBy(session, message.ChannelID, botID) {
+		return true, false
+	}
 	if message.ReferencedMessage != nil && message.ReferencedMessage.Author != nil {
 		return message.ReferencedMessage.Author.ID == botID, false
 	}
@@ -794,6 +799,19 @@ func summonedLocally(
 		return false, false
 	}
 	return false, true
+}
+
+// threadOwnedBy reports whether a channel is a thread the given account
+// created. State only, so it costs no call. See docs/sirens-echo-mentions.md.
+func threadOwnedBy(session *discordgo.Session, channelID, ownerID string) bool {
+	if session.State == nil {
+		return false
+	}
+	channel, err := session.State.Channel(channelID)
+	if err != nil || channel == nil {
+		return false
+	}
+	return channel.IsThread() && channel.OwnerID == ownerID
 }
 
 // mentionsBot reads an explicit mention off the Gateway payload, which is the
@@ -966,7 +984,7 @@ func (a *Agent) handleMessage(
 		a.submitSummon(receiveCtx, turn, message)
 		return
 	}
-	if err := a.runSerialized(receiveCtx, turn, origin.Key()); err != nil {
+	if err := a.runSerialized(receiveCtx, turn); err != nil {
 		a.telemetry.MarkSpanError(receiveSpan, exceptionTurnFailed)
 		a.telemetry.Error(receiveCtx, "discord.turn.failed", append(
 			[]slog.Attr{slog.String("error_type", "turn_failed")},
@@ -1007,14 +1025,14 @@ func (a *Agent) onDenied(
 
 // runSerialized waits for the execution slot, then runs the turn. The request
 // budget starts after admission, not on arrival.
-func (a *Agent) runSerialized(ctx context.Context, turn turnIO, contextKey string) error {
+func (a *Agent) runSerialized(ctx context.Context, turn turnIO) error {
 	queueCtx, cancelQueue := context.WithTimeout(ctx, a.cfg.QueueTimeout)
 	defer cancelQueue()
 	select {
 	case a.slots <- struct{}{}:
 	case <-queueCtx.Done():
 		a.telemetry.RecordAdmission(ctx, string(admissionQueue), turn.Transport())
-		a.replyQueueTimeout(ctx, turn, contextKey)
+		a.replyQueueTimeout(ctx, turn)
 		return fmt.Errorf("turn waited longer than %s for the execution slot", a.cfg.QueueTimeout)
 	}
 	defer func() { <-a.slots }()
@@ -1042,18 +1060,14 @@ func (a *Agent) runAdmitted(ctx context.Context, turn turnIO) error {
 
 // replyQueueTimeout tells the caller its turn gave up waiting. Returning
 // silently left a queued member with no reply at all.
-func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO, contextKey string) {
+func (a *Agent) replyQueueTimeout(ctx context.Context, turn turnIO) {
 	// Marked before the throttle, the way a denial is, so a member who gets no
 	// notice still gets something. See docs/sirens-echo-progress.md.
 	if target, ok := turn.(reactor); ok {
 		a.react(ctx, target, reactionFailed)
 	}
-	// A Discord reply lands in a shared channel, so it shares the throttle the
-	// pending-cap denial uses. A synchronous caller always learns why it ended.
-	if turn.Transport() == transportDiscord &&
-		!a.limiter.notifyQueueTimeout(contextKey) {
-		return
-	}
+	// NOT THROTTLED, unlike a denial. Admission already said yes to this turn,
+	// so silence here reads as being ignored rather than as being refused.
 	if err := turn.Reply(ctx, noticeWithTrace(ctx, noticeQueueTimeout)); err != nil {
 		a.telemetry.RecordFailure(ctx, "reply")
 	}
@@ -1347,6 +1361,23 @@ func (a *Agent) runTurn(
 	// and nothing else can express that. See docs/sirens-echo-reply-assembly.md.
 	if reply == "" {
 		return a.finishSilently(turnCtx, progress, result)
+	}
+
+	// A mark is the whole answer for a turn that needs no words. See
+	// docs/sirens-echo-progress.md and docs/sirens-echo-phrases.md.
+	if reactInvoked(reply) {
+		glyph, err := a.resolveReaction(turnCtx, reply)
+		if err != nil {
+			return a.failTurn(turnCtx, turn, stageValidation, err)
+		}
+		facts := serviceFacts{executed: result.ToolCalls, prefill: prefillNoteOf(turn)}
+		target, markable := turn.(reactor)
+		// A receipt outranks a mark, and a transport that cannot mark has only
+		// words. Both send the glyph instead. See docs/sirens-echo-phrases.md.
+		if markable && !hasServiceSuffix(facts) {
+			return a.finishByReacting(turnCtx, turn, progress, target, glyph)
+		}
+		reply = glyph
 	}
 
 	// A canonical phrase is a deployment artifact rather than model prose, so it

@@ -5,8 +5,8 @@ the end.
 
 ## Admission
 
-- Mention-or-reply invocation with channel, thread, guild, author, and duplicate gates, plus summoning
-  by an edit that newly names the service, **gated on a member edit rather than a link preview**.
+- Mention, reply, own-thread, and edit invocation with channel, thread, guild, author, and duplicate
+  gates, **the edit gated on a member edit and the thread on cached state, not a lookup**.
 - Git-tracked access policy stacking guild, channel, user, and role grants with a deny list, per-guild
   rate overrides, and CI validation.
 - Per-user, per-context, and global admission control with a bounded queue, **one cooldown notice per
@@ -32,8 +32,8 @@ the end.
   results**. Reply refusal for any identifier the process holds, derived from configuration at boot,
   **admitted by shape and matched by value rather than spelling**.
 - Caller-supplied history marked as asserted rather than observed, on both private ingresses. Harness
-  reactions for acceptance, a tool round, a failure, and a refusal, **applied before the model call and
-  unable to fail a turn**.
+  reactions for acceptance, a tool round, a failure, and a refusal, plus a keyed reaction as a reply's
+  whole answer, **falling back to text where a receipt is owed or nothing can mark**.
 - A worklog element on a long Discord turn, one row per tool call resolving in place, **degrading to
   stacked notice lines where the embed permission is absent**.
 - Oversized tool results saved to the requester's scratchpad instead of being truncated away, and
