@@ -194,6 +194,7 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		Tools:         modelTools,
 		Telemetry:     telemetry,
 		Budget:        cfg.Definition.ModelBudget,
+		Admission:     AdmissionBound(accessPolicy),
 	}
 	agent := &Agent{
 		cfg:               cfg,
