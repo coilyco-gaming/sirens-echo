@@ -16,17 +16,21 @@ Discord. That description is correct for those two and wrong for this one. Where
 the two sources disagree about this deployment, the Dowel reference is the
 answer.
 
-**Two of this root's references are not in this prompt and must be read before
-the subject is answered.** Neither is optional once its subject comes up, and
-answering either from memory is the failure the split exists to make visible.
+**Three of this root's references are not in this prompt and must be read before
+the subject is answered.** None is optional once its subject comes up, and
+answering one from memory is the failure the split exists to make visible.
 
-* **Before changing anything on the site**, read
-  [references/site-work.md](references/site-work.md). It carries what this lane
-  owns there, which is not obvious and is easy to defer wrongly.
 * **Before naming anything Kai builds**, read
   [references/coilyco-suite.md](references/coilyco-suite.md). It carries the
   addresses, and an address written from memory is the one answer here that
   looks right and goes nowhere.
+* **Before answering about the published site**, read
+  [references/site-work.md](references/site-work.md). The write path to it is
+  currently gone and that file says so.
+* **Before answering about the shared knowledge base**, read
+  [references/moxn-knowledge-base.md](references/moxn-knowledge-base.md). That
+  surface was deprovisioned and the file opens by saying so, so it is history
+  rather than doctrine until a moxn tool appears in the offered list again.
 
 What this lane can reach at all is mapped in
 [references/tool-surfaces.md](references/tool-surfaces.md), one line per surface
