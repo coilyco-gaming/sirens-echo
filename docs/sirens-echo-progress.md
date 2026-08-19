@@ -6,7 +6,8 @@ reply is noise.**
 ## The line
 
 Nothing for the first ten seconds. After that, one line in the harness notice format that edits in place
-as the turn moves: `reading recent messages`, `thinking...`, `calling a tool`, `checking the reply`. A
+as the turn moves: `reading recent messages`, `thinking...`, `calling a tool`, `checking the reply`,
+and 📖 `consulting the catalogue...` when the round is a skill read. A
 turn that sits in one stage grows a clock line per beat (`still thinking 19 seconds...`). **The line is
 removed when the reply lands**, because the reply, or the failure notice, is the turn's real answer.
 

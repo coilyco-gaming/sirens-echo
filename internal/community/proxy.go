@@ -729,7 +729,7 @@ func (c ProxyClient) Complete(
 			)
 			// A tool round is where a long turn spends its time, so it is worth
 			// narrating. See docs/sirens-echo-progress.md.
-			reportStage(toolCtx, stagePhraseTool)
+			reportStage(toolCtx, toolStagePhrase(definition.Server))
 			// The row opens here and resolves below, so a member sees a call in
 			// flight rather than only the finished ones. See sirens-echo#111.
 			reportToolStarted(toolCtx, definition.Server, definition.Original)

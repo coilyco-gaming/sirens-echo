@@ -47,7 +47,8 @@ func TestAnIconDoesNotImplyAnEllipsis(t *testing.T) {
 func TestEveryStageStillMatchesTheNoticeShape(t *testing.T) {
 	t.Parallel()
 	for _, phrase := range []string{
-		stagePhraseHistory, stagePhraseThinking, stagePhraseTool, stagePhraseChecking,
+		stagePhraseHistory, stagePhraseThinking, stagePhraseTool, stagePhraseSkill,
+		stagePhraseChecking,
 	} {
 		notice := stageLine(phrase)
 		if !noticeShape.MatchString(notice) {
@@ -90,5 +91,22 @@ func TestTheDecoratedBodyIsStillSanitized(t *testing.T) {
 		if strings.Contains(got, banned) {
 			t.Errorf("%q survived sanitizing into %q", banned, got)
 		}
+	}
+}
+
+func TestSkillRoundNarratesTheCatalogue(t *testing.T) {
+	if got := toolStagePhrase(skillToolServer); got != stagePhraseSkill {
+		t.Fatalf("skill round phrase = %q", got)
+	}
+	if got := toolStagePhrase("eco"); got != stagePhraseTool {
+		t.Fatalf("ordinary round phrase = %q", got)
+	}
+	rendered := stageLine(stagePhraseSkill)
+	want := "> " + skillReadGlyph + " `consulting the catalogue...`"
+	if rendered != want {
+		t.Fatalf("stage line = %q, want %q", rendered, want)
+	}
+	if !noticeShape.MatchString(rendered) {
+		t.Fatalf("stage line %q escapes the notice shape", rendered)
 	}
 }
