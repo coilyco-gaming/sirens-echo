@@ -5,9 +5,8 @@ import (
 	"testing"
 )
 
-// #1035: four of Dowel's visible posts in #moxn-temporal carried no content at
-// all. A blank message reads as the thing being broken while carrying none of
-// the information a real failure would.
+// A blank message reads as the thing being broken while carrying none of the
+// information a real failure would (#1035).
 
 func blankReplyAgent() *Agent {
 	return &Agent{telemetry: telemetryOrNoop(nil)}
