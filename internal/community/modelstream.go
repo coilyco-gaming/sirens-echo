@@ -118,7 +118,7 @@ func readModelStream(
 			bytesSeen += len(line.text)
 			if bytesSeen > maxAgentProxyResponseBytes {
 				return chatChoice{}, fmt.Errorf(
-					"Agent Proxy stream exceeded %d bytes", maxAgentProxyResponseBytes,
+					"%w: stream of %d bytes", ErrResponseTooLarge, maxAgentProxyResponseBytes,
 				)
 			}
 			text := strings.TrimRight(line.text, "\r")

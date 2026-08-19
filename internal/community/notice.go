@@ -75,12 +75,18 @@ var (
 	noticeModelRejected = harnessNotice("harness built a request the model refused")
 	// Distinct from the ceiling notice: nothing arrived at all, so retrying is
 	// the right advice where at the ceiling it is not. See sirens-echo#171.
-	noticeModelSilent  = harnessNotice("model backend went quiet, retry shortly")
-	noticeToolFailed   = harnessNotice("tool call failed")
-	noticeRoundsSpent  = harnessNotice("ran out of steps, ask for something narrower")
-	noticeBudgetSpent  = harnessNotice("ran out of room to answer, ask for something narrower")
-	noticeReplyBlocked = harnessNotice("reply blocked by response check, rephrase")
-	noticeTurnCrashed  = harnessNotice("turn crashed")
+	noticeModelSilent = harnessNotice("model backend went quiet, retry shortly")
+	// The backend answered and the answer was too long to read. Narrowing is
+	// the move that shortens it, and nothing is down. See sirens-echo#933.
+	noticeResponseTooLarge = harnessNotice("answer too long to read, ask for something narrower")
+	// The backend answered with something this service could not parse. Not the
+	// member's to fix, and not an outage either. See sirens-echo#933.
+	noticeResponseUnreadable = harnessNotice("model backend sent an unreadable answer, retry shortly")
+	noticeToolFailed         = harnessNotice("tool call failed")
+	noticeRoundsSpent        = harnessNotice("ran out of steps, ask for something narrower")
+	noticeBudgetSpent        = harnessNotice("ran out of room to answer, ask for something narrower")
+	noticeReplyBlocked       = harnessNotice("reply blocked by response check, rephrase")
+	noticeTurnCrashed        = harnessNotice("turn crashed")
 	// The answer existed and the send failed. A member reading silence cannot
 	// tell that from being ignored. See docs/sirens-echo-delivery.md.
 	noticeUndelivered = harnessNotice("reply could not be delivered, retry shortly")
@@ -117,7 +123,11 @@ const (
 	// The model deliberated past the ceiling and emitted nothing. Separate from
 	// rounds_spent because the ceiling that bound it is a different number.
 	causeBudgetSpent = "budget_spent"
-	causeStage       = "stage_failed"
+	// The backend answered and the answer was unusable. Separate from every
+	// availability cause, because nothing was down. See sirens-echo#933.
+	causeResponseTooLarge   = "response_too_large"
+	causeResponseUnreadable = "response_unreadable"
+	causeStage              = "stage_failed"
 	// causeShutdown is the service ending the turn, not the turn failing. It
 	// reads as a deploy in the failure series rather than as a defect.
 	causeShutdown = "shutdown"
@@ -149,6 +159,12 @@ func failureCause(cause error) string {
 	// the ceiling bound was unalertable. See sirens-echo#549.
 	case errors.Is(cause, ErrBudgetExhausted):
 		return causeBudgetSpent
+	// Ahead of the stage, because these happen at the model stage on an answer
+	// the backend delivered. See sirens-echo#933.
+	case errors.Is(cause, ErrResponseTooLarge):
+		return causeResponseTooLarge
+	case errors.Is(cause, ErrResponseUnreadable):
+		return causeResponseUnreadable
 	case rejectedByModel(cause):
 		return causeModelRejected
 	}
@@ -180,6 +196,12 @@ func turnFailureNotice(stage string, cause error) string {
 	// Narrowing the question is the move that works. See sirens-echo#549.
 	case errors.Is(cause, ErrBudgetExhausted):
 		return noticeBudgetSpent
+	// Ahead of the stage switch, because the backend answered 200 and telling a
+	// member it is unavailable is false. See sirens-echo#933.
+	case errors.Is(cause, ErrResponseTooLarge):
+		return noticeResponseTooLarge
+	case errors.Is(cause, ErrResponseUnreadable):
+		return noticeResponseUnreadable
 	// Ahead of the stage switch, because this happens at the model stage and
 	// the backend was reachable the whole time. See sirens-echo#875.
 	case rejectedByModel(cause):
