@@ -28,12 +28,9 @@ was found**.
 
 **A skipped test and a passing test print the same word and exit the same way**, and nothing counts how
 many tests ran, **so a guard can stop running for months without anyone learning**. Two guards were
-found unguarded at once, and deleting the thing each protected left the suite green:
-`TestGraphPatternsNeverReachDeniedSources`, because `AOS_CATALOG` is set nowhere in CI, and
-`TestScratchRefusesSymlinkEscape`, which planted a symlink at a partition path that stopped existing
-when the name became a hash. **The second is the sharper one: it was disabled by a correct, unrelated
-fix.** Every other stale reference to the old name was updated, **and only the one wrapped in a skip
-swallowed its error rather than failing**.
+found unguarded at once, and deleting the thing each protected left the suite green. **The sharper case
+was disabled by a correct, unrelated fix**: every other reference to a renamed path was updated, **and
+only the one wrapped in a skip swallowed its error rather than failing**.
 
 **The check runs on what fires, not on what is written.** A source scan for `t.Skip` would not have
 caught either, because both carried their skip from the day they were written: **what changed was the
@@ -69,10 +66,9 @@ make a live case work.** That mutates a world a community plays in, to run a tes
 A multi-model sweep is **only a comparison if the substrate was equal**. The local GPU tier becomes
 unusable when the host is doing anything else, **and nothing in the path detects it, routes around it,
 or reports it**. **End-state scoring cannot tell a starved backend from a model that genuinely cannot do
-the task**, so running the self-hosted cell on a contended host makes the sweep conclude that the
-open-source tier cannot do the behavior - **the finding the sweep was designed to look for, arrived at
-for the wrong reason, and believable because it matches the prior**. **Data-shaped wrongness is worse
-than no data.**
+the task**, so a self-hosted cell run on a contended host concludes that the open-source tier cannot do
+the behavior - **the finding the sweep was looking for, arrived at for the wrong reason, and believable
+because it matches the prior**.
 
 Run the self-hosted cell only against a host known to be idle, and **verify before the cell rather than
 after, because after is an alibi rather than a control**. Record host state for every cell in the run's
@@ -80,14 +76,13 @@ own provenance. **A cell that hits a saturated backend or a deadline is void**: 
 compare a cell to another taken under different host conditions.**
 
 The rate runner separates an `error` outcome from a `fail` and reports a case whose attempts all errored
-as `measured: false`. **That covers the substrate failing loudly, and it cannot cover the case that
-matters most**: a contended GPU that returns a slow but complete reply raises no error, **and from
-inside the turn that is indistinguishable from a model getting it wrong**. **No in-process check closes
-this, which is why the host-state record is the load-bearing rule rather than the void rule.**
-`SIRENS_ECHO_SUBSTRATE` and `SIRENS_ECHO_IMAGE` are copied verbatim into the provenance. **The image
-matters more than it looks**: roughly half of main's pushes publish no image, **so the deployed build is
-often older than the change under measurement, and a dataset that does not name it still looks entirely
-legitimate**. Unset, either records `unrecorded`, **deliberately and not as a neutral default**.
+as `measured: false`. **That covers the substrate failing loudly and cannot cover the case that matters
+most**: a contended GPU returns a slow but complete reply, raising no error, **which is why the
+host-state record is load-bearing rather than the void rule**. `SIRENS_ECHO_SUBSTRATE` and
+`SIRENS_ECHO_IMAGE` are copied verbatim into the provenance, and unset, either records `unrecorded`,
+**deliberately rather than as a neutral default**. **The image matters more than it looks**: roughly
+half of main's pushes publish none, **so the deployed build is often older than the change under
+measurement, and a dataset that does not name it still looks entirely legitimate**.
 
 ## The merge lane
 
