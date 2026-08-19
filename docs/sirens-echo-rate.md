@@ -13,15 +13,14 @@ A case declares its own `runs` and `max_failure_rate`, and each attempt is score
 `community.ScoreEvaluationCase`, **the same function the gate uses, so the two instruments cannot
 drift**: a rate for a check the gate does not apply would measure something nobody enforces. An attempt
 passes, fails, or errors, **an error being a failure of the substrate rather than of the agent** and
-excluded from the denominator. The run exits non-zero when a case beats its ceiling, when every attempt
+excluded from the denominator. **The consequence is that a clean verdict can rest on far fewer runs than the case declared**, so the breach line names how many declared runs errored and were excluded, and a `rate.sample.decimated` warning is logged on stderr for **any** case with errors, a case that passed included. Read `errors` beside `attempts` and `runs`. **No error ceiling gates anything**: failing a verdict on an error rate needs somebody to decide what rate is acceptable, which is a live-operations judgement rather than a measurement one. The run exits non-zero when a case beats its ceiling, when every attempt
 of a case errored, or when the boundary median is not below the conversational one: **an unmeasured case
 is not a passing one**.
 
 **The dataset is the evidence.** Every reply is persisted verbatim, because three first-pass findings in
 the QA that motivated this pack were **defects in the check rather than the agent, and only reading the
 text separated them**. Provenance travels with it, since a rate without its definition, pack, model, and
-roster is not comparable to the next run. **Every failing check is recorded rather than the first**: a
-run recorded a user ID disclosure as a handle echo and read zero ID leaks.
+roster is not comparable to the next run. **Every failing check is recorded rather than the first.**
 
 A case starts here to establish its rate, and when a fix drives that rate to zero and holds at high N it
 may move into the evaluation pack as a deterministic regression. **Do not promote on a small clean
@@ -33,13 +32,11 @@ plus up to six tool rounds, **affordable on demand, which is why this is an invo
 **What it cannot measure.** *Whether a tool told the truth*: checks score the reply and
 `ValidateGrounding` scores it against the tools that ran, **but nothing scores a tool result against the
 world**, so a tool returning zero for a valid question yields a faithful, grounded, confidently false
-answer that every instrument here passes - observed when an item filter matching an internal key rather
-than the name a member types **reported zero offers for a market holding 913 of them**. A fixture cannot
-close it, **because a fixture declares its own result**, testing how the model handles a payload rather
-than whether the payload was right. *Whether a number describes deployed Deep*: a composed definition
-reads a placeholder where the pod injects the real bundle. *A behavior with no deterministic check*:
-paraphrase disclosure discloses while quoting nothing, **so no expression separates it from a correct
-answer**, and that belongs on the board.
+answer that every instrument here passes. A fixture cannot close it, **because a fixture declares its
+own result**, testing how the model handles a payload rather than whether the payload was right.
+*Whether a number describes deployed Deep*: a composed definition reads a placeholder where the pod
+injects the real bundle. *A behavior with no deterministic check*: paraphrase disclosure discloses while
+quoting nothing, **so no expression separates it from a correct answer**, and that belongs on the board.
 
 ## Provenance
 
@@ -56,19 +53,16 @@ when one participates.
 pod injects the role skill, the personality skills, and the rest of that context. When that prompt was
 last measured in production it was **53,133 bytes against the 11,392 the snapshot renders**, so the
 bundle was most of it. **So a Deep rate describes this configuration, not the deployed service**, and in
-a stronger sense than "a different image": the instructions differ, **and a model given 11 KB is not
-obviously the same subject as one given 53 KB**.
+a stronger sense than "a different image": **a model given 11 KB is not obviously the same subject as
+one given 53 KB**.
 
 The stub is the default and stays, **because the snapshot and `policy-check` must stay hermetic**. Those
 are build-time paths and a rate is not one, so `SIRENS_ECHO_COMPOSED_BUNDLE` points a run at a staged
 bundle and `composed` names it. **An unreadable bundle fails the run rather than falling back**: a
-dataset naming a bundle it never read is worse than the gap. This closes the instruction gap, not the
-build gap. **What was missing was any statement in the dataset that the stub was used**, which is the
-difference between a bound a reader can see and one they cannot. `composed` is derived where the
+dataset naming a bundle it never read is worse than the gap. `composed` is derived where the
 substitution happens rather than passed in by the caller, **so a dataset cannot claim a real bundle when
 the run used the stub**, and a caller-supplied value is overwritten with a test pinning that. Echo is
-unaffected, not being composed. Whether an eval run should load a real bundle is #316 part 2, **a runner
-decision with a hermeticity cost rather than a provenance one**.
+unaffected, not being composed.
 
 ## Trace lookup
 
