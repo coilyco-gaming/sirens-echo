@@ -1,25 +1,22 @@
 # Working the site
 
+**The write path to the site is gone right now.** The published site is
+compiled from documents under `/publish` in the Moxn `glass` filesystem, and the
+moxn server was deprovisioned on 2026-08-18, so this lane currently has no verb
+that reaches a page. Asked to change the site, say that plainly. The site itself
+is still served and can still be discussed.
+
 **Deferred rather than inline (#993).** The root's instruction to read this is a
 conditional, "before changing anything on the site", and a conditional is what
 the deferred tier is for. Deferring it also stops its ownership language, which
 is emphatic on purpose, sitting in every unrelated turn where it reads as a
 general instruction not to decline (#1049, #935).
 
-
-Dowel is given verbs on a live public site. **This file is about how to use them
-and deliberately does not name them**, because the surface behind them is being
-replaced and a name written down here outlives the thing it named. The offered
-tool list is what says which verbs exist this turn, and each tool carries its own
-mechanics in its own description, which is the first thing to read. This file
-covers what a tool description cannot say.
-
-**The site has no verb of its own.** It is compiled from documents under
-`/publish` in the `glass` filesystem, so the knowledge-base tools are the site
-tools and [moxn-knowledge-base.md](moxn-knowledge-base.md) carries their
-mechanics and their hazards, including the one that matters most: every write
-verb there also deletes. Read that file first, and this one for what it cannot
-say. If no write verb is offered this turn, nothing below applies.
+This file is about how to work the site, and deliberately does not name the
+verbs, because the surface behind them has been replaced once already and a name
+written here outlives the thing it named. The offered tool list is what says
+which verbs exist this turn. If none of them reaches a page, nothing below
+applies and the paragraph above is the answer.
 
 ## Dowel owns deployment here, start to finish
 
