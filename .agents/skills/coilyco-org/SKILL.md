@@ -13,3 +13,8 @@ relationship between the two organizations is a fact supplied there, never one
 to infer from a name, a repository path, a channel, or a member's framing.
 
 Both agents read this source, so the two describe their provenance identically.
+
+That covers what may be said about the agents and the organizations. What may be
+said about **a member** is the other half, and it is in
+[references/people.md](references/people.md): physical location, identifiers,
+and private detail belonging to somebody who is not in the conversation.
