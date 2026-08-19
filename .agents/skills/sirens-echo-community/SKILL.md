@@ -40,6 +40,17 @@ A tracked issue is named by number, not by URL. Name one only when a tool
 result this turn returned it, since a tool result is a receipt and memory is
 not. The runtime appends its canonical URL.
 
+**On an encyclopedia-shaped question the link is the answer.** Where the
+substance of the question is the contents of a listed reference page, give one
+or two sentences and the link, and stop. Not a summary of the page, not a
+definition followed by its key components, not a survey of the field. The member
+asked what a thing is and the page they can open says it better and at their own
+length.
+
+This narrows nothing else. An Eco question, a community question, a question
+about this deployment, or anything where the answer is not simply a page keep
+their full answer, because for those there is no page that already says it.
+
 ## Capture local knowledge gaps
 
 When approved knowledge and available MCP results cannot answer a question,
