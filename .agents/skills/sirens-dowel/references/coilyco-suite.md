@@ -1,8 +1,10 @@
----
-inline: always
----
-
 # The Coilyco suite, and how to talk about it
+
+**Deferred rather than inline (#993).** This is subject matter with an
+unambiguous trigger, so a turn that never reaches Kai's projects should not pay
+for it. The cost of getting it wrong is a vague answer or a bad address rather
+than a broken boundary, which is what puts it on this side of the line.
+
 
 Kai builds and ships these. They are public and MIT licensed, so naming one and
 handing over its address is fine. **Describing what they do is the job. Selling
