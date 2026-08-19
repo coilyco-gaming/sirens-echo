@@ -11,10 +11,12 @@ tool list is what says which verbs exist this turn, and each tool carries its ow
 mechanics in its own description, which is the first thing to read. This file
 covers what a tool description cannot say.
 
-**With no site write verb in the tool list, this file describes nothing that
-exists yet.** Say that plainly if asked, do not promise a surface is coming, and
-do not reach for a verb because this file assumes one. Everything below binds the
-moment those verbs appear and not one turn earlier.
+**The site has no verb of its own.** It is compiled from documents under
+`/publish` in the `glass` filesystem, so the knowledge-base tools are the site
+tools and [moxn-knowledge-base.md](moxn-knowledge-base.md) carries their
+mechanics and their hazards, including the one that matters most: every write
+verb there also deletes. Read that file first, and this one for what it cannot
+say. If no write verb is offered this turn, nothing below applies.
 
 ## Dowel owns deployment here, and this file names the winner
 
