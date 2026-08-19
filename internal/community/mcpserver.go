@@ -69,10 +69,51 @@ func (a *Agent) mcpHandler() http.Handler {
 		},
 		a.handleMCPTurn,
 	)
+	if !a.cfg.MCPReexport {
+		return mcp.NewStreamableHTTPHandler(
+			func(*http.Request) *mcp.Server { return server },
+			&mcp.StreamableHTTPOptions{},
+		)
+	}
+	// Built per request, so a changed roster is the one this client sees.
 	return mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return server },
+		func(request *http.Request) *mcp.Server {
+			return a.reexportServer(request.Context())
+		},
 		&mcp.StreamableHTTPOptions{},
 	)
+}
+
+// reexportServer is mcpHandler's server plus the roster. turn stays registered.
+func (a *Agent) reexportServer(ctx context.Context) *mcp.Server {
+	server := mcp.NewServer(
+		&mcp.Implementation{
+			Name:    a.cfg.InstanceName,
+			Title:   a.cfg.Definition.Identity,
+			Version: "1",
+		},
+		&mcp.ServerOptions{Instructions: a.reexportInstructions()},
+	)
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name: "turn",
+			Description: "Answer one message through this deployment's " +
+				"policy, tools, and response validation.",
+		},
+		a.handleMCPTurn,
+	)
+	a.registerReexportedTools(server, ctx)
+	return server
+}
+
+// reexportInstructions extends serverInstructions, which stays true of turn.
+func (a *Agent) reexportInstructions() string {
+	return a.serverInstructions() +
+		" This deployment also re-exports its own rostered tools, named " +
+		"server__tool. Those reach a server directly and do not pass the " +
+		"response checks turn applies, so they require the deployment token " +
+		"and return records rather than prose."
 }
 
 func (a *Agent) handleMCPTurn(

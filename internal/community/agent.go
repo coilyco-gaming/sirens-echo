@@ -25,10 +25,12 @@ const (
 // Agent owns the Sirens Echo Discord session and its outbound boundaries.
 type Agent struct {
 	// temporal is held only to close it. Nil when no mirror is configured.
-	temporal          interface{ Close() }
-	cfg               Config
-	session           *discordgo.Session
-	tools             *MCPProvider
+	temporal interface{ Close() }
+	cfg      Config
+	session  *discordgo.Session
+	tools    *MCPProvider
+	// reexport caches the roster advertised over /mcp. Zero value is ready.
+	reexport          reexportCache
 	completions       CompletionClient
 	systemPrompt      string
 	telemetry         *Telemetry

@@ -51,6 +51,14 @@ func featureFlags(cfg *Config) []featureFlag {
 			fallback: false,
 			summary:  "Batch a member's rapid comments into one turn on a worker pool.",
 		},
+		{
+			env:      "SIRENS_ECHO_MCP_REEXPORT",
+			target:   &cfg.MCPReexport,
+			fallback: false,
+			summary: "Offer the roster's own tools over /mcp beside turn. " +
+				"They bypass the turn pipeline's checks, so they require the " +
+				"deployment token.",
+		},
 	}
 }
 

@@ -8,3 +8,4 @@ COALESCE_ENABLED                   off   Batch a member's rapid comments into on
 DISCORD_COMMANDS                   off   Register and serve Discord application commands.
 DISCORD_DM_ENABLED                 off   Admit direct messages, which carry no guild moderation.
 DISCORD_ENABLED                    on    Open the Discord gateway session at all.
+MCP_REEXPORT                       off   Offer the roster's own tools over /mcp beside turn. They bypass the turn pipeline's checks, so they require the deployment token.
