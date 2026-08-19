@@ -117,7 +117,7 @@ func TestEachOutcomeHasItsOwnGlyph(t *testing.T) {
 // the dropped ones from vanishing silently.
 func TestTheWorklogIsCapped(t *testing.T) {
 	t.Parallel()
-	over := maxWorklogRows + 4
+	over := maxProgressRows + 4
 	rows := make([]progressRow, 0, over)
 	for index := 0; index < over; index++ {
 		rows = append(rows, progressRow{server: "eco", tool: "get_market", done: true})
@@ -125,11 +125,11 @@ func TestTheWorklogIsCapped(t *testing.T) {
 
 	rendered := worklogRows(rows)
 
-	if len(rendered) != maxWorklogRows+1 {
+	if len(rendered) != maxProgressRows+1 {
 		t.Fatalf("rendered %d lines, want %d rows and one count",
-			len(rendered), maxWorklogRows)
+			len(rendered), maxProgressRows)
 	}
-	if dropped := fmt.Sprintf("%d earlier calls", over-maxWorklogRows); !strings.Contains(rendered[0], dropped) {
+	if dropped := fmt.Sprintf("%d earlier calls", over-maxProgressRows); !strings.Contains(rendered[0], dropped) {
 		t.Errorf("the dropped rows are not counted as %q: %q", dropped, rendered[0])
 	}
 }

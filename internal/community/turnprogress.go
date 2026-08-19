@@ -598,7 +598,7 @@ func (p *turnProgress) narrateWait(ctx context.Context) {
 	seconds := int(elapsed.Round(time.Second).Seconds())
 	// A full column advances its last line in place. The cap bounds how tall a
 	// stuck turn grows, never how long it reports. See sirens-echo#899.
-	if len(p.waits) >= maxProgressWaitLines {
+	if len(p.waits) >= maxProgressRows {
 		p.waits[len(p.waits)-1] = seconds
 	} else {
 		p.waits = append(p.waits, seconds)
