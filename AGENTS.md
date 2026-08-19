@@ -27,7 +27,7 @@ Local skills live under `.agents/skills/`. `sirens-echo-community` and
 `sirens-echo-knowledge` are Echo's compiled local policy and knowledge.
 `coilyco-general` is the domain-neutral HTTP profile.
 `ops-social-discord` guides guarded read-only investigations and is not part of
-the runtime skill roots. `sirens-dowel` is the owl.glass lane's own root, and it
+the runtime skill roots. `sirens-dowel` is the dowel lane's own root, and it
 is where a standing instruction to reach for a tool belongs: its surface map and
 its Moxn and Temporal references are `inline: always` because the decision to
 call a tool happens in the first round, and a reference the model has to choose

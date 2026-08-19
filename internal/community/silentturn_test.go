@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// answeredThroughToolClient is the owl.glass shape: the model wrote its answer
-// through a write tool aimed at the reply channel and returned nothing.
+// answeredThroughToolClient is the shape a write tool aimed at the reply
+// channel produces: the model answered through it and returned nothing.
 type answeredThroughToolClient struct{}
 
 func (answeredThroughToolClient) Complete(
