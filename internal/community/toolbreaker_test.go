@@ -16,22 +16,23 @@ import (
 
 // brokenTool registers a name whose session would panic if it were dispatched,
 // so surviving the call is the proof that no call was made.
-func brokenTool(name, recorded string) *mcpToolSession {
+func brokenTool(name, recorded string, arguments map[string]any) *mcpToolSession {
 	return &mcpToolSession{
 		registered: map[string]registeredMCPTool{
 			name: {serverName: "playwright", toolName: "browser_navigate"},
 		},
-		failed: map[string]string{name: recorded},
+		failed: map[string]string{callKey(name, arguments): recorded},
 	}
 }
 
 func TestASecondCallToAFailedToolIsNotMade(t *testing.T) {
 	t.Parallel()
 	const recorded = "mcp-beaver: upstream MCP session is closed"
-	session := brokenTool("playwright__browser_navigate", recorded)
+	arguments := map[string]any{"url": "x"}
+	session := brokenTool("playwright__browser_navigate", recorded, arguments)
 
 	result, err := session.Call(
-		context.Background(), "playwright__browser_navigate", map[string]any{"url": "x"},
+		context.Background(), "playwright__browser_navigate", arguments,
 	)
 	if err != nil {
 		t.Fatalf("the breaker returned a transport error, which would end the turn: %v", err)
@@ -56,15 +57,35 @@ func TestASecondCallToAFailedToolIsNotMade(t *testing.T) {
 // which is the failure a round cap would have introduced and Kai declined.
 func TestTheBreakerStopsOneToolRatherThanTheRoster(t *testing.T) {
 	t.Parallel()
-	session := brokenTool("playwright__browser_navigate", "closed")
+	dead := map[string]any{"url": "x"}
+	session := brokenTool("playwright__browser_navigate", "closed", dead)
 	session.registered["forgejo__list_issue"] = registeredMCPTool{
 		serverName: "forgejo", toolName: "list_issue",
 	}
-	if _, spent := session.alreadyFailed("forgejo__list_issue"); spent {
+	if _, spent := session.alreadyFailed(callKey("forgejo__list_issue", nil)); spent {
 		t.Fatal("a healthy tool was broken by another tool's failure")
 	}
-	if _, spent := session.alreadyFailed("playwright__browser_navigate"); !spent {
-		t.Fatal("the failed tool is not recorded")
+	if _, spent := session.alreadyFailed(callKey("playwright__browser_navigate", dead)); !spent {
+		t.Fatal("the failed call is not recorded")
+	}
+}
+
+// The observed defect was byte-identical repeats. A model that corrects its
+// arguments is doing the right thing and must not be refused for it.
+func TestACorrectedRetryIsNotRefused(t *testing.T) {
+	t.Parallel()
+	session := brokenTool(
+		"forgejo__list_issue", "unknown field", map[string]any{"q": "typo"},
+	)
+	if _, spent := session.alreadyFailed(
+		callKey("forgejo__list_issue", map[string]any{"q": "fixed"}),
+	); spent {
+		t.Fatal("a corrected retry was refused, so the model cannot recover from its own mistake")
+	}
+	if _, spent := session.alreadyFailed(
+		callKey("forgejo__list_issue", map[string]any{"q": "typo"}),
+	); !spent {
+		t.Fatal("the identical repeat is not blocked, which is the call that was wasted")
 	}
 }
 
@@ -73,9 +94,10 @@ func TestTheBreakerStopsOneToolRatherThanTheRoster(t *testing.T) {
 func TestTheRecordedFailureIsTheFirstOne(t *testing.T) {
 	t.Parallel()
 	session := &mcpToolSession{}
-	session.recordFailure("t", "first")
-	session.recordFailure("t", "second")
-	if recorded, _ := session.alreadyFailed("t"); recorded != "first" {
+	key := callKey("t", nil)
+	session.recordFailure(key, "first")
+	session.recordFailure(key, "second")
+	if recorded, _ := session.alreadyFailed(key); recorded != "first" {
 		t.Errorf("recorded %q, want the failure that was actually returned", recorded)
 	}
 }
@@ -85,11 +107,11 @@ func TestTheRecordedFailureIsTheFirstOne(t *testing.T) {
 func TestAToolThatNeverFailedIsNotBroken(t *testing.T) {
 	t.Parallel()
 	session := &mcpToolSession{}
-	if _, spent := session.alreadyFailed("t"); spent {
+	if _, spent := session.alreadyFailed(callKey("t", nil)); spent {
 		t.Fatal("a tool with no record reads as broken")
 	}
 	// A failure with no text still stops the second call, and still says so.
-	session.recordFailure("t", "")
+	session.recordFailure(callKey("t", nil), "")
 	if notice := repeatedFailureNotice(""); !strings.Contains(notice, "not called again") {
 		t.Errorf("an empty record renders %q", notice)
 	}

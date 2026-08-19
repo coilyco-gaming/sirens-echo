@@ -16,11 +16,12 @@ calls and results, then continues. **An empty roster skips discovery and sends n
 an OpenAI-compatible string, text-part array, or text object.
 
 The harness rejects empty, colliding, or overlong model-facing tool names; calls missing an identifier
-or function name; calls to tools absent from the roster; arguments that are not JSON objects; a response with neither tool calls nor usable content; and more than six rounds. **A
+or function name; calls to tools absent from the roster; arguments that are not JSON objects; a response with neither tool calls nor content; and more than six rounds. **A
 server that fails to connect or list contributes no tools and the turn goes on with the rest, named to
 the model so it reports the gap.** Only an unreachable roster stops the turn, a name collision stays
 fatal, an invocation failure ends the turn with the tool-failure notice, and an MCP error result is
-grounded data the model self-corrects from **once**: a failed tool is replayed, not re-called (#943).
+grounded data the model self-corrects from **once**: an identical failed call is replayed, not re-made
+(#943).
 
 The in-process fixture proves schema discovery, a tool-call-only first response, continuation, alternate
 content forms, and that **a tool which never answers fails on the call bound rather than the
@@ -50,7 +51,7 @@ the answer. In process rather than a twelfth roster server, and registered uncon
 
 ## The fetch tool
 
-A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** It runs inside the
+A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** It runs in the
 cluster, so unbounded it reaches the tailnet, other services' internals, and cloud metadata, **and the model is precisely the component an attacker
 gets to talk to**: a tool that fetches any URL a model can be persuaded to fetch is server-side request
 forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated allowlist, and **empty

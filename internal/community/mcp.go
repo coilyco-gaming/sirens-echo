@@ -2,6 +2,8 @@ package community
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -798,9 +800,10 @@ func (s *mcpToolSession) Call(
 	if !exists {
 		return ToolResult{}, fmt.Errorf("model requested unavailable MCP tool %q", name)
 	}
-	// One failure per tool per turn. The model is told, never silently denied,
-	// because a dropped tool reads as one that might work. See sirens-echo#943.
-	if recorded, spent := s.alreadyFailed(name); spent {
+	// One failure per identical call per turn. Keyed on the arguments too, so a
+	// corrected retry still runs. See docs/sirens-echo-tools.md.
+	attempt := callKey(name, arguments)
+	if recorded, spent := s.alreadyFailed(attempt); spent {
 		return ToolResult{Text: repeatedFailureNotice(recorded), IsError: true}, nil
 	}
 	// Bounded below the turn budget, so a server that never answers fails as a
@@ -836,12 +839,23 @@ func (s *mcpToolSession) Call(
 		)
 	}
 	if result.IsError {
-		s.recordFailure(name, text)
+		s.recordFailure(attempt, text)
 	}
 	return ToolResult{Text: text, IsError: result.IsError}, nil
 }
 
-// alreadyFailed reports the error this tool gave earlier in the same turn.
+// callKey identifies one attempt. Arguments that will not marshal fall back to
+// the tool alone, which breaks wider rather than not at all.
+func callKey(name string, arguments map[string]any) string {
+	encoded, err := json.Marshal(arguments)
+	if err != nil {
+		return name
+	}
+	sum := sha256.Sum256(append([]byte(name+"\x00"), encoded...))
+	return hex.EncodeToString(sum[:16])
+}
+
+// alreadyFailed reports the error this exact call gave earlier in the turn.
 func (s *mcpToolSession) alreadyFailed(name string) (string, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
