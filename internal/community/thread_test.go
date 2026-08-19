@@ -16,41 +16,41 @@ import (
 // A long answer gets somewhere of its own, and a thread that cannot be made
 // must never cost a member their reply. See sirens-echo#239.
 
-func TestAThreadNameComesFromTheMemberNotFromUs(t *testing.T) {
+// The name is the harness's, never the member's. Deriving it put somebody
+// else's truncated sentence under "started a thread:". See sirens-echo#1036.
+func TestAThreadNameNeverCarriesTheMembersWords(t *testing.T) {
 	t.Parallel()
-	message := &discordgo.Message{Content: "what is the Eco server status right now"}
-	if got := threadNameFor(message); got != "what is the Eco server status right now" {
-		t.Errorf("thread name = %q", got)
+	message := &discordgo.Message{
+		Content: "feed cracked 104 exhibitors full roster attached endpoint follows",
+	}
+	got := threadCreationName("", message)
+	if got != threadNameFallback {
+		t.Fatalf("an untitled thread was named %q, want the harness fallback", got)
+	}
+	for _, lifted := range []string{"exhibitors", "cracked", "roster"} {
+		if strings.Contains(got, lifted) {
+			t.Errorf("%q was lifted from the member's message into %q", lifted, got)
+		}
 	}
 }
 
-// Markup and mentions are dropped rather than summarised, because summarising
-// would be authoring a name for a member.
-func TestAThreadNameDropsMarkupAndNeverEmpties(t *testing.T) {
+// A title the harness generated is still used, and still bounded.
+func TestAGeneratedTitleSurvivesAndStaysBounded(t *testing.T) {
 	t.Parallel()
-	got := threadNameFor(&discordgo.Message{Content: "**hey** <@123>, status?"})
-	for _, banned := range []string{"*", "<", "@", "?"} {
-		if strings.Contains(got, banned) {
-			t.Errorf("%q survived into the thread name %q", banned, got)
-		}
+	message := &discordgo.Message{Content: "irrelevant member text"}
+	if got := threadCreationName("Eco server status", message); got != "Eco server status" {
+		t.Fatalf("generated title became %q", got)
 	}
-	if strings.Contains(got, "  ") {
-		t.Errorf("dropped markup left a double space: %q", got)
-	}
-	// All punctuation still has to produce a name, since Discord refuses a
-	// thread without one.
-	if name := threadNameFor(&discordgo.Message{Content: "!!! ???"}); name != threadNameFallback {
-		t.Errorf("an unusable message produced %q, not the fallback", name)
-	}
-	if threadNameFor(nil) != threadNameFallback {
-		t.Error("a nil message produced no fallback name")
+	long := strings.Repeat("a", threadTitleRunes+40)
+	if got := threadCreationName(long, message); len([]rune(got)) > threadTitleRunes {
+		t.Fatalf("title ran to %d runes, past the %d bound", len([]rune(got)), threadTitleRunes)
 	}
 }
 
 func TestAThreadNameStaysInsideDiscordsCap(t *testing.T) {
 	t.Parallel()
 	long := strings.Repeat("status ", 60)
-	if got := threadNameFor(&discordgo.Message{Content: long}); len([]rune(got)) > threadNameRunes {
+	if got := threadCreationName(long, nil); len([]rune(got)) > threadNameRunes {
 		t.Errorf("thread name is %d runes, over Discord's cap of %d", len([]rune(got)), threadNameRunes)
 	}
 }
@@ -145,9 +145,10 @@ func TestAFailedTitleKeepsTheDerivedName(t *testing.T) {
 	if got := threadTitle(t.Context(), nil, message, "req-1", nil); got != "" {
 		t.Errorf("a nil client returned %q", got)
 	}
-	// The fallback is still the derived name, unchanged.
-	if got := threadNameFor(message); got != "how much does it cost to build a log house" {
-		t.Errorf("the derived name changed: %q", got)
+	// A failed titler now falls back to the harness's own name rather than to
+	// the member's words. See sirens-echo#1036.
+	if got := threadCreationName("", message); got != threadNameFallback {
+		t.Errorf("a failed title fell back to %q", got)
 	}
 }
 
