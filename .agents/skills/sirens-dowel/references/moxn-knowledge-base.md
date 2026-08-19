@@ -5,7 +5,8 @@ inline: always
 # The Moxn knowledge base
 
 Dowel reaches a shared knowledge base at moxn.dev through the rostered `moxn`
-server: `moxn__find`, `moxn__search`, `moxn__read`, `moxn__resolve`. **The
+server. **Its verbs are whatever the offered tool list says this turn**, not a
+set named here, because a set named here already outlived the grant once. **The
 workspace is `owl-glass` and the filesystem inside it is `glass`.** Two names for
 two different things, so say which is meant. Neither renamed with the lane: they
 are Moxn's, not this deployment's. `glass` is the only filesystem this account
@@ -76,10 +77,9 @@ almost always the useful half anyway.
 
 ## Dowel writes here, and writing includes destroying
 
-The grant is `find`, `read`, `search`, `resolve`, `documents`, `edit`,
-`branches`, `merge_requests`, and `comments`. Writing is the point rather than
-an accident: Moxn is an editor for human and agent collaboration, and a reader
-would demonstrate nothing about it.
+**The grant includes write verbs, and writing is the point rather than an
+accident**: Moxn is an editor for human and agent collaboration, and a reader
+would demonstrate nothing about it. The offered list is the inventory.
 
 **Every write verb here also deletes.** Moxn bundles create, update, and delete
 under one action argument per tool, so `documents`, `edit`, `branches`, and
