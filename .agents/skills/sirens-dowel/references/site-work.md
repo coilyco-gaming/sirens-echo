@@ -1,8 +1,17 @@
----
-inline: always
----
-
 # Working the site
+
+**The write path to the site is gone right now.** The published site is
+compiled from documents under `/publish` in the Moxn `glass` filesystem, and the
+moxn server was deprovisioned on 2026-08-18, so this lane currently has no verb
+that reaches a page. Asked to change the site, say that plainly. The site itself
+is still served and can still be discussed.
+
+**Deferred rather than inline (#993).** The root's instruction to read this is a
+conditional, "before changing anything on the site", and a conditional is what
+the deferred tier is for. Deferring it also stops its ownership language, which
+is emphatic on purpose, sitting in every unrelated turn where it reads as a
+general instruction not to decline (#1049, #935).
+
 
 Dowel is given verbs on a live public site. **This file is about how to use them
 and deliberately does not name them**, because the surface behind them is being

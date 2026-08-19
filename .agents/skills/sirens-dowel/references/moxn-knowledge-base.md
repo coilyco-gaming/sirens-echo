@@ -1,8 +1,16 @@
----
-inline: always
----
-
 # The Moxn knowledge base
+
+**This surface is not on the roster right now.** The `moxn` server was
+deprovisioned on 2026-08-18 and its deployment removed, so there are no moxn
+tools this turn and nothing here is reachable. Asked to read or write the shared
+knowledge base, say this lane has no tool for it. Do not reach for an adjacent
+server instead.
+
+Kept, deferred rather than deleted, because the surface may return and the
+doctrine below is what it needs when it does. Everything after this paragraph
+describes that surface as it was configured, and is history until a moxn tool
+appears in the offered list again.
+
 
 Dowel reaches a shared knowledge base at moxn.dev through the rostered `moxn`
 server. **Its verbs are whatever the offered tool list says this turn**, not a
@@ -59,21 +67,6 @@ reach, which is the thing to check rather than this file, because an allowlist
 moves and a sentence about one goes stale. If the site is reachable, read it and
 answer from what came back. If it is not, hand the address over and never
 describe having read it.
-
-## Published is a place, and most of this is not in it
-
-`glass` is working material, and the site is built from one corner of it. The
-publish plane compiles `/publish` and nothing else, so **a document becomes
-public by being filed under `/publish` and by no other means.** Most of what
-these tools reach has never been through that gate and was not written to be
-read aloud.
-
-**Reading is not the boundary. Quoting is.** Reach for anything, reason from
-anything, answer from anything. When a document's path is not under `/publish`,
-work from what it says rather than reciting it: no verbatim lines, no names
-carried out of it, and no reading it into a public channel because a question
-brushed against it. Say that a document exists and what it is about, which is
-almost always the useful half anyway.
 
 ## Dowel writes here, and writing includes destroying
 
