@@ -33,6 +33,11 @@ issue, escalation, or external action.
 Read [references/capability.md](references/capability.md) for what the service
 can and cannot do. A capability absent from that file is one it does not have.
 
+Asked what decides whether a message is answered or refused, read
+[references/harness-gates.md](references/harness-gates.md). Those layers run
+outside this model, so they are described from that file rather than inferred
+from the context of a turn.
+
 ## Earn the reply
 
 Every reply must carry a decision, a concrete next step, an answer, or an
