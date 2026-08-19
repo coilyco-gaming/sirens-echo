@@ -12,19 +12,19 @@ authority.
 When a definition configures MCP servers, the harness opens every session, lists each published tool,
 description, and input schema, exposes each model name as `<server>__<tool>`, sends those schemas with
 the Agent Proxy request, executes valid model-requested tools, renders each result as text, appends the
-calls and results, then continues. **An empty roster skips discovery and sends no tools.** Final content can be an
-OpenAI-compatible string, text-part array, or text object.
+calls and results, then continues. **An empty roster skips discovery and sends no tools.** Final content can be
+an OpenAI-compatible string, text-part array, or text object.
 
-The harness rejects empty, colliding, or overlong model-facing tool names; tool calls missing an
-identifier or function name; calls to tools absent from the discovered roster; arguments that are not
-JSON objects; a response with neither tool calls nor usable content; and more than six rounds. **A
+The harness rejects empty, colliding, or overlong model-facing tool names; calls missing an identifier
+or function name; calls to tools absent from the roster; arguments that are not JSON objects; a response with neither tool calls nor content; and more than six rounds. **A
 server that fails to connect or list contributes no tools and the turn goes on with the rest, named to
 the model so it reports the gap.** Only an unreachable roster stops the turn, a name collision stays
 fatal, an invocation failure ends the turn with the tool-failure notice, and an MCP error result is
-grounded data the model self-corrects from.
+grounded data the model self-corrects from **once**: an identical failed call is replayed, not re-made
+(#943).
 
-The in-process MCP fixture proves schema discovery, a tool-call-only first response, continuation,
-alternate content forms, and that **a tool which never answers fails on the call bound rather than the
+The in-process fixture proves schema discovery, a tool-call-only first response, continuation, alternate
+content forms, and that **a tool which never answers fails on the call bound rather than the
 turn's**. The live Echo evaluation requires an `eco__get_eco_server_status` call and no writes.
 
 ## Harness tools
@@ -51,11 +51,11 @@ the answer. In process rather than a twelfth roster server, and registered uncon
 
 ## The fetch tool
 
-A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** The fetch runs inside the cluster, so without bounds it reaches the tailnet, other services'
-internal endpoints, and cloud metadata addresses, **and the model is precisely the component an attacker
+A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** It runs in the
+cluster, so unbounded it reaches the tailnet, other services' internals, and cloud metadata, **and the model is precisely the component an attacker
 gets to talk to**: a tool that fetches any URL a model can be persuaded to fetch is server-side request
-forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated allowlist, and
-**empty offers no tool at all**: no schema in the prompt, nothing to be talked into.
+forgery with a conversational interface. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated allowlist, and **empty
+offers no tool at all**: no schema in the prompt, nothing to be talked into.
 
 * **A wildcard covers subdomains and nothing else.** `*.mozilla.com` matches `www.mozilla.com` and
   `a.b.mozilla.com`, **not** `mozilla.com`, which is a separate entry. It is not a suffix test: the
