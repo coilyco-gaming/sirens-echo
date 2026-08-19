@@ -32,9 +32,9 @@ replacing it. Discord delivers the addressed message inline for most replies, an
 fetches it under the same budget as the other gate-forced calls. **Only one level renders**: a reply to
 a reply does not walk the chain, because the second is a claim about someone else's subject.
 
-**The turn also carries a clock.** Nothing named the time, so `what time is it` had no answer and
-`discord-timestamps` had no epoch to render from (#855). One system message states the moment, **read
-once per turn**, so two rounds agree about it.
+**The turn carries a clock and its admitted surface**, a system message each, **read once per turn**.
+Nothing named the time (#855), and nothing named who it may answer (#909). The surface renders from the
+gate's own policy, in counts rather than ids.
 
 ## Snapshots
 
