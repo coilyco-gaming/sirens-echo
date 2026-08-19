@@ -51,10 +51,10 @@ type CommandDefinition struct {
 	Ephemeral bool
 }
 
-// JobCommands is the closed command set. Adding one is a reviewed act in this
-// repository, exactly as adding a job kind is.
-func JobCommands() []CommandDefinition {
-	return []CommandDefinition{
+// JobCommands is the closed command set, one reviewed act to add to. mcpServers
+// closes /mcp's argument, and empty drops it. See docs/sirens-echo-commands.md.
+func JobCommands(mcpServers []string) []CommandDefinition {
+	commands := []CommandDefinition{
 		{
 			Name:        "echo",
 			Description: "Submit an echo job, which proves the lifecycle end to end.",
@@ -82,6 +82,23 @@ func JobCommands() []CommandDefinition {
 			Ephemeral:   true,
 		},
 	}
+	if len(mcpServers) == 0 {
+		return commands
+	}
+	return append(commands, CommandDefinition{
+		Name:        "mcp",
+		Description: "Describe one MCP server's tools, which /mcps has no room to.",
+		Ephemeral:   true,
+		Parameters: []CommandParameter{{
+			Name:        "server",
+			Description: "Which server to describe.",
+			Type:        ParameterString,
+			Required:    true,
+			// The roster is fixed at image build, so the set is closed and
+			// choices is the tightest bound available.
+			Choices: mcpServers,
+		}},
+	})
 }
 
 func jobIDParameter() CommandParameter {
@@ -128,6 +145,13 @@ func (c CommandDefinition) Validate() error {
 				return fmt.Errorf("command %s parameter %s has invalid pattern: %w",
 					c.Name, parameter.Name, err)
 			}
+		}
+		// A required argument closed to nothing can never be satisfied, so the
+		// command would publish and then refuse every call.
+		if parameter.Required && parameter.Type == ParameterString &&
+			parameter.Choices != nil && len(parameter.Choices) == 0 {
+			return fmt.Errorf("command %s parameter %s is closed to no choices",
+				c.Name, parameter.Name)
 		}
 	}
 	return nil
@@ -216,9 +240,10 @@ func (p CommandParameter) check(command, value string) error {
 	return nil
 }
 
-// LookupCommand finds a declared command by name.
-func LookupCommand(name string) (CommandDefinition, bool) {
-	for _, command := range JobCommands() {
+// LookupCommand finds a declared command by name, against the same roster the
+// registration used, so a published argument binds the way it was advertised.
+func LookupCommand(name string, mcpServers []string) (CommandDefinition, bool) {
+	for _, command := range JobCommands(mcpServers) {
 		if command.Name == name {
 			return command, true
 		}

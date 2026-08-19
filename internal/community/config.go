@@ -288,6 +288,9 @@ var (
 	// mcpsReplyBudget leaves room under discordReplyLimit for /mcps's own
 	// truncation notice, so a long roster is cut with a line saying so.
 	mcpsReplyBudget int
+	// mcpToolSummaryRunes bounds one tool's own description inside /mcp, so a
+	// verbose server cannot spend the whole reply on its first tool.
+	mcpToolSummaryRunes int
 	// replyAttachmentBytes bounds the file an overflowing reply is sent as.
 	// Derived, so the scratchpad's limit is the one number to move.
 	replyAttachmentBytes int
@@ -470,6 +473,7 @@ func knobs() []knob {
 		overridable(&threadPrefillReads, "SIRENS_ECHO_THREAD_PREFILL_READS", 10),
 		overridable(&discordReplyLimit, "SIRENS_ECHO_REPLY_LIMIT", 1990),
 		overridable(&mcpsReplyBudget, "SIRENS_ECHO_MCPS_REPLY_BUDGET", 1800),
+		overridable(&mcpToolSummaryRunes, "SIRENS_ECHO_MCP_TOOL_SUMMARY_RUNES", 90),
 		overridable(&threadNameRunes, "SIRENS_ECHO_THREAD_NAME_RUNES", 100),
 		overridable(&threadTitleRunes, "SIRENS_ECHO_THREAD_TITLE_RUNES", 60),
 		overridable(&threadTitleWords, "SIRENS_ECHO_THREAD_TITLE_WORDS", 9),

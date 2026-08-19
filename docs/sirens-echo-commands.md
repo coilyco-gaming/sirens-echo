@@ -90,24 +90,25 @@ it is, and its argument schema is declared here rather than taken from the publi
 must be answered in three seconds and a model turn takes minutes**, so a prompt command needs a deferred
 response or the job path (sirens-echo#884).
 
-## /mcps
+## /mcps and /mcp
 
-`/mcps` reports the MCP servers this deployment reaches and the tools each advertises. It takes no
-arguments and submits no job.
+`/mcps` names the MCP servers this deployment reaches and their tools, taking no arguments and no job.
+`/mcp <server>` describes one, adding **what each tool does**: an index and a detail, not a long and a
+short form.
 
-**It reads what the process reached, not what the file declares.** The roster file names servers,
-whether one answered is a different fact, and **the two come apart exactly when someone needs this
-command**. So the reply is built from the discovered tool set with the configured roster supplying the
-names, and three states stay distinct because collapsing them hides the interesting one: `name (n):
-tools`, `name: no tools` (answered, advertising nothing), and `name: did not answer this turn`.
+**Both read what the process reached, not what the file declares.** The roster names servers, whether
+one answered is a different fact, and **the two come apart exactly when someone needs this**. So three
+states stay distinct, collapsing them hiding the interesting one: `name (n): tools`, `name: no tools`
+(answered, advertising nothing), and `name: did not answer this turn`.
 
-**It carries no addresses.** An MCP entry holds a URL, a transport, and an environment map, none of
-which is rendered: a name is a fact about the deployment, an address is an identifier, and a test
-asserts the absence. **The reply is ephemeral**, because introspection belongs to whoever asked and
-Echo's channel carries members who did not. The declaration carries that flag rather than the handler,
-so the refusal paths inherit it and **a denied `/mcps` does not become the public event the command was
-avoiding**.
+**Neither carries addresses**: a name is a fact about the deployment, an address is an identifier, and
+a test asserts the absence. **Both are ephemeral**, since introspection belongs to whoever asked and
+Echo's channel carries members who did not, and the declaration carries that flag rather than the
+handler, so **a denied one is not the public event it was avoiding**. `runCommand` answers both above
+the job guard, and each reply is cut to one interaction and says so, since **a silently short list reads
+as a short one**.
 
-`runCommand` answers it above the job guard, because reporting the tool surface is not job work. The
-reply is cut to fit one interaction and says so when it cut something, since **a silently short list is
-indistinguishable from a short roster**, the failure this command exists to prevent.
+**`/mcp`'s argument carries choices**, a server name naming a thing and the roster being fixed at image
+build. It is read at registration and **again at dispatch**, so a choice outliving its roster is
+refused, and no MCP publishes no `/mcp`. **Neither threads**: a thread hangs off a channel message, and
+an ephemeral reply is not one.
