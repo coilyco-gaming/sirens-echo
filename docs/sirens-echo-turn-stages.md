@@ -2,11 +2,45 @@
 
 A turn's wall clock is attributable to named stages.
 
+## One allowance for the whole turn
+
+`ModelBudget` bounds **one completion**: `Complete` runs `tool_rounds + response_repairs +
+budget_raises + 1` model calls, then withdraws the tools and asks for an answer from what it gathered.
+**A turn is not one completion.** The content gate, the answer, and the filing check are separate
+`Complete` calls each opening that ceiling again, so it multiplied rather than bound.
+
+Measured on `sirens-dowel` over 24h to 2026-08-19: `model.round` never passed **15**, the last round of
+a 16-call ceiling, while the heaviest turn ran **36** `model.chat` spans in 235.9s. Its rounds read 0-8
+three times and taper to 13 once, so that turn is three completions of 14, 13, and 9 rather than one
+long loop, and `mcp.tools.list` sits beside them three times. **Nothing was counting the turn**, which
+is why neither a shorter `SIRENS_ECHO_REQUEST_TIMEOUT` nor a smaller `tool_rounds` was the fix: the
+clock drops the hard turns, and `tool_rounds` was already being honoured.
+
+`SIRENS_ECHO_TURN_MODEL_CALLS` (`24`, per lane `model_budget.turn_model_calls`) rides the turn context
+and is spent by every completion under it. **It gates investigation and never the answer**: under two
+calls a tool round no longer fits, so tools are withdrawn and the spent-budget notice appended, logged
+as `model.turn.budget.spent`, while each completion still buys its final call. A starved content gate
+or filing check fails the turn outright, worse than a turn answering from partial evidence and saying
+so. A round costs two calls, so an allowance under two is refused rather than shipped as a silently
+toolless lane. Only an ingress turn installs one, so the board, bridge, and rate lane are
+unchanged. Count `model.chat` per `trace_id` for a turn's whole spend.
+
 ## The settle wait
 
 Between the last `model.response` and `turn.reply.ready` a turn sits under `turn.progress.settle`.
-**A member's answer can be held for up to 10 seconds after it is ready**, and whether that trade is
-right is a separate question from whether it is visible.
+**A member's answer can be held for just under one full beat after it is ready**, which is
+`turnProgressEvery`, twice `SIRENS_ECHO_PROGRESS_AFTER`. At the packaged 10s wait that is a hold of
+**up to 20 seconds**, not ten: `settleDelay` returns `turnProgressEvery - remainder`, so the ceiling
+is the beat rather than the wait. This page said ten, and the telemetry disagreed with it in the
+open: measured on `sirens-dowel` over 24h, `turn.progress.settle` ran p50 15.97s against p95
+**19.9997s**, which is the 20s beat and could not have been the 10s wait.
+
+**Half of the number is not a rounding error when the number is the argument.** Whether holding a
+finished answer to protect the cadence of a line that is deleted when the answer lands is the right
+trade is a separate question from whether it is visible, and it is a question someone decides by
+reading this sentence. Ordinary turns are where it bites rather than slow ones: three median
+`sirens-dowel` turns spent 9.5s of 22.3s and 20.0s of 35.3s in the settle, against 0.6s and 1.1s in
+tool calls.
 
 ## Which check refused a reply
 

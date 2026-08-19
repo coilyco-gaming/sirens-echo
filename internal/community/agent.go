@@ -1233,6 +1233,9 @@ func (a *Agent) runTurn(
 	}
 	turnCtx = WithRequester(turnCtx, turn.Requester())
 	turnCtx = WithSession(turnCtx, sessionOf(turn))
+	// The only bound that sees a turn as one thing rather than as each of the
+	// completions it makes. See docs/sirens-echo-turn-stages.md.
+	turnCtx = withTurnBudget(turnCtx, a.cfg.Definition.ModelBudget.resolved().TurnModelCalls)
 	// The tool loop narrates from behind the completion boundary, and the
 	// watcher narrates a stage that is waiting rather than changing.
 	turnCtx = WithTurnProgress(turnCtx, progress)

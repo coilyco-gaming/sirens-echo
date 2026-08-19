@@ -79,6 +79,9 @@ func parseKnob[T knobValue](raw string) (T, bool) {
 var (
 	maxToolRounds      int
 	maxResponseRepairs int
+	// turnModelCalls bounds a turn where maxToolRounds bounds one completion of
+	// the several a turn makes. See docs/sirens-echo-turn-stages.md.
+	turnModelCalls int
 	// maxToolResultBytes bounds one tool result before it re-enters the
 	// prompt. Four parallel Eco calls inflated a 6k prompt past 47k.
 	maxToolResultBytes int
@@ -407,6 +410,7 @@ var (
 func knobs() []knob {
 	return []knob{
 		overridable(&maxToolRounds, "SIRENS_ECHO_TOOL_ROUNDS", 6),
+		overridable(&turnModelCalls, "SIRENS_ECHO_TURN_MODEL_CALLS", 24),
 		overridable(&maxResponseRepairs, "SIRENS_ECHO_RESPONSE_REPAIRS", 1),
 		overridable(&maxToolResultBytes, "SIRENS_ECHO_TOOL_RESULT_BYTES", 8*1024),
 		overridable(&maxAgentProxyResponseBytes, "SIRENS_ECHO_PROXY_RESPONSE_BYTES", 2*1024*1024),
@@ -709,7 +713,10 @@ type Definition struct {
 // ModelBudget is what one turn on this definition may spend on model calls. The
 // two profiles do not share a substrate, so they cannot share one ceiling.
 type ModelBudget struct {
-	ToolRounds           int `json:"tool_rounds,omitempty" yaml:"tool_rounds,omitempty"`
+	ToolRounds int `json:"tool_rounds,omitempty" yaml:"tool_rounds,omitempty"`
+	// TurnModelCalls is the whole turn's allowance, shared by the content gate,
+	// the answer, and the filing check. ToolRounds bounds each of those alone.
+	TurnModelCalls       int `json:"turn_model_calls,omitempty" yaml:"turn_model_calls,omitempty"`
 	BaseCompletionTokens int `json:"base_completion_tokens,omitempty" yaml:"base_completion_tokens,omitempty"`
 	MaxCompletionTokens  int `json:"max_completion_tokens,omitempty" yaml:"max_completion_tokens,omitempty"`
 	BudgetRaises         int `json:"budget_raises,omitempty" yaml:"budget_raises,omitempty"`
@@ -735,6 +742,9 @@ func (b ModelBudget) resolved() ModelBudget {
 	if b.ToolRounds == 0 {
 		b.ToolRounds = maxToolRounds
 	}
+	if b.TurnModelCalls == 0 {
+		b.TurnModelCalls = turnModelCalls
+	}
 	if b.BaseCompletionTokens == 0 {
 		b.BaseCompletionTokens = baseCompletionTokens
 	}
@@ -758,6 +768,7 @@ func (b ModelBudget) validate() error {
 		value int
 	}{
 		{"tool_rounds", b.ToolRounds},
+		{"turn_model_calls", b.TurnModelCalls},
 		{"base_completion_tokens", b.BaseCompletionTokens},
 		{"max_completion_tokens", b.MaxCompletionTokens},
 		{"budget_raises", b.BudgetRaises},
@@ -778,6 +789,15 @@ func (b ModelBudget) validate() error {
 		}
 	}
 	resolved := b.resolved()
+	// A tool round costs two calls, so an allowance below two is a toolless
+	// lane spelled as a number, and never what the value meant.
+	if resolved.TurnModelCalls < 2 {
+		return fmt.Errorf(
+			"model_budget turn_model_calls %d funds no tool round, so the lane "+
+				"would answer without tools on every turn",
+			resolved.TurnModelCalls,
+		)
+	}
 	if resolved.MaxCompletionTokens < resolved.BaseCompletionTokens {
 		return fmt.Errorf(
 			"model_budget max_completion_tokens %d is below base_completion_tokens %d",

@@ -532,7 +532,18 @@ func (c ProxyClient) Complete(
 	budget := c.budget()
 	completionTokens := budget.BaseCompletionTokens
 	maxModelCalls := budget.ToolRounds + maxResponseRepairs + budget.BudgetRaises + 1
+	// Shared with every other completion this turn makes, so a turn cannot
+	// restart the ceiling above by asking a second time.
+	turn := turnBudgetFrom(ctx)
 	for round := 0; round < maxModelCalls; round++ {
+		// The allowance gates investigation and never the answer, so the last
+		// calls buy words. See docs/sirens-echo-turn-stages.md.
+		if !toolsSpent && !turn.affordsToolRound() {
+			toolsSpent = true
+			telemetry.Info(ctx, "model.turn.budget.spent", slog.Int("rounds", toolRounds))
+			messages = append(messages, chatMessage{Role: "system", Content: toolBudgetSpentNotice})
+		}
+		turn.spend()
 		requestTools := tools
 		if repairAttempts > 0 || toolsSpent {
 			requestTools = nil
