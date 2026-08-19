@@ -150,20 +150,20 @@ func TestTheWaitColumnIsBoundedAndKeepsUpdating(t *testing.T) {
 
 	// Long enough that the column fills and then keeps going, with the backoff
 	// in force. Beats rather than edits, which is the distinction #934 added.
-	beats := 1 << (maxProgressWaitLines + 2)
+	beats := 1 << (maxProgressRows + 2)
 	for i := 0; i < beats; i++ {
 		advance(turnProgressEvery)
 		progress.refresh(context.Background())
 	}
 	// It still edits. The indicator going quiet is what a member read as the
 	// turn stalling around 130 seconds, and that must not come back. See #899.
-	if len(sink.edits) < maxProgressWaitLines {
+	if len(sink.edits) < maxProgressRows {
 		t.Fatalf("edits = %d over %d beats, so the indicator went quiet",
 			len(sink.edits), beats)
 	}
 	final := sink.edits[len(sink.edits)-1]
-	if got := strings.Count(final, "still "); got != maxProgressWaitLines {
-		t.Errorf("final body carries %d wait lines, want %d", got, maxProgressWaitLines)
+	if got := strings.Count(final, "still "); got != maxProgressRows {
+		t.Errorf("final body carries %d wait lines, want %d", got, maxProgressRows)
 	}
 	// The last line advances in place, so the newest elapsed is the one shown.
 	if !strings.Contains(final, "seconds") {

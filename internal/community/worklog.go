@@ -57,8 +57,8 @@ func worklogRow(row progressRow) string {
 func worklogRows(rows []progressRow) []string {
 	visible := rows
 	dropped := 0
-	if len(rows) > maxWorklogRows {
-		dropped = len(rows) - maxWorklogRows
+	if len(rows) > maxProgressRows {
+		dropped = len(rows) - maxProgressRows
 		visible = rows[dropped:]
 	}
 	rendered := make([]string, 0, len(visible)+1)

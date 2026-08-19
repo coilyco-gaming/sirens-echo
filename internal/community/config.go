@@ -316,9 +316,9 @@ var (
 
 // Reply rendering bounds
 var (
-	// maxProgressWaitLines bounds how tall the column grows, not how long it
-	// reports: a full column advances in place. See sirens-echo#899.
-	maxProgressWaitLines int
+	// maxProgressRows bounds how tall the progress element grows on either
+	// surface: worklog rows in the embed, wait lines in the notice fallback.
+	maxProgressRows int
 	// maxCalculatorRunes bounds one expression, so a pasted document cannot
 	// arrive as arithmetic. See docs/sirens-echo-tools.md.
 	maxCalculatorRunes int
@@ -331,9 +331,6 @@ var (
 	maxCalculatorPlaces int
 	// maxProxyToolNameBytes bounds one served tool name.
 	maxProxyToolNameBytes int
-	// maxWorklogRows bounds the embed. A forty-call turn must not render forty
-	// rows, and the earliest are the least interesting once later ones resolved.
-	maxWorklogRows int
 	// maxRedactedBlocks bounds the removal. Past it this is no longer a message
 	// with a bad block in it, and the member is better served by the refusal.
 	maxRedactedBlocks int
@@ -488,13 +485,12 @@ func knobs() []knob {
 		overridable(&threadTitleWords, "SIRENS_ECHO_THREAD_TITLE_WORDS", 9),
 		overridable(&threadArchiveMinutes, "SIRENS_ECHO_THREAD_ARCHIVE_MINUTES", 60),
 
-		overridable(&maxProgressWaitLines, "SIRENS_ECHO_PROGRESS_WAIT_LINES", 12),
+		overridable(&maxProgressRows, "SIRENS_ECHO_PROGRESS_ROWS", 12),
 		overridable(&maxCalculatorRunes, "SIRENS_ECHO_CALCULATOR_RUNES", 200),
 		overridable(&maxCalculatorDigits, "SIRENS_ECHO_CALCULATOR_DIGITS", 30),
 		overridable(&maxCalculatorExponent, "SIRENS_ECHO_CALCULATOR_EXPONENT", 64),
 		overridable(&maxCalculatorPlaces, "SIRENS_ECHO_CALCULATOR_PLACES", 10),
 		overridable(&maxProxyToolNameBytes, "SIRENS_ECHO_PROXY_TOOL_NAME_BYTES", 64),
-		overridable(&maxWorklogRows, "SIRENS_ECHO_WORKLOG_ROWS", 12),
 		overridable(&maxRedactedBlocks, "SIRENS_ECHO_REDACTED_BLOCKS", 2),
 		overridable(&inventedChannelRunes, "SIRENS_ECHO_INVENTED_CHANNEL_RUNES", 64),
 		overridable(&maxObjectEmoji, "SIRENS_ECHO_OBJECT_EMOJI", 3),
