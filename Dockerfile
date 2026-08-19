@@ -18,6 +18,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-compose ./cmd/sirens-echo-compose \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-prompt ./cmd/sirens-echo-prompt \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-access-check ./cmd/sirens-echo-access-check \
+    && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-temporal-mcp ./cmd/sirens-echo-temporal-mcp \
     && /out/sirens-echo-policy-check
 
 # The release image ships agent-compose but not the composed catalogue, so this
@@ -68,6 +69,9 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-compose /usr/local/bin/sire
 # Deploy's CI invokes this against the ConfigMap before applying it, so it has
 # to reach the released image and not only the build stage. See #628.
 COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin/sirens-echo-access-check
+# A sidecar entrypoint, so the roster's Temporal server is this same image run
+# with a different command rather than another image to publish. deploy#698.
+COPY --from=build --chown=1000:1000 /out/sirens-echo-temporal-mcp /usr/local/bin/sirens-echo-temporal-mcp
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
 COPY --chown=1000:1000 agents /app/agents
