@@ -773,6 +773,11 @@ func (c ProxyClient) Complete(
 			// rather than only a log. See sirens-echo#640.
 			toolBytes := budget.ToolResultBytesFor(definition.Name)
 			reinjected, delivered, trimmed := boundToolResult(result.Text, toolBytes)
+			// The closed-set reference a skill read delivered, so #968's
+			// trigger rates are queryable. Never argument text.
+			if result.Detail != "" {
+				toolSpan.SetAttributes(attribute.String("mcp.tool.skill", result.Detail))
+			}
 			// On the span as well as the metric, so a reader holding one trace
 			// can tell a call that returned rows from one that returned none.
 			toolSpan.SetAttributes(
