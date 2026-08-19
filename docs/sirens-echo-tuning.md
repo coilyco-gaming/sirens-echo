@@ -39,6 +39,10 @@ names only what it changes and one naming none behaves exactly as the defaults d
 (#467). **The declared values stay the defaults rather than becoming dead**, which keeps `config.go` the
 answer to "what does this service do if nobody says otherwise".
 
+`turn_model_calls` is the one field in that budget which bounds the turn rather than the completion,
+because a turn makes several completions and each of the other fields binds one of them. See
+[turn-stages](sirens-echo-turn-stages.md).
+
 A budget is validated at load. Every field is a ceiling, so none may be negative, **a ceiling below the
 floor is refused, and so is one the rungs stop short of**: the ladder doubles, so `base` times the step
 to the power of the raises has to reach `max`, **because a ceiling that is never applied reads as

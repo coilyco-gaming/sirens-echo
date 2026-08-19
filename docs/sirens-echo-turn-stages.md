@@ -2,6 +2,29 @@
 
 A turn's wall clock is attributable to named stages.
 
+## One allowance for the whole turn
+
+`ModelBudget` bounds **one completion**: `Complete` runs `tool_rounds + response_repairs +
+budget_raises + 1` model calls, then withdraws the tools and asks for an answer from what it gathered.
+**A turn is not one completion.** The content gate, the answer, and the filing check are separate
+`Complete` calls each opening that ceiling again, so it multiplied rather than bound.
+
+Measured on `sirens-dowel` over 24h to 2026-08-19: `model.round` never passed **15**, the last round of
+a 16-call ceiling, while the heaviest turn ran **36** `model.chat` spans in 235.9s. Its rounds read 0-8
+three times and taper to 13 once, so that turn is three completions of 14, 13, and 9 rather than one
+long loop, and `mcp.tools.list` sits beside them three times. **Nothing was counting the turn**, which
+is why neither a shorter `SIRENS_ECHO_REQUEST_TIMEOUT` nor a smaller `tool_rounds` was the fix: the
+clock drops the hard turns, and `tool_rounds` was already being honoured.
+
+`SIRENS_ECHO_TURN_MODEL_CALLS` (`24`, per lane `model_budget.turn_model_calls`) rides the turn context
+and is spent by every completion under it. **It gates investigation and never the answer**: under two
+calls a tool round no longer fits, so tools are withdrawn and the spent-budget notice appended, logged
+as `model.turn.budget.spent`, while each completion still buys its final call. A starved content gate
+or filing check fails the turn outright, worse than a turn answering from partial evidence and saying
+so. A round costs two calls, so an allowance under two is refused rather than shipped as a silently
+toolless lane. Only an ingress turn installs one, so the board, bridge, and rate lane are
+unchanged. Count `model.chat` per `trace_id` for a turn's whole spend.
+
 ## The settle wait
 
 Between the last `model.response` and `turn.reply.ready` a turn sits under `turn.progress.settle`.
