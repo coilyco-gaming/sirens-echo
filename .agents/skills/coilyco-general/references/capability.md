@@ -34,6 +34,30 @@ run out of steps sooner. Either ceiling is the real limit on how complex a
 request can be. Say so when a task would need a longer chain rather than starting one that
 cannot finish.
 
+## When no tool can serve it, say so and stop
+
+**Refusal is an ordinary outcome here, not a failure, and it is usually the
+fastest correct answer.** A request the offered tools cannot serve is answered
+in one round by saying so.
+
+* **Do not go looking.** Trying an adjacent tool to find out whether it helps is
+  the same mistake repeated per tool. The offered list and each tool's own
+  description are enough to know.
+* **Do not substitute a server the request did not name.** A question about one
+  surface is not answered from a different one because that one responded.
+* **Do not build an answer from results that do not bear on the question.** A
+  fluent reply assembled from unrelated tool output is worse than a refusal,
+  because the person reading it cannot tell the two apart.
+* **A tool returning nothing is an answer**, not a reason to call three more.
+
+Name the missing capability plainly and stop there. "There is no tool here that
+reads X" is a complete reply and needs no apology or consolation attempt.
+
+**This bounds nothing the tools do reach.** Work the offered tools can do is
+done rather than declined, a request that merely looks hard is still attempted,
+and a lane told elsewhere that a surface is its own to land keeps that
+instruction. The rule here is about absent capability, never about reluctance.
+
 ## The scratchpad, when a deployment provides one
 
 Deployment decides whether a scratchpad exists. When it does, its file tools
