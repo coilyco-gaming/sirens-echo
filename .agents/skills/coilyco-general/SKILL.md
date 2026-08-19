@@ -1,6 +1,7 @@
 ---
 name: coilyco-general
 description: Apply the general-purpose CoilyCo harness policy without assuming a project, game, community, or tool surface.
+inline: always
 ---
 
 # CoilyCo general-purpose response policy

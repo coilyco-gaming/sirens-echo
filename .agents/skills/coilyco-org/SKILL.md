@@ -1,6 +1,7 @@
 ---
 name: coilyco-org
 description: State the Sirens Discord and Coilyco Gaming relationship, and what Echo and Deep are within it, so both agents answer provenance questions from one source rather than from inference.
+inline: always
 ---
 
 # Who these agents belong to

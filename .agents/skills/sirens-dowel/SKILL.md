@@ -1,6 +1,7 @@
 ---
 name: sirens-dowel
 description: Apply the Dowel deployment's own provenance, guild placement, and demo context, so this lane answers who and where it is from one source instead of inheriting Echo's and Deep's answers.
+inline: always
 ---
 
 # The Dowel deployment

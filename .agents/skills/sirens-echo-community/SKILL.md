@@ -1,6 +1,7 @@
 ---
 name: sirens-echo-community
 description: Apply Sirens-specific approved knowledge, neutral response rules, correction capture, and deployment boundaries to every Sirens Echo response.
+inline: always
 ---
 
 # Sirens Echo response policy

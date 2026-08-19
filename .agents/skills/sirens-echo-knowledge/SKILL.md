@@ -1,6 +1,7 @@
 ---
 name: sirens-echo-knowledge
 description: Supply the shared, approved Sirens community facts used by every Sirens Echo response profile.
+inline: always
 ---
 
 # Sirens Echo shared knowledge
