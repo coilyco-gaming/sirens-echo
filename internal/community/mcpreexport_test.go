@@ -29,10 +29,8 @@ func reexportFixture() FixtureProvider {
 	}}}
 }
 
-// reexportAgent stands up the lane over MCP with the roster fixture attached.
-// configured is the deployment's token, empty meaning it trusts nobody.
-// presented is what the client sends, which is separate on purpose: the gate
-// only means something when a client can hold the wrong answer.
+// configured and presented are separate because the gate only means something
+// when a client can hold the wrong answer.
 func reexportAgent(t *testing.T, enabled bool, configured, presented string) *mcp.ClientSession {
 	t.Helper()
 	agent := &Agent{
@@ -82,8 +80,7 @@ func listedToolNames(t *testing.T, session *mcp.ClientSession) []string {
 	return names
 }
 
-// The default is the surface every lane serves today, so opting out has to be
-// byte-for-byte what shipped before this existed.
+// Opting out has to be what shipped before this existed.
 func TestReexportDisabledServesTurnAlone(t *testing.T) {
 	session := reexportAgent(t, false, "secret", "secret")
 	names := listedToolNames(t, session)
@@ -101,8 +98,7 @@ func TestReexportEnabledOffersRosterBesideTurn(t *testing.T) {
 	}
 }
 
-// The names carry their server, so two servers offering find cannot collide
-// into one entry a caller cannot address.
+// Two servers offering find must stay two addressable tools.
 func TestReexportedNamesCarryTheirServer(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "secret")
 	for _, name := range listedToolNames(t, session) {
@@ -115,8 +111,7 @@ func TestReexportedNamesCarryTheirServer(t *testing.T) {
 	}
 }
 
-// The point of the gate. A caller past this reaches a server directly without
-// the turn pipeline's checks, so an unauthenticated one must be refused.
+// The point of the gate.
 func TestReexportedCallRefusesAnUntrustedCaller(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -134,8 +129,7 @@ func TestReexportedCallRefusesAnUntrustedCaller(t *testing.T) {
 	}
 }
 
-// An empty configured token trusts nobody, so enabling re-export without one
-// offers tools that refuse every caller rather than tools that admit everyone.
+// An empty token trusts nobody, so this fails closed rather than open.
 func TestReexportWithNoTokenRefusesEveryone(t *testing.T) {
 	session := reexportAgent(t, true, "", "")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -167,8 +161,7 @@ func TestReexportedCallReachesTheServerForATrustedCaller(t *testing.T) {
 	}
 }
 
-// turn keeps working when re-export is on, because opting in adds a surface
-// rather than replacing the one every existing client uses.
+// Opting in adds a surface rather than replacing one.
 func TestTurnStillAnswersWhenReexportIsOn(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "secret")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
@@ -183,9 +176,7 @@ func TestTurnStillAnswersWhenReexportIsOn(t *testing.T) {
 	}
 }
 
-// #943 recorded the roster collapsing to zero and back. A client whose tool
-// list empties underneath it is worse than one holding a slightly stale list,
-// so a failed refresh keeps what it had.
+// #943's collapse to zero, seen from outside: a failed refresh keeps its list.
 func TestSnapshotKeepsThePreviousRosterWhenDiscoveryFails(t *testing.T) {
 	agent := &Agent{cfg: Config{MCPReexport: true}, telemetry: telemetryOrNoop(nil)}
 	agent.reexport.provider = reexportFixture()
@@ -202,8 +193,7 @@ func TestSnapshotKeepsThePreviousRosterWhenDiscoveryFails(t *testing.T) {
 	}
 }
 
-// toolText flattens a result's text content, so an assertion reads the answer
-// rather than the envelope.
+// toolText flattens a result so an assertion reads the answer.
 func toolText(result *mcp.CallToolResult) string {
 	if result == nil {
 		return ""
@@ -217,8 +207,6 @@ func toolText(result *mcp.CallToolResult) string {
 	return strings.Join(parts, "\n")
 }
 
-// bearerClient presents the deployment token on every request, which is how a
-// trusted fleet client reaches the re-exported surface.
 func bearerClient(token string) *http.Client {
 	return &http.Client{Transport: bearerTransport{token: token}}
 }
@@ -231,7 +219,6 @@ func (b bearerTransport) RoundTrip(request *http.Request) (*http.Response, error
 	return http.DefaultTransport.RoundTrip(clone)
 }
 
-// failingProvider stands in for a roster that stopped answering.
 type failingProvider struct{}
 
 func (failingProvider) Open(context.Context) (ToolSession, error) {
@@ -240,8 +227,7 @@ func (failingProvider) Open(context.Context) (ToolSession, error) {
 
 var errRosterUnavailable = errors.New("roster unavailable")
 
-// A caller holding the wrong token is refused exactly as one holding none, so
-// the gate is a comparison rather than a presence check.
+// The gate is a comparison, not a presence check.
 func TestReexportedCallRefusesAWrongToken(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "not-the-secret")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{

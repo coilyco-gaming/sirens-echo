@@ -13,21 +13,13 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// Re-exporting the roster puts a caller past runReplyChecks, response
-// validation, and IdentifierGuard, all of which live in the turn pipeline
-// rather than in the tools. That is a security boundary moving rather than an
-// interface being added, so this is off unless a deployment opts in and every
-// call is refused without the deployment token. sirens-echo#1025 records the
-// decision and what it reverses.
+// A re-exported call reaches a server without the turn pipeline's checks, so
+// it is gated rather than offered. See docs/sirens-echo-http.md, #1025.
 
-// reexportUntrusted is returned instead of a result, and says which of the two
-// reasons applies without revealing whether a token was configured at all.
 const reexportUntrusted = "this tool requires the deployment token. " +
 	"Present it as an Authorization Bearer header, or call turn instead, " +
 	"which runs the same work through the deployment's response checks."
 
-// reexportDescription prefixes the upstream server's own text so a client can
-// see that it reached a tool directly rather than through a turn.
 func reexportDescription(definition ToolDefinition) string {
 	upstream := strings.TrimSpace(definition.Description)
 	prefix := fmt.Sprintf("[%s, called directly]", definition.Server)
@@ -37,20 +29,16 @@ func reexportDescription(definition ToolDefinition) string {
 	return prefix + " " + upstream
 }
 
-// reexportCache holds the last discovered roster so tools/list does not open a
-// session per request. A call always opens its own.
 type reexportCache struct {
 	mu      sync.Mutex
 	tools   []ToolDefinition
 	fetched time.Time
-	// provider substitutes the roster in tests. Nil uses the real one, so a
-	// deployment cannot reach this field.
+	// provider substitutes the roster in tests.
 	provider ToolProvider
 }
 
-// rosterProvider is the seam the re-export opens through. a.tools is a concrete
-// *MCPProvider, and returning it directly as an interface would hand back a
-// non-nil interface holding a nil pointer.
+// rosterProvider guards the nil-interface trap: a.tools is a concrete type, so
+// returning it directly yields a non-nil interface holding a nil pointer.
 func (a *Agent) rosterProvider() ToolProvider {
 	if a.reexport.provider != nil {
 		return a.reexport.provider
@@ -61,9 +49,8 @@ func (a *Agent) rosterProvider() ToolProvider {
 	return a.tools
 }
 
-// snapshot returns the advertised roster, refreshing when stale. A discovery
-// failure keeps the previous list rather than emptying it, because a client
-// whose tool list vanishes underneath it is the failure #943 recorded.
+// reexportSnapshot keeps the previous list when discovery fails, because #943's
+// collapse to zero is worse seen by a client than a stale list.
 func (a *Agent) reexportSnapshot(ctx context.Context) []ToolDefinition {
 	a.reexport.mu.Lock()
 	defer a.reexport.mu.Unlock()
@@ -109,21 +96,18 @@ func reexportRequestTrusted(request *mcp.CallToolRequest, configured string) boo
 	return headerTrusted(request.Extra.Header, configured)
 }
 
-// registerReexportedTools adds one MCP tool per rostered tool. Names arrive
-// already namespaced as server__tool from proxyToolName, so the collision rule
-// that guards the model's tool list guards this surface too.
+// registerReexportedTools leans on proxyToolName having already namespaced each
+// name as server__tool, so the existing collision rule covers this surface.
 func (a *Agent) registerReexportedTools(server *mcp.Server, ctx context.Context) {
 	for _, definition := range a.reexportSnapshot(ctx) {
 		if definition.Name == "turn" {
-			// The harness owns that name on this surface.
+			// The harness owns that name here.
 			continue
 		}
 		a.addReexportedTool(server, definition)
 	}
 }
 
-// addReexportedTool binds one definition. Taking it by value is what keeps each
-// handler bound to its own tool rather than to the loop's last one.
 func (a *Agent) addReexportedTool(server *mcp.Server, definition ToolDefinition) {
 	mcp.AddTool(
 		server,
@@ -152,8 +136,6 @@ func (a *Agent) handleReexportedCall(
 		return toolFailure(reexportUntrusted), nil, nil
 	}
 
-	// Tool calls are cheaper than turns and some of them write, so they are
-	// admitted under the same budget rather than beside it. sirens-echo#1025.
 	decision := a.limiter.Admit(admissionRequest{
 		UserKey:    mcpPrincipal(request),
 		ContextKey: transportMCP,
@@ -188,9 +170,8 @@ func (a *Agent) handleReexportedCall(
 	}, nil, nil
 }
 
-// reexportSchema passes the upstream schema through when it is an object the
-// SDK can serve, and otherwise offers a free-form object. An upstream that
-// describes its arguments oddly should not remove the tool.
+// reexportSchema keeps a tool whose upstream schema is missing, rather than
+// dropping it for describing its arguments oddly.
 func reexportSchema(schema any) any {
 	if schema == nil {
 		return map[string]any{"type": "object"}

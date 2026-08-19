@@ -75,8 +75,7 @@ func (a *Agent) mcpHandler() http.Handler {
 			&mcp.StreamableHTTPOptions{},
 		)
 	}
-	// Built per request rather than once, so a roster that changed since the
-	// last client is the one this client sees. See sirens-echo#1025.
+	// Built per request, so a changed roster is the one this client sees.
 	return mcp.NewStreamableHTTPHandler(
 		func(request *http.Request) *mcp.Server {
 			return a.reexportServer(request.Context())
@@ -85,8 +84,7 @@ func (a *Agent) mcpHandler() http.Handler {
 	)
 }
 
-// reexportServer is mcpHandler's server plus one tool per rostered tool. turn
-// stays registered, so opting in adds a surface rather than replacing one.
+// reexportServer is mcpHandler's server plus the roster. turn stays registered.
 func (a *Agent) reexportServer(ctx context.Context) *mcp.Server {
 	server := mcp.NewServer(
 		&mcp.Implementation{
@@ -109,8 +107,7 @@ func (a *Agent) reexportServer(ctx context.Context) *mcp.Server {
 	return server
 }
 
-// reexportInstructions extends serverInstructions, because that statement
-// stays true of turn and a client needs to tell the two surfaces apart.
+// reexportInstructions extends serverInstructions, which stays true of turn.
 func (a *Agent) reexportInstructions() string {
 	return a.serverInstructions() +
 		" This deployment also re-exports its own rostered tools, named " +
