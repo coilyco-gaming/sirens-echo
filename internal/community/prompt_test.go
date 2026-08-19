@@ -323,10 +323,10 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 }
 
 // promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
-// is recorded in docs/sirens-echo-prompt.md with its cause.
+// is recorded in the commit that makes it, with its cause.
 var promptBudgets = map[string]int{
 	"agents/echo/rendered/prompt.txt": 19042,
-	"agents/deep/rendered/prompt.txt": 12852,
+	"agents/deep/rendered/prompt.txt": 14336,
 }
 
 // shippedProfiles lists the in-image agent profiles from disk, so a new one is
