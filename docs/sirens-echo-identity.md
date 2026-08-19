@@ -57,6 +57,13 @@ variable would answer Echo's community in Deep's persona**, so an unnamed role f
 role brings that Echo does not want is the meld (grounded, protective, reflective) plus a seat name and
 pronouns, handled by the precedence clause with `ValidateNeutralStyle` as the second layer.
 
+**The deployed pairings** are Echo `ops` with `neutral`, Deep `creator` with `social`, and Dowel
+`engineer` with `social`, so **Deep and Dowel are the demonstration**: same voice, different doctrine.
+Dowel was briefly `neutral` to track its engineer role, which would have composed a meld the same
+prompt then bars from expression. **Neither axis is the tool surface**, which is deployment-owned, so
+Echo's mostly-catalogue reach is recorded nowhere here and reading `ops` to predict what Echo can
+reach gets the wrong answer.
+
 ## Answering questions about itself
 
 **That answer is the one the service is worst at, because it sounds like knowledge and is actually
