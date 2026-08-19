@@ -69,10 +69,54 @@ func (a *Agent) mcpHandler() http.Handler {
 		},
 		a.handleMCPTurn,
 	)
+	if !a.cfg.MCPReexport {
+		return mcp.NewStreamableHTTPHandler(
+			func(*http.Request) *mcp.Server { return server },
+			&mcp.StreamableHTTPOptions{},
+		)
+	}
+	// Built per request rather than once, so a roster that changed since the
+	// last client is the one this client sees. See sirens-echo#1025.
 	return mcp.NewStreamableHTTPHandler(
-		func(*http.Request) *mcp.Server { return server },
+		func(request *http.Request) *mcp.Server {
+			return a.reexportServer(request.Context())
+		},
 		&mcp.StreamableHTTPOptions{},
 	)
+}
+
+// reexportServer is mcpHandler's server plus one tool per rostered tool. turn
+// stays registered, so opting in adds a surface rather than replacing one.
+func (a *Agent) reexportServer(ctx context.Context) *mcp.Server {
+	server := mcp.NewServer(
+		&mcp.Implementation{
+			Name:    a.cfg.InstanceName,
+			Title:   a.cfg.Definition.Identity,
+			Version: "1",
+		},
+		&mcp.ServerOptions{Instructions: a.reexportInstructions()},
+	)
+	mcp.AddTool(
+		server,
+		&mcp.Tool{
+			Name: "turn",
+			Description: "Answer one message through this deployment's " +
+				"policy, tools, and response validation.",
+		},
+		a.handleMCPTurn,
+	)
+	a.registerReexportedTools(server, ctx)
+	return server
+}
+
+// reexportInstructions extends serverInstructions, because that statement
+// stays true of turn and a client needs to tell the two surfaces apart.
+func (a *Agent) reexportInstructions() string {
+	return a.serverInstructions() +
+		" This deployment also re-exports its own rostered tools, named " +
+		"server__tool. Those reach a server directly and do not pass the " +
+		"response checks turn applies, so they require the deployment token " +
+		"and return records rather than prose."
 }
 
 func (a *Agent) handleMCPTurn(

@@ -124,6 +124,9 @@ var (
 	// server writes and this prompt carries. See sirens-echo#647.
 	maxServerGuidanceBytes int
 	maxGroundingDocuments  int
+	// reexportRefreshInterval bounds staleness for the roster advertised over
+	// /mcp. See docs/sirens-echo-http.md and sirens-echo#1025.
+	reexportRefreshInterval time.Duration
 )
 
 // Turn progress cadence. Only the wait is a knob. The pair below it is derived,
@@ -423,6 +426,7 @@ func knobs() []knob {
 		overridable(&mcpBackoffMin, "SIRENS_ECHO_MCP_BACKOFF_MIN", 5*time.Second),
 		overridable(&mcpBackoffMax, "SIRENS_ECHO_MCP_BACKOFF_MAX", 2*time.Minute),
 		overridable(&maxGroundingDocuments, "SIRENS_ECHO_GROUNDING_DOCUMENTS", 8),
+		overridable(&reexportRefreshInterval, "SIRENS_ECHO_REEXPORT_REFRESH", time.Minute),
 
 		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 10*time.Second),
 
@@ -861,6 +865,9 @@ type Config struct {
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
 	// nobody. See docs/sirens-echo-http.md.
 	HTTPTrustToken string
+	// MCPReexport offers the roster's tools over /mcp beside turn. False serves
+	// turn alone, because re-export moves a security boundary. sirens-echo#1025.
+	MCPReexport bool
 	// FetchHosts is the allowlist the fetch tool may reach. Empty offers no
 	// tool. See docs/sirens-echo-tools.md.
 	FetchHosts []string
