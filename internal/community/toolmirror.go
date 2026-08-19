@@ -4,6 +4,10 @@ import (
 	"context"
 	"log/slog"
 	"time"
+
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
+	"go.temporal.io/sdk/workflow"
 )
 
 // Mirroring the tool-call trajectory, metadata only. Temporal observes the
@@ -147,6 +151,11 @@ func (a *Agent) attachToolMirror() error {
 		return nil
 	}
 	a.temporal = temporal
+	if err := a.startTrajectoryWorker(temporal, mirrorConfig.TaskQueue); err != nil {
+		// Records still land, only their closing does not.
+		a.telemetry.Error(context.Background(), "mirror.worker.failed",
+			slog.String("error", err.Error()))
+	}
 	a.telemetry.AttachToolMirror(mirror)
 	a.telemetry.Info(context.Background(), "mirror.attached",
 		slog.String("namespace", a.cfg.TemporalMirror.Namespace),
@@ -154,10 +163,28 @@ func (a *Agent) attachToolMirror() error {
 	return nil
 }
 
+// startTrajectoryWorker registers the workflow the mirror already signals.
+// Without it nothing runs a trajectory. See sirens-echo#1041.
+func (a *Agent) startTrajectoryWorker(temporal client.Client, taskQueue string) error {
+	trajectory := worker.New(temporal, taskQueue, worker.Options{})
+	trajectory.RegisterWorkflowWithOptions(
+		ToolTrajectoryWorkflow,
+		workflow.RegisterOptions{Name: TrajectoryWorkflow},
+	)
+	if err := trajectory.Start(); err != nil {
+		return err
+	}
+	a.trajectoryWorker = trajectory
+	return nil
+}
+
 // closeToolMirror stops the worker and the client, in that order, so nothing
 // is delivered into a closed connection.
 func (a *Agent) closeToolMirror() {
 	a.telemetry.CloseToolMirror()
+	if a.trajectoryWorker != nil {
+		a.trajectoryWorker.Stop()
+	}
 	if a.temporal != nil {
 		a.temporal.Close()
 	}

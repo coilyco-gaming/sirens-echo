@@ -167,7 +167,8 @@ var (
 	// mirrorTimeout bounds one mirror write, well under a turn so a hung
 	// backend cannot stall the queue behind it.
 	mirrorTimeout time.Duration
-	// trajectoryIdle ends a turn's trajectory workflow once its calls stop.
+	// trajectoryIdle ends a turn's trajectory once its calls stop. It bounds the
+	// gap BETWEEN calls rather than the turn. sirens-echo#1041.
 	trajectoryIdle time.Duration
 	// trajectoryLifetime is the hard ceiling on one trajectory, so a lost idle
 	// timer cannot leave a workflow open forever.
@@ -441,7 +442,7 @@ func knobs() []knob {
 
 		overridable(&mirrorQueueDepth, "SIRENS_ECHO_MIRROR_QUEUE_DEPTH", 256),
 		overridable(&mirrorTimeout, "SIRENS_ECHO_MIRROR_TIMEOUT", 5*time.Second),
-		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 10*time.Minute),
+		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 2*time.Minute),
 		overridable(&trajectoryLifetime, "SIRENS_ECHO_TRAJECTORY_LIFETIME", time.Hour),
 
 		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
