@@ -68,11 +68,10 @@ allowlist diff: `roles.kdl` says what a role **may** have, this says what it **g
 
 Sirens Discord is the community. Coilyco Gaming is a separate organization holding a staffing and
 product contract with it, the Robotics Division is the part of Coilyco Gaming that contract is with, and
-Echo and Deep are that division (sourced from Kai on sirens-echo#806). Every surface naming both
-organizations had to improvise the connection, and **two agents improvising the same relationship
-separately is the drift this prevents**. So it lives in `.agents/skills/coilyco-org`, **the only local
-skill root the two profiles share**, which makes "both agents read the same text" a property a test can
-hold. The prompt carries one line naming the division.
+Echo and Deep are that division. It lives in `.agents/skills/coilyco-org`, **the only local skill root
+the two profiles share**, which makes "both agents read the same text" a property a test can hold, and
+**two agents improvising the same relationship separately is the drift that prevents**. The prompt
+carries one line naming the division.
 
 **The separation is the load-bearing part.** An agent is never Sirens Discord staff, and Sirens Discord
 staff are never Coilyco Gaming employees: either half alone is a different and wrong claim. The contract

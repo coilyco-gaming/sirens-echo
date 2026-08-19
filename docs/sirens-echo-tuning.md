@@ -13,8 +13,7 @@ off is worse than a refused start.
 **A number in the file that uses it is easy to find once you already know which file that is. The
 problem is the other direction**: nobody could answer "how many numbers does this service have" or
 "which of these are related" without reading everything, and two numbers that must agree could sit in
-different files with nothing connecting them, **which is how the progress cadence came to be three
-constants whose relationship existed only in whoever remembered it**.
+different files with nothing connecting them.
 
 Here: a number that tunes behaviour - a timeout, cap, bound, retry count, size limit. **Not here**: a
 number that is part of a data structure or an algorithm, a cache capacity chosen at a call site, or a
@@ -84,12 +83,9 @@ names**: the test parses each non-test file in the package and reports every pac
 `elsewhereByDesign` names it with a reason. A number inside a function body is a local and never reaches
 this, as is a string, a struct, a call, and a type.
 
-**The first version matched names** against `^(max|min|default)[A-Z]` and a list of nine suffixes, **so
-it saw a number only when the author happened to spell it that way**. That failed twice on the sweep it
-was written for: four of the seven numbers recovered on #829 were invisible until the pattern was
-widened, and `mcpsReplyBudget` stayed invisible after the widening because it is neither. **A pattern
-that has to be widened every time someone names a number a new way is not holding a line. It is
-describing the names already used.**
+**Matching names instead would not hold a line.** A pattern over `^(max|min|default)[A-Z]` and a list of
+suffixes sees a number only when the author happened to spell it that way, **and a pattern that has to be
+widened every time someone names a number a new way is describing the names already used.**
 
 Inverting it costs an exemption for every genuine non-knob, currently seven, **which is the deliberate
 half of the trade**: an exemption is a sentence someone had to write and a reviewer can disagree with,

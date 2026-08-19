@@ -52,47 +52,20 @@ cost, not moderation.**
 ## Which bucket ages out
 
 The bucket table is capacity-bounded so key churn cannot grow it without limit. **Which key that bound
-chooses to drop turns out to matter more than the bound.**
+chooses to drop matters more than the bound.**
 
-Eviction used insertion order, and `global` is both the earliest-created key and the one every admission
-touches, so **the single bucket that must never go was the one structurally most likely to go**, and
-churn at the tail evicted the head. Recreating a missing key restores it at full burst, so eviction was
-a reset rather than a degradation: a caller who can mint keys could spend past the configured global
-budget by rotating them, and on the HTTP path the key is `"http:"` plus a caller-asserted header. The
-global bucket is now outside the tracked order entirely, one fixed key rather than a member of the
-rotating population the bound exists to contain.
+**The global bucket sits outside the tracked order entirely**, one fixed key rather than a member of the
+rotating population the bound exists to contain. Under insertion-order eviction it was both the earliest
+key and the one every admission touches, so **the single bucket that must never go was the one
+structurally most likely to go**. Recreating a missing key restores it at full burst, making eviction a
+reset rather than a degradation, so a caller who can mint keys could otherwise spend past the configured
+global budget by rotating them.
 
-The remaining keys are evicted **least-recently-used**, which is what the bound was described as doing
-and was not. That also stops one caller evicting another caller's partly-spent bucket, the quieter
-version of the same defect, since **a bucket that comes back full is a budget that was never spent**.
-
-Discord is unaffected either way, its user keys being author snowflakes a member cannot rotate, so the
-reachable case was the tailnet-only HTTP path and this bounded what an already-authorized caller could
-spend rather than exposing anything. `exchangeLimiter`, which bounds agent-to-agent runs per channel,
-evicts by last-use timestamp already and its keys are channel identifiers, so it never shared the defect.
-
-## Errors and the decimated sample
-
-A pass rate is computed over attempts that **returned content**. Errors are excluded from the
-denominator, which is correct, because a 502 or an empty completion is a fact about the substrate rather
-than a behaviour, and counting one as a behavioural failure would corrupt every rate. **The consequence
-is that a clean verdict can rest on far fewer runs than the case declared.**
-
-A case with `runs: 5` reported `passed: 2, attempts: 2, errors: 3`, read as 100 percent. Three attempts
-returned empty content after the proxy exhausted a 3600 token budget and escalated twice, so the pass
-rate was 100 percent of what was scored and 40 percent of what was asked for, **and nothing in the
-headline said so** (sirens-echo#325). Now the breach line names how many declared runs errored and were
-excluded, and a `rate.sample.decimated` warning is logged for **any** case with errors, so a case that
-passed surfaces it too, on stderr rather than in the dataset stream. Read `errors` beside `attempts` and
-`runs`.
-
-**This does not make the rate more reliable.** A behaviour rate over 2 attempts is a weak measurement
-whether or not the reader can see that 3 attempts vanished, and the promotion arithmetic in
-[the rate pack](sirens-echo-rate.md) applies to the **scored** attempts rather than the declared `runs`.
-**No error ceiling gates anything**, because failing a verdict on an error rate needs somebody to decide
-what rate is acceptable, which is a live-operations judgement rather than a measurement one, and
-inventing a default with no evidence would be the certifying-rather-than-measuring failure in a new
-place.
+The remaining keys evict **least-recently-used**, which also stops one caller evicting another caller's
+partly-spent bucket, since **a bucket that comes back full is a budget that was never spent**. Discord
+is unaffected either way, its user keys being author snowflakes a member cannot rotate, so the reachable
+case is the tailnet-only HTTP path where the key is `"http:"` plus a caller-asserted header.
+`exchangeLimiter`, which bounds agent-to-agent runs per channel, evicts by last-use timestamp already.
 
 ## Coalescing
 Admission bounds spend by refusing. Coalescing bounds it by **answering several comments in one turn**,
