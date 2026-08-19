@@ -116,3 +116,33 @@ nothing, and answer normally otherwise. Available keys: %s.`,
 		strings.Join(reactKeys(), ", "),
 	) + "\n"
 }
+
+// blankReplyReaction is the mark a turn leaves when its assembled reply turns
+// out to carry nothing visible. See docs/sirens-echo-reply-assembly.md.
+const blankReplyReaction = "acknowledge"
+
+// finishBlankReply is the last guard before a send. Chosen silence is
+// finishSilently and reaches here never; this is the defect case (#1035).
+func (a *Agent) finishBlankReply(ctx context.Context, turn turnIO) error {
+	a.telemetry.Info(
+		ctx,
+		"turn.reply.blank",
+		slog.String("transport", turn.Transport()),
+	)
+	target, markable := turn.(reactor)
+	if !markable {
+		return nil
+	}
+	glyph := replyReactions[blankReplyReaction]
+	if err := turnReactor(ctx, target).React(ctx, glyph); err != nil {
+		// The member still gets nothing, which is the point: a mark that did
+		// not land must not become a message that says nothing.
+		a.telemetry.Info(
+			ctx,
+			"response.reaction.undelivered",
+			slog.String("reaction", glyph),
+			slog.String("error", err.Error()),
+		)
+	}
+	return nil
+}
