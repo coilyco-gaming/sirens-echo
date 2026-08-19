@@ -42,12 +42,17 @@ type progressView struct {
 // worklogRow renders one call in the notice shape, so harness text inside an
 // embed keeps the contract it has outside one. See docs/sirens-echo-delivery.md.
 func worklogRow(row progressRow) string {
+	if row.done && row.detail != "" {
+		return stageNotice(skillReadGlyph+" "+toolOutcomeGlyph(row.outcome), row.detail, false)
+	}
 	glyph := reactionTool
+	// A skill read wears the book while it runs, so the type anchor never
+	// changes mid-row: only the outcome joins it on resolve.
+	if !row.done && row.server == skillToolServer {
+		glyph = skillReadGlyph
+	}
 	if row.done {
 		glyph = toolOutcomeGlyph(row.outcome)
-	}
-	if row.done && row.detail != "" {
-		return stageNotice(glyph+" "+skillReadGlyph, row.detail, false)
 	}
 	return stageNotice(glyph, ExecutedTool{Server: row.server, Original: row.tool}.Label(), false)
 }
