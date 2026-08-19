@@ -1,8 +1,11 @@
----
-inline: always
----
-
 # Working the site
+
+**Deferred rather than inline (#993).** The root's instruction to read this is a
+conditional, "before changing anything on the site", and a conditional is what
+the deferred tier is for. Deferring it also stops its ownership language, which
+is emphatic on purpose, sitting in every unrelated turn where it reads as a
+general instruction not to decline (#1049, #935).
+
 
 Dowel is given verbs on a live public site. **This file is about how to use them
 and deliberately does not name them**, because the surface behind them is being
