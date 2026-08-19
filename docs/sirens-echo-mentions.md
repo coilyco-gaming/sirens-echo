@@ -11,8 +11,8 @@ definition.
 
 **A thread this service opened is its own conversation, so every message in it summons**, for the
 thread's life and from any member, not only the one it was opened for (#750). `Channel.OwnerID` is the
-signal and cached gateway state answers it, so a channel the state has never seen reports unowned
-rather than costing a lookup per message. A thread a member opened keeps the mention gate.
+signal. Cached state answers it, and a miss, from archiving or a restart, takes one lookup cached per
+channel rather than per message. A thread a member opened keeps the mention gate.
 
 **A role mention summons, because a member who @s the role is addressing what holds it** (#866).
 Discord delivers the mentioned role ids on the payload, and the account's own roles come from the
