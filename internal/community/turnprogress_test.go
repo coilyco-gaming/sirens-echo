@@ -193,7 +193,8 @@ func TestNilProgressIsSafe(t *testing.T) {
 func TestProgressStagesUseTheHarnessFormat(t *testing.T) {
 	t.Parallel()
 	for _, phrase := range []string{
-		stagePhraseHistory, stagePhraseThinking, stagePhraseTool, stagePhraseChecking,
+		stagePhraseHistory, stagePhraseThinking, stagePhraseTool, stagePhraseSkill,
+		stagePhraseChecking,
 	} {
 		if notice := harnessNotice(phrase); !noticeShape.MatchString(notice) {
 			t.Errorf("stage %q renders %q, which is not the harness shape", phrase, notice)

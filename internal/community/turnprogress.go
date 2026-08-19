@@ -18,6 +18,7 @@ const (
 	stagePhraseHistory  = "reading recent messages"
 	stagePhraseThinking = "thinking"
 	stagePhraseTool     = "calling a tool"
+	stagePhraseSkill    = "consulting the catalogue"
 	stagePhraseChecking = "checking the reply"
 )
 
@@ -32,6 +33,16 @@ type stageDecoration struct {
 // plain and unterminated, which is the standing answer for the other three.
 var stageDecorations = map[string]stageDecoration{
 	stagePhraseThinking: {icon: "\U0001F914", trailing: true},
+	stagePhraseSkill:    {icon: skillReadGlyph, trailing: true},
+}
+
+// toolStagePhrase narrates the round for what it is: a skill read is the
+// desk consulting its own catalogue, any other server is a tool call.
+func toolStagePhrase(server string) string {
+	if server == skillToolServer {
+		return stagePhraseSkill
+	}
+	return stagePhraseTool
 }
 
 // stageLine renders one stage in whatever it wears.
