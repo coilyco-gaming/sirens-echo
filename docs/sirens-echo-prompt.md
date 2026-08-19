@@ -73,6 +73,16 @@ the prompt is not a defect, and neither is one that lists the tools the service 
 undesirable it is a *composure* concern about a service that volunteers more than it was asked, which
 needs to be made on its own terms.
 
+**A capability doc either names the harness bounds or names none of them.**
+`TestTheCapabilityDocsFollowTheHarnessBounds` rewrites the tool-round and model-call
+figures in a copy that states them, so moving a number moves the sentence. **A copy
+shared across lanes cannot state them at all**: `coilyco-general` loads on the Dowel
+lane and on the domain-neutral HTTP profile, whose deployments set different
+ceilings, **so whichever figure it printed would be a false claim on the other lane**,
+which is a fabrication under that file's own opening rule. Such a copy says the
+ceilings are set per deployment, and the test then fails it for naming a figure
+anywhere, **because the loophole in naming none is naming one somewhere else**.
+
 ## Prompt budget
 
 `TestRenderedPromptsStayInsideTheirBudget` bounds each tracked snapshot. **The numbers in

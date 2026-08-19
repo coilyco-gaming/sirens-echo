@@ -38,6 +38,14 @@ func lane(path string) string {
 	return filepath.Base(filepath.Dir(filepath.Dir(path)))
 }
 
+// A shared copy declines to name the ceilings at all, and says so in this
+// phrase. Why, in docs/sirens-echo-prompt.md.
+var deploymentSetBounds = regexp.MustCompile(`set per deployment`)
+
+// Digits only, because the docs spell small counts as words and "a separate
+// one on model calls" is not a figure.
+var figureBesideABound = regexp.MustCompile(`(?i)\d+[^.\n]{0,40}(?:tool rounds?|model calls?)|(?:tool rounds?|model calls?)[^.\n]{0,40}\d+`)
+
 // The doc's bounds follow the table rather than pinning it, so moving a number
 // rewrites the sentence instead of failing. The outer budget fired in issue 258.
 func TestTheCapabilityDocsFollowTheHarnessBounds(t *testing.T) {
@@ -57,6 +65,13 @@ func TestTheCapabilityDocsFollowTheHarnessBounds(t *testing.T) {
 		body, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
+		}
+		if deploymentSetBounds.Match(body) {
+			if figure := figureBesideABound.Find(body); figure != nil {
+				t.Errorf("%s says its ceilings are deployment-set and then names one in %q",
+					lane(path), figure)
+			}
+			continue
 		}
 		updated := string(body)
 		for _, rule := range rules {
