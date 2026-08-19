@@ -80,7 +80,17 @@ func TestReadingASkillReferenceReturnsIt(t *testing.T) {
 		t.Fatalf("tools = %#v", tools)
 	}
 
-	path := session.(*skillSession).paths()[0]
+	// Entrypoints are fetchable too since #971, so name the reference rather
+	// than taking whichever path sorts first.
+	var path string
+	for _, candidate := range session.(*skillSession).paths() {
+		if strings.Contains(candidate, "/references/") {
+			path = candidate
+		}
+	}
+	if path == "" {
+		t.Fatal("no reference path was served, so this asserts nothing")
+	}
 	result, err := session.Call(
 		context.Background(), skillToolName, map[string]any{"path": path})
 	if err != nil {

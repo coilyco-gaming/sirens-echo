@@ -72,7 +72,8 @@ func TestLoadSkillpackReadsComposedSources(t *testing.T) {
 	}
 	write(
 		filepath.Join(composed, "COMPOSED.md"),
-		"---\nname: coilyco-favorites\n---\n\n# Favorites\n\nPurple and black.\n",
+		"---\nname: coilyco-favorites\ndescription: House colours.\n---\n\n"+
+			"# Favorites\n\nPurple and black.\n",
 	)
 	write(filepath.Join(composed, "references", "detail.md"), "Reference detail.\n")
 
@@ -86,10 +87,20 @@ func TestLoadSkillpackReadsComposedSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
-	for _, expected := range []string{"Purple and black.", "Ordinary body."} {
-		if !strings.Contains(pack, expected) {
-			t.Fatalf("skillpack missing %q:\n%s", expected, pack)
+	// #971 inverted this. An entrypoint is indexed by its own description and
+	// its body is fetched, so the pack carries the summary and not the text.
+	if !strings.Contains(pack, "House colours.") {
+		t.Fatalf("skillpack missing the composed source's description:\n%s", pack)
+	}
+	for _, body := range []string{"Purple and black.", "Ordinary body."} {
+		if strings.Contains(pack, body) {
+			t.Fatalf("skillpack inlined an entrypoint body %q:\n%s", body, pack)
 		}
+	}
+	// An entrypoint with no description still has to be findable, so it falls
+	// back to its first heading rather than vanishing from the index.
+	if !strings.Contains(pack, "Ordinary") {
+		t.Fatalf("an entrypoint without a description left no index line:\n%s", pack)
 	}
 	// The reference is fetchable rather than inlined, and the pack says so, or
 	// the model has no way to know it exists. See sirens-echo#859.
@@ -103,8 +114,24 @@ func TestLoadSkillpackReadsComposedSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadSkillReferences: %v", err)
 	}
-	if len(references) != 1 || !strings.Contains(references[0].Body, "Reference detail.") {
+	// Three now, not one: both entrypoints joined the reference alongside the
+	// reference itself, which is what makes an entrypoint fetchable at all.
+	if len(references) != 3 {
 		t.Fatalf("references = %#v", references)
+	}
+	served := map[string]string{}
+	for _, reference := range references {
+		served[filepath.Base(filepath.Dir(reference.Path))+"/"+filepath.Base(reference.Path)] =
+			reference.Title
+	}
+	for path, title := range map[string]string{
+		"coilyco-favorites/COMPOSED.md": "House colours.",
+		"references/detail.md":          "reference material",
+		"ordinary/SKILL.md":             "Ordinary",
+	} {
+		if served[path] != title {
+			t.Errorf("%s is indexed as %q, want %q", path, served[path], title)
+		}
 	}
 	if strings.Contains(pack, "name: coilyco-favorites") {
 		t.Fatal("composed frontmatter reached the model context")
