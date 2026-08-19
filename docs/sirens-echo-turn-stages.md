@@ -5,8 +5,19 @@ A turn's wall clock is attributable to named stages.
 ## The settle wait
 
 Between the last `model.response` and `turn.reply.ready` a turn sits under `turn.progress.settle`.
-**A member's answer can be held for up to 10 seconds after it is ready**, and whether that trade is
-right is a separate question from whether it is visible.
+**A member's answer can be held for just under one full beat after it is ready**, which is
+`turnProgressEvery`, twice `SIRENS_ECHO_PROGRESS_AFTER`. At the packaged 10s wait that is a hold of
+**up to 20 seconds**, not ten: `settleDelay` returns `turnProgressEvery - remainder`, so the ceiling
+is the beat rather than the wait. This page said ten, and the telemetry disagreed with it in the
+open: measured on `sirens-dowel` over 24h, `turn.progress.settle` ran p50 15.97s against p95
+**19.9997s**, which is the 20s beat and could not have been the 10s wait.
+
+**Half of the number is not a rounding error when the number is the argument.** Whether holding a
+finished answer to protect the cadence of a line that is deleted when the answer lands is the right
+trade is a separate question from whether it is visible, and it is a question someone decides by
+reading this sentence. Ordinary turns are where it bites rather than slow ones: three median
+`sirens-dowel` turns spent 9.5s of 22.3s and 20.0s of 35.3s in the settle, against 0.6s and 1.1s in
+tool calls.
 
 ## Which check refused a reply
 
