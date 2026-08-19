@@ -26,9 +26,11 @@ const (
 type Agent struct {
 	// temporal is held only to close it. Nil when no mirror is configured.
 	temporal interface{ Close() }
-	cfg      Config
-	session  *discordgo.Session
-	tools    *MCPProvider
+	// trajectoryWorker runs the workflow the mirror signals. Nil when off.
+	trajectoryWorker interface{ Stop() }
+	cfg              Config
+	session          *discordgo.Session
+	tools            *MCPProvider
 	// reexport caches the roster advertised over /mcp. Zero value is ready.
 	reexport          reexportCache
 	completions       CompletionClient
