@@ -16,11 +16,11 @@ prevent**. The alphabet is lowercase letters, digits, spaces, and `, . / - _`, e
 every phrase, so a new condition adds one there rather than a string at the call site, and
 `harnessNotice` is the only constructor, falling back to a fixed phrase when nothing usable survives.
 
-**A failed turn always replies**, the class chosen from the stage and the cause, because the member's
-next useful move differs per class: `turn timed out, retry shortly`, `tool call failed`, `channel
-history unavailable`, `model backend unavailable, retry shortly`, `reply blocked by response check,
-rephrase`, or `turn failed`. **A deadline and a tool failure outrank the stage**, since both name the
-surface to stop waiting on more precisely. The notice is sent on a context detached from the turn
+**A failed turn always replies**, the class chosen from the stage and the cause, since the member's
+next move differs per class, and notice.go holds them. **A deadline, a tool failure, and every
+round the backend answered outrank the stage**: a 200 past the read bound, an unparsable one, a refused
+request, a spent budget and a rejected reply each carry their own, as collapsing them into
+`model backend unavailable` sent members to retry a healthy one (#933). The notice is sent on a context detached from the turn
 deadline, because **a turn that failed by expiring has no budget left to say so otherwise**, which is
 how the slowest failures used to end as silence. No model round trip is involved, so **the error path
 cannot inherit a model failure it was written to report**.

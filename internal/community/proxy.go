@@ -59,6 +59,14 @@ var ErrResponseRepairExhausted = errors.New("response repair exhausted")
 // ceiling and emitted nothing. See docs/sirens-echo-model-call.md.
 var ErrBudgetExhausted = errors.New("completion budget exhausted")
 
+// ErrResponseTooLarge marks an answer past the read bound. The backend answered
+// 200, so it must never read as an outage. See sirens-echo#933.
+var ErrResponseTooLarge = errors.New("Agent Proxy response exceeded the read bound")
+
+// ErrResponseUnreadable marks a 200 whose body was not a completion this
+// service could parse. Also not an outage. See sirens-echo#933.
+var ErrResponseUnreadable = errors.New("Agent Proxy response could not be read")
+
 // isToolFailure reports a cause that reached the turn from an MCP surface.
 func isToolFailure(cause error) bool {
 	var failure ToolFailure
@@ -1170,7 +1178,7 @@ func (c ProxyClient) wholeCompletion(
 		slog.Int("response_bytes", len(responseRaw)),
 	)
 	if len(responseRaw) > maxAgentProxyResponseBytes {
-		err := fmt.Errorf("Agent Proxy response exceeded %d bytes", maxAgentProxyResponseBytes)
+		err := fmt.Errorf("%w of %d bytes", ErrResponseTooLarge, maxAgentProxyResponseBytes)
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseTooLarge)
 		modelSpan.End()
@@ -1181,7 +1189,7 @@ func (c ProxyClient) wholeCompletion(
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelResponseDecodeFailed)
 		modelSpan.End()
-		return chatChoice{}, fmt.Errorf("decode Agent Proxy response: %w", err)
+		return chatChoice{}, fmt.Errorf("%w: decode: %w", ErrResponseUnreadable, err)
 	}
 	if len(completion.Choices) == 0 {
 		err := fmt.Errorf("Agent Proxy response contained no choices")
