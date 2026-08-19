@@ -111,18 +111,6 @@ func hardTrimRunes(value string, limit int) string {
 	return strings.TrimSpace(string(runes[:limit]))
 }
 
-// threadNameFor derives a name from the member's own message rather than
-// authoring one. Mentions and markup are dropped, not summarised.
-func threadNameFor(message *discordgo.Message) string {
-	if message == nil {
-		return threadNameFallback
-	}
-	if name := threadNameFrom(message.ContentWithMentionsReplaced()); name != "" {
-		return name
-	}
-	return threadNameFallback
-}
-
 // threadNameFrom keeps letters, digits and spaces and bounds the result. Empty
 // means nothing usable survived.
 func threadNameFrom(raw string) string {
@@ -139,11 +127,10 @@ func threadNameFrom(raw string) string {
 	return truncateRunes(name, threadNameRunes)
 }
 
-// threadCreationName is the name a thread is created with, bounded whatever it
-// came from. See docs/sirens-echo-threads.md.
-func threadCreationName(title string, message *discordgo.Message) string {
-	return hardTrimRunes(
-		valueOrDefault(title, threadNameFor(message)), threadTitleRunes)
+// threadCreationName names a thread from the harness's own words, never the
+// member's. Deriving it read as parroting. See sirens-echo#1036.
+func threadCreationName(title string, _ *discordgo.Message) string {
+	return hardTrimRunes(valueOrDefault(title, threadNameFallback), threadTitleRunes)
 }
 
 // threadForReply returns where a long turn's reply lands. No failure here is
