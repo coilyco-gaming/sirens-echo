@@ -59,9 +59,11 @@ func loadSkills(roots []string) (string, []SkillReference, error) {
 			return "", nil, fmt.Errorf("skill file %s has no body", path)
 		}
 		slashed := filepath.ToSlash(path)
-		if isReferencePath(path) && !inlineAlways(text) {
+		// The contract, restored. A description is the cheap always-on index and
+		// the body is what gets fetched, for an entrypoint as for a reference.
+		if !inlineAlways(text) {
 			references = append(references, SkillReference{
-				Path: slashed, Title: firstHeading(body), Body: body,
+				Path: slashed, Title: skillSummary(text, body), Body: body,
 			})
 			continue
 		}
@@ -127,6 +129,15 @@ func skillIndex(references []SkillReference) string {
 		fmt.Fprintf(&index, "- `%s` - %s\n", reference.Path, reference.Title)
 	}
 	return index.String()
+}
+
+// skillSummary is what the index says a file is about. A skill declares that in
+// its own frontmatter, so scraping a heading is the fallback rather than first.
+func skillSummary(raw, body string) string {
+	if description := frontmatterValue(raw, "description"); description != "" {
+		return description
+	}
+	return firstHeading(body)
 }
 
 // firstHeading is what the index says a reference is about.
@@ -240,6 +251,26 @@ func isSkillEntrypoint(slashed string) bool {
 		}
 	}
 	return false
+}
+
+// frontmatterValue reads one string key out of a file's frontmatter. Returns
+// empty for an absent key or an absent block, so a caller falls back.
+func frontmatterValue(raw, key string) string {
+	normalized := strings.ReplaceAll(raw, "\r\n", "\n")
+	if !strings.HasPrefix(normalized, "---\n") {
+		return ""
+	}
+	end := strings.Index(normalized[4:], "\n---\n")
+	if end < 0 {
+		return ""
+	}
+	for _, line := range strings.Split(normalized[4:4+end], "\n") {
+		name, value, found := strings.Cut(line, ":")
+		if found && strings.TrimSpace(name) == key {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }
 
 // frontmatterFlag reads one boolean key out of a file's frontmatter, so the
