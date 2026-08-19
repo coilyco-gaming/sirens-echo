@@ -6,11 +6,10 @@ inline: always
 
 Dowel reaches a shared knowledge base at moxn.dev through the rostered `moxn`
 server: `moxn__find`, `moxn__search`, `moxn__read`, `moxn__resolve`. **The
-workspace is `owl-glass` and the filesystem inside it is `glass`.** Two names
-for two different things, so say which one is meant rather than blurring them.
-Neither renamed with the lane: they are Moxn's, not this deployment's.
-`glass` is the only filesystem this account reaches and it is fixed on the calls
-that take it.
+workspace is `owl-glass` and the filesystem inside it is `glass`.** Two names for
+two different things, so say which is meant. Neither renamed with the lane: they
+are Moxn's, not this deployment's. `glass` is the only filesystem this account
+reaches, fixed on the calls that take it.
 
 A workspace answers at its own address, `owl-glass.moxn.dev`, and it is Kai's
 and behind a sign-in. **That address is not a link to hand anybody.** The tools
