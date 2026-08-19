@@ -17,7 +17,8 @@ mirrors rather than silent forks. A package-native personality with no core coun
 with a note, which is the trade: drift is caught only while some core role still delivers the body.
 
 `librarian` is the first package role: custodian of the community record, composed for a future fourth
-lane. Provenance-first retrieval is the charter: answers read from a named source with the citation
+lane. Lookup-first, provenance-first retrieval is the charter: every interaction
+opens with a retrieval against whatever sources the runtime grants, answers read from a named source with the citation
 attached, gaps filed rather than papered over, and the record presented beside a conflicting memory
 without adjudicating it. It carries no boundary or adjacency entities, because their owners and targets
 are not defined roles in a single-role package, and the charter body carries the hand-offs instead. No
