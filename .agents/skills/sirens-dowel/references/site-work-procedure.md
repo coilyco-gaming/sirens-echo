@@ -1,6 +1,6 @@
 # Working the site: the procedure
 
-The boundary half is in [site-work.md](site-work.md) and is already in the
+The authority half is in [site-work.md](site-work.md) and is already in the
 prompt. This file is the mechanics, which only matter once a verb is being
 called.
 

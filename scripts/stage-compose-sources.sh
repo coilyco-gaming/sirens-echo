@@ -62,16 +62,27 @@ seat_identity() {
     esac
 }
 
+# One agent alone in a guild has no seat to defer to. Engineer only, because
+# that is Dowel. See docs/sirens-echo-boundaries.md and agent-compose#304.
+seat_boundary_omissions() {
+    case "$1" in
+        engineer) printf '    boundary-omit "modify-live-system" "seek-external-validation"\n' ;;
+        *) printf '' ;;
+    esac
+}
+
 for role in $roles; do
     "$generator" "${catalog_flags[@]}" --role "$role" --compose-dir "$compose_dir"
     out=$bundles/$role
     rm -rf "$out"
     mkdir -p "$out"
     identity=$(seat_identity "$role")
-    awk -v role="$role" -v identity="$identity" '
+    omissions=$(seat_boundary_omissions "$role")
+    awk -v role="$role" -v identity="$identity" -v omissions="$omissions" '
         /^    role "/ {
             print "    role \"" role "\""
             if (identity != "") { print identity }
+            if (omissions != "") { print omissions }
             next
         }
         { print }
