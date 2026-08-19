@@ -246,6 +246,9 @@ var (
 	maxScratchEntries int
 	// maxScratchMatches bounds a search result for the same reason.
 	maxScratchMatches int
+	// maxScratchMatchRunes bounds one hit, since a minified file is one line
+	// and a single match could otherwise be the whole result.
+	maxScratchMatchRunes int
 	// maxScratchDepth bounds nesting so a walk stays cheap.
 	maxScratchDepth int
 	// maxSessionBytes bounds one shared workspace, which is the bound that
@@ -458,6 +461,7 @@ func knobs() []knob {
 		overridable(&maxScratchFileBytes, "SIRENS_ECHO_SCRATCH_FILE_BYTES", 256*1024),
 		overridable(&maxScratchEntries, "SIRENS_ECHO_SCRATCH_ENTRIES", 200),
 		overridable(&maxScratchMatches, "SIRENS_ECHO_SCRATCH_MATCHES", 100),
+		overridable(&maxScratchMatchRunes, "SIRENS_ECHO_SCRATCH_MATCH_RUNES", 240),
 		overridable(&maxScratchDepth, "SIRENS_ECHO_SCRATCH_DEPTH", 8),
 		overridable(&maxSessionBytes, "SIRENS_ECHO_SESSION_BYTES", 1024*1024),
 		overridable(&threadSessionRetention, "SIRENS_ECHO_THREAD_SESSION_RETENTION", 7*24*time.Hour),

@@ -528,11 +528,15 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 	}
 	needle := strings.ToLower(query)
 	matches := make([]string, 0, 16)
+	// Bytes as well as matches. A count alone let a hundred long lines answer
+	// with far more than any consumer holds. See docs/sirens-echo-scratchpad.md.
+	spent, truncated := 0, false
 	walkErr := filepath.WalkDir(target, func(p string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if len(matches) >= maxScratchMatches {
+		if len(matches) >= maxScratchMatches || spent >= maxToolResultBytes {
+			truncated = true
 			return fs.SkipAll
 		}
 		if d.IsDir() {
@@ -551,13 +555,15 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 			return relErr
 		}
 		for i, line := range strings.Split(string(data), "\n") {
-			if len(matches) >= maxScratchMatches {
+			if len(matches) >= maxScratchMatches || spent >= maxToolResultBytes {
+				truncated = true
 				return fs.SkipAll
 			}
 			if strings.Contains(strings.ToLower(line), needle) {
-				matches = append(matches, fmt.Sprintf(
-					"%s:%d: %s", filepath.ToSlash(rel), i+1, strings.TrimSpace(line),
-				))
+				match := fmt.Sprintf("%s:%d: %s", filepath.ToSlash(rel), i+1,
+					scratchMatchLine(strings.TrimSpace(line)))
+				matches = append(matches, match)
+				spent += len(match) + 1
 			}
 		}
 		return nil
@@ -571,7 +577,25 @@ func (s *scratchSession) search(query, relative string) (ToolResult, error) {
 	if len(matches) == 0 {
 		return ToolResult{Text: "no matches"}, nil
 	}
-	return ToolResult{Text: strings.Join(matches, "\n")}, nil
+	text := strings.Join(matches, "\n")
+	// Said rather than left to look like the whole answer, which is the reading
+	// that sends a model on with a partial picture.
+	if truncated {
+		text += fmt.Sprintf(
+			"\n\n[stopped at %d matches or %d bytes, narrow the query for the rest]",
+			maxScratchMatches, maxToolResultBytes,
+		)
+	}
+	return ToolResult{Text: text}, nil
+}
+
+// scratchMatchLine bounds one hit. A minified file is one line, and without
+// this a single match could be the whole result.
+func scratchMatchLine(line string) string {
+	if len(line) <= maxScratchMatchRunes {
+		return line
+	}
+	return strings.ToValidUTF8(line[:maxScratchMatchRunes], "") + "..."
 }
 
 // requesterBytes totals this requester across sessions, so their ceiling
