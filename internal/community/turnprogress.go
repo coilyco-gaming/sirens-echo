@@ -208,7 +208,9 @@ func (p *turnProgress) ToolStarted(server, tool string) {
 }
 
 // ToolFinished resolves the most recent unresolved row for that tool.
-func (p *turnProgress) ToolFinished(server, tool string, outcome ToolOutcome) {
+func (p *turnProgress) ToolFinished(
+	server, tool string, outcome ToolOutcome, detail string,
+) {
 	if p == nil || p.sink == nil {
 		return
 	}
@@ -220,6 +222,7 @@ func (p *turnProgress) ToolFinished(server, tool string, outcome ToolOutcome) {
 			continue
 		}
 		row.outcome = outcome
+		row.detail = detail
 		row.done = true
 		return
 	}
@@ -445,9 +448,11 @@ func reportToolStarted(ctx context.Context, server, tool string) {
 	progress.ToolStarted(server, tool)
 }
 
-func reportToolFinished(ctx context.Context, server, tool string, outcome ToolOutcome) {
+func reportToolFinished(
+	ctx context.Context, server, tool string, outcome ToolOutcome, detail string,
+) {
 	progress, _ := ctx.Value(turnProgressKey{}).(*turnProgress)
-	progress.ToolFinished(server, tool, outcome)
+	progress.ToolFinished(server, tool, outcome, detail)
 }
 
 // settleDelay is how long until the next beat of the grid the line started. A

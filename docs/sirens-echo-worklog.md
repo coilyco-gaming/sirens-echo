@@ -5,7 +5,7 @@ A long turn shows what it is doing, one row per tool call, resolving in place:
 ```
 Working on it
 > ✅ `eco.get_market`
-> 📭 `eco.get_stores`
+> ✅ 📖 `astronomy`
 > ❌ `forgejo.list_issue`
 > 🔨 `eco.find_trade`
 4 tools, 14 seconds elapsed
@@ -27,8 +27,11 @@ meaning invoked with the outcome never learned.
 
 **Every row is a harness notice**, the same shape a member reads outside an embed. The notice alphabet
 carries the underscore, because the tool name is the payload and `list_issue` sanitized to `list issue`
-is a name nobody can look up. The backtick is still stripped. Rows cap at six with a count standing in
-for the rest, and **arguments are never shown**: names are roster-derived, arguments carry member text.
+is a name nobody can look up. The backtick is still stripped. Rows cap at twelve with a count standing
+in for the rest, and **arguments are never shown**: names are roster-derived, arguments carry member
+text. The one carve-out is a resolved skill read, whose row names the reference behind a 📖: the name
+comes from the session's validated closed set, never from the argument, and a refused read names
+nothing.
 
 `ExecutedTool.Label` is the one spelling the row and the disclosure footer both take, so a call watched
 running is findable afterwards. Neither surface filters anything, and the receipt's collapsed runs state

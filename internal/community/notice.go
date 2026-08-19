@@ -23,9 +23,9 @@ const (
 // See docs/sirens-echo-delivery.md and docs/sirens-echo-worklog.md.
 var noticeAllowed = regexp.MustCompile(`[^a-z0-9 ,./_-]+`)
 
-// noticeShape is what every rendered notice matches. A non-ASCII icon may
+// noticeShape is what every rendered notice matches. Non-ASCII icons may
 // lead it, so model prose still cannot pose as one. See sirens-echo-notices.
-var noticeShape = regexp.MustCompile("^> (?:[^\\x00-\\x7F]+ )?`[a-z0-9][a-z0-9 ,./_-]*`$")
+var noticeShape = regexp.MustCompile("^> (?:[^\\x00-\\x7F]+ )*`[a-z0-9][a-z0-9 ,./_-]*`$")
 
 // noticeFallback stands in for a phrase that sanitizes down to nothing, so a
 // caller bug still reaches the member as a notice rather than an empty line.

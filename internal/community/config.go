@@ -494,7 +494,7 @@ func knobs() []knob {
 		overridable(&maxCalculatorExponent, "SIRENS_ECHO_CALCULATOR_EXPONENT", 64),
 		overridable(&maxCalculatorPlaces, "SIRENS_ECHO_CALCULATOR_PLACES", 10),
 		overridable(&maxProxyToolNameBytes, "SIRENS_ECHO_PROXY_TOOL_NAME_BYTES", 64),
-		overridable(&maxWorklogRows, "SIRENS_ECHO_WORKLOG_ROWS", 6),
+		overridable(&maxWorklogRows, "SIRENS_ECHO_WORKLOG_ROWS", 12),
 		overridable(&maxRedactedBlocks, "SIRENS_ECHO_REDACTED_BLOCKS", 2),
 		overridable(&inventedChannelRunes, "SIRENS_ECHO_INVENTED_CHANNEL_RUNES", 64),
 		overridable(&maxObjectEmoji, "SIRENS_ECHO_OBJECT_EMOJI", 3),

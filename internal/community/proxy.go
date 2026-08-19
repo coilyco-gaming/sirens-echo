@@ -85,6 +85,9 @@ type ExecutedTool struct {
 	// Outcome is what the call did. Recorded here rather than derived later,
 	// because a failure is not visible from the result text.
 	Outcome ToolOutcome
+	// Detail is the session-validated display value, carried so a skill read
+	// can be named on the member surfaces. See docs/sirens-echo-worklog.md.
+	Detail string
 }
 
 // Label is the one spelling of a call a member sees, on the worklog row while
@@ -736,7 +739,7 @@ func (c ProxyClient) Complete(
 			elapsed := time.Since(calledAt)
 			if err != nil {
 				reportToolFinished(
-					toolCtx, definition.Server, definition.Original, ToolOutcomeFailed)
+					toolCtx, definition.Server, definition.Original, ToolOutcomeFailed, "")
 				telemetry.RecordToolCall(
 					toolCtx, definition.Server, definition.Original, "error", elapsed)
 				telemetry.MarkSpanError(toolSpan, mcpCallFailure(err))
@@ -754,7 +757,8 @@ func (c ProxyClient) Complete(
 				outcome = "tool_error"
 			}
 			reportToolFinished(
-				toolCtx, definition.Server, definition.Original, outcomeOf(result))
+				toolCtx, definition.Server, definition.Original, outcomeOf(result),
+				result.Detail)
 			telemetry.Info(
 				toolCtx,
 				"mcp.tool.result",
@@ -796,6 +800,7 @@ func (c ProxyClient) Complete(
 				Server:    definition.Server,
 				Original:  definition.Original,
 				Outcome:   outcomeOf(result),
+				Detail:    result.Detail,
 			})
 			if trimmed {
 				// The remainder is preserved rather than discarded wherever the

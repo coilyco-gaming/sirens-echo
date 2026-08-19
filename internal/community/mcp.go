@@ -38,6 +38,9 @@ type ToolDefinition struct {
 type ToolResult struct {
 	Text    string
 	IsError bool
+	// Detail is a display value the session validated against its own closed
+	// set, never argument text. See docs/sirens-echo-tool-markup.md.
+	Detail string
 }
 
 // GroundingDocument is one resource a server marked for the assistant, already
