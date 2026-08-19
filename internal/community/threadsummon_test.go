@@ -168,3 +168,69 @@ func TestThreadOwnershipReadsCachedGatewayState(t *testing.T) {
 		t.Fatal("a session with no state must report unowned")
 	}
 }
+
+// The resolver's cache, state read, and negative answer. The REST fallback
+// needs an HTTP fixture and is exercised live instead.
+func testAgentForOwnership(t *testing.T) *Agent {
+	t.Helper()
+	agent := &Agent{}
+	agent.ensureRuntimeDefaults()
+	return agent
+}
+
+func TestAResolvedThreadSummonsOnALaterMessage(t *testing.T) {
+	botID := "bot-1"
+	session := threadSummonSession(t, botID, botID)
+	agent := testAgentForOwnership(t)
+
+	// State alone cannot answer for a thread it never saw.
+	if threadOwnedBy(session, "thread-unseen", botID) {
+		t.Fatal("cached state should not claim an unseen thread")
+	}
+
+	agent.threads.Set("thread-unseen", true)
+	if !agent.resolveThreadOwnership(session, summonContext{ChannelID: "thread-unseen"}) {
+		t.Fatal("a resolved thread should summon on a later message")
+	}
+}
+
+func TestResolvedOwnershipIsCachedSoALookupIsPerChannel(t *testing.T) {
+	botID := "bot-1"
+	session := threadSummonSession(t, botID, botID)
+	agent := testAgentForOwnership(t)
+
+	origin := summonContext{ChannelID: "thread-1", GuildID: "guild-1"}
+	if !agent.resolveThreadOwnership(session, origin) {
+		t.Fatal("a thread in state and owned by this account should summon")
+	}
+	owned, known := agent.threads.Get("thread-1")
+	if !known || !owned {
+		t.Fatalf("ownership should be cached: known=%v owned=%v", known, owned)
+	}
+}
+
+func TestOrdinaryChannelCachesFalseRatherThanLookingUpEachMessage(t *testing.T) {
+	botID := "bot-1"
+	session := threadSummonSession(t, botID, botID)
+	agent := testAgentForOwnership(t)
+
+	origin := summonContext{ChannelID: "channel-1", GuildID: "guild-1"}
+	if agent.resolveThreadOwnership(session, origin) {
+		t.Fatal("an ordinary channel is not a thread this service opened")
+	}
+	owned, known := agent.threads.Get("channel-1")
+	if !known || owned {
+		t.Fatalf("the negative answer should cache: known=%v owned=%v", known, owned)
+	}
+}
+
+func TestAMemberOwnedThreadStaysUnowned(t *testing.T) {
+	botID := "bot-1"
+	session := threadSummonSession(t, botID, "member-9")
+	agent := testAgentForOwnership(t)
+
+	origin := summonContext{ChannelID: "thread-1", GuildID: "guild-1"}
+	if agent.resolveThreadOwnership(session, origin) {
+		t.Fatal("a thread a member opened must not summon")
+	}
+}
