@@ -164,12 +164,12 @@ boundaries-check *ARGS:
 
 # Grade a board dataset by hand with the shared aos-eval. One case per screen, saved after every decision.
 grade DATASET *ARGS:
-    @bash scripts/task.sh grade "{{DATASET}}" "$@"
+    @bash scripts/task.sh grade "{{DATASET}}" {{ARGS}}
 
 # Rank a graded board's deductions into a failure taxonomy. Takes the dataset and its annotations.
 taxonomy DATASET ANNOTATIONS *ARGS:
-    @bash scripts/task.sh taxonomy "{{DATASET}}" "{{ANNOTATIONS}}" "$@"
+    @bash scripts/task.sh taxonomy "{{DATASET}}" "{{ANNOTATIONS}}" {{ARGS}}
 
 # Check a board dataset against this deployment's aos-eval profile without grading it.
 grade-check DATASET *ARGS:
-    @bash scripts/task.sh grade-check "{{DATASET}}" "$@"
+    @bash scripts/task.sh grade-check "{{DATASET}}" {{ARGS}}
