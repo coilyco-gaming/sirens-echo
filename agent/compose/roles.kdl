@@ -23,6 +23,7 @@ roles {
     // Globs so the deny list drops a match. Set and cost: deploy#658.
     role "engineer" {
         composed-skill "tooling-sirens-dowel-contract"
+        composed-skill "tooling-sirens-dowel-temporal-brand"
         composed-skill "tooling-discord-community-host"
         composed-skill "personal-preference-*"
         composed-skill "personal-preferences"

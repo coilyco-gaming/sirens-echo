@@ -5,7 +5,7 @@ Seat: Angie (she)
 Model tier: frontier
 Personalities: curious, meticulous, tenacious
 Sources: aos-public, roster:core
-Skills: 57
+Skills: 58
 
 ===== SELECTION =====
 
@@ -52,6 +52,7 @@ aos-public/tooling-qa-adversarial-verification
 aos-public/tooling-qa-state-machine-verification
 aos-public/tooling-qa-visual-verification
 aos-public/tooling-sirens-dowel-contract
+aos-public/tooling-sirens-dowel-temporal-brand
 aos-public/tooling-skill-authoring
 aos-public/writing-kai-voice
 aos-public/writing-social-cultural-reading
