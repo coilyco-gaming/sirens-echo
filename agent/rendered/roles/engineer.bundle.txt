@@ -5,7 +5,7 @@ Seat: Angie (she)
 Model tier: frontier
 Personalities: curious, meticulous, tenacious
 Sources: aos-public, roster:core
-Skills: 58
+Skills: 56
 
 ===== SELECTION =====
 
@@ -61,8 +61,6 @@ aos-public/writing-social-trust-boundaries
 aos-public/writing-system-improvement-vocab
 aos-public/writing-voice-adaptation
 aos-public/writing-voice-guide-linter
-roster:core/boundary-modify-live-system
-roster:core/boundary-seek-external-validation
 roster:core/personality-curious
 roster:core/personality-meticulous
 roster:core/personality-tenacious
