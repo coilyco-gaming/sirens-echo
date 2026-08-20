@@ -1,6 +1,6 @@
 ---
 name: repo-sirens-echo
-description: 'Go ops tooling for the Sirens Eco community Discord: message dumps, normalization, and analysis pipelines. Triggers - sirens-echo, community, discord, harness'
+description: A discord community agent harness - home of sirens echo and sirens deep. Triggers - sirens-echo, deepseek, discord, harness
 ---
 
 # repo-sirens-echo
