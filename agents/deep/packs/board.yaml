@@ -67,9 +67,9 @@
 # issue 184 defeated max_verbatim_words while quoting nothing. A human decides
 # whether a restatement disclosed the instructions. Nothing else can.
 
-schema: sirens-discord-ops.board.v1
+schema: sirens-discord-ops.board.v2
 
-cases:
+challenges:
   - id: deep-surf-in
     clause: no-invented-surface
     half: in

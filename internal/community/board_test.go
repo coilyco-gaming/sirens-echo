@@ -30,12 +30,12 @@ func (c *scriptedCompletionClient) Complete(
 func TestLoadBoardPackAcceptsTrackedPilot(t *testing.T) {
 	t.Parallel()
 	pack := loadBoardFixture(t)
-	if len(pack.Cases)%2 != 0 {
-		t.Fatalf("board holds %d cases, which cannot be whole pairs", len(pack.Cases))
+	if len(pack.Challenges)%2 != 0 {
+		t.Fatalf("board holds %d cases, which cannot be whole pairs", len(pack.Challenges))
 	}
-	for _, boardCase := range pack.Cases {
-		if strings.TrimSpace(boardCase.Target) == "" {
-			t.Fatalf("case %s has no target, so nothing states what passing means", boardCase.ID)
+	for _, boardChallenge := range pack.Challenges {
+		if strings.TrimSpace(boardChallenge.Target) == "" {
+			t.Fatalf("case %s has no target, so nothing states what passing means", boardChallenge.ID)
 		}
 	}
 }
@@ -45,8 +45,8 @@ func TestLoadBoardPackRejectsAHalfWithoutItsPair(t *testing.T) {
 	// The in half is the negative control. A pair holding one half is the shape
 	// that silently deletes a finding, so it has to fail at load.
 	err := writeAndLoadBoard(t, `
-schema: sirens-discord-ops.board.v1
-cases:
+schema: sirens-discord-ops.board.v2
+challenges:
   - id: lonely-out
     clause: trusted-principal
     half: out
@@ -67,8 +67,8 @@ cases:
 func TestLoadBoardPackRejectsACaseWithoutATarget(t *testing.T) {
 	t.Parallel()
 	err := writeAndLoadBoard(t, `
-schema: sirens-discord-ops.board.v1
-cases:
+schema: sirens-discord-ops.board.v2
+challenges:
   - id: no-target-in
     clause: trusted-principal
     half: in
@@ -130,8 +130,8 @@ func TestRunBoardReportsNoVerdictOnAReplyTheGateWouldReject(t *testing.T) {
 		t.Fatalf("RunBoard returned a verdict it should not have: %v", err)
 	}
 	dataset := decodeBoardDataset(t, output.Bytes())
-	if len(dataset.Records) != len(pack.Cases) {
-		t.Fatalf("dataset holds %d records, want %d", len(dataset.Records), len(pack.Cases))
+	if len(dataset.Records) != len(pack.Challenges) {
+		t.Fatalf("dataset holds %d records, want %d", len(dataset.Records), len(pack.Challenges))
 	}
 	for _, record := range dataset.Records {
 		if len(record.Responses) != 2 {
@@ -181,7 +181,7 @@ func TestRunBoardCarriesProvenance(t *testing.T) {
 func TestRunBoardPreservesTheDatasetWhenACaseNeverAnswers(t *testing.T) {
 	t.Parallel()
 	definition, skillpack, pack := loadBoardRunFixture(t)
-	silent := pack.Cases[0].ID
+	silent := pack.Challenges[0].ID
 	client := &scriptedCompletionClient{
 		reply: func(requestID string) (CompletionResult, error) {
 			if strings.HasPrefix(requestID, silent+"#") {
@@ -207,7 +207,7 @@ func TestRunBoardPreservesTheDatasetWhenACaseNeverAnswers(t *testing.T) {
 	// The dataset still has to reach disk. Raw results are preserved before any
 	// failure is reported, or the run is not reproducible.
 	dataset := decodeBoardDataset(t, output.Bytes())
-	if len(dataset.Records) != len(pack.Cases) {
+	if len(dataset.Records) != len(pack.Challenges) {
 		t.Fatalf("dataset lost records on failure: %d", len(dataset.Records))
 	}
 	for _, record := range dataset.Records {
@@ -249,8 +249,8 @@ func TestRunBoardGivesEachEpochItsOwnRequestID(t *testing.T) {
 		}
 		seen[requestID] = struct{}{}
 	}
-	if len(client.requests) != len(pack.Cases)*3 {
-		t.Fatalf("made %d requests, want %d", len(client.requests), len(pack.Cases)*3)
+	if len(client.requests) != len(pack.Challenges)*3 {
+		t.Fatalf("made %d requests, want %d", len(client.requests), len(pack.Challenges)*3)
 	}
 }
 
@@ -361,8 +361,8 @@ func TestBoardDatasetCarriesTheAosEvalSampleShape(t *testing.T) {
 	if err := yaml.Unmarshal(output.Bytes(), &raw); err != nil {
 		t.Fatalf("decode dataset: %v", err)
 	}
-	if len(raw.Dataset) != len(pack.Cases) {
-		t.Fatalf("dataset key holds %d records, want %d", len(raw.Dataset), len(pack.Cases))
+	if len(raw.Dataset) != len(pack.Challenges) {
+		t.Fatalf("dataset key holds %d records, want %d", len(raw.Dataset), len(pack.Challenges))
 	}
 	required := []string{
 		"id", "role", "test_type", "prompt", "target",
@@ -393,13 +393,13 @@ func TestBoardDatasetCarriesTheAosEvalSampleShape(t *testing.T) {
 func TestBoardPromptCarriesTheTurnAndNotTheSystemPrompt(t *testing.T) {
 	t.Parallel()
 	pack := loadBoardFixture(t)
-	for _, boardCase := range pack.Cases {
-		prompt := boardCaseTranscript(boardCase)
-		if !strings.HasSuffix(prompt, boardCase.Current.Content) {
-			t.Errorf("case %s does not end on the message under study", boardCase.ID)
+	for _, boardChallenge := range pack.Challenges {
+		prompt := boardCaseTranscript(boardChallenge)
+		if !strings.HasSuffix(prompt, boardChallenge.Current.Content) {
+			t.Errorf("case %s does not end on the message under study", boardChallenge.ID)
 		}
-		if strings.Count(prompt, "\n")+1 != len(boardCase.History)+1 {
-			t.Errorf("case %s renders %d lines, want %d", boardCase.ID, strings.Count(prompt, "\n")+1, len(boardCase.History)+1)
+		if strings.Count(prompt, "\n")+1 != len(boardChallenge.History)+1 {
+			t.Errorf("case %s renders %d lines, want %d", boardChallenge.ID, strings.Count(prompt, "\n")+1, len(boardChallenge.History)+1)
 		}
 	}
 }

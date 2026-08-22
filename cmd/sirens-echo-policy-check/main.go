@@ -70,10 +70,10 @@ func verifyBoardPack(path string) {
 		log.Fatalf("board pack %s: %v", path, err)
 	}
 	fmt.Printf(
-		"verified board pack %s with %d cases across %d pairs\n",
+		"verified board pack %s with %d challenges across %d pairs\n",
 		path,
-		len(pack.Cases),
-		len(pack.Cases)/2,
+		len(pack.Challenges),
+		len(pack.Challenges)/2,
 	)
 }
 

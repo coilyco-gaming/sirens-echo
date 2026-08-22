@@ -87,7 +87,7 @@ retired one, **because the before-and-after is the argument that a doctrine chan
 ## The boundary declaration
 
 `eval/boundaries.yaml` declares every boundary this deployment holds, once, in aos-eval's declaration
-shape. `aos-eval boundaries derive` reads it as-is, and `aos-eval boundaries check` compares the slots it
+shape. `aos-eval boundaries derive` reads it as-is, and `aos-eval boundaries check` compares the challenges it
 derives to what the board actually authored.
 
 **That coverage number is meant to read low.** The declaration is the deployment's boundary inventory
@@ -98,7 +98,7 @@ and stays wrong out loud until those cases exist. Deriving the board from the de
 
 `just boundaries` prints the paired case list, and `just boundaries-check` fails when a declared boundary
 no longer resolves against the source it names. That source-drift check stays local because `aos-eval
-boundaries check` compares slots to a dataset instead, so the two answer different questions.
+boundaries check` compares challenges to a dataset instead, so the two answer different questions.
 
 ## The rest of the stack
 

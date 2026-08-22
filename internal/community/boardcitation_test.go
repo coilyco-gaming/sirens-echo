@@ -62,9 +62,9 @@ func TestEveryBoardClauseIsCited(t *testing.T) {
 		t.Fatalf("load the board pack: %v", err)
 	}
 	missing := make([]string, 0)
-	for _, boardCase := range pack.Cases {
-		if _, ok := cited[boardCase.Clause]; !ok {
-			missing = append(missing, boardCase.Clause)
+	for _, boardChallenge := range pack.Challenges {
+		if _, ok := cited[boardChallenge.Clause]; !ok {
+			missing = append(missing, boardChallenge.Clause)
 		}
 	}
 	sort.Strings(missing)
