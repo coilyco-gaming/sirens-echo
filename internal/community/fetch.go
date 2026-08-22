@@ -90,6 +90,12 @@ func (s *fetchSession) Call(
 		return ToolResult{Text: "that host did not answer", IsError: true}, nil
 	}
 	defer func() { _ = response.Body.Close() }()
+	// A media URL answers with the thing itself rather than a document, so it
+	// is described instead of decoded. See docs/sirens-echo-tools.md.
+	kind := response.Header.Get("Content-Type")
+	if !fetchReadable(kind) {
+		return ToolResult{Text: fetchMedia(response.StatusCode, kind, response.ContentLength)}, nil
+	}
 	// One byte past the cap, so a page that fits is distinguishable from one
 	// that does not. See docs/sirens-echo-tools.md.
 	body, err := io.ReadAll(io.LimitReader(response.Body, int64(maxFetchBytes)+1))
@@ -97,6 +103,46 @@ func (s *fetchSession) Call(
 		return ToolResult{Text: "that response could not be read", IsError: true}, nil
 	}
 	return ToolResult{Text: fetchText(response.StatusCode, body)}, nil
+}
+
+// fetchReadable reports whether a content type is text the model can read. An
+// absent type is read, because that is what a plain page used to send.
+func fetchReadable(kind string) bool {
+	base, _, _ := strings.Cut(kind, ";")
+	base = strings.ToLower(strings.TrimSpace(base))
+	if base == "" {
+		return true
+	}
+	if strings.HasPrefix(base, "text/") {
+		return true
+	}
+	// The structured types that are text underneath, by suffix rather than by
+	// an enumeration a new vendor type would fall out of.
+	return strings.HasSuffix(base, "+json") ||
+		strings.HasSuffix(base, "+xml") ||
+		base == "application/json" ||
+		base == "application/xml" ||
+		base == "application/javascript"
+}
+
+// fetchMedia states what the URL is rather than what it contains. A gif decoded
+// as text is 32 KB of nothing, and what the caller needs is that it is a gif.
+func fetchMedia(status int, kind string, length int64) string {
+	base, _, _ := strings.Cut(kind, ";")
+	base = strings.ToLower(strings.TrimSpace(base))
+	if base == "" {
+		base = "an unnamed type"
+	}
+	if length < 0 {
+		return fmt.Sprintf(
+			"%d\n[this url answers with %s of unstated length, not a page to read]",
+			status, base,
+		)
+	}
+	return fmt.Sprintf(
+		"%d\n[this url answers with %s, %d bytes, not a page to read]",
+		status, base, length,
+	)
 }
 
 // fetchText marks a page that was cut, because a half document the model cannot
