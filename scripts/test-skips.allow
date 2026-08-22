@@ -18,10 +18,11 @@ TestCapabilityDocIsRightThatTheBuildCarriesNoRevision
 # This entry is permanent while that question needs a checkout to answer.
 TestGraphPatternsNeverReachDeniedSources
 
-# The Postgres store's SQL, which needs a live database. There is no in-process
-# Postgres, so the choice is an env gate or no SQL coverage at all.
+# The Postgres-backed SQL, job store and turn log alike, which needs a live
+# database. There is no in-process Postgres, so the choice is an env gate or no
+# SQL coverage at all.
 #
-# These five skip under `just test` and `test-skips` in every environment,
+# These eight skip under `just test` and `test-skips` in every environment,
 # including CI, because SIRENS_ECHO_TEST_JOB_STORE_DSN is deliberately not set
 # job-wide. They are not unrun: the `job store SQL` CI step runs exactly this
 # set against a service container, scoping the DSN to that one step so the skip
@@ -35,3 +36,6 @@ TestThePostgresStoreCollapsesARedeliveredSubmission
 TestThePostgresStoreLeavesARefusedMoveAlone
 TestThePostgresStoreFindsAJobReboundToAThread
 TestThePostgresStoreReportsAMissingJob
+TestThePostgresTurnLogReportsWhatAnotherRunLeft
+TestThePostgresTurnLogTakesEachRecordOnce
+TestThePostgresTurnLogClearsFinishedAndKeepsLive

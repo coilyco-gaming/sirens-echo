@@ -93,6 +93,9 @@ var (
 	// The turn was cut by a restart rather than by anything it did, so retrying
 	// is the right move and nothing about it was wrong. See sirens-echo#597.
 	noticeShuttingDown = harnessNotice("service restarting, retry shortly")
+	// Said at the next boot rather than at the death, because nothing reliable
+	// runs at the death. See sirens-echo#989.
+	noticeInterrupted = harnessNotice("summon dropped by a restart, not answered, retry")
 )
 
 // noticeWithTrace appends the turn's trace so a member's screenshot becomes a

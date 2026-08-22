@@ -79,27 +79,30 @@ before building it.
 ## Shutdown
 
 **A restart is not a failure, and a member whose turn it interrupts is entitled to hear which one it
-was.** SIGTERM cancelled the context handed to `Run`, which reached the HTTP listener and nothing else,
-and every Discord turn was rooted at `context.Background()`, **so shutdown could not see one, wait for
-one, or tell one to stop**. The turn ended when the process did, which read to the member as silence:
-the message kept its accepted mark and never got an answer. HTTP turns were never affected, descending
-from their request.
+was.** SIGTERM reached the HTTP listener and nothing else, every Discord turn being rooted at
+`context.Background()`, **so shutdown could not see one, wait for one, or tell one to stop**. They now
+descend from a root the service owns, and shutdown goes one way: stop admitting; wait out the grace;
+cancel the rest **naming the restart as the cause**; let them send their notice **while the gateway is
+still open**; then close the session, the MCP connections, and the job runner. **That close was always
+last. What was missing is everything above it.**
 
-Discord turns now descend from a root the service owns, with a counter tracking those in flight, and
-shutdown goes in one direction: stop admitting; wait up to the grace period for running turns to answer;
-cancel whatever is left, **naming the restart as the cause**; give those turns a moment to send their
-notice **while the gateway is still open**; then return, at which point `Run` closes the session, the
-MCP connections, and the job runner. **That last step was always last. What was missing is everything
-above it**, so the closes happened while turns were still running.
+Only `context.Cause` separates a restart from a deleted message: `service restarting, retry shortly` is
+actionable where `turn timed out` **would blame the member's question for a deploy**. The metric splits
+on `shutdown` rather than `stage_failed`, **so a rollout does not read as an outage**. The 15 second
+`SIRENS_ECHO_SHUTDOWN_GRACE` is what fits the pod's kill window.
 
-**A cancelled turn sees `context.Canceled`, which is what every other cancellation also looks like.**
-Only `context.Cause` separates a restart from a member deleting their message, and the notice depends on
-it: `service restarting, retry shortly` is true and actionable, while `turn timed out, retry shortly`
-**would blame the member's question for a deploy**. The failure metric splits the same way, on
-`shutdown` rather than `stage_failed`, **so a rollout does not read as an outage**.
+## The turns the drain cannot reach
 
-`SIRENS_ECHO_SHUTDOWN_GRACE` is 15 seconds by default. **It has to fit inside the pod's kill window**,
-and no manifest sets `terminationGracePeriodSeconds`, so Kubernetes' default of 30 seconds is the
-ceiling. It is deliberately shorter than the 3 minute `RequestTimeout`, because **a turn allowed to run
-that long cannot be waited out by any value that fits the window**, so the grace serves the common turn
-and cancels the rare one.
+The grace rescues only quick turns against a p95 of 182 seconds, and sees nothing of a SIGKILL or an OOM
+kill. **The loss is structural, so the goal is making it visible** (sirens-echo#989).
+
+So the mark is written at the **start**, a shutdown-time write depending on the least reliable moment in
+the process's life and catching only the graceful case. A turn records itself before its first model
+call, keyed by the message id and carrying the channel, the author, the start, and **a random identity
+for the run that wrote it**, then clears it when the turn ends, success and failure alike. **The next
+boot sweeps every record another run left**, which is why the tests name no signal.
+
+A swept record lands on `sirens_echo.turns` as `outcome=interrupted`, **the counter an ordinary turn
+already lands on**, and a reply tells the room the summon was dropped. Taking and clearing is one step,
+**so a second boot cannot repeat it**, and it never re-answers, a replay risking the double answer
+`Recreate` exists to prevent. The log follows the store [jobs](sirens-echo-jobs.md) already selected.
