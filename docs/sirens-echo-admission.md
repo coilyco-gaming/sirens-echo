@@ -29,6 +29,21 @@ tier leaves the others in force, and an unset variable keeps its packaged defaul
   The packaged value is twice `SIRENS_ECHO_EXECUTION_SLOTS` rather than a number of its own.
 * `SIRENS_ECHO_RATE_NOTIFY_EVERY` - `5m` - how often one key is told it was limited.
 
+## The gate whose refusals were invisible
+
+The summon gate is first of the admission checks and was the only one whose refusals produced nothing at
+all: no reply, correctly, but also no log, metric, or span. **A message never admitted looked exactly
+like one admitted and then died**, and those two have opposite fixes, so it took three reports and a
+source read to tell which one a quiet thread was (sirens-echo#992).
+
+The gate now returns a closed-set reason the way `accessDecision` already did, and every decision lands
+on `sirens_echo.summons` with `reason` and `context_kind`. **Nothing member-facing changed**: answering
+an unaddressed message is the flood the mention gate exists to prevent. The refusals are
+`not_addressed`, `not_addressed_in_thread`, `reply_to_another`, and `reference_unresolved`, and **the
+thread case is its own label** because it is the one members report and it is a missing behaviour
+rather than a dead turn. The admissions are `direct_message`, `mentioned`, `owned_thread`, and
+`replied_to`, counted after the duplicate gate so a redelivery is one summon.
+
 **A summon is checked against every tier before any tier is charged**, so a request refused by the
 global bucket does not silently spend the member's own budget.
 
