@@ -14,7 +14,7 @@ import (
 
 // BoardSchema names the human-graded pack. The deterministic gate keeps
 // sirens-discord-ops.evaluation.v1 and the two never share a file.
-const BoardSchema = "sirens-discord-ops.board.v1"
+const BoardSchema = "sirens-discord-ops.board.v2"
 
 // BoardDatasetSchema names the emitted annotation input.
 const BoardDatasetSchema = "sirens-discord-ops.board-dataset.v1"
@@ -26,9 +26,9 @@ const (
 	BoardHalfOut = "out"
 )
 
-// BoardCase is one authored case. Target states what passing means in prose,
-// because a human grades this pack and a phrase list is not a criterion.
-type BoardCase struct {
+// BoardChallenge is one written challenge. Target states what passing means in
+// prose, because a human grades this pack and a phrase list is not a criterion.
+type BoardChallenge struct {
 	ID           string            `yaml:"id"`
 	Clause       string            `yaml:"clause"`
 	Half         string            `yaml:"half"`
@@ -42,8 +42,8 @@ type BoardCase struct {
 // BoardPack is the source-controlled human-graded board. It never gates a
 // deployment, so nothing in this file decides pass or fail.
 type BoardPack struct {
-	Schema string      `yaml:"schema"`
-	Cases  []BoardCase `yaml:"cases"`
+	Schema     string           `yaml:"schema"`
+	Challenges []BoardChallenge `yaml:"challenges"`
 }
 
 // BoardProvenance records what produced a dataset. Evaluation evidence without
@@ -109,54 +109,54 @@ func LoadBoardPack(path string) (BoardPack, error) {
 	if pack.Schema != BoardSchema {
 		return BoardPack{}, fmt.Errorf("unsupported board schema %q", pack.Schema)
 	}
-	if len(pack.Cases) == 0 {
-		return BoardPack{}, fmt.Errorf("board pack contains no cases")
+	if len(pack.Challenges) == 0 {
+		return BoardPack{}, fmt.Errorf("board pack contains no challenges")
 	}
-	if err := validateBoardCases(pack.Cases); err != nil {
+	if err := validateBoardChallenges(pack.Challenges); err != nil {
 		return BoardPack{}, err
 	}
 	return pack, nil
 }
 
-// validateBoardCases enforces the pair invariant at load time. A pair holding
+// validateBoardChallenges enforces the pair invariant at load time. A pair holding
 // one half is the shape that silently deletes a finding, so it fails here.
-func validateBoardCases(cases []BoardCase) error {
-	seen := make(map[string]struct{}, len(cases))
+func validateBoardChallenges(challenges []BoardChallenge) error {
+	seen := make(map[string]struct{}, len(challenges))
 	halves := make(map[string]map[string]string)
-	for _, boardCase := range cases {
+	for _, boardChallenge := range challenges {
 		switch {
-		case boardCase.ID == "":
-			return fmt.Errorf("board case requires an id")
-		case boardCase.Clause == "":
-			return fmt.Errorf("board case %s requires a clause", boardCase.ID)
-		case strings.TrimSpace(boardCase.Current.Content) == "":
-			return fmt.Errorf("board case %s requires current content", boardCase.ID)
-		case strings.TrimSpace(boardCase.Target) == "":
-			return fmt.Errorf("board case %s requires a target", boardCase.ID)
-		case boardCase.Half != BoardHalfIn && boardCase.Half != BoardHalfOut:
+		case boardChallenge.ID == "":
+			return fmt.Errorf("board challenge requires an id")
+		case boardChallenge.Clause == "":
+			return fmt.Errorf("board challenge %s requires a clause", boardChallenge.ID)
+		case strings.TrimSpace(boardChallenge.Current.Content) == "":
+			return fmt.Errorf("board challenge %s requires current content", boardChallenge.ID)
+		case strings.TrimSpace(boardChallenge.Target) == "":
+			return fmt.Errorf("board challenge %s requires a target", boardChallenge.ID)
+		case boardChallenge.Half != BoardHalfIn && boardChallenge.Half != BoardHalfOut:
 			return fmt.Errorf(
-				"board case %s half must be %q or %q",
-				boardCase.ID, BoardHalfIn, BoardHalfOut,
+				"board challenge %s half must be %q or %q",
+				boardChallenge.ID, BoardHalfIn, BoardHalfOut,
 			)
-		case boardCase.PairID == "":
-			return fmt.Errorf("board case %s requires a pair_id", boardCase.ID)
+		case boardChallenge.PairID == "":
+			return fmt.Errorf("board challenge %s requires a pair_id", boardChallenge.ID)
 		}
-		if _, duplicate := seen[boardCase.ID]; duplicate {
-			return fmt.Errorf("board case %s is declared twice", boardCase.ID)
+		if _, duplicate := seen[boardChallenge.ID]; duplicate {
+			return fmt.Errorf("board challenge %s is declared twice", boardChallenge.ID)
 		}
-		seen[boardCase.ID] = struct{}{}
-		pair, ok := halves[boardCase.PairID]
+		seen[boardChallenge.ID] = struct{}{}
+		pair, ok := halves[boardChallenge.PairID]
 		if !ok {
 			pair = make(map[string]string, 2)
-			halves[boardCase.PairID] = pair
+			halves[boardChallenge.PairID] = pair
 		}
-		if existing, taken := pair[boardCase.Half]; taken {
+		if existing, taken := pair[boardChallenge.Half]; taken {
 			return fmt.Errorf(
 				"pair %s declares half %s twice, in %s and %s",
-				boardCase.PairID, boardCase.Half, existing, boardCase.ID,
+				boardChallenge.PairID, boardChallenge.Half, existing, boardChallenge.ID,
 			)
 		}
-		pair[boardCase.Half] = boardCase.ID
+		pair[boardChallenge.Half] = boardChallenge.ID
 	}
 	return validateBoardPairsComplete(halves)
 }
@@ -232,29 +232,29 @@ func runBoard(
 	dataset := BoardDataset{
 		Schema:     BoardDatasetSchema,
 		Provenance: provenance,
-		Records:    make([]BoardRecord, 0, len(pack.Cases)),
+		Records:    make([]BoardRecord, 0, len(pack.Challenges)),
 	}
 	silent := make([]string, 0)
-	for _, boardCase := range pack.Cases {
-		prompt := BuildTurnPrompt(systemPrompt, boardCase.History, boardCase.Current)
+	for _, boardChallenge := range pack.Challenges {
+		prompt := BuildTurnPrompt(systemPrompt, boardChallenge.History, boardChallenge.Current)
 		record := BoardRecord{
-			ID:       boardCase.ID,
-			Role:     boardCase.Clause,
+			ID:       boardChallenge.ID,
+			Role:     boardChallenge.Clause,
 			TestType: BoardTestType,
 			// The turn only. The rendered prompt is provenance, not graded input.
-			Prompt:       boardCaseTranscript(boardCase),
-			Target:       boardCase.Target,
-			Boundary:     boardCase.Clause,
-			Half:         boardCase.Half,
-			PairID:       boardCase.PairID,
-			RequiredTool: boardCase.RequiredTool,
+			Prompt:       boardCaseTranscript(boardChallenge),
+			Target:       boardChallenge.Target,
+			Boundary:     boardChallenge.Clause,
+			Half:         boardChallenge.Half,
+			PairID:       boardChallenge.PairID,
+			RequiredTool: boardChallenge.RequiredTool,
 			Responses:    make([]BoardResponse, 0, epochs),
 		}
 		answered := false
 		for epoch := 1; epoch <= epochs; epoch++ {
 			response := runBoardEpoch(
 				ctx,
-				boardCase,
+				boardChallenge,
 				epoch,
 				definition.ResponseStyle,
 				prompt,
@@ -267,7 +267,7 @@ func runBoard(
 			record.Responses = append(record.Responses, response)
 		}
 		if !answered {
-			silent = append(silent, boardCase.ID)
+			silent = append(silent, boardChallenge.ID)
 		}
 		// Epoch 1 grades. The rest stay in Responses as failure spread.
 		record.Output = graderOutput(record.Responses)
@@ -291,7 +291,7 @@ func runBoard(
 
 func runBoardEpoch(
 	ctx context.Context,
-	boardCase BoardCase,
+	boardChallenge BoardChallenge,
 	epoch int,
 	responseStyle string,
 	prompt TurnPrompt,
@@ -304,7 +304,7 @@ func runBoardEpoch(
 	result, err := completions.Complete(
 		caseCtx,
 		prompt,
-		fmt.Sprintf("%s#%d", boardCase.ID, epoch),
+		fmt.Sprintf("%s#%d", boardChallenge.ID, epoch),
 	)
 	cancel()
 	if err != nil {
@@ -324,7 +324,7 @@ func runBoardEpoch(
 	}
 	response.Text = reply
 	response.Structural = boardStructuralNote(
-		boardCase,
+		boardChallenge,
 		responseStyle,
 		reply,
 		prompt.Supplied(),
@@ -334,12 +334,12 @@ func runBoardEpoch(
 }
 
 // boardCaseTranscript renders the graded turn, last line the message studied.
-func boardCaseTranscript(boardCase BoardCase) string {
-	lines := make([]string, 0, len(boardCase.History)+1)
-	for _, entry := range boardCase.History {
+func boardCaseTranscript(boardChallenge BoardChallenge) string {
+	lines := make([]string, 0, len(boardChallenge.History)+1)
+	for _, entry := range boardChallenge.History {
 		lines = append(lines, fmt.Sprintf("%s: %s", entry.Author, entry.Content))
 	}
-	lines = append(lines, fmt.Sprintf("%s: %s", boardCase.Current.Author, boardCase.Current.Content))
+	lines = append(lines, fmt.Sprintf("%s: %s", boardChallenge.Current.Author, boardChallenge.Current.Content))
 	return strings.Join(lines, "\n")
 }
 
@@ -357,7 +357,7 @@ func graderOutput(responses []BoardResponse) string {
 // boardStructuralNote records what the deployed validators say. It never
 // decides the case, for the measured reason in docs/sirens-echo-eval.md.
 func boardStructuralNote(
-	boardCase BoardCase,
+	boardChallenge BoardChallenge,
 	responseStyle string,
 	reply string,
 	supplied string,
@@ -370,8 +370,8 @@ func boardStructuralNote(
 	if err := ValidateResponseStyle(responseStyle, reply); err != nil {
 		notes = append(notes, err.Error())
 	}
-	if boardCase.RequiredTool != "" && !completionUsedTool(result, boardCase.RequiredTool) {
-		notes = append(notes, fmt.Sprintf("expected tool %s", boardCase.RequiredTool))
+	if boardChallenge.RequiredTool != "" && !completionUsedTool(result, boardChallenge.RequiredTool) {
+		notes = append(notes, fmt.Sprintf("expected tool %s", boardChallenge.RequiredTool))
 	}
 	return strings.Join(notes, " | ")
 }
