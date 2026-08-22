@@ -184,7 +184,9 @@ type ProxyClient struct {
 	ResponseStyle string
 	// Harness attributes the call to the deployment's ingress. The per-turn
 	// transport is on the turn span; this is deployment-level audit context.
-	Harness    string
+	Harness string
+	// HTTPClient carries the call. Nil takes a default, so the zero value means
+	// the packaged default here as it does on every other field.
 	HTTPClient *http.Client
 	Tools      ToolProvider
 	Telemetry  *Telemetry
@@ -205,6 +207,15 @@ func (c ProxyClient) now() time.Time {
 		return c.Now()
 	}
 	return time.Now().UTC()
+}
+
+// httpClient is the same shape as now(). A caller outside NewAgent gets a
+// working client rather than a nil dereference. See sirens-echo#959.
+func (c ProxyClient) httpClient() *http.Client {
+	if c.HTTPClient != nil {
+		return c.HTTPClient
+	}
+	return http.DefaultClient
 }
 
 // clockMessage states the moment the turn started. Nothing else in the prompt
@@ -1118,7 +1129,7 @@ func (c ProxyClient) completeOnce(
 	request.Header.Set("X-Ward-Harness", valueOrDefault(c.Harness, transportHTTP))
 	request.Header.Set("X-Ward-Target-Repo", "coilyco-gaming/sirens-echo")
 
-	response, err := c.HTTPClient.Do(request)
+	response, err := c.httpClient().Do(request)
 	if err != nil {
 		telemetry.RecordModelCall(modelCtx, "error")
 		telemetry.MarkSpanError(modelSpan, exceptionModelTransportFailed)
