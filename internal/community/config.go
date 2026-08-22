@@ -173,8 +173,8 @@ var (
 	// trajectoryIdle ends a turn's trajectory once its calls stop. It bounds the
 	// gap BETWEEN calls rather than the turn. sirens-echo#1041.
 	trajectoryIdle time.Duration
-	// trajectoryLifetime is the hard ceiling on one trajectory, so a lost idle
-	// timer cannot leave a workflow open forever.
+	// trajectoryLifetime closes a trajectory. With nothing polling the mirror's
+	// queue it is the only closer. See docs/sirens-echo-tool-markup.md.
 	trajectoryLifetime time.Duration
 )
 
@@ -451,7 +451,6 @@ func knobs() []knob {
 		overridable(&mirrorQueueDepth, "SIRENS_ECHO_MIRROR_QUEUE_DEPTH", 256),
 		overridable(&mirrorTimeout, "SIRENS_ECHO_MIRROR_TIMEOUT", 5*time.Second),
 		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 2*time.Minute),
-		overridable(&trajectoryLifetime, "SIRENS_ECHO_TRAJECTORY_LIFETIME", time.Hour),
 
 		overridable(&executionSlots, "SIRENS_ECHO_EXECUTION_SLOTS", 8),
 
@@ -555,6 +554,10 @@ func deriveKnobs() {
 	// The bound covers the pool and the queue behind it, a turn counting from
 	// acceptance to release. See docs/sirens-echo-admission.md.
 	defaultRateLimitPolicy.MaxPending = executionSlots * 2
+
+	// The longest a turn can still be calling tools, plus the window that ends
+	// a trajectory. An hour was inherited. See sirens-echo#930.
+	trajectoryLifetime = defaultRequestTimeout + trajectoryIdle
 
 	// One context-injection budget. A grounding document and a tool result are
 	// spent against the same window, so they move together.
