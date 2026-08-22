@@ -23,12 +23,13 @@ per-turn seam a process-wide tool provider has**, so no tool interface changed.
   discouraged by a description.
 * **No binaries.** Content must be valid UTF-8, on write and on read.
 * **No escape.** A parent segment is refused rather than normalized away, and the target is checked
-  after symlinks are followed, because **anchoring a clean at the root would absorb the attempt and
-  write somewhere else while reporting the path that was asked for**.
+  after symlinks are followed, because **anchoring a clean at the root absorbs the attempt and writes
+  somewhere else while reporting the path that was asked for**.
 * **No unbounded write.** 256 KB per file and 4 MB per requester, with listing, search results, and
   nesting all capped.
-* **No unbounded read.** `scratch_search` bounds bytes and line length as well as match count, and says
-  when it stopped. A count alone let long lines answer with 131 KB against a 16 KB consumer (#940).
+* **No unbounded read.** `scratch_search` and `scratch_read` **bound at the file rather than after it
+  crosses**, each saying where it stopped so a caller continues. Bounding downstream let them answer
+  131 KB and 53 KB to a 16 KB reader (#940).
 
 The blast-radius line (#179) is drawn at credentials, infrastructure mutation, code execution or
 publication, irreversible external publication, and third-party personal data. **The scratchpad reaches

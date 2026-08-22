@@ -1,6 +1,7 @@
 package community
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -11,6 +12,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -146,12 +148,17 @@ func (s *scratchSession) Tools() []ToolDefinition {
 			}, nil),
 		},
 		{
-			Name:        "scratch_read",
-			Original:    "scratch_read",
-			Server:      "scratchpad",
-			Description: "Read a UTF-8 text file from your scratchpad.",
+			Name:     "scratch_read",
+			Original: "scratch_read",
+			Server:   "scratchpad",
+			Description: "Read a UTF-8 text file from your scratchpad. A long file comes " +
+				"back in one bounded piece that says where it stopped, and offset " +
+				"continues from there.",
 			InputSchema: scratchObjectSchema(map[string]any{
 				"path": scratchStringProperty("File to read, relative to the scratchpad root."),
+				"offset": scratchIntegerProperty(
+					"Byte to start at. Use the offset the previous read reported.",
+				),
 			}, []string{"path"}),
 		},
 		{
@@ -195,6 +202,28 @@ func scratchStringProperty(description string) map[string]any {
 	return map[string]any{"type": "string", "description": description}
 }
 
+func scratchIntegerProperty(description string) map[string]any {
+	return map[string]any{"type": "integer", "description": description}
+}
+
+// scratchIntArg tolerates the number a JSON decoder produces and the string a
+// model sometimes sends instead. A value it cannot read is zero, the default.
+func scratchIntArg(arguments map[string]any, key string) int {
+	switch value := arguments[key].(type) {
+	case float64:
+		return int(value)
+	case int:
+		return value
+	case string:
+		parsed, err := strconv.Atoi(strings.TrimSpace(value))
+		if err != nil {
+			return 0
+		}
+		return parsed
+	}
+	return 0
+}
+
 // Call runs one scratchpad verb. A refusal comes back as an error result the
 // model can read and correct, not as a Go error, which would fail the turn.
 func (s *scratchSession) Call(
@@ -212,7 +241,7 @@ func (s *scratchSession) Call(
 	case "scratch_list":
 		return s.list(scratchStringArg(arguments, "path"))
 	case "scratch_read":
-		return s.read(scratchStringArg(arguments, "path"))
+		return s.read(scratchStringArg(arguments, "path"), scratchIntArg(arguments, "offset"))
 	case "scratch_write":
 		return s.write(scratchStringArg(arguments, "path"), scratchStringArg(arguments, "content"))
 	case "scratch_search":
@@ -403,9 +432,12 @@ func (s *scratchSession) list(relative string) (ToolResult, error) {
 	return ToolResult{Text: strings.Join(entries, "\n")}, nil
 }
 
-func (s *scratchSession) read(relative string) (ToolResult, error) {
+func (s *scratchSession) read(relative string, offset int) (ToolResult, error) {
 	if strings.TrimSpace(relative) == "" {
 		return scratchRefusal("path is required")
+	}
+	if offset < 0 {
+		return scratchRefusal("offset cannot be negative")
 	}
 	target, err := s.resolveShared(relative)
 	if err != nil {
@@ -434,7 +466,46 @@ func (s *scratchSession) read(relative string) (ToolResult, error) {
 	if !utf8.Valid(data) {
 		return scratchRefusal("%s is not UTF-8 text", scratchDisplayPath(relative))
 	}
-	return ToolResult{Text: string(data)}, nil
+	if offset >= len(data) {
+		if offset > 0 {
+			return scratchRefusal(
+				"%s is %d bytes, so offset %d is past its end",
+				scratchDisplayPath(relative), len(data), offset,
+			)
+		}
+		return ToolResult{Text: string(data)}, nil
+	}
+	return scratchReadPiece(relative, data, offset), nil
+}
+
+// scratchReadPiece returns what fits in one tool result and says where it
+// stopped. See docs/sirens-echo-scratchpad.md.
+func scratchReadPiece(relative string, data []byte, offset int) ToolResult {
+	rest := data[offset:]
+	if len(rest) <= maxToolResultBytes {
+		return ToolResult{Text: string(rest)}
+	}
+	// Cut on a line where there is one nearby, because a piece ending mid-line
+	// reads as a truncated fact rather than as a boundary.
+	cut := maxToolResultBytes
+	if line := bytes.LastIndexByte(rest[:cut], '\n'); line > cut/2 {
+		cut = line + 1
+	}
+	cut = scratchRuneBoundary(rest, cut)
+	next := offset + cut
+	return ToolResult{Text: string(rest[:cut]) + fmt.Sprintf(
+		"\n[%s: bytes %d to %d of %d, read again with offset %d]",
+		scratchDisplayPath(relative), offset, next, len(data), next,
+	)}
+}
+
+// scratchRuneBoundary walks back off a partial rune, so a piece is always
+// valid UTF-8 and the next one starts where this one really ended.
+func scratchRuneBoundary(data []byte, cut int) int {
+	for cut > 0 && !utf8.Valid(data[:cut]) {
+		cut--
+	}
+	return cut
 }
 
 // scratchReservedDir holds what the runtime wrote. The model cannot write here,
