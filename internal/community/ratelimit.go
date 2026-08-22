@@ -43,8 +43,8 @@ type RateLimitPolicy struct {
 	PerContext RateLimit
 	// Global bounds the process across every context it serves.
 	Global RateLimit
-	// MaxPending bounds turns waiting for the execution slot. Turns beyond it
-	// are shed, because a stale queued turn still costs a completion.
+	// MaxPending bounds admitted turns, the pool plus the queue behind it.
+	// Beyond it the runtime sheds. See docs/sirens-echo-admission.md.
 	MaxPending int
 	// NotifyEvery bounds how often one key learns it was limited. A reply per
 	// denial would be its own spam vector.
@@ -98,7 +98,7 @@ type admissionRequest struct {
 	UserKey string
 	// ContextKey identifies the guild, DM, or transport the summon arrived on.
 	ContextKey string
-	// Queued marks a request that occupies the execution slot, so it counts
+	// Queued marks a request that takes an execution slot, so it counts
 	// against MaxPending and must be released. Cheap gates leave it false.
 	Queued bool
 	// Override tightens selected tiers for this summon, from the access

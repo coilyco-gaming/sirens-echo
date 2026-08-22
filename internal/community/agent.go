@@ -213,7 +213,6 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 		readinessEndpoint: readinessEndpoint,
 		readinessRoute:    cfg.AgentProxyModel,
 		readinessTimeout:  defaultReadinessTimeout,
-		slots:             make(chan struct{}, 1),
 		seen:              newSeenMessages(1024),
 		scope:             newChannelScope(256),
 		access:            accessPolicy,
@@ -292,6 +291,12 @@ func (a *Agent) ensureRuntimeDefaults() {
 	}
 	if a.cfg.ShutdownGrace <= 0 {
 		a.cfg.ShutdownGrace = defaultShutdownGrace
+	}
+	if a.slots == nil {
+		if a.cfg.ExecutionSlots <= 0 {
+			a.cfg.ExecutionSlots = executionSlots
+		}
+		a.slots = make(chan struct{}, a.cfg.ExecutionSlots)
 	}
 	if a.limiter == nil {
 		a.limiter = newRateLimiter(a.cfg.RateLimit, defaultRateLimiterCapacity)
@@ -1073,7 +1078,7 @@ func (a *Agent) onDenied(
 	}
 }
 
-// runSerialized waits for the execution slot, then runs the turn. The request
+// runSerialized waits for an execution slot, then runs the turn. The request
 // budget starts after admission, not on arrival.
 func (a *Agent) runSerialized(ctx context.Context, turn turnIO) error {
 	queueCtx, cancelQueue := context.WithTimeout(ctx, a.cfg.QueueTimeout)
@@ -1083,13 +1088,13 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO) error {
 	case <-queueCtx.Done():
 		a.telemetry.RecordAdmission(ctx, string(admissionQueue), turn.Transport())
 		a.replyQueueTimeout(ctx, turn)
-		return fmt.Errorf("turn waited longer than %s for the execution slot", a.cfg.QueueTimeout)
+		return fmt.Errorf("turn waited longer than %s for an execution slot", a.cfg.QueueTimeout)
 	}
 	defer func() { <-a.slots }()
 	return a.runAdmitted(ctx, turn)
 }
 
-// runAdmitted runs one turn under the request budget. It is what the execution
+// runAdmitted runs one turn under the request budget. It is what an execution
 // slot guards, and what a coalescing worker runs in place of taking one.
 func (a *Agent) runAdmitted(ctx context.Context, turn turnIO) error {
 	turnCtx, cancel := context.WithTimeout(ctx, a.cfg.RequestTimeout)

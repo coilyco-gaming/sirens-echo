@@ -188,11 +188,18 @@ var (
 	modelIdleTimeout time.Duration
 )
 
+// Turn concurrency
+var (
+	// executionSlots multiplexes I/O rather than compute, a turn being almost
+	// all wait on a hosted model. See docs/sirens-echo-admission.md.
+	executionSlots int
+)
+
 // Turn timeouts
 var (
 	defaultRequestTimeout time.Duration
-	// defaultQueueTimeout bounds the wait for the execution slot. A longer
-	// wait answers a conversation that has already moved on.
+	// defaultQueueTimeout bounds the wait for a slot. A longer wait answers a
+	// conversation that has already moved on.
 	defaultQueueTimeout time.Duration
 	// defaultShutdownGrace lets the turns in flight answer before a restart
 	// takes them. It fits inside Kubernetes' 30s default kill window.
@@ -446,6 +453,8 @@ func knobs() []knob {
 		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 2*time.Minute),
 		overridable(&trajectoryLifetime, "SIRENS_ECHO_TRAJECTORY_LIFETIME", time.Hour),
 
+		overridable(&executionSlots, "SIRENS_ECHO_EXECUTION_SLOTS", 8),
+
 		overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute),
 		overridable(&defaultShutdownGrace, "SIRENS_ECHO_SHUTDOWN_GRACE", 15*time.Second),
 		overridable(&shutdownNoticeGrace, "SIRENS_ECHO_SHUTDOWN_NOTICE_GRACE", 3*time.Second),
@@ -529,7 +538,10 @@ func deriveKnobs() {
 
 	// The turn budget is the parent of every wait inside a turn, so one number
 	// moves the whole shape and no child can outlive its turn. sirens-echo#942.
-	defaultQueueTimeout = defaultRequestTimeout / 6
+
+	// Half, not the sixth one slot was sized against: a pool waits for the
+	// first slot to free. See docs/sirens-echo-admission.md.
+	defaultQueueTimeout = defaultRequestTimeout / 2
 	defaultCallTimeout = defaultRequestTimeout / 4
 	modelIdleTimeout = defaultRequestTimeout / 4
 
@@ -539,6 +551,10 @@ func deriveKnobs() {
 	for range budgetRaisesAllowed {
 		maxCompletionTokens *= completionBudgetStep
 	}
+
+	// The bound covers the pool and the queue behind it, a turn counting from
+	// acceptance to release. See docs/sirens-echo-admission.md.
+	defaultRateLimitPolicy.MaxPending = executionSlots * 2
 
 	// One context-injection budget. A grounding document and a tool result are
 	// spent against the same window, so they move together.
@@ -633,10 +649,10 @@ const (
 // See docs/sirens-echo-admission.md.
 
 var defaultRateLimitPolicy = RateLimitPolicy{
-	PerUser:     RateLimit{Burst: 3, Every: 30 * time.Second},
-	PerContext:  RateLimit{Burst: 10, Every: 10 * time.Second},
-	Global:      RateLimit{Burst: 20, Every: 5 * time.Second},
-	MaxPending:  8,
+	PerUser:    RateLimit{Burst: 3, Every: 30 * time.Second},
+	PerContext: RateLimit{Burst: 10, Every: 10 * time.Second},
+	Global:     RateLimit{Burst: 20, Every: 5 * time.Second},
+	// Derived from executionSlots in deriveKnobs, never set here.
 	NotifyEvery: 5 * time.Minute,
 }
 
@@ -936,6 +952,8 @@ type Config struct {
 	TuningRejected []string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
+	// ExecutionSlots is how many turns run at once. See sirens-echo#995.
+	ExecutionSlots int
 	// ShutdownGrace is how long a restart waits for the turns already running.
 	// It has to fit the pod's kill window. See docs/sirens-echo-execution.md.
 	ShutdownGrace time.Duration
@@ -1019,6 +1037,7 @@ func LoadConfig() (Config, error) {
 		TuningRejected:     tuningRejected,
 		RequestTimeout:     defaultRequestTimeout,
 		QueueTimeout:       defaultQueueTimeout,
+		ExecutionSlots:     executionSlots,
 		ShutdownGrace:      defaultShutdownGrace,
 		RateLimit:          rateLimit,
 	}

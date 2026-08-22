@@ -9,6 +9,11 @@ A deployment can join a guild whose members the operator does not moderate. With
 any member could summon the service in a loop and every summon would reach the model, the runtime
 having previously queued each summon behind one execution slot with no bound.
 
+`SIRENS_ECHO_EXECUTION_SLOTS` (`8`) is how many turns run at once. **Cores are not what it is sized
+against.** A turn is almost entirely time spent waiting on a hosted model, so the pool multiplexes I/O
+rather than compute, and one process running eight turns is fully compatible with the single replica
+the unsharded Gateway connection requires (sirens-echo#995).
+
 ## Tiers
 
 Each tier is a token bucket. Burst is how many summons may arrive at once, and the interval is how long
@@ -19,8 +24,9 @@ tier leaves the others in force, and an unset variable keeps its packaged defaul
 * `SIRENS_ECHO_RATE_CONTEXT` - `10/10s` - one guild or direct-message channel, so one busy guild cannot
   consume every other guild's budget.
 * `SIRENS_ECHO_RATE_GLOBAL` - `20/5s` - the whole process.
-* `SIRENS_ECHO_MAX_PENDING` - `8` - summons waiting for the execution slot. Beyond it the runtime sheds
-  rather than queues.
+* `SIRENS_ECHO_MAX_PENDING` - `16` - admitted summons, which is the execution pool plus the queue behind
+  it, because a turn counts from acceptance to release. Beyond it the runtime sheds rather than queues.
+  The packaged value is twice `SIRENS_ECHO_EXECUTION_SLOTS` rather than a number of its own.
 * `SIRENS_ECHO_RATE_NOTIFY_EVERY` - `5m` - how often one key is told it was limited.
 
 **A summon is checked against every tier before any tier is charged**, so a request refused by the
@@ -38,10 +44,13 @@ call, an unseen thread whose parent is unknown and a reply whose referenced mess
 and both are bounded per context so an unscoped channel cannot force a call per message, with scope
 decisions cached in both directions.
 
-`SIRENS_ECHO_QUEUE_TIMEOUT` (`30s`) is how long a summon may wait for the execution slot and
-`SIRENS_ECHO_REQUEST_TIMEOUT` (`3m`) how long the turn itself may take. **The request budget starts
-after the turn acquires the slot**, because a turn that started its budget on arrival would reach the
-model with only the remainder. The typing indicator starts when the turn starts running and refreshes
+`SIRENS_ECHO_REQUEST_TIMEOUT` (`3m`) is how long the turn itself may take, and the wait for a slot is
+half of it (`90s`), derived rather than named, so **there is no `SIRENS_ECHO_QUEUE_TIMEOUT` to set**.
+**The request budget starts after the turn acquires a slot**, because a turn that started its budget on
+arrival would reach the model with only the remainder. The wait was a sixth of the budget while there
+was one slot and the wait was for one named turn to finish. A pool waits for the first of
+`SIRENS_ECHO_EXECUTION_SLOTS` to free, so a bound that shed the ninth caller at 30s while the turn ahead
+had three minutes to run was shedding for no reason (sirens-echo#995). The typing indicator starts when the turn starts running and refreshes
 until the reply is sent. Tool results and the completion budget are bounded separately
 ([the completion budget](sirens-echo-model-call.md)).
 
