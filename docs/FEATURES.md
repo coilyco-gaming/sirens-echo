@@ -9,8 +9,8 @@ the end.
   gates, **the edit gated on a member edit and the thread on cached state, not a lookup**.
 - Git-tracked access policy stacking guild, channel, user, and role grants with a deny list, per-guild
   rate overrides, and CI validation.
-- Per-user, per-context, and global admission control with a bounded queue, **one cooldown notice per
-  window**, and bounded lookups.
+- Per-user, per-context, and global admission control over **a pool of eight concurrent execution
+  slots** with a bounded queue behind it, **one cooldown notice per window**, and bounded lookups.
 - Coalescing lane folding a member's rapid comments into one turn behind **an acknowledgment per
   comment**, one writer per member, **selectable on the Discord summon path and off by default**.
 

@@ -132,8 +132,8 @@ func TestApplyingTwiceIsNotCumulative(t *testing.T) {
 	}
 	// The vehicle changed to a parent knob when the queue timeout became one of
 	// its derivations, so this also pins that a reset re-derives.
-	if defaultQueueTimeout != 9*time.Second/6 {
-		t.Errorf("queue timeout = %s, want a sixth of the turn", defaultQueueTimeout)
+	if defaultQueueTimeout != 9*time.Second/2 {
+		t.Errorf("queue timeout = %s, want half the turn", defaultQueueTimeout)
 	}
 }
 

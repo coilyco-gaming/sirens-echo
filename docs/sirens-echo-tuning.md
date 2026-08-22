@@ -53,7 +53,7 @@ granted**. Slack upward is fine. To say never raise, set `max_completion_tokens`
 ## One helper, one behaviour
 
 Each number is declared on one line binding where the package reads it, the name that sets it, and what
-it holds without one: `overridable(&defaultQueueTimeout, "SIRENS_ECHO_QUEUE_TIMEOUT", 30*time.Second)`.
+it holds without one: `overridable(&defaultRequestTimeout, "SIRENS_ECHO_REQUEST_TIMEOUT", 3*time.Minute)`.
 A duration takes Go's spelling and a count a plain integer. **Unparsable, zero, or negative applies
 nothing, for every name alike**, so a typo leaves the service on its default rather than on a number
 nobody chose, **the direction that fails safe when a values file is edited under pressure**. **Silence
@@ -62,9 +62,10 @@ at startup beside the applied ones. **This used to differ by name**: `REQUEST_TI
 and `SHUTDOWN_GRACE` were parsed a second time to fill a `Config` field, and that second reader refused
 a bad value and failed the load - **one name, two readers, two answers**.
 
-**Three numbers are expressions of another and have no name of their own**: `turnProgressEvery` is twice
-`turnProgressAfter`, `turnLongReplyAfter` is the wait plus two beats, and `replyAttachmentBytes` is the
-scratchpad's per-file limit. They are recomputed **after** the overrides land, because read before, **an
+**Some numbers are expressions of another and have no name of their own**: `turnProgressEvery` is twice
+`turnProgressAfter`, `turnLongReplyAfter` is the wait plus two beats, `replyAttachmentBytes` is the
+scratchpad's per-file limit, the queue timeout is half the turn budget, and the admission bound is twice
+the execution pool. They are recomputed **after** the overrides land, because read before, **an
 override would move the beat and leave the long-reply threshold on the old number**: the override would
 appear to work while the threshold deciding whether a reply gets a thread silently disagreed with it.
 
