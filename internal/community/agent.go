@@ -41,8 +41,13 @@ type Agent struct {
 	readinessRoute    string
 	readinessTimeout  time.Duration
 	slots             chan struct{}
-	seen              *seenMessages
-	scope             *channelScope
+	// turns records a turn while it runs, so a roll leaves a report rather
+	// than a silence. See docs/sirens-echo-execution.md.
+	turns TurnLog
+	// process names this run. A record carrying another run is an interruption.
+	process string
+	seen    *seenMessages
+	scope   *channelScope
 	// threads caches thread ownership, so a state miss costs one REST lookup
 	// per channel rather than one per message. See sirens-echo#750.
 	threads *channelScope
@@ -298,6 +303,12 @@ func (a *Agent) ensureRuntimeDefaults() {
 		}
 		a.slots = make(chan struct{}, a.cfg.ExecutionSlots)
 	}
+	if a.process == "" {
+		a.process = newProcessID()
+	}
+	if a.turns == nil {
+		a.turns = NewMemoryTurnLog()
+	}
 	if a.limiter == nil {
 		a.limiter = newRateLimiter(a.cfg.RateLimit, defaultRateLimiterCapacity)
 	}
@@ -369,6 +380,11 @@ func (a *Agent) buildJobRunner() error {
 	if err != nil {
 		return err
 	}
+	// The turn log follows the store the deployment already chose, so there is
+	// no second name for one decision.
+	if a.turns, err = openTurnLog(a.cfg, store); err != nil {
+		return err
+	}
 	executors, err := buildExecutingKinds(a.cfg, a.access, a.telemetry)
 	if err != nil {
 		return err
@@ -438,6 +454,57 @@ func (a *Agent) settleRestart(
 		slog.String("group", group), slog.Int("jobs", len(settled)))
 }
 
+// reportInterruptedTurns says what the last run did not finish. It runs at boot
+// because nothing reliable runs at the death. See docs/sirens-echo-execution.md.
+func (a *Agent) reportInterruptedTurns(ctx context.Context) {
+	if a.turns == nil {
+		return
+	}
+	swept, err := a.turns.Sweep(a.process)
+	if err != nil {
+		a.telemetry.Error(ctx, "turn.sweep.failed")
+		return
+	}
+	if len(swept) == 0 {
+		return
+	}
+	for _, record := range swept {
+		// The same counter an ordinary turn lands on, so an interrupted turn is
+		// a turn outcome rather than a separate thing to go looking for.
+		a.telemetry.RecordTurn(ctx, turnOutcomeInterrupted, 0)
+		a.telemetry.Info(ctx, "turn.interrupted",
+			slog.String("message_id", record.MessageID),
+			slog.String("channel_id", record.ChannelID),
+			slog.String("process", record.Process),
+			slog.Time("started_at", record.StartedAt),
+		)
+		a.tellChannelItWasInterrupted(ctx, record)
+	}
+	a.telemetry.Info(ctx, "turn.sweep.reported", slog.Int("turns", len(swept)))
+}
+
+// tellChannelItWasInterrupted stops the room waiting on a reply that is never
+// coming. It never re-answers, which would risk the double answer.
+func (a *Agent) tellChannelItWasInterrupted(ctx context.Context, record TurnRecord) {
+	if a.session == nil || record.ChannelID == "" {
+		return
+	}
+	_, err := a.session.ChannelMessageSendComplex(record.ChannelID, &discordgo.MessageSend{
+		Content: noticeInterrupted,
+		Reference: &discordgo.MessageReference{
+			MessageID: record.MessageID,
+			ChannelID: record.ChannelID,
+		},
+		AllowedMentions: &discordgo.MessageAllowedMentions{
+			Parse:       []discordgo.AllowedMentionType{},
+			RepliedUser: false,
+		},
+	})
+	if err != nil {
+		a.telemetry.RecordFailure(ctx, "turn.interrupted.notice")
+	}
+}
+
 // Run opens the Gateway session and blocks until shutdown.
 func (a *Agent) Run(ctx context.Context) error {
 	a.logCapabilities(ctx)
@@ -449,6 +516,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		defer a.closeToolMirror()
 		a.recoverJobs(ctx)
 	}
+	a.reportInterruptedTurns(ctx)
 	if a.session != nil {
 		// Started before the gateway opens, so no summon arrives at a pool that
 		// is not yet draining batches.
@@ -1110,7 +1178,46 @@ func (a *Agent) runAdmitted(ctx context.Context, turn turnIO) error {
 	}
 	progress := a.progressFor(turn)
 	defer progress.Finish(context.WithoutCancel(turnCtx))
+	// Written before the first model call and cleared after the last, so what
+	// survives is exactly what the process did not finish.
+	defer a.finishTurnRecord(turnCtx, turn)
+	a.beginTurnRecord(turnCtx, turn)
 	return a.runTurn(turnCtx, turn, progress)
+}
+
+// interruptible is an optional turn capability. A transport whose summon can
+// still be named after the process dies declares it.
+type interruptible interface {
+	InterruptRecord() TurnRecord
+}
+
+// beginTurnRecord marks the turn in progress. A failed write is reported and
+// never fails the turn, the record being a report rather than a gate.
+func (a *Agent) beginTurnRecord(ctx context.Context, turn turnIO) {
+	target, ok := turn.(interruptible)
+	if !ok || a.turns == nil {
+		return
+	}
+	record := target.InterruptRecord()
+	record.Process = a.process
+	record.StartedAt = time.Now()
+	if err := a.turns.Begin(record); err != nil {
+		a.telemetry.RecordFailure(ctx, "turn.record")
+	}
+}
+
+// finishTurnRecord clears the record on success and on handled failure alike,
+// because both of those are the process reaching the end of the turn.
+func (a *Agent) finishTurnRecord(ctx context.Context, turn turnIO) {
+	target, ok := turn.(interruptible)
+	if !ok || a.turns == nil {
+		return
+	}
+	// Detached, so a cancelled turn still clears the record it would otherwise
+	// leave for the next boot to report as interrupted.
+	if err := a.turns.Finish(target.InterruptRecord().MessageID); err != nil {
+		a.telemetry.RecordFailure(context.WithoutCancel(ctx), "turn.record")
+	}
 }
 
 // replyQueueTimeout tells the caller its turn gave up waiting. Returning
@@ -1257,10 +1364,10 @@ func (a *Agent) runTurn(
 	if uploader, ok := turn.(attachmentBearer); ok {
 		turnCtx = WithAttachments(turnCtx, uploader.Attachments())
 	}
-	outcome := "ok"
+	outcome := turnOutcomeOK
 	defer func() {
 		if turnErr != nil {
-			outcome = "error"
+			outcome = turnOutcomeError
 			a.telemetry.MarkSpanError(turnSpan, exceptionTurnFailed)
 		}
 		a.telemetry.RecordTurn(turnCtx, outcome, time.Since(started))
@@ -1672,6 +1779,16 @@ type discordMessageTurn struct {
 	// folded are the member's earlier comments this turn also answers, oldest
 	// first. Empty unless the lane built it. See docs/sirens-echo-admission.md.
 	folded []*discordgo.Message
+}
+
+// InterruptRecord names this summon well enough for a later boot to say which
+// message went unanswered, without carrying any of its text.
+func (t *discordMessageTurn) InterruptRecord() TurnRecord {
+	record := TurnRecord{MessageID: t.message.ID, ChannelID: t.message.ChannelID}
+	if t.message.Author != nil {
+		record.Author = t.message.Author.ID
+	}
+	return record
 }
 
 // PrefillNote reports what the context budget dropped, which is zero for every

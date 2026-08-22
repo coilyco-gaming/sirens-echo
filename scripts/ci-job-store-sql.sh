@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run the Postgres store's SQL tests and fail if any of them skipped.
+# Run every Postgres-backed SQL test and fail if any of them skipped.
 #
 # `go test` prints ok and exits 0 for a skip, so a service container that never
 # came up, or a DSN that never reached the step, would leave this green having
@@ -17,7 +17,7 @@ if [ -z "${SIRENS_ECHO_TEST_JOB_STORE_DSN:-}" ]; then
   exit 1
 fi
 
-output=$(go test -v -count=1 -run TestThePostgresStore ./internal/community/ 2>&1) || {
+output=$(go test -v -count=1 -run TestThePostgres ./internal/community/ 2>&1) || {
   echo "$output"
   exit 1
 }
@@ -30,9 +30,9 @@ if [ -n "$skipped" ]; then
   exit 1
 fi
 
-ran=$(printf '%s\n' "$output" | grep -c '^--- PASS: TestThePostgresStore' || true)
+ran=$(printf '%s\n' "$output" | grep -c '^--- PASS: TestThePostgres' || true)
 if [ "$ran" -eq 0 ]; then
-  echo "ci-job-store-sql: no job store test reported a pass" >&2
+  echo "ci-job-store-sql: no Postgres test reported a pass" >&2
   exit 1
 fi
-echo "ci-job-store-sql: ${ran} job store SQL test(s) ran against Postgres"
+echo "ci-job-store-sql: ${ran} Postgres SQL test(s) ran against Postgres"
