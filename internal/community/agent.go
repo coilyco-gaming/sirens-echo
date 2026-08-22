@@ -1183,7 +1183,7 @@ func (a *Agent) runSerialized(ctx context.Context, turn turnIO) error {
 	select {
 	case a.slots <- struct{}{}:
 	case <-queueCtx.Done():
-		a.telemetry.RecordAdmission(ctx, string(admissionQueue), turn.Transport())
+		a.telemetry.RecordAdmission(ctx, string(admissionSlotWait), turn.Transport())
 		a.replyQueueTimeout(ctx, turn)
 		return fmt.Errorf("turn waited longer than %s for an execution slot", a.cfg.QueueTimeout)
 	}

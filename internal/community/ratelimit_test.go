@@ -105,8 +105,8 @@ func TestRateLimiterShedsBeyondMaxPending(t *testing.T) {
 			t.Fatalf("attempt %d: outcome = %q", attempt, got)
 		}
 	}
-	if got := limiter.Admit(request).Outcome; got != admissionQueue {
-		t.Fatalf("full queue: outcome = %q, want %q", got, admissionQueue)
+	if got := limiter.Admit(request).Outcome; got != admissionBacklog {
+		t.Fatalf("full queue: outcome = %q, want %q", got, admissionBacklog)
 	}
 	limiter.Release()
 	if got := limiter.Admit(request).Outcome; got != admissionAccepted {
@@ -224,7 +224,7 @@ func TestQueueShedCarriesRetryAfter(t *testing.T) {
 		t.Fatalf("first request denied: %v", first.Outcome)
 	}
 	shed := limiter.Admit(admissionRequest{UserKey: "u2", ContextKey: "c1", Queued: true})
-	if shed.Outcome != admissionQueue {
+	if shed.Outcome != admissionBacklog {
 		t.Fatalf("outcome = %v, want a queue shed", shed.Outcome)
 	}
 	if shed.RetryAfter <= 0 {

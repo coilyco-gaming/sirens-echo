@@ -51,8 +51,15 @@ Discord gets one short cooldown notice per key per notify window, not one per de
 reply per denial would burn the bot's own Discord message budget and hand a flooder an amplifier**.
 HTTP gets `429` with a `Retry-After` header. Both paths record `sirens_echo.admissions` with closed-set
 `outcome` and `transport` labels, the outcomes being `accepted`, `denied_user`, `denied_context`,
-`denied_global`, and `denied_queue`. **No member-supplied value reaches a label, so a flood cannot
-expand metric cardinality.**
+`denied_global`, `denied_backlog`, and `denied_slot_wait`. **No member-supplied value reaches a label,
+so a flood cannot expand metric cardinality.**
+
+**The last two were one label, and that made a measurement unanswerable.** `denied_backlog` is refused
+at admission because `MAX_PENDING` is reached, before the turn waits at all. `denied_slot_wait` was
+admitted, waited, and gave up, which is a turn that ran long rather than a queue that filled. Both fired
+on the same transport under the old `denied_queue`, so a 7.3% denial share on dowel and 11.7% on echo
+could not be attributed to either mechanism, and the two have different fixes: sizing the bound against
+running the pool harder (sirens-echo#1083).
 
 Gate evaluation decides from the Gateway payload where it can. Two gates can still need a Discord API
 call, an unseen thread whose parent is unknown and a reply whose referenced message was not delivered,

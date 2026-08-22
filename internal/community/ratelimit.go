@@ -17,7 +17,11 @@ const (
 	admissionUser     admissionOutcome = "denied_user"
 	admissionContext  admissionOutcome = "denied_context"
 	admissionGlobal   admissionOutcome = "denied_global"
-	admissionQueue    admissionOutcome = "denied_queue"
+	// admissionBacklog is refused at admission, before the turn waits at all.
+	admissionBacklog admissionOutcome = "denied_backlog"
+	// admissionSlotWait was admitted and then gave up waiting for a slot. It
+	// shares the metric and nothing else. See docs/sirens-echo-admission.md.
+	admissionSlotWait admissionOutcome = "denied_slot_wait"
 )
 
 // denied reports whether the outcome rejected the summon.
@@ -169,7 +173,7 @@ func (l *rateLimiter) Admit(request admissionRequest) admissionDecision {
 		if state.tokens > 0 {
 			state.tokens--
 		}
-		return l.denyLocked(state, shed, admissionQueue, now)
+		return l.denyLocked(state, shed, admissionBacklog, now)
 	}
 
 	for _, state := range charge {

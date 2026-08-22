@@ -363,8 +363,8 @@ func TestQueueDenialCarriesRetryAfter(t *testing.T) {
 		t.Fatalf("first outcome = %s, want accepted", first.Outcome)
 	}
 	second := limiter.Admit(admissionRequest{UserKey: "http:one", ContextKey: transportHTTP, Queued: true})
-	if second.Outcome != admissionQueue {
-		t.Fatalf("second outcome = %s, want %s", second.Outcome, admissionQueue)
+	if second.Outcome != admissionBacklog {
+		t.Fatalf("second outcome = %s, want %s", second.Outcome, admissionBacklog)
 	}
 	if second.RetryAfter <= 0 {
 		t.Error("queue denial carried no Retry-After, contradicting the documented contract")
@@ -406,8 +406,8 @@ func TestCallerHeaderIsolatesTheUserTierOnly(t *testing.T) {
 			t.Fatalf("first outcome = %s, want accepted", first.Outcome)
 		}
 		second := limiter.Admit(admissionRequest{UserKey: "http:two", ContextKey: transportHTTP, Queued: true})
-		if second.Outcome != admissionQueue {
-			t.Errorf("a distinct caller got %s, want %s", second.Outcome, admissionQueue)
+		if second.Outcome != admissionBacklog {
+			t.Errorf("a distinct caller got %s, want %s", second.Outcome, admissionBacklog)
 		}
 	})
 }
