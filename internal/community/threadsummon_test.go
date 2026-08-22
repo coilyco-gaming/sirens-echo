@@ -38,11 +38,11 @@ func TestMessageInServiceOwnedThreadSummons(t *testing.T) {
 	const botID = "bot-1"
 	session := threadSummonSession(t, botID, botID)
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "thread-1",
 		Author:    &discordgo.User{ID: "member-1"},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf(
 			"a message in a service-owned thread must summon, got summoned=%v lookup=%v",
@@ -52,12 +52,12 @@ func TestMessageInServiceOwnedThreadSummons(t *testing.T) {
 
 	// Any member's message, not only the one the thread was opened for. This is
 	// the accepted consequence rather than an oversight.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:           "guild-1",
 		ChannelID:         "thread-1",
 		Author:            &discordgo.User{ID: "member-2"},
 		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: "member-1"}},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf(
 			"one member answering another in a service thread must summon, got summoned=%v lookup=%v",
@@ -73,11 +73,11 @@ func TestMessageInMemberOwnedThreadDoesNotSummon(t *testing.T) {
 	const botID = "bot-1"
 	session := threadSummonSession(t, botID, "member-1")
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "thread-1",
 		Author:    &discordgo.User{ID: "member-1"},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf(
 			"a member-created thread must not summon on its own, got summoned=%v lookup=%v",
@@ -86,12 +86,12 @@ func TestMessageInMemberOwnedThreadDoesNotSummon(t *testing.T) {
 	}
 
 	// A mention still works inside it, unchanged.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "thread-1",
 		Author:    &discordgo.User{ID: "member-1"},
 		Mentions:  []*discordgo.User{{ID: botID}},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf("a mention must still summon in a member thread, got summoned=%v lookup=%v",
 			summoned, lookup)
@@ -105,11 +105,11 @@ func TestOrdinaryChannelIsNotSummonedByOwnership(t *testing.T) {
 	const botID = "bot-1"
 	session := threadSummonSession(t, botID, botID)
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "channel-1",
 		Author:    &discordgo.User{ID: "member-1"},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf("an unmentioned channel message must not summon, got summoned=%v lookup=%v",
 			summoned, lookup)
@@ -123,23 +123,23 @@ func TestUnknownThreadFallsThroughToTheOtherSignals(t *testing.T) {
 	const botID = "bot-1"
 	session := threadSummonSession(t, botID, botID)
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "thread-unseen",
 		Author:    &discordgo.User{ID: "member-1"},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf("an unknown channel must not summon by ownership, got summoned=%v lookup=%v",
 			summoned, lookup)
 	}
 
 	// The reply signal still decides for it, so an unseen thread is not deaf.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:           "guild-1",
 		ChannelID:         "thread-unseen",
 		Author:            &discordgo.User{ID: "member-1"},
 		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: botID}},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf("a reply in an unseen thread must still summon, got summoned=%v lookup=%v",
 			summoned, lookup)

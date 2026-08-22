@@ -10,9 +10,8 @@ any member could summon the service in a loop and every summon would reach the m
 having previously queued each summon behind one execution slot with no bound.
 
 `SIRENS_ECHO_EXECUTION_SLOTS` (`8`) is how many turns run at once. **Cores are not what it is sized
-against.** A turn is almost entirely time spent waiting on a hosted model, so the pool multiplexes I/O
-rather than compute, and one process running eight turns is fully compatible with the single replica
-the unsharded Gateway connection requires (sirens-echo#995).
+against.** A turn is almost all wait on a hosted model, so the pool multiplexes I/O rather than compute,
+and eight turns in one process suits the single replica the Gateway connection requires.
 
 ## Tiers
 
@@ -29,6 +28,17 @@ tier leaves the others in force, and an unset variable keeps its packaged defaul
   The packaged value is twice `SIRENS_ECHO_EXECUTION_SLOTS` rather than a number of its own.
 * `SIRENS_ECHO_RATE_NOTIFY_EVERY` - `5m` - how often one key is told it was limited.
 
+## The gate whose refusals were invisible
+
+The summon gate is first of the checks and was the only one whose refusals produced nothing: no reply,
+correctly, but also no log, metric, or span. **A message never admitted looked exactly like one admitted
+and then died**, and those have opposite fixes, so it took three reports and a source read to tell which
+one a quiet thread was (sirens-echo#992). It now returns a closed-set reason the way `accessDecision`
+already did, and every decision lands on `sirens_echo.summons` with `reason` and `context_kind`.
+**A refusal inside a thread is its own label**, being the one members report and a missing behaviour
+rather than a dead turn. **Nothing member-facing changed**: answering an unaddressed message is the
+flood the mention gate exists to prevent.
+
 **A summon is checked against every tier before any tier is charged**, so a request refused by the
 global bucket does not silently spend the member's own budget.
 
@@ -40,11 +50,9 @@ HTTP gets `429` with a `Retry-After` header. Both paths record `sirens_echo.admi
 so a flood cannot expand metric cardinality.**
 
 **The last two were one label, and that made a measurement unanswerable.** `denied_backlog` is refused
-at admission because `MAX_PENDING` is reached, before the turn waits at all. `denied_slot_wait` was
-admitted, waited, and gave up, which is a turn that ran long rather than a queue that filled. Both fired
-on the same transport under the old `denied_queue`, so a 7.3% denial share on dowel and 11.7% on echo
-could not be attributed to either mechanism, and the two have different fixes: sizing the bound against
-running the pool harder (sirens-echo#1083).
+at admission because `MAX_PENDING` is reached, before the turn waits. `denied_slot_wait` was admitted,
+waited, and gave up, which is a long turn rather than a full queue. Both fired on the same transport
+under the old `denied_queue`, and they have different fixes (sirens-echo#1083).
 
 Gate evaluation decides from the Gateway payload where it can. Two gates can still need a Discord API
 call, an unseen thread whose parent is unknown and a reply whose referenced message was not delivered,
@@ -54,10 +62,9 @@ decisions cached in both directions.
 `SIRENS_ECHO_REQUEST_TIMEOUT` (`3m`) is how long the turn itself may take, and the wait for a slot is
 half of it (`90s`), derived rather than named, so **there is no `SIRENS_ECHO_QUEUE_TIMEOUT` to set**.
 **The request budget starts after the turn acquires a slot**, because a turn that started its budget on
-arrival would reach the model with only the remainder. The wait was a sixth of the budget while there
-was one slot and the wait was for one named turn to finish. A pool waits for the first of
-`SIRENS_ECHO_EXECUTION_SLOTS` to free, so a bound that shed the ninth caller at 30s while the turn ahead
-had three minutes to run was shedding for no reason (sirens-echo#995). The typing indicator starts when the turn starts running and refreshes
+arrival would reach the model with only the remainder. The wait was a sixth of the budget when one slot
+meant waiting on one named turn. A pool waits for the first slot to free, so a bound that shed the ninth
+caller at 30s while the turn ahead had three minutes to run was shedding for nothing. The typing indicator starts when the turn starts running and refreshes
 until the reply is sent. Tool results and the completion budget are bounded separately
 ([the completion budget](sirens-echo-model-call.md)).
 

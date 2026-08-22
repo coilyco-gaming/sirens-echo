@@ -44,6 +44,7 @@ type Telemetry struct {
 	attachments          metric.Int64Counter
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
+	summons              metric.Int64Counter
 	phraseInvocations    metric.Int64Counter
 	failures             metric.Int64Counter
 	jobs                 metric.Int64Counter
@@ -273,6 +274,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	summons, err := meter.Int64Counter("sirens_echo.summons")
+	if err != nil {
+		return nil, err
+	}
 	failures, err := meter.Int64Counter("sirens_echo.failures")
 	if err != nil {
 		return nil, err
@@ -318,6 +323,7 @@ func newTelemetry(
 		mirrorDrops:          mirrorDrops,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
+		summons:              summons,
 		phraseInvocations:    phraseInvocations,
 		failures:             failures,
 		jobs:                 jobs,
@@ -528,6 +534,15 @@ func (t *Telemetry) RecordAdmission(ctx context.Context, outcome, transport stri
 // no guild, channel, or member identifier reaches a metric label.
 func (t *Telemetry) RecordAccess(ctx context.Context, reason string) {
 	t.accessChecks.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
+}
+
+// RecordSummon counts one summon-gate decision. Both labels are closed sets,
+// so a channel a flooder can open cannot expand cardinality.
+func (t *Telemetry) RecordSummon(ctx context.Context, reason, contextKind string) {
+	t.summons.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("reason", reason),
+		attribute.String("context_kind", contextKind),
+	))
 }
 
 // RecordPhrase records one canonical phrase a reply invoked. The key comes

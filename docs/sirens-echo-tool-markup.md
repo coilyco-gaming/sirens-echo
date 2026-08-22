@@ -97,12 +97,13 @@ with no change here and nothing to notice it. Widening means adding a field to t
 disclosure decision someone makes on purpose**, and a test enumerates the fields and fails when the set
 changes.
 
-**Only `RecordToolCall` mirrors.** Agent Proxy logged roughly 68,900 `http receive` spans against about
-4,300 real requests over 30 days, so hooking span-start would point a firehose at a service that bills
-per action. One `SignalWithStartWorkflow` per tool call is one action either way, keyed on
+**Only `RecordToolCall` mirrors.** Agent Proxy logged 68,900 `http receive` spans against 4,300 real
+requests in 30 days, so hooking span-start points a firehose at a service that bills per action. One
+`SignalWithStartWorkflow` per tool call is one action either way, keyed on
 `sirens-deep-trajectory-<trace id>`, **so a turn's calls arrive as one ordered trajectory instead of one
-workflow each**. `ToolTrajectoryWorkflow` accumulates the signals and returns when they stop, performing
-no activity and reaching nothing.
+workflow each**. `ToolTrajectoryWorkflow` performs no activity and reaches nothing, and nothing polls
+that queue, so **`TimedOut` is expected and history is the record**: 0 Completed is the design, not a
+break (sirens-echo#930).
 
 **Never on the turn's path.** The send is a non-blocking channel write and a full queue drops. A single
 worker owns the only call into the mirror, with a hard timeout, on a context detached from the turn
@@ -111,8 +112,8 @@ recovered. Every one of those paths increments `sirens_echo.mirror.drops`, **so 
 rather than a silence**, because a mirror that fails quietly is the shape of #137 and #190.
 
 It is off unless a deployment supplies all three of `SIRENS_ECHO_TEMPORAL_HOST`, `..._NAMESPACE`, and
-`..._TASK_QUEUE`. **A half-filled connection fails at boot**, since a typo that quietly turned the
-mirror off would be the same silent failure the drop counter exists to prevent, while a dial failure is
-only logged: **Temporal being unreachable must never stop this service answering**.
-`SIRENS_ECHO_TEMPORAL_API_KEY` comes from the pod environment (#444). Deep only, a deployment choice
-made by which lane sets the variables.
+`..._TASK_QUEUE`. **A half-filled connection fails at boot**, a typo that quietly turned the mirror off
+being the silent failure the drop counter exists to prevent, while a dial failure is only logged:
+**Temporal being unreachable must never stop this service answering**.
+`SIRENS_ECHO_TEMPORAL_API_KEY` comes from the pod environment (#444). Deep only, chosen by which lane
+sets the variables.

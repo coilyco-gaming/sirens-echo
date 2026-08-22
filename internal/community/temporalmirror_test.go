@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"go.temporal.io/sdk/client"
 )
@@ -236,5 +237,39 @@ func TestTheRequestIDRoundTripsThroughTheContext(t *testing.T) {
 	// An empty id must not shadow an outer one with a blank value.
 	if got := RequestIDFromContext(ContextWithRequestID(ctx, "")); got != "1536447620116127784" {
 		t.Errorf("an empty id overwrote the turn's: %q", got)
+	}
+}
+
+// An hour was inherited rather than chosen, so every trajectory sat open long
+// after its turn ended and closed TimedOut. See sirens-echo#930.
+func TestTheTrajectoryCeilingIsTheTurnPlusTheIdleWindow(t *testing.T) {
+	// Not parallel. applyKnobs writes the package defaults.
+	restoreKnobs(t)
+	applyKnobs(func(string) string { return "" })
+
+	if want := defaultRequestTimeout + trajectoryIdle; trajectoryLifetime != want {
+		t.Errorf("trajectory lifetime = %s, want %s", trajectoryLifetime, want)
+	}
+	// The ceiling has to outlast a turn that is still calling tools at its own
+	// deadline, or a long turn loses the tail of its own audit record.
+	if trajectoryLifetime <= defaultRequestTimeout {
+		t.Errorf(
+			"lifetime %s does not outlast the %s turn budget",
+			trajectoryLifetime, defaultRequestTimeout,
+		)
+	}
+	if trajectoryLifetime >= time.Hour {
+		t.Errorf("lifetime %s is still the inherited hour", trajectoryLifetime)
+	}
+}
+
+// A deployment moving the turn budget moves the ceiling with it, which is the
+// half a fixed number got wrong.
+func TestTheTrajectoryCeilingFollowsTheTurnBudget(t *testing.T) {
+	restoreKnobs(t)
+	applyKnobs(fixedLookup(map[string]string{"SIRENS_ECHO_REQUEST_TIMEOUT": "30s"}))
+
+	if want := 30*time.Second + trajectoryIdle; trajectoryLifetime != want {
+		t.Errorf("trajectory lifetime = %s, want %s", trajectoryLifetime, want)
 	}
 }
