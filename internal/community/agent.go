@@ -1437,6 +1437,7 @@ func (a *Agent) runTurn(
 
 	contextCtx, contextSpan := a.telemetry.StartSpan(turnCtx, "context.assemble")
 	prompt := BuildTurnPrompt(a.systemPrompt, history, current)
+	prompt.Context = withTurnLocation(prompt.Context, turn)
 	a.telemetry.Info(
 		contextCtx,
 		"context.rendered",
@@ -1808,6 +1809,31 @@ type discordMessageTurn struct {
 	// folded are the member's earlier comments this turn also answers, oldest
 	// first. Empty unless the lane built it. See docs/sirens-echo-admission.md.
 	folded []*discordgo.Message
+}
+
+// LocationLabel names the room this turn is in, from cached state alone so it
+// costs no call. See docs/sirens-echo-prompt.md.
+func (t *discordMessageTurn) LocationLabel() string {
+	if t.session == nil || t.session.State == nil || t.message == nil {
+		return ""
+	}
+	if t.message.GuildID == "" {
+		return "a direct message"
+	}
+	here, err := t.session.State.Channel(t.message.ChannelID)
+	if err != nil || here == nil || here.Name == "" {
+		return ""
+	}
+	if !here.IsThread() || here.ParentID == "" {
+		return "#" + cleanTranscriptText(here.Name, 80)
+	}
+	name := cleanTranscriptText(here.Name, 80)
+	parent, err := t.session.State.Channel(here.ParentID)
+	if err != nil || parent == nil || parent.Name == "" {
+		return "a thread named " + name
+	}
+	return "a thread named " + name +
+		" in #" + cleanTranscriptText(parent.Name, 80)
 }
 
 // InterruptRecord names this summon well enough for a later boot to say which
