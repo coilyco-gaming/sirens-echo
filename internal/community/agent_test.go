@@ -202,10 +202,10 @@ func TestDirectMessagesSummonWithoutAMention(t *testing.T) {
 	session := &discordgo.Session{State: state}
 	author := &discordgo.User{ID: "member-1"}
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		ChannelID: "dm-1",
 		Author:    author,
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf(
 			"a direct message must summon without a mention, got summoned=%v lookup=%v",
@@ -215,11 +215,11 @@ func TestDirectMessagesSummonWithoutAMention(t *testing.T) {
 
 	// The guild path keeps its mention gate, which is what keeps a busy
 	// channel quiet.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "channel-1",
 		Author:    author,
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf(
 			"an unmentioned guild message must not summon, got summoned=%v lookup=%v",
@@ -856,35 +856,35 @@ func TestReplyToServiceMessageSummons(t *testing.T) {
 	session := editSession(botID)
 	author := &discordgo.User{ID: "member-1"}
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:           "guild-1",
 		ChannelID:         "channel-1",
 		Author:            author,
 		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: botID}},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf("a reply to the service must summon, got summoned=%v lookup=%v", summoned, lookup)
 	}
 
 	// A reply aimed at another member is not a summon.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:           "guild-1",
 		ChannelID:         "channel-1",
 		Author:            author,
 		ReferencedMessage: &discordgo.Message{Author: &discordgo.User{ID: "member-2"}},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf("a reply to a member must not summon, got summoned=%v lookup=%v", summoned, lookup)
 	}
 
 	// An unresolved reference defers to the rate-limited lookup rather than
 	// guessing either way.
-	summoned, lookup = summonedLocally(session, &discordgo.Message{
+	summoned, lookup = summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:          "guild-1",
 		ChannelID:        "channel-1",
 		Author:           author,
 		MessageReference: &discordgo.MessageReference{MessageID: "m-9"},
-	})
+	}))
 	if summoned || !lookup {
 		t.Fatalf("an unresolved reply must defer to lookup, got summoned=%v lookup=%v", summoned, lookup)
 	}

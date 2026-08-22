@@ -30,12 +30,12 @@ func TestARoleMentionSummons(t *testing.T) {
 	t.Parallel()
 	session := roleSession(t, "bot-1", "guild-1", []string{"role-agents"})
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:      "guild-1",
 		ChannelID:    "channel-1",
 		Author:       &discordgo.User{ID: "member-1"},
 		MentionRoles: []string{"role-agents"},
-	})
+	}))
 	if !summoned || lookup {
 		t.Fatalf("a mention of the held role did not summon: summoned=%v lookup=%v",
 			summoned, lookup)
@@ -47,12 +47,12 @@ func TestAnotherRolesMentionDoesNotSummon(t *testing.T) {
 	t.Parallel()
 	session := roleSession(t, "bot-1", "guild-1", []string{"role-agents"})
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:      "guild-1",
 		ChannelID:    "channel-1",
 		Author:       &discordgo.User{ID: "member-1"},
 		MentionRoles: []string{"role-moderators"},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf("a role this account does not hold summoned: summoned=%v", summoned)
 	}
@@ -64,13 +64,13 @@ func TestAnEveryoneMentionDoesNotSummon(t *testing.T) {
 	t.Parallel()
 	session := roleSession(t, "bot-1", "guild-1", []string{"guild-1", "role-agents"})
 
-	summoned, _ := summonedLocally(session, &discordgo.Message{
+	summoned, _ := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:         "guild-1",
 		ChannelID:       "channel-1",
 		Author:          &discordgo.User{ID: "member-1"},
 		MentionRoles:    []string{"guild-1"},
 		MentionEveryone: true,
-	})
+	}))
 	if summoned {
 		t.Error("an @everyone announcement summoned the service")
 	}
@@ -85,11 +85,11 @@ func TestAMessageWithNoRoleMentionReadsNoMember(t *testing.T) {
 	state.User = &discordgo.User{ID: "bot-1"}
 	session := &discordgo.Session{State: state}
 
-	summoned, lookup := summonedLocally(session, &discordgo.Message{
+	summoned, lookup := summonedBool(summonedLocally(session, &discordgo.Message{
 		GuildID:   "guild-1",
 		ChannelID: "channel-1",
 		Author:    &discordgo.User{ID: "member-1"},
-	})
+	}))
 	if summoned || lookup {
 		t.Fatalf("an unmentioned message summoned: summoned=%v lookup=%v", summoned, lookup)
 	}

@@ -679,15 +679,16 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		a.telemetry.RecordAccess(context.Background(), string(decision.Reason))
 		return
 	}
-	summoned, referenceLookup := summonedLocally(session, message)
-	if !summoned {
+	reason, referenceLookup := summonedLocally(session, message)
+	if !reason.summoned() {
 		// summonedLocally reads cached state alone. An archived thread, and
 		// after a restart any thread GUILD_CREATE did not carry, misses it.
 		if a.resolveThreadOwnership(session, origin) {
-			summoned, referenceLookup = true, false
+			reason, referenceLookup = summonOwnedThread, false
 		}
 	}
-	if !summoned && !referenceLookup {
+	if !reason.summoned() && !referenceLookup {
+		a.telemetry.RecordSummon(context.Background(), string(reason), origin.Kind)
 		return
 	}
 	threadLookup := false
@@ -699,7 +700,7 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		}
 		threadLookup = !known
 	}
-	if threadLookup || (!summoned && referenceLookup) {
+	if threadLookup || (!reason.summoned() && referenceLookup) {
 		if a.lookups.Admit(admissionRequest{ContextKey: origin.Key()}).Outcome.denied() {
 			a.telemetry.RecordAdmission(context.Background(), string(admissionContext), "lookup")
 			return
@@ -709,12 +710,19 @@ func (a *Agent) admitMessage(session *discordgo.Session, message *discordgo.Mess
 		a.telemetry.RecordAccess(context.Background(), string(accessDeniedChannel))
 		return
 	}
-	if !summoned && !summonedByReference(session, message) {
-		return
+	if !reason.summoned() {
+		reason = summonedByReference(session, message)
+		if !reason.summoned() {
+			a.telemetry.RecordSummon(context.Background(), string(reason), origin.Kind)
+			return
+		}
 	}
 	if !a.seen.Add(message.ID) {
 		return
 	}
+	// Counted after the duplicate gate, so a redelivery is one summon rather
+	// than two. See docs/sirens-echo-admission.md.
+	a.telemetry.RecordSummon(context.Background(), string(reason), origin.Kind)
 	// Last, because a summon refused for a restart was otherwise admissible and
 	// the count should say so. See docs/sirens-echo-execution.md.
 	if !a.drain.enter() {
@@ -900,28 +908,46 @@ func resolveChannel(session *discordgo.Session, channelID string) *discordgo.Cha
 func summonedLocally(
 	session *discordgo.Session,
 	message *discordgo.Message,
-) (summoned bool, referenceLookup bool) {
+) (reason summonReason, referenceLookup bool) {
 	// A direct message is addressed to this service by definition. See
 	// docs/sirens-echo-threads.md for what that costs.
 	if message.GuildID == "" {
-		return true, false
+		return summonDirect, false
 	}
 	if mentionsBot(session, message) {
-		return true, false
+		return summonMentioned, false
 	}
 	botID := session.State.User.ID
 	// A thread this service opened is its own conversation, so every message in
 	// it is addressed here. See docs/sirens-echo-mentions.md and sirens-echo#750.
 	if threadOwnedBy(session, message.ChannelID, botID) {
-		return true, false
+		return summonOwnedThread, false
 	}
 	if message.ReferencedMessage != nil && message.ReferencedMessage.Author != nil {
-		return message.ReferencedMessage.Author.ID == botID, false
+		if message.ReferencedMessage.Author.ID == botID {
+			return summonRepliedTo, false
+		}
+		return summonReplyToAnother, false
 	}
 	if message.MessageReference == nil || message.MessageReference.MessageID == "" {
-		return false, false
+		return notAddressedIn(session, message.ChannelID), false
 	}
-	return false, true
+	return notAddressedIn(session, message.ChannelID), true
+}
+
+// notAddressedIn separates a thread from an ordinary channel, because a member
+// reporting silence in a thread is reporting sirens-echo#750 and nothing else.
+func notAddressedIn(session *discordgo.Session, channelID string) summonReason {
+	if session.State == nil {
+		return summonNotAddressed
+	}
+	// Cached state only. A miss reports the plain refusal rather than spending
+	// a REST call on a message nobody is waiting for.
+	channel, err := session.State.Channel(channelID)
+	if err == nil && channel != nil && channel.IsThread() {
+		return summonNotAddressedThread
+	}
+	return summonNotAddressed
 }
 
 // threadOwnedBy reports whether a channel is a thread the given account
@@ -994,15 +1020,18 @@ func botRoles(session *discordgo.Session, guildID string) map[string]struct{} {
 	return held
 }
 
-func summonedByReference(session *discordgo.Session, message *discordgo.Message) bool {
+func summonedByReference(session *discordgo.Session, message *discordgo.Message) summonReason {
 	referenced, err := session.ChannelMessage(
 		message.ChannelID,
 		message.MessageReference.MessageID,
 	)
-	return err == nil &&
-		referenced != nil &&
-		referenced.Author != nil &&
-		referenced.Author.ID == session.State.User.ID
+	if err != nil || referenced == nil || referenced.Author == nil {
+		return summonReferenceUnknown
+	}
+	if referenced.Author.ID == session.State.User.ID {
+		return summonRepliedTo
+	}
+	return summonReplyToAnother
 }
 
 // resolveReplyTo fetches the message a reply answers when the Gateway did not
