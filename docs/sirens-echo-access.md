@@ -44,22 +44,26 @@ label**.
 ## Validating a policy offline
 
 `sirens-echo-access-check` answers one question: would this pod accept this access policy. It reads
-files and does nothing else, so a sealed CI container can run it. It prints `<path>: ok` and what the policy
+files and nothing else, so a sealed CI container can run it. It prints `<path>: ok` and what the policy
 admits, exits 1 with the reason on stderr for a file that fails, and exits 2 with usage when handed no
 arguments. `-` reads one policy from stdin.
 
-**Every file in deploy fails this check when passed as a path**, including the correct ones: they are
-Kubernetes manifests with the policy nested under `data["access-policy.yaml"]`, and the runtime never
-sees that wrapper because the ConfigMap projects the key as a file. So deploy extracts the key first
-with `yq '.data."access-policy.yaml"' access-policy.yml | sirens-echo-access-check -`. **That split is
-the boundary rather than a workaround**: deploy owns the manifest format, this repository owns the
-schema, and deploy never reimplements a parser for a format another repository owns.
+**`sirens-echo-definition-check` is the same shape for `local_skill_roots`, and runs from the image**,
+whose tree is what that comparison needs and neither repository holds alone. A root the image lacks
+fails with the error the pod prints, deploy#666 having named one that shipped in git and never
+reached `/app` (#973).
+
+**Every file in deploy fails this check when passed as a path**, the correct ones included: they are
+manifests with the policy nested under `data["access-policy.yaml"]`, and the runtime never sees that
+wrapper because the ConfigMap projects the key as a file. So deploy extracts the key first with
+`yq '.data."access-policy.yaml"' access-policy.yml | sirens-echo-access-check -`. **That split is the
+boundary rather than a workaround**: deploy owns the manifest format and this repository owns the
+schema, so deploy never reimplements a parser for a format another repository owns.
 
 A plain YAML parse catches a syntax error and nothing else, so before this existed **the first thing to
-evaluate a policy was pod boot**. `check` calls `community.LoadAccessPolicy`, the same function the
-agent calls at startup, and that is the whole design: **a second implementation would be a worse gate
-than none**, passing policies the pod rejects and rejecting ones it accepts, with the divergence
-appearing as a rollout failure CI called green.
+evaluate a policy was pod boot**. `check` calls `community.LoadAccessPolicy`, the function the agent
+calls at startup, and that is the whole design: **a second implementation would be a worse gate than
+none**, with the divergence appearing as a rollout failure CI called green.
 
 The bound that matters most is a guild opened to every member without a real per-user rate limit.
 Strict decoding catches the quieter one, where a misspelled key like `ratelimit` fails rather than being
@@ -93,11 +97,10 @@ grants:
 
 `kinds` takes `all` or an explicit list, the same `Allowlist` shape channels and users use. **A kind not
 declared in `JobKinds` fails validation**, so a table cannot grant something that does not exist, and a
-malformed table stops startup rather than silently denying everyone. A deployment that declares no
-`grants` block is unchanged, which is correct before a table is adopted and wrong after the guild
-widens, so **adopting one is part of opening the guild rather than a follow-up**. This adds no second
-authorization checkpoint beyond admission and no human-in-the-loop approval step, items 7 and 8, which
-remain out of scope, and it does not decide who may **reach** the agent.
+malformed table stops startup rather than silently denying everyone. A deployment declaring no `grants`
+block is unchanged, correct before a table is adopted and wrong after the guild widens, so **adopting
+one is part of opening the guild rather than a follow-up**. It adds no authorization checkpoint beyond
+admission and no approval step, items 7 and 8, and does not decide who may **reach** the agent.
 
 ## Reporting a refusal
 
@@ -112,7 +115,6 @@ that job kind, rather than a generic notice that reads as an invitation to try a
 **A refused submission still creates a job record**, moved to `failed` with the outcome `not permitted`,
 so a denial appears in the principal's listing, carries a reason, and can be asked about afterwards. A
 denial that left no record would be the one event nobody could investigate. **`403` leaks nothing**: a
-principal learns only about its own grant, which `GrantedKinds` exists to answer without a refusal, and
-the reason string stays out of the response body. Contrast the not-found and not-owner pair, which
-deliberately share `404` so an id cannot be probed for, protecting other principals' records. This one
-would protect nothing.
+principal learns only about its own grant, which `GrantedKinds` answers without a refusal, and the
+reason stays out of the body. Contrast the not-found and not-owner pair, which share `404` so an id
+cannot be probed for. This one would protect nothing.
