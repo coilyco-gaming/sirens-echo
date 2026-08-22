@@ -74,7 +74,13 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin
 COPY --from=build --chown=1000:1000 /out/sirens-echo-temporal-mcp /usr/local/bin/sirens-echo-temporal-mcp
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
-COPY --chown=1000:1000 agents /app/agents
+# Definitions only. The rest of agents/ is probes, board cases, and graded
+# replies, and cwd holding the answers to its own tests makes any evaluation run
+# there unfalsifiable. A wildcard would flatten them onto one path, so each is
+# named, and TestTheImageShipsEveryDefinitionAndNoEvalMaterial holds the list
+# complete. See docs/sirens-echo-eval.md and sirens-echo#1012.
+COPY --chown=1000:1000 agents/echo/definition.yaml /app/agents/echo/definition.yaml
+COPY --chown=1000:1000 agents/deep/definition.yaml /app/agents/deep/definition.yaml
 COPY --chown=1000:1000 .agents/skills /app/.agents/skills
 # A wildcard here copies each root's contents rather than the root, flattening
 # the tree, and a definition naming a root then crashes at startup. deploy#666.
