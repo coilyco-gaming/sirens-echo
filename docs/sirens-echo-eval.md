@@ -18,12 +18,22 @@ compliant and still wrong", **which no pattern can say**.
 **The board holds only what a human has to decide.** Anything a scoped or anchored check can decide
 belongs in the battery, **a graded copy alongside a mechanical one being two guards over one behavior**.
 The reverse move is expected too, and a battery check that fires on a correct reply is **deleted rather
-than tuned**. That pack's header carries its own rule, its assumed validators, and each live check kind,
-and it is the current list where this page is a summary.
+than tuned**. That pack's header carries its own rule, its validators, and each live check kind, and it
+is the current list where this page is a summary.
 
 **Nothing mechanical scores the board.** It records what the deployed validators say in a `structural`
 field and treats that as evidence rather than a verdict. The battery is not the same claim: its checks
-have closed target sets rather than phrase lists, and the pack header carries that argument.
+have closed target sets rather than phrase lists, and the pack header carries it.
+
+## The image carries none of it
+
+**An agent that can read its own eval cases produces evals that measure nothing, and the failure is
+silent: the scores go up.** The image copied the whole `agents/` tree into `/app`, so the cwd of a process
+whose job is answering prompts held 55 files of probes, board cases, and graded replies (sirens-echo#1012).
+Nothing reached them, but **that was a property of the tool set rather than of the image**: no shipped tool
+takes a path, and the next one that does would have made the board readable with nothing in CI to notice.
+It now carries the lane definitions alone, and `TestTheImageShipsEveryDefinitionAndNoEvalMaterial` refuses
+a whole-tree copy **by shape rather than by name**, so a new eval directory is excluded by default.
 
 ## The triple
 
