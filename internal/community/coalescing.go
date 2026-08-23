@@ -153,7 +153,7 @@ func (d *discordAck) Shed(ctx context.Context, ask ingest.Ask) error {
 
 // clearArrivalMark removes the mark ingress applied to a comment with no turn of
 // its own to clear it. Swallowed, as every tidy-up here is.
-func (a *Agent) clearArrivalMark(ctx context.Context, turn *discordMessageTurn) {
+func (a *Agent) clearArrivalMark(ctx context.Context, turn unreactor) {
 	clearCtx, cancel := context.WithTimeout(
 		context.WithoutCancel(ctx), reactionClearTimeout,
 	)
@@ -197,7 +197,7 @@ func (r *batchRunner) Run(_ context.Context, batch coalesce.Batch) error {
 
 // recoverTurn contains a crashed batch and tells the member, because a turn
 // that died silently reads as being ignored. See docs/sirens-echo-delivery.md.
-func (r *batchRunner) recoverTurn(ctx context.Context, turn *discordMessageTurn) {
+func (r *batchRunner) recoverTurn(ctx context.Context, turn turnIO) {
 	recovered := recover()
 	if recovered == nil {
 		return
