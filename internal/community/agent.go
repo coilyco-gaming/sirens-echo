@@ -1809,6 +1809,19 @@ type discordMessageTurn struct {
 	// folded are the member's earlier comments this turn also answers, oldest
 	// first. Empty unless the lane built it. See docs/sirens-echo-admission.md.
 	folded []*discordgo.Message
+	// marker substitutes the session half a reaction uses. Nil is the session.
+	marker messageMarker
+}
+
+// messageMarker is the half of a session a reaction needs, so the marks the
+// coalescing lane applies are testable without one. See sirens-echo#988.
+type messageMarker interface {
+	MessageReactionAdd(
+		channelID, messageID, emojiID string, options ...discordgo.RequestOption,
+	) error
+	MessageReactionRemove(
+		channelID, messageID, emojiID, userID string, options ...discordgo.RequestOption,
+	) error
 }
 
 // LocationLabel names the room this turn is in, from cached state alone so it
@@ -2065,7 +2078,16 @@ func (t *discordMessageTurn) recordMentionable(message *discordgo.Message) {
 // Typing shows the Discord indicator for this turn's channel.
 // React marks the member's own message. Discord takes the emoji verbatim.
 func (t *discordMessageTurn) React(_ context.Context, emoji string) error {
-	return t.session.MessageReactionAdd(t.message.ChannelID, t.message.ID, emoji)
+	return t.marks().MessageReactionAdd(t.message.ChannelID, t.message.ID, emoji)
+}
+
+// marks is the session half a reaction uses. Nil takes the session, so only a
+// test sets it. See docs/sirens-echo-admission.md.
+func (t *discordMessageTurn) marks() messageMarker {
+	if t.marker != nil {
+		return t.marker
+	}
+	return t.session
 }
 
 func (t *discordMessageTurn) Typing() error {
@@ -2079,7 +2101,7 @@ func (t *discordMessageTurn) ReplyLimit() int { return discordReplyLimit }
 // Unreact removes a mark the harness applied. Scoped to this identity, so a
 // member's own reaction on the same message is never touched.
 func (t *discordMessageTurn) Unreact(_ context.Context, emoji string) error {
-	return t.session.MessageReactionRemove(
+	return t.marks().MessageReactionRemove(
 		t.message.ChannelID, t.message.ID, emoji, "@me")
 }
 

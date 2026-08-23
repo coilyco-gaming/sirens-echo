@@ -92,22 +92,21 @@ case is the tailnet-only HTTP path where the key is `"http:"` plus a caller-asse
 
 ## Coalescing
 Admission bounds spend by refusing. Coalescing bounds it by **answering several comments in one turn**,
-the only lever that lowers the turn rate without turning anyone away.
-`SIRENS_ECHO_COALESCE_ENABLED` puts the summon path on it and **defaults off**, so the slot stays the
-shipped behaviour and the flag is the rollback. `SIRENS_ECHO_COALESCE_*` in
-[the reference](sirens-echo-tuning.md) tunes it.
+the only lever lowering the turn rate without turning anyone away.
+`SIRENS_ECHO_COALESCE_ENABLED` puts the summon path on it and **defaults off**, so the flag is the
+rollback. `SIRENS_ECHO_COALESCE_*` in [the reference](sirens-echo-tuning.md) tunes it.
 
 **Ingress acknowledges every comment before any batching decision exists**, so folding work never folds
 the ack, and the buffer **sheds its oldest rather than blocking the gateway**, retracting that mark. The
-window opens on the first pending ask, not the newest, so no stream postpones it forever.
+window opens on the first pending ask, not the newest, so no stream postpones it. **Those marks are
+testable without a session**, a turn taking a `messageMarker` whose nil is the session (#988).
 
 **The shard is the member, not the channel**, so two members talking in one place are answered at once
 and one member's three rapid comments once, by workers with **one writer per member**. **The comment
-that arrives last carries the reply**, the earlier ones folding into it in arrival order and in the
-member's own words, read from before the oldest so no comment is history for itself. The turn context
-says how many comments the ask carries and that answering it answers all of them, a count and never
-an identifier.
+that arrives last carries the reply**, the earlier folding into it in arrival order and in the member's
+own words, read from before the oldest so none is history for itself. The turn context says how many
+comments the ask carries and that answering it answers all, a count and never an identifier.
 
 Two bounds move while it is on. With no slot to wait for, **`SIRENS_ECHO_COALESCE_CAPACITY` is the
-backlog bound** `SIRENS_ECHO_MAX_PENDING` was, the rate tiers unchanged. The ladder does not fire:
-**the turn owns its retry and its failure notice**, and only a shutdown dead-letters.
+backlog bound** `SIRENS_ECHO_MAX_PENDING` was, the tiers unchanged. The ladder does not fire: **the
+turn owns its retry and its notice**, and only a shutdown dead-letters.
