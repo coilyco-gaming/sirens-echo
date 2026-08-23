@@ -48,6 +48,9 @@ type Agent struct {
 	process string
 	seen    *seenMessages
 	scope   *channelScope
+	// summaries remembers this service's first reply per thread, for the
+	// living-answer shape. Nil until built. See sirens-echo#951.
+	summaries *threadSummaries
 	// threads caches thread ownership, so a state miss costs one REST lookup
 	// per channel rather than one per message. See sirens-echo#750.
 	threads *channelScope
@@ -305,6 +308,9 @@ func (a *Agent) ensureRuntimeDefaults() {
 	}
 	if a.process == "" {
 		a.process = newProcessID()
+	}
+	if a.summaries == nil {
+		a.summaries = newThreadSummaries(256)
 	}
 	if a.turns == nil {
 		a.turns = NewMemoryTurnLog()
@@ -1131,6 +1137,9 @@ func (a *Agent) handleMessage(
 		// Every thread, because a thread is the conversation rather than a
 		// window into one. See docs/sirens-echo-threads.md.
 		wholeThread: at.ThreadID != "",
+		// Offered unconditionally. summaryTarget gates on the flag, so a reply
+		// registers itself only where the feature can use it.
+		summaries: a.summaries,
 	}
 	if a.lane != nil {
 		a.submitSummon(receiveCtx, turn, message)
@@ -1755,7 +1764,13 @@ func (a *Agent) sendReply(ctx context.Context, turn turnIO, content, whole strin
 	var err error
 	if turn.Transport() == transportDiscord {
 		discordCtx, discordSpan := a.telemetry.StartSpan(replyCtx, "discord.reply")
-		err = deliverWithOverflow(discordCtx, turn, content, whole)
+		// A thread carrying a living answer revises it rather than adding to a
+		// run of replies. See docs/sirens-echo-threads.md.
+		if target := a.summaryTarget(turn); target != "" {
+			err = a.reviseSummary(discordCtx, turn, target, content)
+		} else {
+			err = deliverWithOverflow(discordCtx, turn, content, whole)
+		}
 		if err != nil {
 			a.telemetry.MarkSpanError(discordSpan, exceptionDiscordReplyFailed)
 			// The reply was composed and paid for, so why it did not land is the
@@ -1811,6 +1826,9 @@ type discordMessageTurn struct {
 	folded []*discordgo.Message
 	// marker substitutes the session half a reaction uses. Nil is the session.
 	marker messageMarker
+	// summaries is the agent's thread-summary cache, offered so a reply can
+	// register itself. Nil outside the feature.
+	summaries *threadSummaries
 }
 
 // messageMarker is the half of a session a reaction needs, so the marks the
@@ -2154,8 +2172,18 @@ func (t *discordMessageTurn) send(
 	})
 	if reply != nil && reply.ID != "" {
 		span.SetAttributes(attribute.String("messaging.message.id", reply.ID))
+		t.remember(target, reply.ID)
 	}
 	return err
+}
+
+// remember offers this reply as the thread's living answer. Nil summaries is
+// every turn outside the feature. See docs/sirens-echo-threads.md.
+func (t *discordMessageTurn) remember(channelID, messageID string) {
+	if t.summaries == nil || channelID == "" {
+		return
+	}
+	t.summaries.Remember(channelID, messageID)
 }
 
 // discordMessageSpanAttributes takes a location rather than loose identifiers,

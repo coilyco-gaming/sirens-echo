@@ -52,6 +52,14 @@ func featureFlags(cfg *Config) []featureFlag {
 			summary:  "Batch a member's rapid comments into one turn on a worker pool.",
 		},
 		{
+			env:      "SIRENS_ECHO_THREAD_SUMMARY",
+			target:   &cfg.ThreadSummary,
+			fallback: false,
+			summary: "End a thread turn by editing this service's first reply " +
+				"there rather than posting another, so the thread carries one " +
+				"living answer.",
+		},
+		{
 			env:      "SIRENS_ECHO_MCP_REEXPORT",
 			target:   &cfg.MCPReexport,
 			fallback: false,

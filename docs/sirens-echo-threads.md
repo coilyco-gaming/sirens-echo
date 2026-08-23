@@ -29,11 +29,10 @@ tighter `rate_limit` than the deployment default, and leave direct messages off.
 the service answers a mention or a reply to its own message**, and everything inside a thread it opened,
 with no moderation, role, announcement, or account surface.
 
-**A direct message needs no mention**, because it is addressed to the service by definition and the
-mention gate exists to keep a busy channel quiet. So every direct message from an allowlisted account
-spends a turn, with the per-user admission budget the only remaining brake. **A bot cannot read or act
-as a human account**, and a user-installed Discord app receives only application-command interactions
-and never message events, so mention-based summoning does not work in that install mode.
+**A direct message needs no mention**, being addressed to the service by definition while the mention
+gate exists to keep a busy channel quiet. So every direct message from an allowlisted account spends a
+turn, with the per-user admission budget the only brake. **A bot cannot read or act as a human
+account**, and a user-installed app receives only command interactions, never message events.
 
 ## When a reply gets a thread
 
@@ -46,36 +45,33 @@ not already in the channel.
 
 **A thread that cannot be made must not cost a member their reply.** No permission, a channel type that
 cannot hold threads, an API failure, a turn already inside a thread: every one returns "no thread"
-rather than an error, and the reply goes to the channel as before. That is why the decision returns a
-channel id and a boolean rather than an error: **no failure here is worth failing a turn over**. The
-nesting check reads cached gateway state and makes no API call. Nothing opens a thread for a job, so a
-job started in a channel has no referent of its own.
+rather than an error, and the reply goes to the channel as before, which is why the decision returns a
+channel id and a boolean. **No failure here is worth failing a turn over.** The nesting check reads
+cached gateway state and makes no API call.
 
 ## Thread title length
 
 **Sixty characters, and an over-long one is asked again rather than cut.** `threadTitleRunes` is 60.
-Discord's own cap is 100 and `threadNameRunes` still holds it, but 100 does not display whole in the
-thread list or in the narrow surfaces that truncate hardest (Kai's decision on sirens-echo#753). A
-trimmed title loses its subject, the one thing a title exists to carry, so an over-length title goes
-back to the model with the limit stated. `threadTitleRetryPrompt` builds that sentence from
-`threadTitleRunes`, **so the number in the prose cannot drift from the number in the check**.
+Discord's cap is 100 and `threadNameRunes` holds it, but 100 does not display whole in the thread list
+or in the narrow surfaces that truncate hardest (Kai's decision on sirens-echo#753). A trimmed title
+loses its subject, so an over-length one goes back to the model with the limit stated.
+`threadTitleRetryPrompt` builds that sentence from `threadTitleRunes`, **so the number in the prose
+cannot drift from the number in the check**.
 
 **The bound is not what decides length. `threadTitleWords` is.** Titles were reported clipped at around
 thirty characters against a fifty-rune bound, and nothing was truncating them: the titler was asked for
-six words, and six words is about thirty characters (#904). The bound is a ceiling the model never
-approached. Nine words reaches the forty to sixty range the report asked for, and raising the ceiling
-alone would have changed nothing a member could see.
+six words, which is about thirty characters (#904). Nine words reaches the forty to sixty range the
+report asked for, and raising the ceiling alone would have changed nothing a member could see.
 
 **Exactly one regeneration.** If the second answer is also over, the title is hard-trimmed and recorded
 as `thread.title.trimmed`, never a loop, because **a title generator must not be able to spend a turn's
 budget on itself**. The trim is a plain cut rather than `truncateRunes`, which spends a rune on an
-ellipsis saying it truncated. Recording it matters as much as the trim, since a generator that keeps
-overrunning is a prompt problem a silent fallback would hide.
+ellipsis. Recording it matters as much as the trim, a generator that keeps overrunning being a prompt
+problem a silent fallback would hide.
 
 **The bound holds at creation, not only in the generator.** `threadCreationName` bounds whatever it is
-handed: the generated title is one source, the derived name from the member's own message is the other,
-and it was previously free to reach 100. This binds creation only, so nothing renames an existing
-thread.
+handed: the generated title, or the derived name from the member's own message, which was previously
+free to reach 100. This binds creation only, so nothing renames an existing thread.
 
 ## Reading a whole thread
 
@@ -95,15 +91,23 @@ sits ahead of the tool receipt in the preference order**: a note about missing c
 of what ran, because the last suffix is the first one cut.
 
 The walk is bounded, so a pathological thread costs a known number of Discord calls. A thread longer
-than the walk is still truncated and annotated, and the annotation says `at least` before the length,
-because at that point the runtime knows a floor rather than the thread. **An absent hedge is therefore a
-claim**: a plain count means the walk reached the start. A thread whose newest messages all fit is still
-annotated when the walk stopped short, because nothing going over budget is not the same as having read
-the whole thread.
+than the walk is truncated and annotated, and the annotation says `at least` before the length, the
+runtime knowing a floor rather than the thread. **An absent hedge is therefore a claim**: a plain count
+means the walk reached the start. A thread whose newest messages all fit is still annotated when the
+walk stopped short, because nothing going over budget is not the same as reading the whole thread.
 
 A whole-thread read is one Discord call per hundred messages instead of one, on every thread turn. Read
 `history.thread.read` and `history.thread.dropped` on the `community.history` span for what real threads
-produce, and note that sirens-echo#750 raises the number of turns taken inside threads, deliberately: two
-members talking in a thread this service opened each summon a turn, throttled by the rate tiers rather
-than bounded, and no quiet period ends it. Outside a
-thread the prefill is the same partial window, and a turn that drops nothing adds nothing to the reply.
+produce, and note that sirens-echo#750 raises the number of turns taken inside threads, deliberately:
+two members talking in a thread this service opened each summon a turn, throttled by the rate tiers
+rather than bounded. Outside a thread the prefill is the same partial window.
+
+## One living answer instead of a run
+
+`SIRENS_ECHO_THREAD_SUMMARY` ends a thread turn by **editing this service's
+first reply there** rather than posting another. **Off by default** (#951).
+
+**The thread's starter is never the target**: `threadForReply` opens a thread
+from the member's message, and a bot cannot edit another author's content. The
+edit goes through `sendReply`, so **the response checks still apply**, and a
+failed one falls back to a reply and forgets the thread.
