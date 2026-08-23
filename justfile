@@ -154,13 +154,13 @@ board-deep *ARGS:
 pre-commit-all *ARGS:
     @pre-commit run --all-files "$@"
 
-# Print the paired case list the board derives from eval/boundaries.yaml.
-boundaries *ARGS:
-    @bash scripts/boundaries.sh list "$@"
+# Print the paired challenge list the board derives from eval/attributes.yaml.
+attributes *ARGS:
+    @bash scripts/attributes.sh list "$@"
 
-# Fail when a declared boundary no longer resolves against the source it names.
-boundaries-check *ARGS:
-    @bash scripts/boundaries.sh check "$@"
+# Fail when a declared attribute no longer resolves against the source it names.
+attributes-check *ARGS:
+    @bash scripts/attributes.sh check "$@"
 
 # Grade a board dataset by hand with the shared aos-eval. One case per screen, saved after every decision.
 grade DATASET *ARGS:

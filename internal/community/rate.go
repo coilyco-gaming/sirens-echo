@@ -39,7 +39,7 @@ type RateCase struct {
 	// Observed records the rate that motivated the case, for the reader.
 	Observed string `yaml:"observed,omitempty"`
 	// Shape classifies the case for the relative brevity comparison, by what a
-	// correct reply looks like. See docs/sirens-echo-boundaries.md.
+	// correct reply looks like. See docs/sirens-echo-attributes.md.
 	Shape string `yaml:"shape,omitempty"`
 }
 

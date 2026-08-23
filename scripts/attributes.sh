@@ -2,25 +2,25 @@
 set -euo pipefail
 
 # Makes `derived: true` mean something instead of asserting it.
-# Format and the prose gap: docs/sirens-echo-boundaries.md
+# Format and the prose gap: docs/sirens-echo-attributes.md
 
-FILE=eval/boundaries.yaml
+FILE=eval/attributes.yaml
 
 case "${1:-list}" in
   list)
-    # Two cases per boundary, because the pair is the scoring unit.
-    yq -r '.boundaries[] | "\(.id)\n  rule    : \(.rule)\n  inside  : \(.inside)\n  outside : \(.outside)"' "$FILE"
-    total=$(yq -r '.boundaries | length' "$FILE")
+    # Two challenges per attribute, because the pair is the scoring unit.
+    yq -r '.attributes[] | "\(.id)\n  rule    : \(.rule)\n  inside  : \(.inside)\n  outside : \(.outside)"' "$FILE"
+    total=$(yq -r '.attributes | length' "$FILE")
     echo
-    echo "$total boundaries, $((total * 2)) cases"
+    echo "$total attributes, $((total * 2)) challenges"
     ;;
   check)
     status=0
-    count=$(yq -r '.boundaries | length' "$FILE")
+    count=$(yq -r '.attributes | length' "$FILE")
     for i in $(seq 0 $((count - 1))); do
-      id=$(yq -r ".boundaries[$i].id" "$FILE")
-      origin=$(yq -r ".boundaries[$i].origin" "$FILE")
-      derived=$(yq -r ".boundaries[$i].derived" "$FILE")
+      id=$(yq -r ".attributes[$i].id" "$FILE")
+      origin=$(yq -r ".attributes[$i].origin" "$FILE")
+      derived=$(yq -r ".attributes[$i].derived" "$FILE")
       path=${origin%%#*}
       frag=""
       [ "$origin" != "$path" ] && frag=${origin#*#}
@@ -35,22 +35,22 @@ case "${1:-list}" in
         status=1
       fi
       for key in rule inside outside; do
-        value=$(yq -r ".boundaries[$i].$key // \"\"" "$FILE")
+        value=$(yq -r ".attributes[$i].$key // \"\"" "$FILE")
         if [ -z "$value" ]; then
           echo "boundaries: $id has no $key, so it cannot produce a pair" >&2
           status=1
         fi
       done
     done
-    duplicates=$(yq -r '.boundaries[].id' "$FILE" | sort | uniq -d)
+    duplicates=$(yq -r '.attributes[].id' "$FILE" | sort | uniq -d)
     if [ -n "$duplicates" ]; then
       echo "boundaries: duplicate ids:" >&2
       printf '  %s\n' $duplicates >&2
       status=1
     fi
     if [ "$status" -eq 0 ]; then
-      derived_count=$(yq -r '[.boundaries[] | select(.derived == true)] | length' "$FILE")
-      prose_count=$(yq -r '[.boundaries[] | select(.derived == false)] | length' "$FILE")
+      derived_count=$(yq -r '[.attributes[] | select(.derived == true)] | length' "$FILE")
+      prose_count=$(yq -r '[.attributes[] | select(.derived == false)] | length' "$FILE")
       echo "boundaries: $count declared, $derived_count derived from source, $prose_count prose"
       # Not a failure. Recorded rather than hidden.
       [ "$prose_count" -gt 0 ] && echo "boundaries: $prose_count clause(s) cannot be drift-checked"
@@ -58,7 +58,7 @@ case "${1:-list}" in
     exit "$status"
     ;;
   *)
-    echo "usage: boundaries.sh [list|check]" >&2
+    echo "usage: attributes.sh [list|check]" >&2
     exit 2
     ;;
 esac

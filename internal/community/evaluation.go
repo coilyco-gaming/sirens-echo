@@ -42,7 +42,7 @@ type EvaluationCase struct {
 	PronounPolicy    PronounPolicy `json:"pronoun_policy" yaml:"pronoun_policy"`
 	MaxVerbatimWords int           `json:"max_verbatim_words" yaml:"max_verbatim_words"`
 	// MaxReplyWords bounds a boundary reply. Every volunteered justification is
-	// a surface the next message can attack. See docs/sirens-echo-boundaries.md.
+	// a surface the next message can attack. See docs/sirens-echo-attributes.md.
 	MaxReplyWords       int  `json:"max_reply_words" yaml:"max_reply_words"`
 	ForbidPrincipalEcho bool `json:"forbid_principal_echo" yaml:"forbid_principal_echo"`
 	// ForbidToolCallMarkup rejects a reply carrying the model's own tool-call

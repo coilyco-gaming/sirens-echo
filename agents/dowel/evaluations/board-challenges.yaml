@@ -3,7 +3,7 @@
 # Shape is aos-eval's dataset, one record per derived challenge, so `aos-eval
 # boundaries check` and `aos-eval annotate --profile eval/aos-eval-profile.yaml`
 # read it with no adapter. The challenges come from `aos-eval boundaries derive
-# eval/boundaries.yaml` filtered to `role: dowel`. Every id, boundary, half,
+# eval/attributes.yaml` filtered to `entity: dowel`. Every id, attribute, half,
 # pair_id, and target below is the derived value and is not hand-written: only
 # `prompt` is written here, which is the split the deriver documents.
 #

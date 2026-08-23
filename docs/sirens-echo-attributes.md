@@ -5,7 +5,7 @@ carry.
 
 ## The boundaries declaration
 
-[`eval/boundaries.yaml`](../eval/boundaries.yaml) declares every boundary this deployment holds, once.
+[`eval/attributes.yaml`](../eval/attributes.yaml) declares every boundary this deployment holds, once.
 **The evaluation board derives from it rather than being maintained beside it**, so adding a boundary
 moves the case list on its own. **Nothing here names a bot**: identity is a deployment concern
 (aos#778), and paired boundaries are already about as many cases as a human grades in one sitting.

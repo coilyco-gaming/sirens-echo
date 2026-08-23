@@ -9,7 +9,7 @@ import (
 )
 
 // A reply must not carry an identifier this process holds. Input framings are
-// unbounded and output values are enumerable. See docs/sirens-echo-boundaries.md.
+// unbounded and output values are enumerable. See docs/sirens-echo-attributes.md.
 
 // snowflakePattern matches a Discord ID. A shorter digit run is an ordinary
 // number a reply may legitimately contain, such as a port or a count.
@@ -24,12 +24,12 @@ const opaqueSecretRunes = 20
 type IdentifierGuard struct {
 	forbidden []string
 	// digits holds the numeric identifiers again, for comparison against a
-	// reply stripped to digits. See docs/sirens-echo-boundaries.md.
+	// reply stripped to digits. See docs/sirens-echo-attributes.md.
 	digits []string
 }
 
 // NewIdentifierGuard derives the set from configuration at boot, so it cannot
-// drift from what the pod actually holds. See docs/sirens-echo-boundaries.md.
+// drift from what the pod actually holds. See docs/sirens-echo-attributes.md.
 func NewIdentifierGuard(cfg Config, roster []MCPServerDefinition) *IdentifierGuard {
 	guard := &IdentifierGuard{}
 	// The principal ID reaches no tool that returns it, so it is forbidden
