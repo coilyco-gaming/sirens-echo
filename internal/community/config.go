@@ -955,6 +955,9 @@ type Config struct {
 	TuningRejected []string
 	RequestTimeout time.Duration
 	QueueTimeout   time.Duration
+	// ThreadSummary ends a thread turn by editing this service's first reply
+	// there. Off is the shipped default. See docs/sirens-echo-threads.md.
+	ThreadSummary bool
 	// ExecutionSlots is how many turns run at once. See sirens-echo#995.
 	ExecutionSlots int
 	// ShutdownGrace is how long a restart waits for the turns already running.

@@ -9,3 +9,4 @@ DISCORD_COMMANDS                   off   Register and serve Discord application 
 DISCORD_DM_ENABLED                 off   Admit direct messages, which carry no guild moderation.
 DISCORD_ENABLED                    on    Open the Discord gateway session at all.
 MCP_REEXPORT                       off   Offer the roster's own tools over /mcp beside turn. They bypass the turn pipeline's checks, so they require the deployment token.
+THREAD_SUMMARY                     off   End a thread turn by editing this service's first reply there rather than posting another, so the thread carries one living answer.
