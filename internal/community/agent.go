@@ -569,7 +569,7 @@ func (a *Agent) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
 		slog.String("discord_user", ready.User.Username),
 		slog.String("channel", a.cfg.Definition.Channel),
 		slog.String("audit_role", a.cfg.Definition.AuditRole),
-		// The count, never the values. See docs/sirens-echo-boundaries.md.
+		// The count, never the values. See docs/sirens-echo-attributes.md.
 		slog.Int("guarded_identifiers", a.identifiers.Guarded()),
 		// The admission allowlist, sized at boot. It outlived the thread-prefill
 		// toggle it was added for, which no longer has a default to observe.

@@ -77,8 +77,8 @@ the end.
 
 - `just` recipes for build, policy verification, prompt snapshots, format, vet, test, tidy, run,
   per-profile evaluation, failure-rate measurement, and full pre-commit.
-- Every boundary this deployment holds **declared once** in `eval/boundaries.yaml`, with
-  `just boundaries-check` failing when a declaration no longer resolves.
+- Every boundary this deployment holds **declared once** in `eval/attributes.yaml`, with
+  `just attributes-check` failing when a declaration no longer resolves.
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit. Structure, skills, links, modules,
   comments, secrets, and prompt all validated. **Entrypoint failures logged as severity-carrying JSON,
   never bare stderr.**
@@ -99,7 +99,7 @@ Tools: [commands](sirens-echo-commands.md), [tools](sirens-echo-tools.md), [mcp]
 The turn: [turn-stages](sirens-echo-turn-stages.md), [prompt](sirens-echo-prompt.md),
 [model-call](sirens-echo-model-call.md), [reply-assembly](sirens-echo-reply-assembly.md),
 [progress](sirens-echo-progress.md), [delivery](sirens-echo-delivery.md).
-Safety: [content-gate](sirens-echo-content-gate.md), [boundaries](sirens-echo-boundaries.md),
+Safety: [content-gate](sirens-echo-content-gate.md), [boundaries](sirens-echo-attributes.md),
 [phrases](sirens-echo-phrases.md), [untrusted-input](sirens-echo-untrusted-input.md),
 [reasoning](sirens-echo-reasoning.md), [grounding](sirens-echo-grounding.md).
 Work: [jobs](sirens-echo-jobs.md), [execution](sirens-echo-execution.md),

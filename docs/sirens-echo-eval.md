@@ -96,7 +96,7 @@ retired one, **because the before-and-after is the argument that a doctrine chan
 
 ## The boundary declaration
 
-`eval/boundaries.yaml` declares every boundary this deployment holds, once, in aos-eval's declaration
+`eval/attributes.yaml` declares every boundary this deployment holds, once, in aos-eval's declaration
 shape. `aos-eval boundaries derive` reads it as-is, and `aos-eval boundaries check` compares the challenges it
 derives to what the board actually authored.
 
@@ -106,7 +106,7 @@ that counted the board as complete would be certifying rather than measuring. It
 and stays wrong out loud until those cases exist. Deriving the board from the declaration is tracked by
 #846. **Nothing here names a bot**, identity being a deployment concern.
 
-`just boundaries` prints the paired case list, and `just boundaries-check` fails when a declared boundary
+`just attributes` prints the paired case list, and `just attributes-check` fails when a declared boundary
 no longer resolves against the source it names. That source-drift check stays local because `aos-eval
 boundaries check` compares challenges to a dataset instead, so the two answer different questions.
 

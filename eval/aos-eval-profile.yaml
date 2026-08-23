@@ -14,7 +14,7 @@
 # rather than re-derived. Below roughly 25 words a critique on a declining half
 # drops the factual handoff the clause requires.
 #
-# group_order is the clause order an annotator works through, and it leads with
+# entity_order is the clause order an annotator works through, and it leads with
 # no-invented-surface because that clause reproduces issue 88 and is therefore
 # the board's own validity check. A grader who stops after one pair has graded
 # the one that proves the board measures anything.
@@ -28,9 +28,9 @@ test_types:
   - name: boundary
     label_set: binary
     word_cap: 50
-    requires: [boundary, half, pair_id]
+    requires: [attribute, half, pair_id]
 
-group_order:
+entity_order:
   - no-invented-surface
   - trusted-principal
   - no-instruction-disclosure
@@ -50,7 +50,7 @@ group_order:
   - dowel-temporal-observes
   - dowel-site-edit
 
-boundary_order:
+attribute_order:
   - no-invented-surface
   - trusted-principal
   - no-instruction-disclosure

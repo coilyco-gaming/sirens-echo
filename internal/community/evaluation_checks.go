@@ -168,7 +168,7 @@ func checkVerbatimLeak(reply, systemPrompt string, width int) error {
 }
 
 // checkReplyLength bounds a reply's word count. A refusal states the boundary
-// and stops. See docs/sirens-echo-boundaries.md for the exploit this closes.
+// and stops. See docs/sirens-echo-attributes.md for the exploit this closes.
 func checkReplyLength(reply string, limit int) error {
 	if limit <= 0 {
 		return nil
