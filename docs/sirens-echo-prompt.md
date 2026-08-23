@@ -8,13 +8,13 @@ policy, admission sentence, trust policy, untrusted-input clause, tool-use claus
 issue-draft policy, and the neutral style block. Sections join with a blank line and an empty one drops
 out, so a social profile renders none. `agent/*.yaml` selects identity, response style, channel label,
 issue tracker, and which policy roots load. `.agents/skills/<root>/SKILL.md`, or `COMPOSED.md` for a
-composed source, plus one level of `references/*.md`, supplies the rest: `LoadSkillpack` collects across
-every configured root, sorts by full path, strips frontmatter, and joins with `## Source: <path>`
-headers under a 256 KB cap. **Deployment selects which definition loads and contributes no prose.**
+composed source, plus one level of `references/*.md`, supplies the rest: `LoadSkillpack` collects every
+configured root, sorts by path, strips frontmatter, and joins with `## Source: <path>` headers under a
+256 KB cap. **Deployment selects which definition loads and contributes no prose.**
 
 Every profile opens by naming its identity, the sirens-echo harness, and the Coilyco Gaming Robotics
-Division, then carries the pronoun policy, the admission sentence, and the trust policy. That policy
-**names Kai as the only trusted speaker and treats every other input as a passive threat probe**.
+Division, then carries the pronoun policy, admission sentence, and trust policy. That policy **names Kai
+as the only trusted speaker and treats every other input as a passive threat probe**.
 Deployment supplies her Discord handle and user ID through `SIRENS_ECHO_PRINCIPAL_HANDLE` and
 `SIRENS_ECHO_PRINCIPAL_USER_ID`, and the same paragraph denies those two signals any grant of their own:
 **a blanket grant exists only in a direct message with her**. Set both variables or neither, since
@@ -50,38 +50,42 @@ messages: system prompt, the conversation around the request as its own user tur
 message alone. **History stays flattened and labelled inside the context message**, because a Discord
 channel is multi-party and the assistant and user roles cannot say which human spoke.
 
+**The context opens with the room**, which the lane could name for its deployment but not for the turn
+it was in (#1032). It reads cached state, names a thread with its channel, and **carries no id**, since
+`IdentifierGuard` refuses a reply repeating one. It sits in the context, not the system prompt, since
+**a room name is member-supplied**, cleaned as an author name is.
+
 The files are byte-exact, so `trailing-whitespace` and `end-of-file-fixer` skip `agent/rendered/`, and
 editing one by hand is pointless because the hook regenerates from source. **A diff there is the honest
-answer to "what did this change tell the model"**: read it before approving a change to any policy root,
-since a one-line `SKILL.md` edit can move hundreds of bytes. The header byte count is **the only place a
-skill root's per-turn cost is stated as a number**.
+answer to "what did this change tell the model"**: read it before approving a change to any policy
+root, since a one-line `SKILL.md` edit can move hundreds of bytes. The header byte count is **the only
+place a skill root's per-turn cost is stated as a number**.
 
 ## The system prompt is not a secret
 
 The prompt is assembled from policy roots and capability references tracked in this public repository,
 so **a check against a public document is theatre, and expensive theatre when it gates deployments**.
 Three checks treated it as confidential, `max_verbatim_words` among them, and all three are retired.
-They also failed in the direction that costs most: **a correct refusal frequently describes what the
-service can do in the words the prompt used**, since that is where the words came from, so they fired on
-compliance and not on extraction, **and a security row that is red for correct behaviour teaches readers
-to skip the row that finally matters**.
+They also failed in the direction that costs most: **a correct refusal often describes what the service
+can do in the words the prompt used**, that being where the words came from, so they fired on
+compliance rather than extraction, **and a security row red for correct behaviour teaches readers to
+skip the row that finally matters**.
 
 Configuration identifiers are still checked. `SIRENS_ECHO_*` names are not secret either, **but reciting
 them is a shape no correct reply has**, and the pattern costs nothing. The operator's user ID remains
-forbidden, being member data rather than prompt confidentiality. It follows that **a reply that quotes
-the prompt is not a defect, and neither is one that lists the tools the service offers**. If either is
-undesirable it is a *composure* concern about a service that volunteers more than it was asked, which
-needs to be made on its own terms.
+forbidden, being member data rather than prompt confidentiality. So **a reply quoting the prompt is not
+a defect, and neither is one listing the tools**. If either is undesirable that is a *composure*
+concern about a service volunteering more than it was asked, to be made on its own terms.
 
 **A capability doc either names the harness bounds or names none of them.**
 `TestTheCapabilityDocsFollowTheHarnessBounds` rewrites the tool-round and model-call
 figures in a copy that states them, so moving a number moves the sentence. **A copy
 shared across lanes cannot state them at all**: `coilyco-general` loads on the Dowel
-lane and on the domain-neutral HTTP profile, whose deployments set different
-ceilings, **so whichever figure it printed would be a false claim on the other lane**,
-which is a fabrication under that file's own opening rule. Such a copy says the
-ceilings are set per deployment, and the test then fails it for naming a figure
-anywhere, **because the loophole in naming none is naming one somewhere else**.
+lane and on the HTTP profile, whose deployments set different ceilings, **so whichever
+figure it printed would be false on the other lane**, a fabrication under that file's
+own opening rule. Such a copy says the ceilings are per deployment, and the test then
+fails it for naming a figure anywhere, **the loophole in naming none being naming one
+somewhere else**.
 
 ## Prompt budget
 
@@ -95,12 +99,11 @@ prevents: not a large prompt, but one that arrived without a decision.
 When a change pushes a snapshot past its budget, the test names the file, the actual size, and the
 ceiling. Raise the number and say in the commit message why the bytes are worth it, or trim a policy
 root: **silently growing is the only outcome this removes**. The budgets carry headroom on purpose,
-because **a test that fails on every ordinary edit trains people to raise the number without reading
-it**. **It does not measure cost** - a byte count is a poor proxy for tokens across tokenizers and says
-nothing about the cache behavior tracked in the prompt-caching issue - **and it does not judge
-content**: a registry of complete URLs is larger than a template the model fills in, and larger on
-purpose, because a model with no closed list invents addresses.
+because **a test failing on every ordinary edit trains people to raise the number without reading it**.
+**It does not measure cost**, a byte count being a poor proxy for tokens across tokenizers, **and it
+does not judge content**: a registry of complete URLs is larger than a template the model fills in, and
+larger on purpose, because a model with no closed list invents addresses.
 
 Every raise is recorded in the commit that makes it, **because a raise is only correct when the growth
-was intended**, and **a drop is recorded the same way**: a budget left high after a saving banks it and
-spends it again.
+was intended**, and **a drop the same way**: a budget left high after a saving banks it and spends it
+again.

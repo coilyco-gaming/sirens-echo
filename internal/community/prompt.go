@@ -449,6 +449,30 @@ func BuildTurnPrompt(
 	}
 }
 
+// turnLocated is an optional turn capability, like the reactor. A transport
+// that can say which room it is in declares it. See sirens-echo#1032.
+type turnLocated interface {
+	LocationLabel() string
+}
+
+// withTurnLocation says where this turn is happening, in the turn context
+// rather than the system prompt. See docs/sirens-echo-prompt.md.
+func withTurnLocation(assembled string, turn turnIO) string {
+	located, ok := turn.(turnLocated)
+	if !ok {
+		return assembled
+	}
+	label := located.LocationLabel()
+	if label == "" {
+		return assembled
+	}
+	line := "This conversation is happening in " + label + ".\n"
+	if assembled == "" {
+		return line
+	}
+	return line + assembled
+}
+
 // buildTurnContext keeps the transcript flattened and labelled. A Discord
 // channel is multi-party, which the assistant and user roles cannot express.
 func buildTurnContext(history []TranscriptEntry, current TranscriptEntry) string {
