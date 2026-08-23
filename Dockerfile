@@ -33,16 +33,24 @@ ARG AOS_CATALOG_REF=main
 ARG AOS_CATALOG_HEAD
 USER root
 WORKDIR /src
+# The resolved commit is fetched rather than the branch re-resolved, because the
+# branch moves during the build and re-resolving raced it. See sirens-echo#1118.
 RUN set -eu; \
     if [ -z "${AOS_CATALOG_HEAD:-}" ]; then \
       echo "AOS_CATALOG_HEAD is required; resolve it with scripts/lib/catalog-head.sh" >&2; \
       exit 1; \
     fi; \
-    git clone --depth 1 --branch "${AOS_CATALOG_REF}" \
-      https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git /tmp/aos-catalog; \
-    cloned=$(git -C /tmp/aos-catalog rev-parse HEAD); \
-    if [ "${cloned}" != "${AOS_CATALOG_HEAD}" ]; then \
-      echo "catalogue ${AOS_CATALOG_REF} cloned ${cloned}, caller resolved ${AOS_CATALOG_HEAD}" >&2; \
+    catalogue=https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os.git; \
+    git init -q /tmp/aos-catalog; \
+    git -C /tmp/aos-catalog remote add origin "${catalogue}"; \
+    if ! git -C /tmp/aos-catalog fetch -q --depth 1 origin "${AOS_CATALOG_HEAD}"; then \
+      rm -rf /tmp/aos-catalog; \
+      git clone -q --branch "${AOS_CATALOG_REF}" "${catalogue}" /tmp/aos-catalog; \
+    fi; \
+    git -C /tmp/aos-catalog checkout -q --detach "${AOS_CATALOG_HEAD}"; \
+    checked=$(git -C /tmp/aos-catalog rev-parse HEAD); \
+    if [ "${checked}" != "${AOS_CATALOG_HEAD}" ]; then \
+      echo "catalogue checked out ${checked}, caller resolved ${AOS_CATALOG_HEAD}" >&2; \
       exit 1; \
     fi
 COPY agent ./agent
