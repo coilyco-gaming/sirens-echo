@@ -38,7 +38,8 @@ func readAt(t *testing.T, session ToolSession, name string, offset int) ToolResu
 // A 53KB read against a 16KB consumer had 70% dropped downstream, then cost a
 // further round chasing the spill file. See sirens-echo#940.
 func TestALongScratchReadComesBackBounded(t *testing.T) {
-	t.Parallel()
+	// Not parallel. applyKnobs writes the package defaults every other test
+	// reads, which is why no knob test takes t.Parallel.
 	restoreKnobs(t)
 	applyKnobs(func(string) string { return "" })
 
@@ -63,7 +64,8 @@ func TestALongScratchReadComesBackBounded(t *testing.T) {
 // A short file must not grow a boundary note, which would read as a truncation
 // that did not happen.
 func TestAShortScratchReadIsUntouched(t *testing.T) {
-	t.Parallel()
+	// Not parallel. applyKnobs writes the package defaults every other test
+	// reads, which is why no knob test takes t.Parallel.
 	restoreKnobs(t)
 	applyKnobs(func(string) string { return "" })
 
@@ -78,7 +80,8 @@ func TestAShortScratchReadIsUntouched(t *testing.T) {
 // The offset has to actually continue, or the note sends the model somewhere
 // that repeats or skips content.
 func TestReadingFromTheReportedOffsetReassemblesTheFile(t *testing.T) {
-	t.Parallel()
+	// Not parallel. applyKnobs writes the package defaults every other test
+	// reads, which is why no knob test takes t.Parallel.
 	restoreKnobs(t)
 	applyKnobs(func(string) string { return "" })
 
