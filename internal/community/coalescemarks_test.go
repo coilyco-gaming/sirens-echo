@@ -203,6 +203,37 @@ func TestAMarkThatFailsDoesNotFailTheAsk(t *testing.T) {
 	}
 }
 
+// A batch whose turn panics still settles its holds and tells the member,
+// because a turn that died silently reads as being ignored.
+func TestABatchWhoseTurnPanicsSettlesItsHoldsAndTellsTheMember(t *testing.T) {
+	t.Parallel()
+	marker := &recordingMarker{}
+	released := 0
+	runner := &batchRunner{agent: markedAgent(t)}
+	distinct := []*discordSummon{
+		markedSummon(marker, "older", &released),
+		markedSummon(marker, "newest", &released),
+	}
+	// transportDiscord, because sendReply routes on it and the crash notice
+	// has to take the path a real batch would.
+	told := &httpTurn{requestID: "crashed", transport: transportDiscord}
+
+	// The same order Run defers them in, which runs settle first and then the
+	// recovery, so a panic cannot strand a hold behind the notice.
+	func() {
+		defer runner.recoverTurn(context.Background(), told)
+		defer runner.settle(context.Background(), distinct, distinct)
+		panic("the model client crashed")
+	}()
+
+	if released != len(distinct) {
+		t.Errorf("holds returned = %d, want %d, so a shutdown waits forever", released, len(distinct))
+	}
+	if told.reply != noticeTurnCrashed {
+		t.Errorf("member was told %q, want %q", told.reply, noticeTurnCrashed)
+	}
+}
+
 func containsString(haystack []string, needle string) bool {
 	for _, entry := range haystack {
 		if entry == needle {
