@@ -325,8 +325,10 @@ func TestAssertedHistoryMarksEveryEntry(t *testing.T) {
 // promptBudgets ratchet the tracked snapshots, and are not targets. Every raise
 // is recorded in the commit that makes it, with its cause.
 var promptBudgets = map[string]int{
-	"agents/echo/rendered/prompt.txt": 28388,
-	"agents/deep/rendered/prompt.txt": 19211,
+	// +703 boundary brevity (#843), +682 coverage (#449), the `Applies to` line
+	// every always-inline reference carries (#1049), +5 for ops -> sysadmin (#1158).
+	"agents/echo/rendered/prompt.txt": 30302,
+	"agents/deep/rendered/prompt.txt": 20998,
 }
 
 // shippedProfiles lists the in-image agent profiles from disk, so a new one is
