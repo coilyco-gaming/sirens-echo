@@ -1,6 +1,6 @@
 ---
 ward:
-  workflow: pull-request
+  workflow: pull-request-and-merge
 ---
 # Agent instructions
 
@@ -162,7 +162,7 @@ trusted deploy lane. The workload holds no cluster credential. Deploy owns rollo
 <!-- BEGIN managed by agentic-os/scripts/apply-git-workflow.py -->
 ### Git workflow
 
-**This repo runs the `pull-request` lane**, declared as `ward.workflow` in this file's frontmatter. The agent commits to a task branch, pushes it, opens a Forgejo pull request, and stops there. The author does not merge on this lane. The director merge lane takes it from the pull request onward.
+**This repo runs the `pull-request-and-merge` lane**, declared as `ward.workflow` in this file's frontmatter. The agent commits to a task branch, pushes it, opens a Forgejo pull request, and **merges that pull request itself** once it is green. The author of the code is the one who merges it. Opening the pull request is a step, never the stopping point.
 
 The fleet runs two lanes, and both authorize the same core actions:
 
