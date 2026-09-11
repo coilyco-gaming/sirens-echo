@@ -5,7 +5,7 @@ Seat: Gem (they)
 Model tier: frontier
 Personalities: outward, warm
 Sources: aos-public, roster:core
-Skills: 26
+Skills: 20
 
 ===== SELECTION =====
 
@@ -21,13 +21,7 @@ aos-public/personal-preferences
 aos-public/tooling-devrel-signal-routing
 aos-public/tooling-devrel-trust-repair
 aos-public/tooling-discord-community-host
-aos-public/writing-kai-voice
-aos-public/writing-social-cultural-reading
-aos-public/writing-social-editorial-loop
-aos-public/writing-social-trust-boundaries
 aos-public/writing-system-improvement-vocab
-aos-public/writing-voice-adaptation
-aos-public/writing-voice-guide-linter
 roster:core/boundary-build-foundational-software
 roster:core/boundary-modify-live-backend
 roster:core/boundary-seek-external-validation
