@@ -40,7 +40,7 @@ repos:
 
   # BEGIN managed by agentic-os/scripts/apply-agentic-os-hooks.py
   - repo: https://forgejo.coilysiren.me/coilyco-flight-deck/agentic-os
-    rev: aos-precommit-v0.24.0
+    rev: aos-precommit-v0.55.0
     hooks:
       - id: catalog-doc-size
       - id: catalog-trifecta
@@ -49,7 +49,6 @@ repos:
       - id: code-comments
       - id: actions-run-one-line
       - id: source-doc-refs
-      - id: catalog-block-present
       - id: check-skills
       - id: dead-cross-links
       - id: repo-pointer-skills

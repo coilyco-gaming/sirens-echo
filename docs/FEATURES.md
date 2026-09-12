@@ -114,7 +114,6 @@ Shipping: [deploy](sirens-echo-deploy.md).
 
 - [README.md](../README.md) - human-facing introduction.
 - [AGENTS.md](../AGENTS.md) - agent-facing rules.
-- [.ward/ward.yaml](../.ward/ward.yaml) - catalog metadata only.
 - [justfile](../justfile) - development recipes.
 
 Cross-reference convention from [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

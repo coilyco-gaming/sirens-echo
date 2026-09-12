@@ -270,5 +270,4 @@ switching tasks, or ending a session. The remote is the only durable artifact.
 - [README.md](README.md) - human-facing intro.
 - [docs/FEATURES.md](docs/FEATURES.md) - shipped inventory.
 - [justfile](justfile) - development recipes.
-- [.ward/ward.yaml](.ward/ward.yaml) - catalog metadata only, since the commands moved to the justfile.
 Cross-reference convention from [FEATURES.md](docs/FEATURES.md), tracked by [coilysiren/agentic-os#59](https://github.com/coilyco-flight-deck/agentic-os/issues/59).

@@ -111,6 +111,6 @@ How it runs:
 - [HTTP](docs/sirens-echo-http.md) and [observability](docs/sirens-echo-observability.md) - the turn endpoint, and health.
 - [threads](docs/sirens-echo-threads.md) - serving several channels and guilds from one process.
 - [identity](docs/sirens-echo-identity.md) and [compose](docs/sirens-echo-compose.md) - who it says it is, and the role record behind that.
-- [justfile](justfile) and [.ward/ward.yaml](.ward/ward.yaml) - dev verbs, and catalog metadata.
+- [justfile](justfile) - dev verbs, and catalog metadata.
 
 Every doc is under [`docs/`](docs/), one page per surface.
