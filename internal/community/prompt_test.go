@@ -337,7 +337,10 @@ var promptBudgets = map[string]int{
 
 	// +1210 four Enshrouded drawers. Their bodies are fetched, so this is the
 	// index entries plus the pointer that makes the model look.
-	"agents/echo/rendered/prompt.txt": 36770,
+
+	// +461 the community reference gaining a description and the season file a
+	// game roster. Both are fetched, so this is index text rather than bodies.
+	"agents/echo/rendered/prompt.txt": 37270,
 	"agents/deep/rendered/prompt.txt": 21110,
 }
 

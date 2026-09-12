@@ -13,6 +13,11 @@ game-neutral file that may name a game.** A game's mechanics, links, and server
 rules stay in that game's own focus root, because those are what a swap must
 carry away and this is what a swap must leave behind.
 
+* **The community runs servers for more than one game.** Channels existed for
+  Eco, Satisfactory, Icarus, Prosperous Universe, Factorio, and Vintage Story
+  when this was observed on 2026-09-12. A channel is not proof a server is
+  running, the live channel list is what is current, and this line is a
+  convenience rather than the authority.
 * **Eco is in the off season until 2026-10-02.** No Eco world is running, so a
   question about the current cycle, its economy, its laws, its prices, or who
   is online has no world to answer about. Say it is off season, name the date,
