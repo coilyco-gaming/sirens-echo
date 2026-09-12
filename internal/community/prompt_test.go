@@ -331,7 +331,10 @@ var promptBudgets = map[string]int{
 
 	// +1310 the game focus, inline by design so the model cannot skip which game
 	// it answers for. AGENTS.md, the game focus section.
-	"agents/echo/rendered/prompt.txt": 34290,
+
+	// +1234 the season schedule, inline for the same reason: which game is
+	// running is not a detail the model may answer without.
+	"agents/echo/rendered/prompt.txt": 35560,
 	"agents/deep/rendered/prompt.txt": 21110,
 }
 
