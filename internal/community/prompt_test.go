@@ -334,7 +334,10 @@ var promptBudgets = map[string]int{
 
 	// +1234 the season schedule, inline for the same reason: which game is
 	// running is not a detail the model may answer without.
-	"agents/echo/rendered/prompt.txt": 35560,
+
+	// +1210 four Enshrouded drawers. Their bodies are fetched, so this is the
+	// index entries plus the pointer that makes the model look.
+	"agents/echo/rendered/prompt.txt": 36770,
 	"agents/deep/rendered/prompt.txt": 21110,
 }
 
