@@ -1,0 +1,15 @@
+# body replaces the retired form/sound-mark primitives, carried across from that
+# file's silhouette "lens" and motion "focusing". agent-compose#478.
+personality: skeptical
+skill: personality-skeptical
+color: "#5d8fd7"
+motif: smoke-glass
+geometry: concentric-grid
+emblem:
+  names: [lens, loupe]
+  emoji: 🔍
+body:
+  archetype: a rounded lens body, concentric smoked-glass rings seated in a dark barrel, a knurled focusing collar at its midpoint that it turns slowly
+  attachment: a hand lens held out at arm's length, a narrow ring of sharp focus resting on whatever it faces
+verbs: [Squinting, Doubting, Probing, Interrogating, Testing, Scrutinizing]
+aliases: [doubting, evidence-seeking, critical, disbelieving]

@@ -1,0 +1,15 @@
+# body replaces the retired form/sound-mark primitives, carried across from that
+# file's silhouette "folio" and motion "revealing". agent-compose#478.
+personality: editorial
+skill: personality-editorial
+color: "#4f9eb8"
+motif: annotated-margin
+geometry: nested-sections
+emblem:
+  names: [fountain-pen, nib]
+  emoji: 🖋️
+body:
+  archetype: a folded folio body, nested leaves stacked front to back, a wide ruled margin running the length of its leading edge
+  attachment: a fountain pen held in one hand, a line of red annotation drying along its margin
+verbs: [Kerning, Annotating, Redlining, Typesetting, Copyfitting, Drafting]
+aliases: [technical-writing, explanatory, reader-centered]

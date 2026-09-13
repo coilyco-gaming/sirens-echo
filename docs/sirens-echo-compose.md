@@ -1,6 +1,6 @@
 # Composing a lane identity
 
-Both lanes compose an Agent Compose role bundle. Deep composes `devrel` and takes its voice from it,
+Both lanes compose an Agent Compose role bundle. Deep composes `advocate` and takes its voice from it,
 Echo composes `sysadmin` and does not ([role and voice](sirens-echo-identity.md)).
 The [community person package](sirens-echo-person.md) adds lane roles the Core Roster lacks.
 

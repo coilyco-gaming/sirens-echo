@@ -57,7 +57,7 @@ variable would answer Echo's community in Deep's persona**, so an unnamed role f
 role brings that Echo does not want is the meld (protective, grounded) plus a seat name and
 pronouns, handled by the precedence clause with `ValidateNeutralStyle` as the second layer.
 
-**The deployed pairings** are Echo `sysadmin` with `neutral`, Deep `devrel` with `social`, and Dowel
+**The deployed pairings** are Echo `sysadmin` with `neutral`, Deep `advocate` with `social`, and Dowel
 `platform` with `social`, so **Deep and Dowel are the demonstration**: same voice, different doctrine.
 Dowel was briefly `neutral` to track its platform role, which would have composed a meld the same
 prompt then bars from expression. **Neither axis is the tool surface**, which is deployment-owned, so

@@ -37,7 +37,9 @@ roles {
         composed-skill "tooling-browser-routing"
     }
 
-    role "devrel" {
+    // Renamed creator -> devrel -> advocate upstream. An entry for a role the
+    // roster lost grants its skills to nothing. sirens-echo#7617.
+    role "advocate" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-devrel-*"
         composed-skill "personal-preference-*"

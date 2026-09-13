@@ -5,13 +5,15 @@ Seat: Delphi (she)
 Model tier: frontier
 Personalities: imaginative, playful
 Sources: aos-public, roster:core
-Skills: 7
+Skills: 9
 
 ===== SELECTION =====
 
 roster:core/boundary-build-foundational-software
+roster:core/boundary-hold-emotional-weight
 roster:core/boundary-modify-live-backend
 roster:core/boundary-seek-external-validation
+roster:core/boundary-study-an-unmet-party
 roster:core/boundary-suggest-external-comms
 roster:core/personality-imaginative
 roster:core/personality-playful

@@ -1,0 +1,15 @@
+# body replaces the retired form/sound-mark primitives, carried across from that
+# file's silhouette "instrument" and motion "ratcheting". agent-compose#478.
+personality: meticulous
+skill: personality-meticulous
+color: "#7d9fd3"
+motif: graph-paper
+geometry: measured-grid
+emblem:
+  names: [drafting-triangle, set-square]
+  emoji: 📐
+body:
+  archetype: an upright drafting-instrument body, a flat triangular plate standing on two braced legs, a ratcheting hinge at its apex, ruled edges notched in even increments
+  attachment: a drafting triangle held square against its chest, a sheet of graph paper ruled flat beneath it
+verbs: [Squaring, Aligning, Ruling, Tallying, Truing, Gridding]
+aliases: [precise, thorough, detail-oriented, careful]
