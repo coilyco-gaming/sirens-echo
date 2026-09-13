@@ -12,22 +12,36 @@ import (
 // The role graph is agent-compose's own format, so the allowlist stays terse
 // and globbed. See docs/sirens-echo-compose.md.
 
-// DeniedComposedSkills must never reach an agent that answers strangers. It is
-// the invariant a glob is checked against, so it sits beside the expander.
+// DeniedComposedSkills must never reach an agent that answers strangers. Every
+// name must resolve, which is what VerifyDenyListResolves holds true.
 var DeniedComposedSkills = map[string]string{
 	"kai-career":                 "private career context",
 	"kai-job-search":             "private job search",
 	"kai-grill-me":               "private operating context",
-	"kai-collaboration":          "private collaboration context",
-	"kai-kapwing-pr-review":      "employer team and domain context",
-	"kai-linkedin-voice":         "a member's personal channel voice",
-	"kai-linkedin-video":         "a member's personal channel format",
+	"tooling-collaboration":      "private collaboration context",
+	"kapwing-pr-review":          "employer team and domain context",
 	"kai-bio-surface":            "resume and identity surface, points at private lore",
-	"kai-public-repos":           "names private sibling repositories",
-	"kai-engineering-voice":      "code review and eng-channel posts, not this agent",
-	"kai-design-language":        "art direction, and low-context: required",
+	"writing-public-repos":       "names private sibling repositories",
+	"coilyco-design-language":    "art direction, and low-context: required",
 	"personal-preference-social": "an organization cannot own a person's social accounts",
 	"tooling-cross-repo-infra":   "fleet mutation surface",
+}
+
+// RetiredDeniedSkills left the catalogues for voice-corpus. Still denied, so a
+// revival under the old name is refused rather than admitted by an absence.
+var RetiredDeniedSkills = map[string]string{
+	"kai-linkedin-voice":    "a member's personal channel voice, moved to voice-corpus",
+	"kai-linkedin-video":    "a member's personal channel format, moved to voice-corpus",
+	"kai-engineering-voice": "code review and eng-channel posts, moved to voice-corpus",
+}
+
+// deniedReason reports why a name is refused, across both halves of the list.
+func deniedReason(name string) (string, bool) {
+	if reason, ok := DeniedComposedSkills[name]; ok {
+		return reason, true
+	}
+	reason, ok := RetiredDeniedSkills[name]
+	return reason, ok
 }
 
 // PrivateRepositories must never be globalized. A public repository is fine.
@@ -131,7 +145,7 @@ func ExpandRoleWithExclusions(catalogs []string, role string, graph RoleGraph) (
 			if !ok {
 				continue
 			}
-			if reason, denied := DeniedComposedSkills[name]; denied {
+			if reason, denied := deniedReason(name); denied {
 				// Naming one exactly asks for it. A family glob merely brushes
 				// past, so the denied member drops out and the rest stands.
 				if pattern == name {
@@ -218,4 +232,43 @@ func CheckGraphGlobals(graph RoleGraph) error {
 		}
 	}
 	return nil
+}
+
+// VerifyDenyListResolves is the negative control the name-only tests cannot be,
+// since those build their fixture from the list. sirens-echo#7615.
+func VerifyDenyListResolves(catalogs []string) error {
+	present := map[string]bool{}
+	for _, catalog := range catalogs {
+		entries, err := os.ReadDir(filepath.Join(catalog, ".agents", "composed"))
+		if err != nil {
+			return fmt.Errorf("read composed catalogue %s: %w", catalog, err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				present[entry.Name()] = true
+			}
+		}
+	}
+
+	problems := []string{}
+	for name := range DeniedComposedSkills {
+		if !present[name] {
+			problems = append(problems, fmt.Sprintf(
+				"denied skill %q resolves in no catalogue, so it guards nothing; "+
+					"rename it to its current name or retire it", name))
+		}
+	}
+	for name := range RetiredDeniedSkills {
+		if present[name] {
+			problems = append(problems, fmt.Sprintf(
+				"retired skill %q is back in a catalogue; "+
+					"move it to DeniedComposedSkills so it is verified", name))
+		}
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	sort.Strings(problems)
+	return fmt.Errorf("deny list is stale against %s:\n  %s",
+		strings.Join(catalogs, ", "), strings.Join(problems, "\n  "))
 }
