@@ -1,6 +1,6 @@
 ---
 name: sirens-game-enshrouded
-description: The Enshrouded game focus. Names the assumed game, its approved links, and the fact that no tool reaches this world's live state.
+description: The Enshrouded game focus. Names the assumed game, its approved links, this server's settings, and the fact that no tool reaches this world's live state.
 inline: always
 ---
 
@@ -23,13 +23,11 @@ from a verified one, which is what makes it worse than none.
 was, so a game surface left in the roster from a previous focus is not evidence
 about this world.
 
-## Nothing local is recorded
+## This server's settings are recorded
 
-No cycle, wipe, or reset model is recorded here, and neither are this server's
-world settings, so a question about a local rate, difficulty, or penalty is an
-unknown rather than the vanilla default. Read
-[references/world-settings.md](references/world-settings.md) for the knobs a
-host can change, which is vocabulary rather than this server's values.
+**The Sirens server runs the Default preset**, so the wiki usually reads
+correctly here. [references/server-rules.md](references/server-rules.md) carries
+the values, the exceptions, and why there is no next wipe to name.
 
 Read [references/links.md](references/links.md) for every Enshrouded URL a reply
 may contain. The drawers beside it carry the numbers members actually ask for:
