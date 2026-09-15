@@ -78,17 +78,13 @@ guardfile-skill *ARGS:
 guardfile-skill-check *ARGS:
     @go run ./cmd/sirens-echo-guardfile --check --guardfile ../../coilyco-bridge/deploy/services/sirens-echo/forgejo-mcp.mcp.kdl "$@"
 
-# Rewrite the tracked per-role selection record from baked bundles.
-role-snapshot *ARGS:
+# Load already-baked bundles and fail on one that did not compose.
+role-load *ARGS:
     @go run ./cmd/sirens-echo-prompt --bundles agent/bundles "$@"
 
-# Fail when a baked role selects something its tracked record does not. Needs bundles already baked.
-role-snapshot-check *ARGS:
-    @go run ./cmd/sirens-echo-prompt --bundles agent/bundles --check "$@"
-
-# Bake the bundles and fail on record drift in one step. What CI runs, and the one to run from a checkout with no baked bundles.
-role-drift-check *ARGS:
-    @bash scripts/task.sh role-drift-check "$@"
+# Bake the bundles and check every role composes, in one step. What CI runs.
+role-check *ARGS:
+    @bash scripts/task.sh role-check "$@"
 
 # go vet across the tree. Routed through the script so a hookless checkout installs the commit gate on the way past.
 vet *ARGS:

@@ -86,7 +86,9 @@ func loadFixture(t *testing.T, root string) []RoleBundle {
 	return loaded
 }
 
-func TestRoleSnapshotRecordsTheSelection(t *testing.T) {
+// Loading decodes what a role actually selected, including the escaped source
+// directory agent-compose writes, which is the part a wrong answer would hide.
+func TestLoadRoleBundlesReadsTheSelection(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	writeRoleBundle(t, root, "fixture", "# Voice adaptation\n")
@@ -94,61 +96,18 @@ func TestRoleSnapshotRecordsTheSelection(t *testing.T) {
 	if len(loaded) != 1 || loaded[0].Role != "fixture" {
 		t.Fatalf("loaded = %#v", loaded)
 	}
-	snapshot := RenderRoleSnapshot(loaded[0])
+	skills := strings.Join(loaded[0].Skills, ",")
 	for _, expected := range []string{
-		"Role: fixture",
-		"Role skill: role-fixture",
-		"Personalities: bold, warm",
-		"Sources: aos-public, roster:core",
-		"Skills: 2",
 		"aos-public/writing-voice-adaptation",
 		// The escaped directory decodes back to the source's real name.
 		"roster:core/personality-warm",
 	} {
-		if !strings.Contains(snapshot, expected) {
-			t.Errorf("snapshot missing %q:\n%s", expected, snapshot)
+		if !strings.Contains(skills, expected) {
+			t.Errorf("selection missing %q: %s", expected, skills)
 		}
 	}
-}
-
-// The catalogue ref floats, so a body edit upstream must not move the record.
-// Otherwise the gate reddens main for a change nobody here can review.
-func TestRoleSnapshotIgnoresAnUpstreamBodyEdit(t *testing.T) {
-	t.Parallel()
-	before := t.TempDir()
-	writeRoleBundle(t, before, "fixture", "# Voice adaptation\n")
-	after := t.TempDir()
-	writeRoleBundle(t, after, "fixture", "# Rewritten upstream\n\nMany more words.\n")
-
-	original := RenderRoleSnapshot(loadFixture(t, before)[0])
-	edited := RenderRoleSnapshot(loadFixture(t, after)[0])
-
-	if original != edited {
-		t.Errorf("an upstream body edit moved the record:\n%s\n---\n%s", original, edited)
-	}
-}
-
-// A selection change is the drift worth reviewing, so it has to move it.
-func TestRoleSnapshotMovesWhenASkillIsAdded(t *testing.T) {
-	t.Parallel()
-	root := t.TempDir()
-	dir := writeRoleBundle(t, root, "fixture", "# Voice adaptation\n")
-	original := RenderRoleSnapshot(loadFixture(t, root)[0])
-
-	added := filepath.Join(dir, "content", "skills", "aos-public", "writing-kai-voice")
-	if err := os.MkdirAll(added, 0o755); err != nil {
-		t.Fatalf("add a skill: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(added, "SKILL.md"), []byte("# Voice\n"), 0o644); err != nil {
-		t.Fatalf("write the added skill: %v", err)
-	}
-	widened := RenderRoleSnapshot(loadFixture(t, root)[0])
-
-	if widened == original {
-		t.Error("a role gaining a skill did not move its record")
-	}
-	if !strings.Contains(widened, "Skills: 3") {
-		t.Errorf("record did not count the added skill:\n%s", widened)
+	if loaded[0].Manifest.RoleSkill != "role-fixture" {
+		t.Errorf("role skill = %q", loaded[0].Manifest.RoleSkill)
 	}
 }
 

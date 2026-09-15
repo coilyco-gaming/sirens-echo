@@ -99,7 +99,7 @@ run time **so a committed dataset stays re-derivable** - evidence rather than th
 retired path is history rather than a stale reference**), and `rendered/prompt.txt`.
 
 **The file names repeat across agents on purpose**, so the folder carries the agent rather than the
-filename repeating it. `phrases.yaml`, `content-classes.yaml`, `compose/`, `rendered/roles/`, and the
+filename repeating it. `phrases.yaml`, `content-classes.yaml`, `compose/`, and the
 tracker and injection fixtures stay in `agent/`, read by both agents, **so filing them under either one
 would be a lie about ownership**. `.agents/skills/` did not move: it is the agentic-os catalog contract
 rather than this repository's convention, **so this is the one place the rule is deliberately not

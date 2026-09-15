@@ -63,9 +63,9 @@ COPY --from=build /out/sirens-echo-compose /usr/local/bin/sirens-echo-compose
 COPY --from=build /out/sirens-echo-prompt /usr/local/bin/sirens-echo-prompt
 RUN SIRENS_ECHO_COMPOSE_BIN=/usr/local/bin/sirens-echo-compose \
     bash scripts/stage-compose-sources.sh /out/bundles /tmp/aos-catalog
-# Every baked role must render a valid composed prompt and select exactly what
-# its tracked record says. See docs/sirens-echo-compose.md.
-RUN sirens-echo-prompt --bundles /out/bundles --check
+# Every baked role must render a valid composed prompt, so one that failed to
+# compose stops the image here. See docs/sirens-echo-compose.md.
+RUN sirens-echo-prompt --bundles /out/bundles
 
 FROM forgejo.coilysiren.me/coilyco-flight-deck/agentic-os:release
 

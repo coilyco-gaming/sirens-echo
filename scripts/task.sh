@@ -105,8 +105,8 @@ case "${1:-}" in
     fi
     bash scripts/stage-compose-sources.sh agent/bundles "$catalog"
     ;;
-  role-drift-check)
-    # The drift the image build used to reach at Dockerfile step 26. Out of tree
+  role-check)
+    # The check the image build reaches at Dockerfile step 26. Out of tree
     # because pre-commit walks the filesystem and a bundle is a skill tree.
     scratch=$(mktemp -d)
     trap 'rm -rf "$scratch"' EXIT

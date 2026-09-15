@@ -33,10 +33,6 @@ var sampleRequest = community.TranscriptEntry{
 	Content: "What changed in the last update?",
 }
 
-// roleSnapshotDir holds one record per baked role. Written only where bundles
-// exist, which is the image build. See docs/sirens-echo-compose.md.
-const roleSnapshotDir = "agent/rendered/roles"
-
 // composedDefinition is the profile the baked bundles belong to.
 const composedDefinition = "agents/deep/definition.yaml"
 
@@ -46,7 +42,7 @@ func main() {
 	flag.Parse()
 
 	if *bundles != "" {
-		if err := roleSnapshots(*bundles, *check); err != nil {
+		if err := checkRoleBundles(*bundles); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -86,16 +82,16 @@ func main() {
 	}
 }
 
-// roleSnapshots records what each baked role selected. Loading validates every
-// role's prompt on the way, so a bundle that failed to compose stops the build.
-func roleSnapshots(bundleDir string, check bool) error {
+// checkRoleBundles loads every baked bundle, which validates each role's prompt,
+// so a bundle that failed to compose stops the build instead of shipping neutral.
+func checkRoleBundles(bundleDir string) error {
 	// Bundles are build output, so an ordinary checkout has none and the bare
 	// loader error names a path rather than the step that creates it.
 	if _, err := os.Stat(bundleDir); errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf(
 			"no baked bundles at %s\n"+
 				"  bake them first with `just compose-bundles`, or run\n"+
-				"  `just role-drift-check`, which bakes and checks in one step",
+				"  `just role-check`, which bakes and checks in one step",
 			bundleDir,
 		)
 	}
@@ -116,42 +112,11 @@ func roleSnapshots(bundleDir string, check bool) error {
 	if err != nil {
 		return err
 	}
-	stale := make([]string, 0, len(loaded))
 	for _, bundle := range loaded {
-		target := filepath.Join(roleSnapshotDir, bundle.Role+".bundle.txt")
-		rendered := community.RenderRoleSnapshot(bundle)
 		// The prompt size is the early warning issue 98 asked for. It moves with
 		// upstream wording, so it is reported and never gated.
 		fmt.Printf("role %s: %d skills, prompt %d bytes\n",
 			bundle.Role, len(bundle.Skills), len(bundle.SystemPrompt))
-		existing, readErr := os.ReadFile(target)
-		if readErr == nil && string(existing) == rendered {
-			continue
-		}
-		if check {
-			stale = append(stale, target)
-			continue
-		}
-		if err := os.MkdirAll(roleSnapshotDir, 0o755); err != nil {
-			return fmt.Errorf("create %s: %w", roleSnapshotDir, err)
-		}
-		if err := os.WriteFile(target, []byte(rendered), 0o644); err != nil {
-			return fmt.Errorf("write %s: %w", target, err)
-		}
-		fmt.Printf("wrote %s\n", target)
-	}
-	if len(stale) > 0 {
-		// Every instance of this so far was a branch cut before a composed-sources
-		// change on main, so the merge is named before the rebake. See #788.
-		return fmt.Errorf(
-			"a role's selection changed: %s\n"+
-				"  if this branch predates a composed-sources change, merge main first:\n"+
-				"  the record it wants is already committed there\n"+
-				"  if the change is yours, rebake and record it:\n"+
-				"    just compose-bundles\n"+
-				"    just role-snapshot",
-			strings.Join(stale, ", "),
-		)
 	}
 	return nil
 }

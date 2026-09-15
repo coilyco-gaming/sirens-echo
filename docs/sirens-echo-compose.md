@@ -45,26 +45,28 @@ silent first-wins**, and a pattern naming a denied source **exactly** is fatal w
 merely brushes one drops that member and prints it, without which `personal-preference-*` would become
 unusable the moment a catalogue holding the denied `personal-preference-social` is present.
 
-## The per-role selection record
+## Every role must compose
 
-`agent/rendered/roles/<role>.bundle.txt` records what each baked role selected: role skill, model tier,
-personalities, sources, and the sorted skill set as `<source>/<skill>`. **No bodies and no digests**,
-because the catalogue ref floats on `main`, so a record built from bodies would go stale on every
-upstream commit and redden `main` for a reason nobody here can act on. What does move it is a role
-gaining or losing a skill, exactly the change that should be reviewed. CI bakes the bundles in the
-`test` job and the image build checks the same thing again over the bundles it ships: **the second stops
-a bad image, the first tells you in seconds rather than two thirds of the way through a build**
-(sirens-echo#788). A record most often drifts because the branch was cut before a composed-sources
-change landed on `main`, so the merge is the remedy and the failure names it first. Loading the bundles
-also renders and validates each role's prompt, because a bundle that failed to compose would ship as a
-quietly neutral agent and one filed under the wrong slug would make `SIRENS_ECHO_ROLE` select the wrong
-identity. **Prompt sizes are printed per role and never gated.**
+CI bakes the bundles in the `test` job and the image build checks the same thing again over the bundles
+it ships: **the second stops a bad image, the first tells you in seconds rather than two thirds of the
+way through a build** (sirens-echo#788). Loading a bundle renders and validates that role's prompt,
+because a bundle that failed to compose would ship as a quietly neutral agent and one filed under the
+wrong slug would make `SIRENS_ECHO_ROLE` select the wrong identity. **Prompt sizes are printed per role
+and never gated.**
 
-`just role-drift-check` bakes and checks in one step, the gate CI runs, and it bakes to a scratch
-directory it removes, **because pre-commit walks the filesystem and a baked bundle is a tree of skill
-files those hooks then read as this repository's own**. `just compose-bundles`, `role-snapshot`, and
-`role-snapshot-check` work against `agent/bundles` and need `AOS_CATALOG`. Read a diff here beside the
-allowlist diff: `roles.kdl` says what a role **may** have, this says what it **got**.
+`just role-check` bakes and checks in one step, the gate CI runs, and it bakes to a scratch directory it
+removes, **because pre-commit walks the filesystem and a baked bundle is a tree of skill files those
+hooks then read as this repository's own**. `just compose-bundles` and `role-load` work against
+`agent/bundles` and need `AOS_CATALOG`.
+
+**This repository tracks no record of what each role selected.** It used to, as
+`agent/rendered/roles/<role>.bundle.txt`, and the record was removed because it froze a selection that
+two upstream sources move on their own: the catalogue ref floats on `main`, and CI runs inside the
+floating `agentic-os:release` tag. A republish of either changed what the bake produced and reddened
+`main` with no commit in this repository to explain it, which is a gate nobody here could act on
+(`teable:coilyco-flight-deck/agentic-os#7734`). What survives is the check that matters at runtime: the
+bundle composed, the prompt renders, the slug is right. `roles.kdl` still says what a role **may** have,
+and the bundle in the shipped image is what it **got**.
 
 ## Who the agents belong to
 

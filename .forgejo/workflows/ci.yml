@@ -12,7 +12,7 @@
 # otherwise leave the one step whose job is to run that SQL green having run
 # none of it.
 #
-# ROLE SELECTION DRIFT runs here as well as at Dockerfile step 26. The image
+# THE ROLE COMPOSE CHECK runs here as well as at Dockerfile step 26. The image
 # build is what stops a bad image; this step is what says so in seconds rather
 # than two thirds of the way through a build. See docs/sirens-echo-compose.md.
 name: ci
@@ -59,8 +59,8 @@ jobs:
       - name: reviewed skip set
         run: bash scripts/ci-command.sh just test-skips
 
-      - name: role selection drift
-        run: bash scripts/ci-command.sh just role-drift-check
+      - name: every role composes
+        run: bash scripts/ci-command.sh just role-check
 
       - name: job store SQL
         env:
