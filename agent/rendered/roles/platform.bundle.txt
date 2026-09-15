@@ -5,7 +5,7 @@ Seat: Angie (she)
 Model tier: frontier
 Personalities: grounded, tenacious
 Sources: aos-public, roster:core
-Skills: 55
+Skills: 53
 
 ===== SELECTION =====
 
@@ -57,10 +57,8 @@ aos-public/tooling-sysadmin-incident-command
 aos-public/tooling-sysadmin-live-remediation
 aos-public/writing-system-improvement-vocab
 roster:core/boundary-build-foundational-software
-roster:core/boundary-hold-emotional-weight
 roster:core/boundary-modify-live-backend
 roster:core/boundary-seek-external-validation
-roster:core/boundary-study-an-unmet-party
 roster:core/personality-grounded
 roster:core/personality-tenacious
 roster:core/role-platform

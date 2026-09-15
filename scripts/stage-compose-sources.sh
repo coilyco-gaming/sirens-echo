@@ -46,7 +46,20 @@ if [ ! -f "$person" ]; then
     echo "stage-compose-sources: agent-compose roster wrote no person.json" >&2
     exit 1
 fi
-roles=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("\n".join(d.get("role_order") or sorted(d["roles"])))' "$person")
+# The roster describes retired roles too, and compose refuses one by name rather
+# than skipping it, so they are dropped here. teable:coilyco-gaming/sirens-echo#7720.
+bakeable_roles() {
+    python3 -c '
+import json, sys
+d = json.load(open(sys.argv[1]))
+roles = d["roles"]
+order = d.get("role_order") or sorted(roles)
+# Absent on a live role rather than false.
+print("\n".join(r for r in order if not (roles.get(r) or {}).get("archived")))
+' "$1"
+}
+
+roles=$(bakeable_roles "$person")
 if [ -z "$roles" ]; then
     echo "stage-compose-sources: the roster declares no role" >&2
     exit 1
@@ -61,7 +74,7 @@ person_rel=""
 if [ -d "$person_dir" ]; then
     person_out=$(mktemp -d "$scratch_home/person.XXXXXX")
     HOME=$scratch_home agent-compose roster --person-source "$person_dir" --out "$person_out" >/dev/null
-    community_roles=$(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print("\n".join(d.get("role_order") or sorted(d["roles"])))' "$person_out/person.json")
+    community_roles=$(bakeable_roles "$person_out/person.json")
     if [ -z "$community_roles" ]; then
         echo "stage-compose-sources: $person_dir declares no role" >&2
         exit 1

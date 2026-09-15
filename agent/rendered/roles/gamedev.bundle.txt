@@ -5,15 +5,13 @@ Seat: Sprite (they)
 Model tier: frontier
 Personalities: imaginative, immersed
 Sources: aos-public, roster:core
-Skills: 9
+Skills: 7
 
 ===== SELECTION =====
 
 roster:core/boundary-build-foundational-software
-roster:core/boundary-hold-emotional-weight
 roster:core/boundary-modify-live-backend
 roster:core/boundary-seek-external-validation
-roster:core/boundary-study-an-unmet-party
 roster:core/boundary-suggest-external-comms
 roster:core/personality-imaginative
 roster:core/personality-immersed

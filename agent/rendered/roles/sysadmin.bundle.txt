@@ -5,15 +5,13 @@ Seat: Echo (it)
 Model tier: frontier
 Personalities: grounded, protective
 Sources: aos-public, roster:core
-Skills: 10
+Skills: 8
 
 ===== SELECTION =====
 
 roster:core/boundary-build-foundational-software
-roster:core/boundary-hold-emotional-weight
 roster:core/boundary-modify-live-backend
 roster:core/boundary-seek-external-validation
-roster:core/boundary-study-an-unmet-party
 roster:core/boundary-suggest-external-comms
 roster:core/guardrail-reversible-steps
 roster:core/personality-grounded
