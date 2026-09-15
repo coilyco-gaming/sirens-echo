@@ -10,7 +10,7 @@ not a general Enshrouded tutorial, which the wiki pages in
 [links.md](links.md) answer.
 
 Every value here was read from the server's own `enshrouded_server.json` on
-2026-09-13, and Kai confirmed the same day that this is the community server
+2026-09-15, and Kai confirmed on 2026-09-13 that this is the community server
 rather than a private world. Nothing here is live state. It changes when Kai
 edits the config, so **prefer this file over the wiki for a local value, and
 say plainly when the specific number is not one this file carries**.
@@ -31,10 +31,12 @@ short list of exceptions below rather than by contradicting the wiki wholesale.
 
 ## What a member will actually notice
 
-* **Text chat and voice chat are both off.** `enableTextChat` and
-  `enableVoiceChat` are **false**. There is no in-game chat at all, so
-  coordination happens in Discord. A member asking why nobody answers them in
-  game is hitting this rather than being ignored.
+* **Text chat and voice chat are both on**, and voice is **Global** rather
+  than proximity, so it carries across the map. `enableTextChat` and
+  `enableVoiceChat` are both **true**. Those are this host's settings rather
+  than facts about Enshrouded, which ships all three whatever a server picks,
+  so never answer that the game has no chat. Discord is still where the
+  community organises between sessions.
 * **Sixteen slots.** `slotCount` is **16**.
 * **Days are 30 minutes, nights are 12.** `dayTimeDuration` is 1800 seconds and
   `nightTimeDuration` is 720 seconds.
@@ -79,10 +81,10 @@ wipe date would be inventing one.
 
 ## What this file does not carry
 
-The server name is still the stock **Enshrouded Server** with no tags set, so
-it is not a branded listing a member can search for by community name. How a
-member joins, and where the server ultimately lives, are operations questions
-rather than settings questions, and this file does not answer them.
+The server is named **Sirens Shroud**, which is what a member types into the
+browser to find it, though `tags` is still empty. How a member joins, and where
+the server ultimately lives, are operations questions rather than settings
+questions, and this file does not answer them.
 
 Anything above that is not listed here follows the Default preset, so answer it
 from the wiki's World Settings page linked in [links.md](links.md), and say
