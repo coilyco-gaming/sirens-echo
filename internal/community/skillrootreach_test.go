@@ -14,15 +14,10 @@ import (
 // unloadedByDesign are roots no definition here names, each with its reason. A
 // root reached only from deploy's definition counts, being invisible to this.
 var unloadedByDesign = map[string]string{
-	"sirens-dowel": "the owl.glass lane's root, named by deploy's sirens-dowel definition rather than by anything here",
 	"ops-social-discord": "guidance for guarded read-only investigations, deliberately not a runtime skill root. " +
 		"See AGENTS.md",
 	"repo-sirens-echo": "the generated repository-pointer skill, which is discovery for an agent reading the " +
 		"catalog rather than a runtime root",
-	"moxn": "public contribution surface for Moxn's own people, inert until after the 2026-08-19 stream. " +
-		"The lane reads references/moxn-knowledge-base.md meanwhile. See sirens-echo#999",
-	"temporal": "public contribution surface for Temporal's own people, inert on the same schedule. " +
-		"The lane reads references/temporal.md meanwhile. See sirens-echo#999",
 }
 
 // A root nobody loads is either a mistake or a decision, and this makes the

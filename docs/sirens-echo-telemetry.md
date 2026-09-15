@@ -16,10 +16,9 @@ waits for every writer to it, a grandchild included, so a shell that forks rathe
 own deadline. `command.WaitDelay = commandKillGrace` bounds the wait after the kill and closes the pipes.
 **The orphan is not reaped**: this unblocks the harness rather than killing the process tree.
 
-**None of this reaches the Temporal mirror.** The mirror keys off `RecordToolCall` alone, so a new
-`Record*` does not widen what leaves this process, and a command verb is closer to content than
-`mcp.tool.name` is. `TestNeitherEffectReachesTheTemporalMirror` holds the line, asserting a tool call
-does mirror in the same run so it cannot pass by delivering nothing.
+**None of this leaves the process.** The Temporal mirror that used to carry tool-call metadata outward
+is gone, so a new `Record*` cannot widen an export path that no longer exists. A command verb is closer
+to content than `mcp.tool.name` is, and that is the reason to keep it that way if one ever returns.
 
 ## Job-scoped telemetry
 

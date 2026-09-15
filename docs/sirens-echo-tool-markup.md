@@ -82,38 +82,14 @@ change breaks it too, because a failure is never counted inside a run of success
 recoverable from the result text afterwards and a failure is not. A transport failure never reaches the
 footer, because it ends the turn instead of returning a result.
 
-## Mirroring the trajectory
+## No trajectory leaves this process
 
-Deep emits a durable record of what it called into Temporal Cloud. **Metadata only, and Temporal
-observes the turn rather than running it** (decided with Kai on 2026-08-16): an activity per tool call
-would put a round trip in front of a Discord member, and a Temporal retry policy stacked on the
-agent-proxy fallback would compound a 502 into a slow expensive one.
+Deep used to emit a metadata-only tool-call record into Temporal Cloud. It is gone, with the lane it was
+built for. **Nothing about a turn now reaches a third-party SaaS**, which is a stronger guarantee than
+the one the mirror's field-enumerating test used to hold: there is no export path to widen by accident.
 
-`ToolCallRecord` has five named fields: server, tool, outcome, elapsed millis, trace id. **It is
-deliberately not the span's attribute slice**, because `StartSpan` is a variadic passthrough, so copying
-from it would mirror whatever any caller passed, sight unseen, forever: someone adds
-`attribute.String("message.text", ...)` one day and member content starts flowing to a third-party SaaS
-with no change here and nothing to notice it. Widening means adding a field to that struct, **a
-disclosure decision someone makes on purpose**, and a test enumerates the fields and fails when the set
-changes.
-
-**Only `RecordToolCall` mirrors.** Agent Proxy logged 68,900 `http receive` spans against 4,300 real
-requests in 30 days, so hooking span-start points a firehose at a service that bills per action. One
-`SignalWithStartWorkflow` per tool call is one action either way, keyed on
-`sirens-deep-trajectory-<trace id>`, **so a turn's calls arrive as one ordered trajectory instead of one
-workflow each**. `ToolTrajectoryWorkflow` performs no activity and reaches nothing, and nothing polls
-that queue, so **`TimedOut` is expected and history is the record**: 0 Completed is the design, not a
-break (sirens-echo#930).
-
-**Never on the turn's path.** The send is a non-blocking channel write and a full queue drops. A single
-worker owns the only call into the mirror, with a hard timeout, on a context detached from the turn
-**so a finished turn does not cancel its own audit record**. Errors are swallowed and a panicking client
-recovered. Every one of those paths increments `sirens_echo.mirror.drops`, **so an outage is a number
-rather than a silence**, because a mirror that fails quietly is the shape of #137 and #190.
-
-It is off unless a deployment supplies all three of `SIRENS_ECHO_TEMPORAL_HOST`, `..._NAMESPACE`, and
-`..._TASK_QUEUE`. **A half-filled connection fails at boot**, a typo that quietly turned the mirror off
-being the silent failure the drop counter exists to prevent, while a dial failure is only logged:
-**Temporal being unreachable must never stop this service answering**.
-`SIRENS_ECHO_TEMPORAL_API_KEY` comes from the pod environment (#444). Deep only, chosen by which lane
-sets the variables.
+Worth keeping from that design, because it will apply to the next one. The record was five named fields
+rather than the span's attribute slice, because `StartSpan` is a variadic passthrough and copying from
+it would mirror whatever any caller passed, sight unseen: someone adds `attribute.String("message.text",
+...)` one day and member content starts flowing outward with no change here and nothing to notice it.
+**Widening should always be a disclosure decision someone makes on purpose.**

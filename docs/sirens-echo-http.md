@@ -22,17 +22,13 @@ already holds and fails on the queue timeout rather than recursing.
 `0.0.0.0:8080` and publishes no Ingress, certificate, DNS record, or public resource. **Two paths reach
 it, and a lane has one or both.** Where a lane runs Echo's Tailscale sidecar, callers arrive on its
 MagicDNS name. Where the deployment binds a NodePort on kai-server they arrive there: `sirens-echo`
-30120, `sirens-deep` 30121, `sirens-dowel` 30122, **one port per lane covering both surfaces**,
+30120 and `sirens-deep` 30121, **one port per lane covering both surfaces**,
 because `HTTPHandler` hangs `/mcp` and the `/v1` paths off one mux on one listener. The ClusterIP is
 retained either way, so the in-namespace path is unchanged.
 
-**`sirens-dowel` runs `tailnet.enabled: false`**, so it has no sidecar, no MagicDNS name, and
-the NodePort is its only path. Before that port it had no tailnet reach at all, which the single-path
-description above could not express. **The boundary is the same either way**: the NodePort is LAN and
+**A lane may run `tailnet.enabled: false`**, in which case it has no sidecar, no MagicDNS name, and
+the NodePort is its only path. **The boundary is the same either way**: the NodePort is LAN and
 tailnet only, the home router forwards nothing to it, so reaching `/v1/turn` still requires being an
-authorized node on the tailnet. The process carries no credential of its own, and a deployment that
-exposes the listener any other way owns that boundary itself. The process binds `127.0.0.1:8080` by
-default; `SIRENS_ECHO_HTTP_ADDR` moves it.
 
 ```sh
 curl -sS http://sirens-echo:8080/v1/turn -H 'Content-Type: application/json' \

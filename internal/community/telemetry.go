@@ -57,10 +57,6 @@ type Telemetry struct {
 	metricSDK            *sdkmetric.MeterProvider
 	traceProvider        trace.TracerProvider
 	propagator           propagation.TextMapPropagator
-	// mirrorDrops counts records the mirror never delivered, so an outage is
-	// visible rather than silent. See docs/sirens-echo-tool-markup.md.
-	mirrorDrops metric.Int64Counter
-	dispatch    *mirrorDispatch
 }
 
 // logSink chooses where structured logs go. Nil means stdout; a runner writing
@@ -250,10 +246,6 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
-	mirrorDrops, err := meter.Int64Counter("sirens_echo.mirror.drops")
-	if err != nil {
-		return nil, err
-	}
 	commands, err := meter.Int64Counter("sirens_echo.commands")
 	if err != nil {
 		return nil, err
@@ -320,7 +312,6 @@ func newTelemetry(
 		toolCalls:            toolCalls,
 		commands:             commands,
 		attachments:          attachments,
-		mirrorDrops:          mirrorDrops,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
 		summons:              summons,
@@ -458,16 +449,6 @@ func (t *Telemetry) RecordToolCall(
 			attribute.String("outcome", outcome),
 		),
 	)
-	// The same curated triple, and nothing read from the span. See
-	// docs/sirens-echo-tool-markup.md.
-	t.dispatch.send(ToolCallRecord{
-		Server:        server,
-		Tool:          tool,
-		Outcome:       outcome,
-		ElapsedMillis: elapsed.Milliseconds(),
-		TraceID:       traceIDOf(ctx),
-		RequestID:     RequestIDFromContext(ctx),
-	})
 }
 
 // RecordCommand records one workspace execution. The verb is this repository's
@@ -492,21 +473,6 @@ func (t *Telemetry) RecordAttachment(ctx context.Context, outcome string) {
 		metric.WithAttributes(attribute.String("outcome", outcome)),
 	)
 }
-
-// AttachToolMirror starts the mirror. A nil mirror leaves the dispatch nil and
-// every send a no-op, which is the shape a deployment without one runs.
-func (t *Telemetry) AttachToolMirror(mirror ToolCallMirror) {
-	t.dispatch = newMirrorDispatch(
-		mirror,
-		mirrorQueueDepth,
-		mirrorTimeout,
-		func() { t.mirrorDrops.Add(context.Background(), 1) },
-	)
-}
-
-// CloseToolMirror stops the worker. Anything still queued is dropped, because
-// the turns it described have already answered.
-func (t *Telemetry) CloseToolMirror() { t.dispatch.Close() }
 
 // traceIDOf reads the correlation id off the span, or empty outside one.
 func traceIDOf(ctx context.Context) string {

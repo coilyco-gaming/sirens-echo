@@ -80,8 +80,8 @@ concern about a service volunteering more than it was asked, to be made on its o
 **A capability doc either names the harness bounds or names none of them.**
 `TestTheCapabilityDocsFollowTheHarnessBounds` rewrites the tool-round and model-call
 figures in a copy that states them, so moving a number moves the sentence. **A copy
-shared across lanes cannot state them at all**: `coilyco-general` loads on the Dowel
-lane and on the HTTP profile, whose deployments set different ceilings, **so whichever
+shared across lanes cannot state them at all**: `coilyco-general` loads on more than one
+lane, and their deployments set different ceilings, **so whichever
 figure it printed would be false on the other lane**, a fabrication under that file's
 own opening rule. Such a copy says the ceilings are per deployment, and the test then
 fails it for naming a figure anywhere, **the loophole in naming none being naming one

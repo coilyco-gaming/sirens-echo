@@ -24,13 +24,9 @@ const (
 
 // Agent owns the Sirens Echo Discord session and its outbound boundaries.
 type Agent struct {
-	// temporal is held only to close it. Nil when no mirror is configured.
-	temporal interface{ Close() }
-	// trajectoryWorker runs the workflow the mirror signals. Nil when off.
-	trajectoryWorker interface{ Stop() }
-	cfg              Config
-	session          *discordgo.Session
-	tools            *MCPProvider
+	cfg     Config
+	session *discordgo.Session
+	tools   *MCPProvider
 	// reexport caches the roster advertised over /mcp. Zero value is ready.
 	reexport          reexportCache
 	completions       CompletionClient
@@ -239,9 +235,6 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	// makes. See docs/sirens-echo-issues.md.
 	tracker.FilingCheck = agent.checkMemberFiling
 	agent.ensureRuntimeDefaults()
-	if err := agent.attachToolMirror(); err != nil {
-		return nil, err
-	}
 	if err := agent.buildJobRunner(); err != nil {
 		return nil, err
 	}
@@ -532,7 +525,6 @@ func (a *Agent) Run(ctx context.Context) error {
 			return err
 		}
 		defer a.jobs.Stop()
-		defer a.closeToolMirror()
 		a.recoverJobs(ctx)
 	}
 	a.reportInterruptedTurns(ctx)

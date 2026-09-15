@@ -99,8 +99,8 @@ seat_identity() {
     esac
 }
 
-# One agent alone in a guild has no seat to defer to, so Dowel drops what
-# platform defers: one boundary under v3, not two. agent-compose#304.
+# An agent alone in a guild has no seat to defer to. The lane this was added for
+# is retired, so removing it is open rather than settled. agent-compose#304.
 seat_boundary_omissions() {
     case "$1" in
         platform) printf '    boundary-omit "suggest-external-comms"\n' ;;

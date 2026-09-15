@@ -59,10 +59,8 @@ the end.
 - A Discord turn span carrying the author, guild, channel, thread, and message ids, **and no direct
   message contributing any of them**. A gateway heartbeat counting observed, admitted, and replied, **so
   a quiet guild and a stopped ingress differ**.
-- Metrics-only liveness and non-generating route readiness. A metadata-only tool-call trajectory
-  mirrored into Temporal Cloud, **off the turn's path and counted when it drops**. Workspace command
-  execution and attachment ingest recorded by verb and outcome, **with no arguments, output, filename,
-  or content**.
+- Metrics-only liveness and non-generating route readiness. Workspace command execution and attachment
+  ingest recorded by verb and outcome, **with no arguments, output, filename, or content**.
 
 ## Configuration and deployment
 

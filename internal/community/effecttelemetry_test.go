@@ -139,37 +139,6 @@ func TestAFailedAttachmentFetchIsRecorded(t *testing.T) {
 	}
 }
 
-// The acceptance that keeps the two halves of sirens-echo#890 apart: adding
-// telemetry must not start exporting these to a third-party SaaS.
-func TestNeitherEffectReachesTheTemporalMirror(t *testing.T) {
-	t.Parallel()
-	telemetry := telemetryOrNoop(nil)
-	mirror := newRecordingMirror()
-	telemetry.AttachToolMirror(mirror)
-	defer telemetry.CloseToolMirror()
-
-	runner, workspace := scriptRunner(t, telemetry)
-	if _, err := runner.Run(context.Background(), workspace, "-c", "exit 0"); err != nil {
-		t.Fatalf("Run: %v", err)
-	}
-	telemetry.RecordCommand(context.Background(), "exec", "ok")
-	telemetry.RecordAttachment(context.Background(), "stored")
-
-	// A tool call does mirror, so this proves the mirror is live rather than
-	// that the test simply never delivered anything.
-	telemetry.RecordToolCall(context.Background(), "eco", "get_market", "ok", time.Millisecond)
-	mirror.waitFor(t, 1)
-
-	for _, record := range mirror.seen() {
-		if record.Server != "eco" {
-			t.Errorf("a non-tool effect reached the mirror: %#v", record)
-		}
-	}
-	if got := len(mirror.seen()); got != 1 {
-		t.Errorf("mirrored %d records, want only the tool call", got)
-	}
-}
-
 // recordingReservedSession is a scratch session that accepts reserved writes.
 type recordingReservedSession struct {
 	written map[string]string

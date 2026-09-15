@@ -21,8 +21,8 @@ func reexportFixture() FixtureProvider {
 			Result:      "one issue",
 		},
 		{
-			Name:        "moxn__find",
-			Server:      "moxn",
+			Name:        "sample__find",
+			Server:      "sample",
 			Description: "List documents in a filesystem.",
 			Result:      "one document",
 		},
@@ -35,8 +35,8 @@ func reexportAgent(t *testing.T, enabled bool, configured, presented string) *mc
 	t.Helper()
 	agent := &Agent{
 		cfg: Config{
-			InstanceName:   "sirens-dowel",
-			Definition:     Definition{Identity: "Sirens Dowel", MaxContextMessages: 12},
+			InstanceName:   "sirens-fixture",
+			Definition:     Definition{Identity: "Sirens Fixture", MaxContextMessages: 12},
 			MCPReexport:    enabled,
 			HTTPTrustToken: configured,
 		},
@@ -92,7 +92,7 @@ func TestReexportDisabledServesTurnAlone(t *testing.T) {
 func TestReexportEnabledOffersRosterBesideTurn(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "secret")
 	names := listedToolNames(t, session)
-	want := []string{"forgejo__list_issue", "moxn__find", "turn"}
+	want := []string{"forgejo__list_issue", "sample__find", "turn"}
 	if !slices.Equal(names, want) {
 		t.Fatalf("enabled lane offers %v, want %v", names, want)
 	}
@@ -133,7 +133,7 @@ func TestReexportedCallRefusesAnUntrustedCaller(t *testing.T) {
 func TestReexportWithNoTokenRefusesEveryone(t *testing.T) {
 	session := reexportAgent(t, true, "", "")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "moxn__find",
+		Name:      "sample__find",
 		Arguments: map[string]any{},
 	})
 	if err != nil {
@@ -147,7 +147,7 @@ func TestReexportWithNoTokenRefusesEveryone(t *testing.T) {
 func TestReexportedCallReachesTheServerForATrustedCaller(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "secret")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "moxn__find",
+		Name:      "sample__find",
 		Arguments: map[string]any{},
 	})
 	if err != nil {
@@ -231,7 +231,7 @@ var errRosterUnavailable = errors.New("roster unavailable")
 func TestReexportedCallRefusesAWrongToken(t *testing.T) {
 	session := reexportAgent(t, true, "secret", "not-the-secret")
 	result, err := session.CallTool(context.Background(), &mcp.CallToolParams{
-		Name:      "moxn__find",
+		Name:      "sample__find",
 		Arguments: map[string]any{},
 	})
 	if err != nil {

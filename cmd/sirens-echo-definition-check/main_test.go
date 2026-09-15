@@ -47,7 +47,7 @@ func skillRootAt(t *testing.T) string {
 // lane crashlooped for 90 minutes with no signal at edit time. sirens-echo#973.
 func TestARootTheTreeDoesNotCarryFails(t *testing.T) {
 	t.Parallel()
-	path := definitionAt(t, filepath.Join(t.TempDir(), "sirens-dowel"))
+	path := definitionAt(t, filepath.Join(t.TempDir(), "sirens-fixture"))
 
 	var stdout, stderr bytes.Buffer
 	if code := run([]string{path}, &stdout, &stderr); code != 1 {
@@ -56,7 +56,7 @@ func TestARootTheTreeDoesNotCarryFails(t *testing.T) {
 	if !strings.Contains(stderr.String(), "walk skill root") {
 		t.Errorf("stderr = %q, want the walk failure the pod reports", stderr.String())
 	}
-	if !strings.Contains(stderr.String(), "sirens-dowel") {
+	if !strings.Contains(stderr.String(), "sirens-fixture") {
 		t.Errorf("stderr = %q, want the missing root named", stderr.String())
 	}
 }

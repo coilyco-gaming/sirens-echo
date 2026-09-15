@@ -27,7 +27,6 @@ JOB_TIMEOUT=30m0s                             MCPS_REPLY_BUDGET=1800
 MCP_BACKOFF_MAX=2m0s                          MCP_BACKOFF_MIN=5s
 MCP_CONNECT=10s                               MCP_LIST=15s
 MCP_TOOL_SUMMARY_RUNES=90                     MENTION_NAME_RUNES=3
-MIRROR_QUEUE_DEPTH=256                        MIRROR_TIMEOUT=5s
 MODEL_RETRY_ATTEMPTS=4                        MODEL_RETRY_BACKOFF=250ms
 OBJECT_EMOJI=3                                PARAMETER_MAX_LENGTH=200
 PROGRESS_AFTER=10s                            PROGRESS_ROWS=12

@@ -38,8 +38,7 @@ so an interrupted job never sits live forever and never later reports success.
 built empty by `Start` and `enqueue` is called only by `Submit`, **so nothing requeues a job a restart
 found queued** and an accurate `queued` record is a permanently pending one. `SettleDroppedJobs` moves
 those to `failed` under `dropped by a restart`. Requeuing instead was considered and not taken: it is
-the larger change, it needs `Effects` to be load-bearing, and it may be replaced outright if jobs move
-onto Temporal. See sirens-echo#878.
+the larger change, and it needs `Effects` to be load-bearing. See sirens-echo#878.
 
 **Recovery announces every job it settles**, dropped and stranded alike, because correcting the record
 tells nobody: a Discord requester never reads one. `Attempts` counts executions started, so a resumed

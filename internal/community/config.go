@@ -164,12 +164,6 @@ var (
 // Tool-call mirror. Metadata only, and off the turn's path entirely.
 // See docs/sirens-echo-tool-markup.md.
 var (
-	// mirrorQueueDepth bounds what a Temporal outage can hold in memory. Past
-	// it records drop, which is counted rather than silent.
-	mirrorQueueDepth int
-	// mirrorTimeout bounds one mirror write, well under a turn so a hung
-	// backend cannot stall the queue behind it.
-	mirrorTimeout time.Duration
 	// trajectoryIdle ends a turn's trajectory once its calls stop. It bounds the
 	// gap BETWEEN calls rather than the turn. sirens-echo#1041.
 	trajectoryIdle time.Duration
@@ -451,8 +445,6 @@ func knobs() []knob {
 		overridable(&modelRetryAttempts, "SIRENS_ECHO_MODEL_RETRY_ATTEMPTS", 4),
 		overridable(&modelRetryBackoff, "SIRENS_ECHO_MODEL_RETRY_BACKOFF", 250*time.Millisecond),
 
-		overridable(&mirrorQueueDepth, "SIRENS_ECHO_MIRROR_QUEUE_DEPTH", 256),
-		overridable(&mirrorTimeout, "SIRENS_ECHO_MIRROR_TIMEOUT", 5*time.Second),
 		overridable(&trajectoryIdle, "SIRENS_ECHO_TRAJECTORY_IDLE", 2*time.Minute),
 
 		overridable(&executionSlots, "SIRENS_ECHO_EXECUTION_SLOTS", 8),
@@ -934,9 +926,6 @@ type Config struct {
 	// CoalesceEnabled batches a member's rapid comments onto a worker pool in
 	// place of the execution slot. See docs/sirens-echo-admission.md.
 	CoalesceEnabled bool
-	// TemporalMirror is the Temporal Cloud mirror's connection. Empty disables
-	// it entirely. See docs/sirens-echo-tool-markup.md.
-	TemporalMirror TemporalMirrorConfig
 	// JobWorkspaceRoot enables executing jobs. Empty means no execution at all,
 	// which is the default posture.
 	JobWorkspaceRoot string
@@ -1025,15 +1014,9 @@ func LoadConfig() (Config, error) {
 			Handle: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_HANDLE")),
 			UserID: strings.TrimSpace(os.Getenv("SIRENS_ECHO_PRINCIPAL_USER_ID")),
 		},
-		DiscordToken:      strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
-		DiscordChannelIDs: splitList(os.Getenv("DISCORD_CHANNEL_ID")),
-		DiscordGuildIDs:   splitList(os.Getenv("DISCORD_GUILD_IDS")),
-		TemporalMirror: TemporalMirrorConfig{
-			HostPort:  strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_HOST")),
-			Namespace: strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_NAMESPACE")),
-			TaskQueue: strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_TASK_QUEUE")),
-			APIKey:    strings.TrimSpace(os.Getenv("SIRENS_ECHO_TEMPORAL_API_KEY")),
-		},
+		DiscordToken:         strings.TrimSpace(os.Getenv("DISCORD_TOKEN")),
+		DiscordChannelIDs:    splitList(os.Getenv("DISCORD_CHANNEL_ID")),
+		DiscordGuildIDs:      splitList(os.Getenv("DISCORD_GUILD_IDS")),
 		AgentProxyURL:        valueOrDefault(os.Getenv("AGENT_PROXY_URL"), DefaultAgentProxyURL),
 		AgentProxyModel:      strings.TrimSpace(os.Getenv("AGENT_PROXY_MODEL")),
 		OTLPEndpoint:         valueOrDefault(os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"), DefaultOTLPEndpoint),

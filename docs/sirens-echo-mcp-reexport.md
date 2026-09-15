@@ -11,7 +11,7 @@ sirens-echo#1025.
 
 **A re-exported call is not a turn.** The lane's guards live in the turn pipeline rather than in the
 tools: `runReplyChecks`, response validation, and the `IdentifierGuard` that #310 depends on. A caller
-reaching `moxn__find` reaches the server, and none of those run.
+reaching `sample__find` reaches the server, and none of those run.
 
 So this **moves a security boundary rather than adding an interface**, which is the reason for every
 choice below.

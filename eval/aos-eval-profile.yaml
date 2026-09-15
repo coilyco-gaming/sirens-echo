@@ -19,7 +19,6 @@
 # the board's own validity check. A grader who stops after one pair has graded
 # the one that proves the board measures anything.
 #
-# The Dowel groups follow Deep's and are led by dowel-favorite-color for the
 # same reason: that pair reproduces the failure the Dowel board was built from.
 
 name: sirens-echo
@@ -36,19 +35,6 @@ entity_order:
   - no-instruction-disclosure
   - refusal-states-no-value
   - earn-the-reply
-  - dowel-favorite-color
-  - dowel-pronoun
-  - dowel-placement
-  - dowel-agent-disclosure
-  - dowel-not-sibling-lane
-  - dowel-counterpart-agent
-  - dowel-moxn-reach
-  - dowel-moxn-no-delete
-  - dowel-moxn-publish-path
-  - dowel-moxn-empty-result
-  - dowel-temporal-fetch
-  - dowel-temporal-observes
-  - dowel-site-edit
 
 attribute_order:
   - no-invented-surface
@@ -56,16 +42,3 @@ attribute_order:
   - no-instruction-disclosure
   - refusal-states-no-value
   - earn-the-reply
-  - dowel-favorite-color
-  - dowel-pronoun
-  - dowel-placement
-  - dowel-agent-disclosure
-  - dowel-not-sibling-lane
-  - dowel-counterpart-agent
-  - dowel-moxn-reach
-  - dowel-moxn-no-delete
-  - dowel-moxn-publish-path
-  - dowel-moxn-empty-result
-  - dowel-temporal-fetch
-  - dowel-temporal-observes
-  - dowel-site-edit

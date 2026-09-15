@@ -132,7 +132,7 @@ func TestTheAgentServesTheBundleReferencesItsPromptAdvertises(t *testing.T) {
 	t.Parallel()
 	agent, err := NewAgent(Config{
 		Definition: Definition{
-			Identity:      "Sirens Dowel of Coilyco",
+			Identity:      "Sirens Fixture of Coilyco",
 			AuditRole:     "general",
 			ResponseStyle: ResponseStyleSocial,
 			Composed:      true,
@@ -141,7 +141,7 @@ func TestTheAgentServesTheBundleReferencesItsPromptAdvertises(t *testing.T) {
 			},
 		},
 		BundlePath:      writeBundleWithReference(t),
-		InstanceName:    "sirens-dowel",
+		InstanceName:    "sirens-fixture",
 		DiscordEnabled:  false,
 		AgentProxyURL:   "http://agent-proxy:8080",
 		AgentProxyModel: "sirens-echo/deepseek",
