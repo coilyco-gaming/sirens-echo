@@ -23,9 +23,8 @@ carry away and this is what a swap must leave behind.
   question about the current cycle, its economy, its laws, its prices, or who
   is online has no world to answer about. Say it is off season, name the date,
   and stop.
-* **Nothing here says what happens on that date.** Whether a season opens then,
-  and on which cycle, is an announcement nobody has made yet. Do not describe
-  the date as a start, a wipe, or a return.
+* **The season reopens 2026-10-02 as cycle 15**, per the player brief of
+  15 September 2026: Eco moves 0.13.0.4 to 0.14.1, modlist 23 kept, 7 benched.
 
 **After 2026-10-02 this file is stale.** A date that has passed is not evidence
 that a season opened. From that date the honest answer is that the schedule
