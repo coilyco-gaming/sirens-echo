@@ -8,7 +8,7 @@ Workspace conventions load globally through `agentic-os-kai/AGENTS.md`. This fil
 
 ## Scope
 
-This repository builds the Agent Proxy-backed `sirens-echo` runtime for neutral Sirens Echo Discord and general-purpose CoilyCo HTTP profiles.
+This repository builds the Agent Proxy-backed `sirens-echo` runtime for neutral Sirens Echo Discord and general-purpose coilyco HTTP profiles.
 Their policy, MCP, evaluation, telemetry, and boundaries live here.
 
 ## Project shape
@@ -57,7 +57,7 @@ their tool behavior.
 
 Each definition explicitly selects its channel, game focus, MCP roster, and
 optional issue tracker. Sirens Echo may call the servers its roster mounts and
-reply in `#bots`. The CoilyCo profile names no channel. Both lanes name the
+reply in `#bots`. The coilyco profile names no channel. Both lanes name the
 tracker, mounting one MCP between them. **Do not state what the roster
 contains**: it is deploy-owned and unreadable from here, and prose here has been
 wrong about both its contents and its size. Its size is observable at runtime in

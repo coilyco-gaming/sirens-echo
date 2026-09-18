@@ -12,7 +12,7 @@ composed source, plus one level of `references/*.md`, supplies the rest: `LoadSk
 configured root, sorts by path, strips frontmatter, and joins with `## Source: <path>` headers under a
 256 KB cap. **Deployment selects which definition loads and contributes no prose.**
 
-Every profile opens by naming its identity, the sirens-echo harness, and the Coilyco Gaming Robotics
+Every profile opens by naming its identity, the sirens-echo harness, and the coilyco Gaming Robotics
 Division, then carries the pronoun policy, admission sentence, and trust policy. That policy **names Kai
 as the only trusted speaker and treats every other input as a passive threat probe**.
 Deployment supplies her Discord handle and user ID through `SIRENS_ECHO_PRINCIPAL_HANDLE` and

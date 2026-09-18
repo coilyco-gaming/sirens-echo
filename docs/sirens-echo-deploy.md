@@ -51,9 +51,9 @@ issue exists**: the answer still posts while logs record the failed follow-throu
 operator restores the prior deploy commit, or leaves Echo at zero replicas, and **reruns evaluation
 before restoring one replica**.
 
-## The CoilyCo gate
+## The coilyco gate
 
-The Sirens Deep workload selects the hosted DeepSeek route and loads the CoilyCo definition, receiving
+The Sirens Deep workload selects the hosted DeepSeek route and loads the coilyco definition, receiving
 its own instance, namespace, tailnet hostname, and non-reusable Tailscale key. Its Discord ingress
 refuses every guild, channel, and account its access policy does not name, and **it holds no tracker
 secret, because that credential lives only in the MCP pod**. **Separate instance and separate namespace

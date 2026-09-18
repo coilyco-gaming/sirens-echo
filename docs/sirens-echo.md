@@ -42,9 +42,9 @@ and that Forgejo server as its automatic issue tracker. The neutral voice admits
 for legibility and still refuses tone and status indicators, bounded at three per reply
 ([object emoji](sirens-echo-phrases.md)).
 
-`agents/deep/definition.yaml` is the social CoilyCo general-purpose profile. **The filename remains the
+`agents/deep/definition.yaml` is the social coilyco general-purpose profile. **The filename remains the
 stable deployment selection used by the existing `sirens-deep` workload.** Its identity is Sirens Deep
-of Coilyco, its audit role is `general`, and its channel is empty because deployment owns routing. It
+of coilyco, its audit role is `general`, and its channel is empty because deployment owns routing. It
 loads only `.agents/skills/coilyco-general/`, selects a Steam reader and the repository-fixed Forgejo
 MCP whose addresses both come from deployment, and has no automatic issue tracker. It starts from the
 user's request without assuming a project, community, product, or technical discipline, and **its voice

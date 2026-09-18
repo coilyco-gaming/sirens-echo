@@ -5,7 +5,7 @@ What a definition pins, what the deployment supplies, and what the service will 
 ## Definitions and deployment variables
 
 `agents/echo/definition.yaml` pins the neutral Community policy and
-`agents/deep/definition.yaml` the social CoilyCo general-purpose policy. Each pins audit attribution,
+`agents/deep/definition.yaml` the social coilyco general-purpose policy. Each pins audit attribution,
 response style, optional channel, history budget, local policy roots, optional MCP roster, and optional
 automatic issue tracker. **Neither pins a backend model or loads a behavioral role or seat**, and the
 audit role never reaches the model prompt.

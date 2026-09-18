@@ -45,7 +45,7 @@ the end.
   its bytes**. Soft-reference replies with every Discord mention disabled, and an undelivered reply
   reported to the member once and never retried.
 - Private HTTP entrypoint over the same turn path, served as JSON and as an MCP tool, with W3C tracing
-  and Discord's admission policy. Transport-neutral CoilyCo profile with **no assumed domain, MCP,
+  and Discord's admission policy. Transport-neutral coilyco profile with **no assumed domain, MCP,
   automatic issue tracking, or default write surface**.
 
 ## Observability

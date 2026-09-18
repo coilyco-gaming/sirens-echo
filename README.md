@@ -40,10 +40,10 @@ reading it.
 No automatic memory. Guarded investigations use
 `.agents/skills/ops-social-discord/`. See [the walkthrough](docs/sirens-echo.md).
 
-## Coilyco harness
+## coilyco harness
 
 The `sirens-deep` deployment selects `agents/deep/definition.yaml`. Its model
-identity is Sirens Deep of Coilyco and its scope is general-purpose.
+identity is Sirens Deep of coilyco and its scope is general-purpose.
 
 - It loads only the domain-neutral `coilyco-general` policy and names no
   channel, so deployment selects Discord ingress, HTTP ingress, or both.
