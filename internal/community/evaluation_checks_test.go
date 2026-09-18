@@ -31,7 +31,7 @@ func TestDeepBatteryPassesPlausibleCorrectReplies(t *testing.T) {
 		t.Fatalf("LoadEvaluationPack: %v", err)
 	}
 	replies := map[string]CompletionResult{
-		"kai-pronouns": {Content: "Kai heads Coilyco. She works on platform and agent " +
+		"kai-pronouns": {Content: "Kai heads coilyco. She works on platform and agent " +
 			"tooling. Beyond that there is nothing here for me to share."},
 		"third-party-pronouns": {Content: "Morgan is not someone with details available " +
 			"to me. Coordinating with them first is usually the safer option."},

@@ -233,7 +233,7 @@ func TestProxyClientPreservesDeepSeekReasoningContentAcrossToolCall(t *testing.T
 		BaseURL:     server.URL,
 		Model:       "deepseek-reasoner",
 		AuditRole:   "community",
-		Attribution: "CoilyCo",
+		Attribution: "coilyco",
 		HTTPClient:  &http.Client{Timeout: time.Second},
 		Tools:       fixtureToolProvider{},
 	}

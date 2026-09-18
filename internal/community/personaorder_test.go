@@ -12,7 +12,7 @@ func TestPolicyIsReadAfterTheComposedPersona(t *testing.T) {
 	t.Parallel()
 	prompt := BuildSystemPrompt(
 		Definition{
-			Identity:      "Sirens Deep of Coilyco",
+			Identity:      "Sirens Deep of coilyco",
 			AuditRole:     "general",
 			ResponseStyle: ResponseStyleSocial,
 		},
@@ -48,7 +48,7 @@ func TestPolicyIsReadAfterTheComposedPersona(t *testing.T) {
 func TestTheComposedPersonaStaysInsideItsTag(t *testing.T) {
 	t.Parallel()
 	prompt := BuildSystemPrompt(
-		Definition{Identity: "Sirens Deep of Coilyco", AuditRole: "general", ResponseStyle: ResponseStyleSocial},
+		Definition{Identity: "Sirens Deep of coilyco", AuditRole: "general", ResponseStyle: ResponseStyleSocial},
 		PlaceholderPrincipal,
 		"PERSONA-SENTINEL",
 		"the local policy root",

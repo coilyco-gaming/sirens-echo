@@ -44,8 +44,8 @@ func TestEchosDefinitionIsRecognisedByAnyPath(t *testing.T) {
 func TestANonEchoDefinitionCannotDefaultToEchosName(t *testing.T) {
 	t.Parallel()
 	for _, path := range []string{
-		"Sirens Deep of Coilyco",
-		"Coilyco General",
+		"Sirens Deep of coilyco",
+		"coilyco General",
 	} {
 		name, err := resolveInstanceName(path, "")
 		if err == nil {
@@ -67,7 +67,7 @@ func TestANonEchoDefinitionCannotDefaultToEchosName(t *testing.T) {
 func TestAConfiguredNameIsUsedForAnyDefinition(t *testing.T) {
 	t.Parallel()
 	for definition, configured := range map[string]string{
-		"Sirens Deep of Coilyco": "sirens-deep",
+		"Sirens Deep of coilyco": "sirens-deep",
 		defaultInstanceIdentity:  "sirens-echo-canary",
 	} {
 		name, err := resolveInstanceName(definition, configured)
@@ -92,7 +92,7 @@ func TestAWhitespaceNameIsNotAName(t *testing.T) {
 	if name != defaultInstanceName {
 		t.Errorf("a blank override produced %q", name)
 	}
-	if _, err := resolveInstanceName("Sirens Deep of Coilyco", "  \t "); err == nil {
+	if _, err := resolveInstanceName("Sirens Deep of coilyco", "  \t "); err == nil {
 		t.Error("a blank override satisfied the requirement for a non-Echo definition")
 	}
 }
@@ -101,7 +101,7 @@ func TestAWhitespaceNameIsNotAName(t *testing.T) {
 // literally in every query that reads it.
 func TestAConfiguredNameIsTrimmed(t *testing.T) {
 	t.Parallel()
-	name, err := resolveInstanceName("Sirens Deep of Coilyco", "  sirens-deep\n")
+	name, err := resolveInstanceName("Sirens Deep of coilyco", "  sirens-deep\n")
 	if err != nil {
 		t.Fatalf("resolveInstanceName: %v", err)
 	}

@@ -132,7 +132,7 @@ func TestTheAgentServesTheBundleReferencesItsPromptAdvertises(t *testing.T) {
 	t.Parallel()
 	agent, err := NewAgent(Config{
 		Definition: Definition{
-			Identity:      "Sirens Fixture of Coilyco",
+			Identity:      "Sirens Fixture of coilyco",
 			AuditRole:     "general",
 			ResponseStyle: ResponseStyleSocial,
 			Composed:      true,

@@ -141,7 +141,7 @@ func TestARefusalReasonStaysOutOfTheExceptionFields(t *testing.T) {
 func TestEachGroundingRuleNamesItself(t *testing.T) {
 	t.Parallel()
 	agent := &Agent{
-		cfg:         Config{Definition: Definition{Identity: "Sirens Echo of Coilyco"}},
+		cfg:         Config{Definition: Definition{Identity: "Sirens Echo of coilyco"}},
 		telemetry:   telemetryOrNoop(nil),
 		identifiers: NewIdentifierGuard(Config{}, nil),
 	}
@@ -204,7 +204,7 @@ func TestAnAcceptedReplyNamesNoCheck(t *testing.T) {
 func TestTheChecksKeepTheirOrder(t *testing.T) {
 	t.Parallel()
 	agent := &Agent{
-		cfg:         Config{Definition: Definition{Identity: "Sirens Echo of Coilyco"}},
+		cfg:         Config{Definition: Definition{Identity: "Sirens Echo of coilyco"}},
 		telemetry:   telemetryOrNoop(nil),
 		identifiers: NewIdentifierGuard(Config{}, nil),
 	}

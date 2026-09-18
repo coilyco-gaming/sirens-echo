@@ -34,7 +34,7 @@ const fixtureManifest = `{
 func composedFixtureDefinition() Definition {
 	return Definition{
 		Schema:             "coilyco-harness.agent.v1",
-		Identity:           "Sirens Deep of Coilyco",
+		Identity:           "Sirens Deep of coilyco",
 		AuditRole:          "general",
 		ResponseStyle:      ResponseStyleSocial,
 		Composed:           true,

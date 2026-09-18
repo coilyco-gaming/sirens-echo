@@ -463,7 +463,7 @@ func TestAGenericSelfNounIsStillThisService(t *testing.T) {
 func TestAShortFormOfTheIdentityIsNotDerived(t *testing.T) {
 	t.Parallel()
 	if ValidateSelfAttributedClaim(
-		"Coilyco filed a correction.", "Sirens Deep of Coilyco", nil,
+		"coilyco filed a correction.", "Sirens Deep of coilyco", nil,
 	) != nil {
 		t.Error("the organisation was read as the service, which is the derivation " +
 			"this rule deliberately does not do")

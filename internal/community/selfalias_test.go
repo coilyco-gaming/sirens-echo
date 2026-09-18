@@ -28,10 +28,10 @@ func TestADeclaredAliasIsRefusedLikeTheIdentity(t *testing.T) {
 func TestAnUndeclaredShortFormIsNotDerived(t *testing.T) {
 	t.Parallel()
 	for _, reply := range []string{
-		"Coilyco filed a correction.",
+		"coilyco filed a correction.",
 		"Deep filed a correction.",
 	} {
-		if ValidateSelfAttributedClaim(reply, "Sirens Deep of Coilyco", nil) != nil {
+		if ValidateSelfAttributedClaim(reply, "Sirens Deep of coilyco", nil) != nil {
 			t.Errorf("%q was refused, though the profile declares no alias", reply)
 		}
 	}

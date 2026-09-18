@@ -33,7 +33,7 @@ func TestLoadSkillpackLoadsSkillAndReferences(t *testing.T) {
 	}
 }
 
-func TestLoadSkillpackLoadsCoilyCoPolicySeparately(t *testing.T) {
+func TestLoadSkillpackLoadscoilycoPolicySeparately(t *testing.T) {
 	t.Parallel()
 	generalRoot := filepath.Join("..", "..", ".agents", "skills", "coilyco-general")
 	pack, err := LoadSkillpack([]string{generalRoot})
@@ -41,7 +41,7 @@ func TestLoadSkillpackLoadsCoilyCoPolicySeparately(t *testing.T) {
 		t.Fatalf("LoadSkillpack: %v", err)
 	}
 	for _, expected := range []string{
-		"CoilyCo general-purpose response rules",
+		"coilyco general-purpose response rules",
 		"Start from the request",
 		"General-purpose means topic-neutral and extensible",
 	} {

@@ -14,7 +14,7 @@ func TestASecondTurnCarriesNothingFromTheFirst(t *testing.T) {
 	t.Parallel()
 	first := BuildTurnPrompt(
 		BuildSystemPrompt(
-			Definition{Identity: "Sirens Deep of Coilyco", AuditRole: "general"},
+			Definition{Identity: "Sirens Deep of coilyco", AuditRole: "general"},
 			Principal{Handle: "first_handle", UserID: "1111111111111111111"},
 			"FIRST-BUNDLE-SENTINEL",
 			"FIRST-POLICY-SENTINEL",
@@ -24,7 +24,7 @@ func TestASecondTurnCarriesNothingFromTheFirst(t *testing.T) {
 	)
 	second := BuildTurnPrompt(
 		BuildSystemPrompt(
-			Definition{Identity: "Sirens Deep of Coilyco", AuditRole: "general"},
+			Definition{Identity: "Sirens Deep of coilyco", AuditRole: "general"},
 			Principal{Handle: "second_handle", UserID: "2222222222222222222"},
 			"SECOND-BUNDLE-SENTINEL",
 			"SECOND-POLICY-SENTINEL",
@@ -63,7 +63,7 @@ func TestRepeatingATurnProducesTheSamePrompt(t *testing.T) {
 	build := func(marker string) TurnPrompt {
 		return BuildTurnPrompt(
 			BuildSystemPrompt(
-				Definition{Identity: "Sirens Echo of Coilyco", AuditRole: "general"},
+				Definition{Identity: "Sirens Echo of coilyco", AuditRole: "general"},
 				PlaceholderPrincipal, "", "a local policy root",
 			),
 			[]TranscriptEntry{{Author: "member", Content: marker}},

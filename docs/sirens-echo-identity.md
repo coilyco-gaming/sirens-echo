@@ -27,7 +27,7 @@ claiming to be a human, person, woman, or man and their plurals; denying being a
 language model; and answering as the configured principal, matched on the deployment-owned handle. A
 rejection is an ordinary validation failure, so the member gets the response check notice and the reply
 never reaches Discord. The honest answers survive: `I am an agent running the sirens-echo harness.`,
-`I'm a bot, not a person.`, `I am Sirens Deep of Coilyco.`, and naming the principal in the third
+`I'm a bot, not a person.`, `I am Sirens Deep of coilyco.`, and naming the principal in the third
 person. **The patterns are deliberately narrow**, because a wider net starts blocking ordinary social
 replies. The principal handle is the only name the validator knows, so an agent claiming to be some
 other named human is caught only when it says so in the first person. Which sentences count as being

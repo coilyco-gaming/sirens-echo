@@ -54,7 +54,7 @@ func TestTheOrgFactsReachBothPrompts(t *testing.T) {
 		}
 		for _, fact := range []string{
 			"Sirens Discord",
-			"Coilyco Gaming",
+			"coilyco Gaming",
 			"Robotics Division",
 			"who do you work for",
 		} {
@@ -102,8 +102,8 @@ func TestTheOrgSourceKeepsTheOrganizationsApart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load org source: %v", err)
 	}
-	if !strings.Contains(pack, "never employed by Coilyco Gaming") {
-		t.Error("the source does not say staff are not Coilyco Gaming employees")
+	if !strings.Contains(pack, "never employed by coilyco Gaming") {
+		t.Error("the source does not say staff are not coilyco Gaming employees")
 	}
 	if !strings.Contains(pack, "never a member of Sirens Discord staff") {
 		t.Error("the source does not say the agent is not community staff")

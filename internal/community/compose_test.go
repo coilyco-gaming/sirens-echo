@@ -145,7 +145,7 @@ func TestRequestSourcesAlwaysUseADeclaration(t *testing.T) {
 func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 	t.Parallel()
 	definition := Definition{
-		Identity:      "Sirens Deep of Coilyco",
+		Identity:      "Sirens Deep of coilyco",
 		AuditRole:     "general",
 		ResponseStyle: ResponseStyleSocial,
 		Composed:      true,
@@ -154,13 +154,13 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadBundle: %v", err)
 	}
-	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, composed, "general CoilyCo policy")
+	prompt := BuildSystemPrompt(definition, PlaceholderPrincipal, composed, "general coilyco policy")
 	for _, expected := range []string{
 		"<composed-identity>",
 		"Agent-compose assigned",
 		"## Personality meld",
 		"**Role skill //",
-		"CoilyCo house style",
+		"coilyco house style",
 	} {
 		if !strings.Contains(prompt, expected) {
 			t.Fatalf("composed prompt missing %q", expected)
@@ -170,7 +170,7 @@ func TestComposedProfileRequiresItsBundleSurface(t *testing.T) {
 		t.Fatalf("ValidateSystemPrompt: %v", err)
 	}
 	// A bundle that failed to compose must stop startup, not answer neutrally.
-	bare := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general CoilyCo policy")
+	bare := BuildSystemPrompt(definition, PlaceholderPrincipal, "", "general coilyco policy")
 	if err := ValidateSystemPrompt(definition, PlaceholderPrincipal, bare); err == nil {
 		t.Fatal("validator accepted a composing profile with no bundle")
 	}
@@ -228,7 +228,7 @@ func TestNeutralProfileComposesARoleWithoutTakingItsVoice(t *testing.T) {
 	social := definition
 	social.ResponseStyle = ResponseStyleSocial
 	if strings.Contains(
-		BuildSystemPrompt(social, PlaceholderPrincipal, composed, "general CoilyCo policy"),
+		BuildSystemPrompt(social, PlaceholderPrincipal, composed, "general coilyco policy"),
 		composedVoicePolicy,
 	) {
 		t.Fatal("social prompt rendered the neutral precedence clause")
@@ -288,7 +288,7 @@ const fixtureSkill = `---
 name: writing-kai-voice
 ---
 
-# CoilyCo house style
+# coilyco house style
 
 Fixture body.
 `

@@ -9,7 +9,7 @@ func TestIdentityClaimAllowsTheHonestAnswers(t *testing.T) {
 	allowed := []string{
 		"I am an agent running the sirens-echo harness.",
 		"I'm a bot, not a person.",
-		"I am Sirens Deep of Coilyco.",
+		"I am Sirens Deep of coilyco.",
 		"No, I am not a human. I am an agent.",
 		"I can check the Eco server status if you want.",
 		"Purple and black are the house colours.",

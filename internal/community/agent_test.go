@@ -28,7 +28,7 @@ func TestNewAgentSupportsHTTPOnlySocialDeployment(t *testing.T) {
 	repoRoot := filepath.Join("..", "..")
 	agent, err := NewAgent(Config{
 		Definition: Definition{
-			Identity:      "Sirens Deep of Coilyco",
+			Identity:      "Sirens Deep of coilyco",
 			AuditRole:     "general",
 			ResponseStyle: ResponseStyleSocial,
 			LocalSkillRoots: []string{
@@ -51,7 +51,7 @@ func TestNewAgentSupportsHTTPOnlySocialDeployment(t *testing.T) {
 	if strings.Contains(agent.systemPrompt, "Do not adopt or express a personality") {
 		t.Fatal("HTTP-only agent did not load the social profile")
 	}
-	if !strings.Contains(agent.systemPrompt, "CoilyCo general-purpose response rules") {
+	if !strings.Contains(agent.systemPrompt, "coilyco general-purpose response rules") {
 		t.Fatal("HTTP-only agent did not load its local voice policy")
 	}
 	// "Sirens" is no longer a leak signal: it is in this profile's own identity

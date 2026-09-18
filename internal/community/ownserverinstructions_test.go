@@ -17,7 +17,7 @@ func TestOwnInstructionsNameTheDeployment(t *testing.T) {
 	}
 	// Deep and Echo are the same binary with different definitions, so the
 	// text has to differ between them or it distinguishes nothing.
-	deep := &Agent{cfg: Config{Definition: Definition{Identity: "Sirens Deep of Coilyco"}}}
+	deep := &Agent{cfg: Config{Definition: Definition{Identity: "Sirens Deep of coilyco"}}}
 	if deep.serverInstructions() == text {
 		t.Error("two deployments published identical instructions")
 	}

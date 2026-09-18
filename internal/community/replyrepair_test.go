@@ -79,7 +79,7 @@ func (m *scriptedModel) repairPrompt(t *testing.T) string {
 func checkingAgent() *Agent {
 	return &Agent{
 		cfg: Config{Definition: Definition{
-			Identity:      "Sirens Deep of Coilyco",
+			Identity:      "Sirens Deep of coilyco",
 			ResponseStyle: ResponseStyleNeutral,
 		}},
 		telemetry:   telemetryOrNoop(nil),

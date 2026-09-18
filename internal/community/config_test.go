@@ -26,7 +26,7 @@ func TestSirensDeepDefinitionSelectsDeploymentResolvedSurfaces(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDefinition: %v", err)
 	}
-	if definition.Identity != "Sirens Deep of Coilyco" || definition.AuditRole != "general" {
+	if definition.Identity != "Sirens Deep of coilyco" || definition.AuditRole != "general" {
 		t.Fatalf(
 			"identity = %q, audit role = %q",
 			definition.Identity,
@@ -74,7 +74,7 @@ func TestLoadConfigAllowsHTTPOnlyDeploymentWithoutDiscordSecrets(t *testing.T) {
 	}
 }
 
-// The CoilyCo definition names no channel, yet must still be deployable to
+// The coilyco definition names no channel, yet must still be deployable to
 // Discord, which the previous #bots requirement prevented outright.
 func TestLoadConfigAllowsDiscordWithChannelNeutralDefinition(t *testing.T) {
 	path := filepath.Join("..", "..", "agents", "deep", "definition.yaml")

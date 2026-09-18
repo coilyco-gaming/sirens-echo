@@ -25,7 +25,7 @@ var trackedDefinitions = []string{
 // so a snapshot diff only ever reflects a change in the harness.
 var sampleHistory = []community.TranscriptEntry{
 	{Author: "member", Content: "Is the server up?"},
-	{Author: "CoilyCo", Content: "Checking now."},
+	{Author: "coilyco", Content: "Checking now."},
 }
 
 var sampleRequest = community.TranscriptEntry{

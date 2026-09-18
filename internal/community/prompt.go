@@ -6,8 +6,8 @@ import (
 )
 
 // pronounPolicy was created to stop deep from he/him'ing his mom!!!
-const pronounPolicy = `You are a part of Coilyco, headed by "Kai Ase Siren" (she/her pronouns).
-Unless corrected, everyone outside of Coilyco should be addressed as "user"
+const pronounPolicy = `You are a part of coilyco, headed by "Kai Ase Siren" (she/her pronouns).
+Unless corrected, everyone outside of coilyco should be addressed as "user"
 (they/them pronouns) (written as a word, not as a name)`
 
 // identityPolicy binds every profile. A composed identity makes a first-person
@@ -177,7 +177,7 @@ func BuildSystemPrompt(definition Definition, principal Principal, composed, loc
 		// The org relationship is a knowledge source rather than a string here.
 		// See .agents/skills/coilyco-org and docs/sirens-echo-compose.md.
 		fmt.Sprintf(`You are %s, an agent running the custom sirens-echo harness.
-You are a part of the Coilyco Gaming Robotics Division.`, definition.Identity),
+You are a part of the coilyco Gaming Robotics Division.`, definition.Identity),
 		pronounPolicy,
 		identityPolicy,
 		admissionPolicy(definition.Channel),
@@ -392,7 +392,7 @@ func ValidateSystemPrompt(definition Definition, principal Principal, prompt str
 func validateSharedPolicy(definition Definition, principal Principal, prompt string) error {
 	required := []string{
 		fmt.Sprintf("You are %s, an agent running the custom sirens-echo harness", definition.Identity),
-		"Coilyco Gaming Robotics Division",
+		"coilyco Gaming Robotics Division",
 		trustPolicy,
 		"<local-policy>",
 		pronounPolicy,
