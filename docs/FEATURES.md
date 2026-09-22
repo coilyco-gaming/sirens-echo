@@ -1,7 +1,6 @@
 # Features
 
-What ships today, and where each capability is documented. The pages in this folder are indexed at
-the end.
+What ships today, and where each capability is documented. Pages are indexed at the end.
 
 ## Admission
 
@@ -109,7 +108,7 @@ Work: [jobs](sirens-echo-jobs.md), [execution](sirens-echo-execution.md),
 Configuration: [config](sirens-echo-config.md), [tuning](sirens-echo-tuning.md).
 Telemetry: [observability](sirens-echo-observability.md), [telemetry](sirens-echo-telemetry.md), [rate](sirens-echo-rate.md).
 Evaluation: [evals](sirens-echo-eval.md), [testing](sirens-echo-testing.md).
-Shipping: [deploy](sirens-echo-deploy.md).
+Shipping: [deploy](sirens-echo-deploy.md) and the `site/` publish.
 
 ## See also
 

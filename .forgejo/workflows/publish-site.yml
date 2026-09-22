@@ -1,0 +1,37 @@
+# Publishes site/ to discord.coilysiren.me. See docs/sirens-echo-deploy.md.
+name: publish-site
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "scripts/publish-site.sh"
+      - ".forgejo/workflows/publish-site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: deploy
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Publish site to discord.coilysiren.me
+        run: bash scripts/publish-site.sh
+
+      - name: Alert Telegram on failure
+        if: ${{ failure() }}
+        continue-on-error: true
+        env:
+          ALERT_KIND: Site publish
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_RED_CHAT_ID }}
+        run: python3 scripts/alert-telegram.py

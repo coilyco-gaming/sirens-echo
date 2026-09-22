@@ -98,3 +98,12 @@ value rather than a placeholder: an empty field is visibly different from a wron
 commit does not let the process read that commit**: a source link is still current source rather than
 the code that answered, unless the revision is named alongside it, and that claim is bound to the
 Dockerfile by a test.
+
+## The community site
+
+`site/` is the `discord.coilysiren.me` page (`teable:coilyco-bridge/website#7575`). A main push touching
+it runs `publish-site` on the gaming org `deploy` runner, which holds the `project-sites-publish` key.
+That runner has no AWS CLI, so the script streams `site/` into the AOS image and syncs from there.
+**Objects carry `max-age=0` in place of an invalidation**, which would need the opaque distribution id.
+`sync --delete` refuses without `index.html` and `404.html`. Rollback is a revert on main, and the
+bucket keeps superseded versions for 30 days.
