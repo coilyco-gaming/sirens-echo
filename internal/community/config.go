@@ -409,10 +409,22 @@ var (
 	defaultEvaluationCaseTimeout time.Duration
 )
 
+// route.jev. Gates nothing by itself: JevModel unset (Config, not a knob)
+// skips the stage entirely regardless of these.
+var (
+	// jevTimeout bounds one systemone call (route.jev, jev.go).
+	jevTimeout time.Duration
+	// jevSplitAt is the question count above which route.jev sends two
+	// parallel requests instead of one. See the spec's "measure first" step.
+	jevSplitAt int
+)
+
 // knobs is every number and every name, one line each. Adding a number here is
 // the only way to add one, which is what keeps the list complete.
 func knobs() []knob {
 	return []knob{
+		overridable(&jevTimeout, "SIRENS_ECHO_JEV_TIMEOUT", 10*time.Second),
+		overridable(&jevSplitAt, "SIRENS_ECHO_JEV_SPLIT_AT", 60),
 		overridable(&maxToolRounds, "SIRENS_ECHO_TOOL_ROUNDS", 6),
 		overridable(&turnModelCalls, "SIRENS_ECHO_TURN_MODEL_CALLS", 24),
 		overridable(&maxResponseRepairs, "SIRENS_ECHO_RESPONSE_REPAIRS", 1),
@@ -894,6 +906,12 @@ type Config struct {
 	// ContentClassesPath names the taxonomy the content gate enforces. Empty
 	// runs no gate at all, so the deployment is the switch.
 	ContentClassesPath string
+	// JevModel pins the systemone model route.jev calls. Empty skips the
+	// stage entirely: no network call, every family falls back to today's turn.
+	JevModel string
+	// JevDisable names the families route.jev must not ask about, each
+	// falling back to today's behaviour independently of the others.
+	JevDisable []string
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
 	// nobody. See docs/sirens-echo-http.md.
 	HTTPTrustToken string
@@ -1024,6 +1042,8 @@ func LoadConfig() (Config, error) {
 		MCPRosterPath:        strings.TrimSpace(os.Getenv("SIRENS_ECHO_MCP_ROSTER")),
 		AccessPolicyPath:     strings.TrimSpace(os.Getenv("SIRENS_ECHO_ACCESS_POLICY")),
 		ContentClassesPath:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
+		JevModel:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_JEV_MODEL")),
+		JevDisable:           splitList(os.Getenv("SIRENS_ECHO_JEV_DISABLE")),
 		HTTPTrustToken:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:           fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		TrackerIssuesTable:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_TRACKER_ISSUES_TABLE")),

@@ -27,6 +27,9 @@ var elsewhereByDesign = map[string]string{
 	"scratchPermissions":     "a file mode. Text-only is enforced by denying the execute bit, so a deployment must not be able to grant it",
 	"scratchFilePermissions": "a file mode, for the same reason: the partition is readable only by this process",
 	"workspacePermissions":   "a file mode, for the same reason as the scratchpad's",
+	"jevContentThreshold":    "the spec's proposed content-match cutoff: part of route.jev's algorithm (which classes count as matched), not a deployment timeout or count",
+	"jevDrawerThreshold":     "the spec's proposed drawer-match cutoff, same reason as the content threshold",
+	"jevShapeCutoff":         "the spec's proposed shape-pick cutoff, same reason: it decides what counts as a confident pick, not how long to wait or how many to allow",
 }
 
 // numericValue reports whether an expression is a literal number or literals

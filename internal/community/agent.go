@@ -1468,6 +1468,10 @@ func (a *Agent) runTurn(
 	)
 	contextSpan.End()
 
+	// route.jev (jev.go, sirens-echo#8050) traces a decision here; it does
+	// not yet change classifyTurn or Complete below.
+	_ = a.routeJev(turnCtx, current, turn.RequestID(), false, false)
+
 	verdict, gateFailure, err := a.classifyTurn(turnCtx, current, turn.RequestID())
 	if err != nil {
 		// A broken gate is not a denial. See docs/sirens-echo-content-gate.md.

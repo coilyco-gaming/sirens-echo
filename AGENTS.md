@@ -226,14 +226,14 @@ The fleet runs two lanes, and both authorize the same core actions:
 
 Ward honors the declared lane only after ward#1661.
 
-**A pull request body must carry a closing reference**, or the merge verb will
-not merge it. `closes #N` and `closes owner/repo#N` are the accepted spellings,
-and `fixes` and `resolves` work the same way. A full issue URL does **not**
-satisfy it, which matters here because a URL is the house convention everywhere
-else. See [the merge lane](docs/sirens-echo-testing.md).
+**The `closes #N` convention above is retired.** It assumed a Forgejo issue to
+close, and `has_issues: false` on this repo means there is none - the tracker
+moved to Teable. Reference the motivating record as `teable:<owner>/<repo>#<n>`
+in the pull request body instead; no keyword closes it for you, so close the
+record itself as its own step. See [the merge lane](docs/sirens-echo-testing.md).
 
-If a pull request does not fully close the issue that motivated it, file the
-slice as its own issue and close that one. Do not weaken the reference to
+If a pull request does not fully close the record that motivated it, file the
+slice as its own record and close that one. Do not weaken the reference to
 satisfy the verb.
 
 **The `consult` label is a dispatch gate, not decoration.** `cli-guard` reads it

@@ -8,9 +8,9 @@ policy, admission sentence, trust policy, untrusted-input clause, tool-use claus
 issue-draft policy, and the neutral style block. Sections join with a blank line and an empty one drops
 out, so a social profile renders none. `agent/*.yaml` selects identity, response style, channel label,
 issue tracker, and which policy roots load. `.agents/skills/<root>/SKILL.md`, or `COMPOSED.md` for a
-composed source, plus one level of `references/*.md`, supplies the rest: `LoadSkillpack` collects every
-configured root, sorts by path, strips frontmatter, and joins with `## Source: <path>` headers under a
-256 KB cap. **Deployment selects which definition loads and contributes no prose.**
+composed source, plus one level of `references/*.md`, supplies the rest: `inline: always` files join via
+`LoadSkillpack`, sorted by path with `## Source: <path>` headers under a 256 KB cap; the rest is a
+`read_skill` reference. **Deployment selects which definition loads and contributes no prose.**
 
 Every profile opens by naming its identity, the sirens-echo harness, and the coilyco Gaming Robotics
 Division, then carries the pronoun policy, admission sentence, and trust policy. That policy **names Kai

@@ -39,3 +39,15 @@ TestThePostgresStoreReportsAMissingJob
 TestThePostgresTurnLogReportsWhatAnotherRunLeft
 TestThePostgresTurnLogTakesEachRecordOnce
 TestThePostgresTurnLogClearsFinishedAndKeepsLive
+
+# route.jev's latency and question-count probe (teable:coilyco-gaming/sirens-echo#8050,
+# PR 1). It always measures the built question count against the real content
+# taxonomy and skill roots (that half never skips - see the log line it leaves
+# either way). The live half - one real request against Agent Proxy's
+# /v1/systemone route, checking latency and whether the full batch is accepted
+# in one call rather than needing the two-parallel-requests split - needs
+# AGENT_PROXY_URL and SIRENS_ECHO_JEV_MODEL pointed at a reachable deployment,
+# which no CI runner or this sandbox has. Filed as its own follow-up to run
+# once against a live deployment; this entry stays until that measurement has
+# a permanent home (a nightly job against a real endpoint, most likely).
+TestRouteJevQuestionCountAndLatency

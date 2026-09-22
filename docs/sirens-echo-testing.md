@@ -86,18 +86,17 @@ measurement, and a dataset that does not name it still looks entirely legitimate
 
 ## The merge lane
 
-`ward agent director merge` refuses a pull request whose body carries no same-repo closing reference,
-**because the reference is what makes a merge name the work it finished**. There is no Ward verb for
-opening one and the Forgejo MCP exposes reads only, so a seat pushes to the AGit magic ref:
+The closing-reference convention below predates the Teable migration and assumed a same-repo Forgejo
+issue; `has_issues: false` means none exists to close. **Cite the motivating record as
+`teable:<owner>/<repo>#<n>` in the pull request body instead**, and close that record as its own step -
+no keyword does it for you. The Forgejo MCP's `create_pull-request` and `merge_pull-request` now cover
+opening and merging directly, so the AGit push-option path below is one mechanism among others rather
+than the only one:
 
 ```
-git push origin HEAD:refs/for/main -o topic=<short-topic> -o title="<pr title>" \
-  -o description="closes #N - <one line>"
+git push origin HEAD:refs/for/main -o topic=<short-topic> -o title="<pr title>"
 ```
 
 The named branch push is then unnecessary, **because the pull request head is `refs/pull/<N>/head`
 rather than a branch**, and pushing both leaves a branch beside the pull request carrying the same
-commit. **A push option cannot contain a newline**, so the description is one line and the detail
-belongs on the issue - **and that one line is the pull request body, so it is where the closing
-reference has to appear**. Accepted: `closes #324` or `closes owner/repo#324`, with `fixes` and
-`resolves` equivalent, the keyword followed immediately by the reference.
+commit.

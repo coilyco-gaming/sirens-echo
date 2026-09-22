@@ -38,6 +38,11 @@ func main() {
 		verifyRatePack(path)
 	}
 	for _, path := range []string{
+		"agents/echo/packs/routing.yaml",
+	} {
+		verifyRoutingPack(path)
+	}
+	for _, path := range []string{
 		"agent/tool-fixture-injection.yaml",
 		"agent/tool-fixture-tracker.yaml",
 		"agent/tool-fixture-tracker-match.yaml",
@@ -94,6 +99,15 @@ func verifyRatePack(path string) {
 		len(pack.Cases),
 		runs,
 	)
+}
+
+// No scorer reads this pack yet (PR 3's eval judge); this proves it parses.
+func verifyRoutingPack(path string) {
+	pack, err := community.LoadRoutingPack(path)
+	if err != nil {
+		log.Fatalf("routing pack %s: %v", path, err)
+	}
+	fmt.Printf("verified routing pack %s with %d cases\n", path, len(pack.Cases))
 }
 
 // A phrase that does not survive rendering says one thing in git and another
