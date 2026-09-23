@@ -1,6 +1,7 @@
 package community
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -349,5 +350,26 @@ func TestValidateMCPServerChecksShapePerTransport(t *testing.T) {
 		if !testCase.valid && err == nil {
 			t.Errorf("%s: expected an error", testCase.name)
 		}
+	}
+}
+
+func TestResolveBundlePathFallsBackFromARetiredRoleSlug(t *testing.T) {
+	dir := t.TempDir()
+	current := filepath.Join(dir, "prod-manager")
+	if err := os.MkdirAll(current, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(current, "manifest.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("SIRENS_ECHO_BUNDLE_DIR", dir)
+	t.Setenv("SIRENS_ECHO_ROLE", "manager")
+	got, err := resolveBundlePath()
+	if err != nil || got != current {
+		t.Fatalf("resolveBundlePath() = %q, %v, want %q", got, err, current)
+	}
+	t.Setenv("SIRENS_ECHO_ROLE", "nobody")
+	if _, err := resolveBundlePath(); err == nil {
+		t.Fatal("a role with no bundle and no alias must still fail")
 	}
 }

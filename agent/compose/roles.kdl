@@ -19,9 +19,9 @@
 // a hard error rather than an empty selection.
 
 roles {
-    // platform is the sirens-dowel lane: room-craft plus engineering doctrine.
+    // platform-eng is the sirens-dowel lane: room-craft plus engineering doctrine.
     // Globs so the deny list drops a match. Set and cost: deploy#658.
-    role "platform" {
+    role "platform-eng" {
         composed-skill "tooling-sirens-dowel-contract"
         composed-skill "tooling-sirens-dowel-temporal-brand"
         composed-skill "tooling-discord-community-host"
@@ -37,9 +37,9 @@ roles {
         composed-skill "tooling-browser-routing"
     }
 
-    // Renamed creator -> devrel -> advocate upstream. An entry for a role the
+    // Renamed creator, devrel, advocate, dev-advocate upstream. An entry for a role the
     // roster lost grants its skills to nothing. sirens-echo#7617.
-    role "advocate" {
+    role "dev-advocate" {
         composed-skill "tooling-discord-community-host"
         composed-skill "tooling-devrel-*"
         composed-skill "personal-preference-*"

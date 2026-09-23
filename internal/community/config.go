@@ -1166,10 +1166,32 @@ func resolveBundlePath() (string, error) {
 	}
 	dir := valueOrDefault(strings.TrimSpace(os.Getenv("SIRENS_ECHO_BUNDLE_DIR")), defaultBundleDir)
 	path := filepath.Join(dir, role)
-	if _, err := os.Stat(filepath.Join(path, "manifest.json")); err != nil {
+	_, err := os.Stat(filepath.Join(path, "manifest.json"))
+	if current, retired := retiredRoleSlugs[role]; err != nil && retired {
+		// The image bakes the current slug while a deployment may still name the
+		// retired one. teable:coilyco-flight-deck/agent-compose#8086.
+		path = filepath.Join(dir, current)
+		_, err = os.Stat(filepath.Join(path, "manifest.json"))
+	}
+	if err != nil {
 		return "", fmt.Errorf("no composed bundle for role %q under %s: %w", role, dir, err)
 	}
 	return path, nil
+}
+
+// retiredRoleSlugs mirrors agent-compose's roleslug aliases, temporary until
+// every deployment names the current slug.
+var retiredRoleSlugs = map[string]string{
+	"platform":        "platform-eng",
+	"science":         "scientist",
+	"frontend":        "frontend-eng",
+	"gamedev":         "game-dev",
+	"director":        "prod-director",
+	"manager":         "prod-manager",
+	"advocate":        "dev-advocate",
+	"senior-sysadmin": "sysadmin-senior",
+	"junior-sysadmin": "sysadmin-junior",
+	"access-sysadmin": "sysadmin-access",
 }
 
 // LoadDefinition reads and validates the repository-owned agent definition.
