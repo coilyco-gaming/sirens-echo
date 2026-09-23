@@ -94,7 +94,7 @@ fi
 # an identity in it would rename all of them. See docs/sirens-echo-identity.md.
 seat_identity() {
     case "$1" in
-        sysadmin) printf '    identity name="Echo" pronouns="it"\n' ;;
+        sysadmin) printf '    identity name="Echo"\n' ;;
         *) printf '' ;;
     esac
 }
