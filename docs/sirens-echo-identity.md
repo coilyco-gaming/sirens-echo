@@ -18,7 +18,7 @@ shared policy only.** The composed persona is deployment-owned, so the snapshot 
 `<composed-identity>` as literal placeholder text and the image bakes the real bundle at build time: a
 change to a role or personality meld produces **no diff in this repository**. It is reviewed instead
 through `services/sirens-echo/rendered/sirens-deep-bundle.txt` in coilyco-bridge/deploy, gated by its
-compose review. That artifact is named for Deep but covers every baked role, `admin-assist` included, so the
+compose review. That artifact is named for Deep but covers every baked role, `manager` included, so the
 name is the stale part rather than the coverage.
 
 `ValidateIdentityClaim` runs on every reply for every style, **beside grounding rather than inside
@@ -36,7 +36,7 @@ about a named subject is [`pronoun_policy`](sirens-echo-eval.md), a battery chec
 ## Role and voice are separate axes
 
 The composed bundle says what a lane is **accountable for**. `response_style` says **how a reply reads**.
-Echo composes `admin-assist` and answers neutrally, strange only if those are one axis. They used to be, by
+Echo composes `manager` and answers neutrally, strange only if those are one axis. They used to be, by
 accident: the only composing lane was also the only expressive one, so the validator required a
 composing profile to contain `## Personality meld` and a neutral one to not, making **Echo's
 combination unsatisfiable rather than unusual**.
@@ -47,7 +47,7 @@ the seat name and pronouns the identity card carries are never spoken. `Validate
 requires that clause exactly where it stopped requiring the meld's absence, so the property is checked
 **by presence rather than by absence**.
 
-`role-admin-assist` is a records-and-handoff charter, and it replaced `sysadmin` when the Core Roster
+`role-manager` is a records-and-handoff charter, and it replaced `sysadmin` when the Core Roster
 split that slug and Echo's old name stopped existing. **It was chosen on boundaries rather than on
 subject matter**: every boundary it defers is an action a lane answering a public room should not take
 on its own word. The infrastructure charter fit nothing Echo reaches, its estate a **binding** this
@@ -58,10 +58,10 @@ the meld (decisive, outward) plus the seat name Nerissa, held by the precedence 
 `ValidateNeutralStyle` behind it. **`outward` leans toward carrying something to someone** and the one
 place Echo can carry anything is the room, so both guards carry weight here.
 
-**The deployed pairings** are Echo `admin-assist` with `neutral` and Deep `advocate` with `social`: the role
+**The deployed pairings** are Echo `manager` with `neutral` and Deep `advocate` with `social`: the role
 carries doctrine, the response style carries voice, and the two vary independently. A retired third lane
 paired `platform` with `social` to show that. **Neither axis is the tool surface**, which is deployment-owned, so
-Echo's mostly-catalogue reach is recorded nowhere here and reading `admin-assist` to predict what Echo can
+Echo's mostly-catalogue reach is recorded nowhere here and reading `manager` to predict what Echo can
 reach gets the wrong answer.
 
 ## Answering questions about itself
