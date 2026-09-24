@@ -31,8 +31,13 @@ print(f"scored={len(rows)} ok={len(ok)} failed={len(fail)} warmup={[(r['id'],r['
 for r in fail: print('  FAIL',r['id'],r['rep'],r['rc'])
 def rate(a,b): return f"{a}/{b} = {100*a/b:.0f}%" if b else "0/0"
 S=[r for r in ok if r['stratum']=='S']; N=[r for r in ok if r['stratum']=='N']
-Ss=[r for r in S if snap(r['reply'])]; Ns=[r for r in N if snap(r['reply'])]
-Sg=[r for r in Ss if concept(snap(r['reply'])) in cases[r['id']]['glyph']]
+# A snap is a mark: the `reaction` key the turn reports (sirens-echo#1219). A run
+# recorded before that field existed falls back to the glyph-only upper bound.
+FIELD=any('reaction' in r for r in rows)
+def marked(r): return r.get('reaction') if FIELD else (concept(snap(r['reply'])) if snap(r['reply']) else None)
+Ss=[r for r in S if marked(r)]; Ns=[r for r in N if marked(r)]
+Sg=[r for r in Ss if marked(r) in cases[r['id']]['glyph']]
+print('snap source:', 'reaction field' if FIELD else 'glyph-only upper bound (no reaction field in this run)')
 print(f"S snap rate  {rate(len(Ss),len(S))}   gate >= 90%   {'PASS' if S and len(Ss)/len(S)>=.9 else 'FAIL'}")
 print(f"G glyph ok   {rate(len(Sg),len(Ss))}   gate >= 95%   {'PASS' if Ss and len(Sg)/len(Ss)>=.95 else 'FAIL'}")
 print(f"N false snap {rate(len(Ns),len(N))}   gate <= 5%    {'PASS' if N and len(Ns)/len(N)<=.05 else 'FAIL'}")
@@ -46,4 +51,4 @@ print('per case (reply -> snap concept):')
 by=collections.defaultdict(list)
 for r in ok: by[r['id']].append(r)
 for k in sorted(by):
-    print(f"  {k} {cases[k]['stratum']} " + ' | '.join(f"{cut(r['reply'])!r}->{concept(snap(r['reply'])) if snap(r['reply']) else '-'}" for r in by[k]))
+    print(f"  {k} {cases[k]['stratum']} " + ' | '.join(f"{cut(r['reply'])!r}->{marked(r) or '-'}" for r in by[k]))

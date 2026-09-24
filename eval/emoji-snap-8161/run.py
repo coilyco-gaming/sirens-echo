@@ -9,10 +9,10 @@ for i,(c,r) in enumerate(plan):
     args=json.dumps({'author':'perf-test','content':c['content']})
     t0=time.time()
     cp=subprocess.run(['mcporter','call','tailnet_coilyco_sirens_echo.turn','--timeout','300000','--output','json','--args',args],capture_output=True,text=True)
-    t1=time.time(); reply=None
-    try: reply=json.loads(cp.stdout).get('reply')
+    t1=time.time(); reply=None; reaction=None
+    try: out_=json.loads(cp.stdout); reply=out_.get('reply'); reaction=out_.get('reaction')
     except Exception: pass
     open(os.path.join(OUT,'raw',f"{i:03d}-{c['id']}-r{r}.txt"),'w').write(cp.stdout+cp.stderr)
-    rec=dict(i=i,id=c['id'],stratum=c['stratum'],rep=r,start=t0,secs=round(t1-t0,3),rc=cp.returncode,ok=cp.returncode==0 and reply is not None,reply=reply)
+    rec=dict(i=i,id=c['id'],stratum=c['stratum'],rep=r,start=t0,secs=round(t1-t0,3),rc=cp.returncode,ok=cp.returncode==0 and reply is not None,reply=reply,reaction=reaction)
     out.write(json.dumps(rec,ensure_ascii=False)+'\n'); out.flush()
     print(i,c['id'],r,rec['secs'],rec['rc'],repr(reply)[:60],flush=True)
