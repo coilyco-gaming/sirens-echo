@@ -32,8 +32,8 @@ What ships today, and where each capability is documented. Pages are indexed at 
   results**. Reply refusal for any identifier the process holds, derived from configuration at boot,
   **admitted by shape and matched by value rather than spelling**.
 - Caller-supplied history marked as asserted rather than observed, on both private ingresses. Harness
-  reactions for acceptance, a tool round, a failure, and a refusal, plus a keyed reaction as a reply's
-  whole answer, **falling back to text where a receipt is owed or nothing can mark**.
+  reactions for acceptance, tool rounds, failure, and refusal, plus a keyed reaction as whole answer,
+  social ones Jev-snapped pre-model, **text where a receipt is due or no mark fits**.
 - A worklog element on a long Discord turn, one row per tool call resolving in place, **degrading to
   stacked notice lines where the embed permission is absent**.
 - Oversized tool results saved to the requester's scratchpad instead of being truncated away, and

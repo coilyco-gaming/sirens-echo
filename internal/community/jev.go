@@ -173,9 +173,13 @@ func (a *Agent) shapeOptions() []systemone.Criterion {
 		{Name: "full", Description: "An ordinary answer: the main model runs as it does today."},
 	}
 	for _, key := range reactKeys() {
+		if !snapReactions[key] {
+			continue
+		}
 		options = append(options, systemone.Criterion{
-			Name:        "react:" + key,
-			Description: "Deliver only the " + key + " reaction mark, no words, no model call.",
+			Name: "react:" + key,
+			Description: "The message is purely social and needs no lookup, so the whole answer " +
+				"is the " + key + " mark (" + reactionMeanings[key] + "), no words, no model call.",
 		})
 	}
 	if a.phrases.Configured() {
@@ -592,6 +596,19 @@ func (d RouteDecision) PrunedServers() []string {
 		return nil
 	}
 	return d.DroppedServers
+}
+
+// SnapReaction is the social mark Jev chose above the shape cutoff. Anything
+// else, including a fallback, runs the model. sirens-echo#8161.
+func (d RouteDecision) SnapReaction() (string, bool) {
+	if !d.Ran || d.hasFallback(RouteFamilyShape) || d.ShapeProb < jevShapeCutoff {
+		return "", false
+	}
+	key, isReact := strings.CutPrefix(d.Shape, "react:")
+	if !isReact || !snapReactions[key] {
+		return "", false
+	}
+	return key, true
 }
 
 func metaHasFamily(meta map[string]jevQuestionMeta, family RouteFamily) (jevQuestionMeta, bool) {

@@ -25,6 +25,9 @@ type TurnInput struct {
 // TurnOutput carries the validated reply.
 type TurnOutput struct {
 	Reply string `json:"reply"`
+	// Reaction is the key when the answer was a mark, so a caller can tell a
+	// mark from a reply that happens to be a glyph. sirens-echo#8161.
+	Reaction string `json:"reaction,omitempty"`
 }
 
 // serverInstructions says what this deployment is, so a client holding several
@@ -169,7 +172,7 @@ func (a *Agent) handleMCPTurn(
 	}
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{&mcp.TextContent{Text: turn.reply}},
-	}, TurnOutput{Reply: turn.reply}, nil
+	}, TurnOutput{Reply: turn.reply, Reaction: turn.reaction}, nil
 }
 
 // toolFailure reports a caller-fixable problem as tool data rather than a

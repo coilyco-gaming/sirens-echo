@@ -121,8 +121,10 @@ func TestShapeOptionsAreReadFromTheLiveRegistriesNotAHardcodedList(t *testing.T)
 		t.Error("shapeOptions missing full")
 	}
 	for _, key := range reactKeys() {
-		if !names["react:"+key] {
-			t.Errorf("shapeOptions missing react:%s from the live reaction registry", key)
+		// Only a key that needs no lookup may answer before the model runs.
+		if names["react:"+key] != snapReactions[key] {
+			t.Errorf("shapeOptions offers react:%s = %v, want %v from snapReactions",
+				key, names["react:"+key], snapReactions[key])
 		}
 	}
 	if !names["phrase:not-permitted"] {

@@ -36,10 +36,11 @@ question and where the prompt still has a job.
 
 ## A reaction instead of a reply
 
-`{{react:agree}}` marks the member's own message and posts nothing. The keys are `acknowledge`,
-`agree`, and `disagree`, compiled in and **keyed, not spelled as an emoji**, so no literal rune reaches
-a member past the checks. The terminal and unknown-key rules hold, and **a mark is an answer**, earning
-silence with no tool call.
+`{{react:agree}}` marks the member's own message and posts nothing. Eight keys, each with a meaning the
+prompt names, compiled in and **keyed, not spelled as an emoji**. The terminal and unknown-key rules
+hold, and **a mark is an answer**. **A social key can snap before the model**: when route.jev's shape
+picks one above the cutoff, the turn is marked with no model call. `agree` and `disagree` state a fact,
+so only the model, after its tools, may use them. The turn tool returns the key as `reaction` (#8161).
 
 Three cases send the glyph as text: a turn owing a receipt a mark cannot carry, a transport that cannot
 mark, and a mark Discord refuses. None loses the answer.
@@ -50,9 +51,7 @@ mark, and a mark Discord refuses. None loses the answer.
 `response.phrase.invoked` and sets `response.phrase` on the turn span. **The key is safe as a metric
 label because the registry authors it**: every other closed-set rule in the telemetry contract exists to
 keep a member value out of cardinality, **and a phrase key is the opposite of member-supplied**. What it
-answers is which boundaries members actually probe, and how often. The issue recommended a tool call so
-an invocation would appear as its own span; the registry that shipped implements the sentinel, **a real
-divergence that costs the span** but not the anti-spoofing argument, which the terminal rule closes.
+answers is which boundaries members actually probe, and how often.
 
 `expect_phrase` asserts which key the reply invoked, failing when the reply invoked nothing, a different
 key, more than one, or the right key beside other text. **This is the replacement for frozen keyword

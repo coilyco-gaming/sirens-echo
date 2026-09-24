@@ -43,8 +43,9 @@ type httpPromptRequest struct {
 }
 
 type httpTurnResponse struct {
-	Reply string `json:"reply,omitempty"`
-	Error string `json:"error,omitempty"`
+	Reply    string `json:"reply,omitempty"`
+	Reaction string `json:"reaction,omitempty"`
+	Error    string `json:"error,omitempty"`
 }
 
 // HTTPHandler exposes the same turn path as a summoned Discord message after
@@ -271,7 +272,7 @@ func (a *Agent) handleHTTPTurn(writer http.ResponseWriter, request *http.Request
 		})
 		return
 	}
-	writeJSON(writer, http.StatusOK, httpTurnResponse{Reply: turn.reply})
+	writeJSON(writer, http.StatusOK, httpTurnResponse{Reply: turn.reply, Reaction: turn.reaction})
 }
 
 // httpPrincipal names the per-user limiter key for an HTTP caller. Callers that
@@ -365,7 +366,12 @@ type httpTurn struct {
 	history   []TranscriptEntry
 	current   TranscriptEntry
 	reply     string
+	reaction  string
 }
+
+// RecordReaction keeps the key beside the glyph reply, since this transport
+// cannot place a mark.
+func (t *httpTurn) RecordReaction(key string) { t.reaction = key }
 
 func (t *httpTurn) RequestID() string { return t.requestID }
 

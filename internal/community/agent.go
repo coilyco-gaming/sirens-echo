@@ -1468,8 +1468,8 @@ func (a *Agent) runTurn(
 	)
 	contextSpan.End()
 
-	// route.jev (jev.go, sirens-echo#8050) traces a decision here. Only its
-	// server family reaches Complete so far; classifyTurn ignores it.
+	// route.jev (jev.go, sirens-echo#8050) traces a decision here. Its server and
+	// shape families act below; classifyTurn ignores it.
 	route := a.routeJev(turnCtx, current, turn.RequestID(), false, false)
 
 	verdict, gateFailure, err := a.classifyTurn(turnCtx, current, turn.RequestID())
@@ -1488,6 +1488,12 @@ func (a *Agent) runTurn(
 		blocked := turn.Reply(turnCtx, BlockResponse(verdict.Class, "", a.cfg.Principal))
 		a.clearTurnMarks(turnCtx)
 		return blocked
+	}
+
+	// A purely social turn is answered by a mark with no model call.
+	// See docs/sirens-echo-phrases.md.
+	if key, ok := route.SnapReaction(); ok {
+		return a.finishWithSnap(turnCtx, turn, progress, key)
 	}
 
 	progress.Stage(turnCtx, stagePhraseThinking)
@@ -1580,10 +1586,11 @@ func (a *Agent) runTurn(
 	// A mark is the whole answer for a turn that needs no words. See
 	// docs/sirens-echo-progress.md and docs/sirens-echo-phrases.md.
 	if reactInvoked(reply) {
-		glyph, err := a.resolveReaction(turnCtx, reply)
+		key, glyph, err := a.resolveReaction(turnCtx, reply)
 		if err != nil {
 			return a.failTurn(turnCtx, turn, stageValidation, err)
 		}
+		recordReaction(turn, key)
 		facts := serviceFacts{executed: result.ToolCalls, prefill: prefillNoteOf(turn)}
 		target, markable := turn.(reactor)
 		// A receipt outranks a mark, and a transport that cannot mark has only
