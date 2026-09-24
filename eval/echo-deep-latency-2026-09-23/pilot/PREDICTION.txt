@@ -1,0 +1,4 @@
+written 2026-09-23T23:16:00Z, before any turn ran
+claim: end-to-end MCP turn latency (client wall clock) for sirens echo vs deep, same prompts, sequential, n=3 per prompt per lane
+EXPECTED: echo p50 5-15s, deep p50 10-40s, deep slower than echo
+correctness: turn returns non-error content; latency counted for successful turns only, failures reported separately

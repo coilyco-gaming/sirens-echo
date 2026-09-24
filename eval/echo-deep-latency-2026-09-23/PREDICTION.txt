@@ -1,0 +1,12 @@
+written 2026-09-23T23:45:48Z, before any v120 turn ran
+design: 3 prompts x 20 reps x 2 lanes = 120 scored turns, order shuffled with seed 8139, 1 warm-up turn per lane discarded (reported)
+EXPECTED echo: p0 median ~11.0s cv <1%; p1 ~15.7s; p2 ~19s cv ~5-8%; replies byte-identical across all 20 reps per prompt
+EXPECTED deep: p0 ~3.5s; p1 ~2.8s; p2 bimodal, a cluster near 5s and a cluster near 10.5s; reply bytes vary
+EXPECTED: deep p2 slow cluster is NOT explained by reply length (weak correlation)
+correctness: exit 0 and non-empty reply; failures reported separately, excluded from latency stats
+control: image digest of both deployments read before and after, run is void for pre-fix baseline if either changed
+
+amendment written 2026-09-23T23:51:00Z, before inspecting the affected rows
+confound: sysadmin-senior probed tower Ollama ornith:9b directly ~23:48:50-23:49:50 UTC, forcing model reloads; reported reloaded at ctx 48128 by 23:50:14
+exclusion rule (by time window, not by slowness): drop every ECHO turn whose [start,end] overlaps 2026-09-23 23:48:50-23:50:14 UTC. Deep turns kept (hosted route, different backend).
+replacement: after the main run, re-take the same (prompt,rep) cells for each dropped echo turn, and report both with and without the replacements.

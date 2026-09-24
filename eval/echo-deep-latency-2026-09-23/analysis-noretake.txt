@@ -1,0 +1,22 @@
+dropped (ollama probe window): [(15, 1, 4, 15.412), (17, 2, 18, 29.993), (18, 2, 1, 39.622)]
+mode: without retakes
+scored=117 ok=116 failed=1 warmup=[('echo', 11.914), ('deep', 6.588)]
+  FAIL 40 deep 0 19 1 2.013
+echo p0 n=20 median=10.82 [95%CI 10.77-10.94] p90=10.99 min=10.63 max=11.06 sd=0.13 cv=1.2% distinct_replies=1 tool_footer=0/20 rho(secs,bytes)=nan rho(secs,order)=-0.23 rho(secs,toolcalls)=nan
+   secs:toolcalls 10.6:0 10.7:0 10.7:0 10.7:0 10.7:0 10.8:0 10.8:0 10.8:0 10.8:0 10.8:0 10.8:0 10.9:0 10.9:0 10.9:0 10.9:0 11.0:0 11.0:0 11.0:0 11.0:0 11.1:0
+   sorted secs: 10.6 10.7 10.7 10.7 10.7 10.8 10.8 10.8 10.8 10.8 10.8 10.9 10.9 10.9 10.9 11.0 11.0 11.0 11.0 11.1
+echo p1 n=19 median=15.62 [95%CI 15.45-15.85] p90=15.92 min=15.14 max=16.09 sd=0.27 cv=1.8% distinct_replies=2 tool_footer=0/19 rho(secs,bytes)=-0.34 rho(secs,order)=-0.37 rho(secs,toolcalls)=nan
+   secs:toolcalls 15.1:0 15.3:0 15.3:0 15.3:0 15.4:0 15.4:0 15.5:0 15.5:0 15.6:0 15.6:0 15.7:0 15.8:0 15.8:0 15.8:0 15.9:0 15.9:0 15.9:0 16.0:0 16.1:0
+   sorted secs: 15.1 15.3 15.3 15.3 15.4 15.4 15.5 15.5 15.6 15.6 15.7 15.8 15.8 15.8 15.9 15.9 15.9 16.0 16.1
+echo p2 n=18 median=18.43 [95%CI 17.86-18.79] p90=19.37 min=17.58 max=20.25 sd=0.75 cv=4.0% distinct_replies=4 tool_footer=0/18 rho(secs,bytes)=0.30 rho(secs,order)=0.22 rho(secs,toolcalls)=nan
+   secs:toolcalls 17.6:0 17.7:0 17.7:0 17.8:0 17.9:0 17.9:0 18.3:0 18.3:0 18.4:0 18.5:0 18.6:0 18.7:0 18.7:0 18.8:0 18.8:0 19.1:0 20.0:0 20.2:0
+   sorted secs: 17.6 17.7 17.7 17.8 17.9 17.9 18.3 18.3 18.4 18.5 18.6 18.7 18.7 18.8 18.8 19.1 20.0 20.2
+deep p0 n=19 median=3.90 [95%CI 3.69-4.08] p90=4.61 min=3.28 max=6.40 sd=0.72 cv=17.9% distinct_replies=17 tool_footer=19/19 rho(secs,bytes)=0.62 rho(secs,order)=-0.40 rho(secs,toolcalls)=nan
+   secs:toolcalls 3.3:1 3.4:1 3.5:1 3.5:1 3.5:1 3.7:1 3.7:1 3.8:1 3.8:1 3.9:1 3.9:1 3.9:1 4.0:1 4.1:1 4.1:1 4.3:1 4.5:1 5.2:1 6.4:1
+   sorted secs: 3.3 3.4 3.5 3.5 3.5 3.7 3.7 3.8 3.8 3.9 3.9 3.9 4.0 4.1 4.1 4.3 4.5 5.2 6.4
+deep p1 n=20 median=2.94 [95%CI 2.68-3.18] p90=3.59 min=1.93 max=4.29 sd=0.58 cv=19.4% distinct_replies=14 tool_footer=0/20 rho(secs,bytes)=0.07 rho(secs,order)=-0.10 rho(secs,toolcalls)=nan
+   secs:toolcalls 1.9:0 2.3:0 2.4:0 2.4:0 2.4:0 2.7:0 2.7:0 2.8:0 2.8:0 2.9:0 3.0:0 3.1:0 3.1:0 3.1:0 3.2:0 3.2:0 3.5:0 3.5:0 4.0:0 4.3:0
+   sorted secs: 1.9 2.3 2.4 2.4 2.4 2.7 2.7 2.8 2.8 2.9 3.0 3.1 3.1 3.1 3.2 3.2 3.5 3.5 4.0 4.3
+deep p2 n=20 median=7.05 [95%CI 5.80-12.12] p90=18.42 min=4.00 max=42.29 sd=8.82 cv=82.9% distinct_replies=20 tool_footer=8/20 rho(secs,bytes)=0.74 rho(secs,order)=-0.16 rho(secs,toolcalls)=0.73
+   secs:toolcalls 4.0:0 4.5:0 4.9:0 5.0:0 5.4:0 5.7:0 5.9:0 6.4:0 6.8:0 6.9:0 7.2:0 7.4:0 9.9:2 11.6:3 12.7:2 12.9:2 14.6:2 18.2:3 20.9:4 42.3:9
+   sorted secs: 4.0 4.5 4.9 5.0 5.4 5.7 5.9 6.4 6.8 6.9 7.2 7.4 9.9 11.6 12.7 12.9 14.6 18.2 20.9 42.3
