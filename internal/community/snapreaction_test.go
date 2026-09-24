@@ -63,6 +63,14 @@ func (c modelMustNotRun) Complete(context.Context, TurnPrompt, string) (Completi
 
 func snappingAgent(t *testing.T, shape string, probability float64) *Agent {
 	t.Helper()
+	return jevAnsweringAgent(t, map[string]systemone.Answer{
+		"shape": {Key: "shape", Option: shape, Probability: probability},
+	})
+}
+
+// jevAnsweringAgent runs turns against a Jev that answers only the given keys.
+func jevAnsweringAgent(t *testing.T, answers map[string]systemone.Answer) *Agent {
+	t.Helper()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req systemone.Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -70,8 +78,8 @@ func snappingAgent(t *testing.T, shape string, probability float64) *Agent {
 		}
 		resp := systemone.Response{}
 		for _, q := range req.Questions {
-			if q.Key == "shape" {
-				resp.Answers = append(resp.Answers, systemone.Answer{Key: q.Key, Option: shape, Probability: probability})
+			if answer, ok := answers[q.Key]; ok {
+				resp.Answers = append(resp.Answers, answer)
 			}
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -123,5 +131,73 @@ func TestAModelInvokedMarkOverHTTPNamesTheKey(t *testing.T) {
 	}
 	if turn.reaction != "agree" || !strings.Contains(turn.reply, replyReactions["agree"]) {
 		t.Errorf("reply, reaction = %q, %q, want the agree glyph and key", turn.reply, turn.reaction)
+	}
+}
+
+func TestARequestedMarkWinsAndMayBeAFact(t *testing.T) {
+	t.Parallel()
+	social := RouteDecision{Ran: true, Shape: "react:wave", ShapeProb: 0.9}
+	cases := []struct {
+		name     string
+		decision RouteDecision
+		want     string
+	}{
+		{"requested thumbs up", RouteDecision{Ran: true, Requested: "agree", RequestedProb: 0.9, Shape: "full", ShapeProb: 0.9}, "agree"},
+		{"request beats shape", RouteDecision{Ran: true, Requested: "heart", RequestedProb: 0.8, Shape: "react:wave", ShapeProb: 0.9}, "heart"},
+		{"weak request defers to shape", RouteDecision{Ran: true, Requested: "agree", RequestedProb: 0.4, Shape: "react:wave", ShapeProb: 0.9}, "wave"},
+		{"no request", social, "wave"},
+		{"unknown requested key", RouteDecision{Ran: true, Requested: "shrug", RequestedProb: 0.99}, ""},
+	}
+	for _, c := range cases {
+		if key, _ := c.decision.SnapReaction(); key != c.want {
+			t.Errorf("%s: SnapReaction() = %q, want %q", c.name, key, c.want)
+		}
+	}
+	fell := RouteDecision{Ran: true, Requested: "agree", RequestedProb: 0.99}
+	fell.fellBackTo(RouteFamilyRequest, jevFallbackMissingAnswer)
+	if key, ok := fell.SnapReaction(); ok {
+		t.Errorf("a fallen-back request snapped %q", key)
+	}
+}
+
+func TestTheRequestQuestionOffersEveryKeyAndNone(t *testing.T) {
+	t.Parallel()
+	agent := testJevAgent(t)
+	questions, _ := agent.buildRouteQuestions(TranscriptEntry{Content: "react with a thumbs up?"}, nil, false, false)
+	for _, q := range questions {
+		if q.Key != "request" {
+			continue
+		}
+		names := map[string]bool{}
+		for _, c := range q.Criteria {
+			names[c.Name] = true
+		}
+		if !names["none"] {
+			t.Error("request question lacks a none option, so every turn would be forced to a mark")
+		}
+		for _, key := range reactKeys() {
+			if !names["react:"+key] {
+				t.Errorf("request question cannot pick react:%s", key)
+			}
+		}
+		return
+	}
+	t.Fatal("no request question was built")
+}
+
+// Kai asked "can react with a 👍🏽 ?" and got ✅, because only the model could
+// reach agree. A member naming the mark now gets it. sirens-echo#8161.
+func TestAMemberAskingForAThumbsUpGetsOne(t *testing.T) {
+	agent := jevAnsweringAgent(t, map[string]systemone.Answer{
+		"request": {Key: "request", Option: "react:agree", Probability: 0.93},
+		"shape":   {Key: "shape", Option: "react:acknowledge", Probability: 0.8},
+	})
+	turn := &markableTurn{}
+
+	if err := agent.runTurn(context.Background(), turn, nil); err != nil {
+		t.Fatalf("runTurn: %v", err)
+	}
+	if !marked(turn, replyReactions["agree"]) || marked(turn, replyReactions["acknowledge"]) {
+		t.Errorf("marks = %v, want %q and not %q", turn.applied, replyReactions["agree"], replyReactions["acknowledge"])
 	}
 }

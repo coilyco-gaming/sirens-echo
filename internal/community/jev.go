@@ -32,13 +32,14 @@ const (
 	RouteFamilyShape     RouteFamily = "shape"
 	RouteFamilyCoalesce  RouteFamily = "coalesce"
 	RouteFamilyAddressed RouteFamily = "addressed"
+	RouteFamilyRequest   RouteFamily = "request"
 )
 
 // routeFamilies is the spec's own table order, so a trace reads the same way.
 var routeFamilies = []RouteFamily{
 	RouteFamilyContent, RouteFamilyDrawer, RouteFamilyRoot, RouteFamilyFocus,
 	RouteFamilyServer, RouteFamilyRoute, RouteFamilyDepth, RouteFamilyShape,
-	RouteFamilyCoalesce, RouteFamilyAddressed,
+	RouteFamilyCoalesce, RouteFamilyAddressed, RouteFamilyRequest,
 }
 
 // jevContentThreshold, jevDrawerThreshold, jevShapeCutoff are the spec's
@@ -89,6 +90,8 @@ type RouteDecision struct {
 	ShapeProb      float64
 	Coalesce       bool
 	Addressed      bool
+	Requested      string // the reply key the member asked Echo to react with, or ""
+	RequestedProb  float64
 
 	// Fallbacks names, per family, why its field is the fallback value.
 	Fallbacks map[RouteFamily]jevFallbackReason
@@ -319,6 +322,25 @@ func (a *Agent) buildRouteQuestions(
 			Type:   systemone.TypeNoul,
 			Prompt: "Is this thread message addressed to this service, though it carries no mention?",
 		}, jevQuestionMeta{family: RouteFamilyAddressed})
+	}
+
+	if !disabled[RouteFamilyRequest] {
+		criteria := []systemone.Criterion{
+			{Name: "none", Description: "The message does not ask this service to react with an emoji."},
+		}
+		for _, key := range reactKeys() {
+			criteria = append(criteria, systemone.Criterion{
+				Name: "react:" + key,
+				Description: "The member asks this service to react with " + replyReactions[key] +
+					" or a skin-tone or look-alike variant of it (" + reactionMeanings[key] + ").",
+			})
+		}
+		add(systemone.Question{
+			Key:      "request",
+			Type:     systemone.TypeChoice,
+			Prompt:   "Does the member explicitly ask this service to react with a particular emoji, and which?",
+			Criteria: criteria,
+		}, jevQuestionMeta{family: RouteFamilyRequest})
 	}
 
 	return questions, meta
@@ -587,6 +609,18 @@ func (a *Agent) applyRouteAnswers(
 			decision.Addressed = answer.Probability >= 0.5
 		}
 	}
+
+	if !disabled[RouteFamilyRequest] {
+		if answer, ok := answers["request"]; ok {
+			decision.Requested = strings.TrimPrefix(answer.Option, "react:")
+			if answer.Option == "none" {
+				decision.Requested = ""
+			}
+			decision.RequestedProb = answer.Probability
+		} else {
+			decision.fellBackTo(RouteFamilyRequest, jevFallbackMissingAnswer)
+		}
+	}
 }
 
 // PrunedServers is what Complete may drop: an explicit no only, never a
@@ -598,10 +632,18 @@ func (d RouteDecision) PrunedServers() []string {
 	return d.DroppedServers
 }
 
-// SnapReaction is the social mark Jev chose above the shape cutoff. Anything
-// else, including a fallback, runs the model. sirens-echo#8161.
+// SnapReaction is the mark to place before the model: one the member asked
+// for by name, else a social one from shape. A fallback runs the model.
 func (d RouteDecision) SnapReaction() (string, bool) {
-	if !d.Ran || d.hasFallback(RouteFamilyShape) || d.ShapeProb < jevShapeCutoff {
+	if !d.Ran {
+		return "", false
+	}
+	// Any key may be requested, agree included: the member named the answer.
+	if _, known := replyReactions[d.Requested]; known &&
+		!d.hasFallback(RouteFamilyRequest) && d.RequestedProb >= jevShapeCutoff {
+		return d.Requested, true
+	}
+	if d.hasFallback(RouteFamilyShape) || d.ShapeProb < jevShapeCutoff {
 		return "", false
 	}
 	key, isReact := strings.CutPrefix(d.Shape, "react:")
@@ -639,6 +681,8 @@ func recordRouteDecision(span trace.Span, decision RouteDecision) {
 		attribute.Float64("jev.shape.probability", decision.ShapeProb),
 		attribute.Bool("jev.coalesce", decision.Coalesce),
 		attribute.Bool("jev.addressed", decision.Addressed),
+		attribute.String("jev.request", decision.Requested),
+		attribute.Float64("jev.request.probability", decision.RequestedProb),
 	)
 	for _, family := range routeFamilies {
 		if reason, fellBack := decision.Fallbacks[family]; fellBack {

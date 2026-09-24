@@ -40,7 +40,8 @@ question and where the prompt still has a job.
 prompt names, compiled in and **keyed, not spelled as an emoji**. The terminal and unknown-key rules
 hold, and **a mark is an answer**. **A social key can snap before the model**: when route.jev's shape
 picks one above the cutoff, the turn is marked with no model call. `agree` and `disagree` state a fact,
-so only the model, after its tools, may use them. The turn tool returns the key as `reaction` (#8161).
+so only the model, after its tools, may use them, **unless the member asks for one by name**. The turn
+tool returns the key as `reaction` (#8161).
 
 Three cases send the glyph as text: a turn owing a receipt a mark cannot carry, a transport that cannot
 mark, and a mark Discord refuses. None loses the answer.
