@@ -1,0 +1,3 @@
+{
+  "reply": "A weekly Saturday meetup is a common community choice. If scheduling or logistics are needed, the relevant Discord channels or event organizers should be consulted."
+}

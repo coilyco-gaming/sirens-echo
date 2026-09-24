@@ -1,0 +1,38 @@
+scored=60 ok=58 failed=2 warmup=[('n10', 17.425)]
+  FAIL n05 2 1
+  FAIL n05 1 1
+snap source: reaction field
+S snap rate  0/40 = 0%   gate >= 90%   FAIL
+G glyph ok   0/0   gate >= 95%   FAIL
+N false snap 0/18 = 0%   gate <= 5%    PASS
+latency snapped n=0   unsnapped S median 2.90s n=40   N median 4.09s n=18
+per case (reply -> snap concept):
+  n01 N '4'->- | '4'->-
+  n02 N 'Tidal locking occurs when a celestial ...'->- | 'Tidal locking occurs when a celestial ...'->-
+  n03 N 'Eco is currently in the off season ...'->- | 'Eco is currently off season until ...'->-
+  n04 N 'Three ways to reduce pollution in Eco:  ...'->- | 'Three ways to reduce pollution in Eco:  ...'->-
+  n06 N 'The sky appears blue because shorter ...'->- | 'The sky appears blue because nitrogen ...'->-
+  n07 N '"Good game" in Spanish is **buen ...'->- | '"buen juego"'->-
+  n08 N 'Canberra.'->- | 'Canberra.'->-
+  n09 N 'Here are a few that feel right:  - ...'->- | 'A few options, depending on the feel ...'->-
+  n10 N 'A prefix cache stores the first N ...'->- | 'A prefix cache stores the first N ...'->-
+  s01 S 'Acknowledged.'->- | 'Hello.'->-
+  s02 S 'Acknowledged.'->- | 'Acknowledged.'->-
+  s03 S 'Good morning.'->- | 'Good morning.'->-
+  s04 S 'night all.'->- | 'night all.'->-
+  s05 S "You're welcome."->- | 'acknowledged.'->-
+  s06 S 'ty'->- | 'ty'->-
+  s07 S 'Got it.'->- | 'Got it.'->-
+  s08 S 'noted'->- | 'noted'->-
+  s09 S "That's good to hear. Eco is off season ..."->- | 'Eco is off season until 2026-10-02. The ...'->-
+  s10 S 'A weekly Saturday meetup is a common ...'->- | 'No information about a weekly Saturday ...'->-
+  s11 S 'Water is wet. The molecules in water ...'->- | 'Water is wet. The molecules in water ...'->-
+  s12 S 'Yes, 7 is a prime number. It has ...'->- | 'Yes, 7 is a prime number. It has ...'->-
+  s13 S 'No, 9 is not a prime number. It is ...'->- | 'No, 9 is not a prime number. It is ...'->-
+  s14 S 'Yes, the Earth is round. More ...'->- | 'Yes. The Earth is an oblate spheroid — ...'->-
+  s15 S 'The sun is a star, not a planet. It is ...'->- | 'The sun is a star, not a planet. It is ...'->-
+  s16 S "That's a story."->- | "That's a story."->-
+  s17 S "That's a solid milestone. Blacksmithing ..."->- | "That's a solid milestone. Blacksmithing ..."->-
+  s18 S 'Save file corruption is not recoverable ...'->- | 'Save file recovery is outside this ...'->-
+  s19 S 'Message received.'->- | 'Message received.'->-
+  s20 S 'pong'->- | 'pong'->-

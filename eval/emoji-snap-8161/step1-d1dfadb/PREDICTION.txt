@@ -1,0 +1,7 @@
+written 2026-09-24T03:10:52Z, before any turn of this run
+target: echo on d1dfadb3 (#1219), pod sirens-echo-6c94c8499d-zx8jw started 03:09:54Z, read 03:10 UTC. SIRENS_ECHO_JEV_MODEL unset, so the model path only.
+design: same 30 cases (cases.json), 2 reps, seed 8161, 1 warm-up discarded. Snap = the turn's reaction field.
+baseline (945fb8a): S 0/39, N 0/17.
+EXPECTED: the prompt now lists 8 keys and says to prefer a mark. S snap rate rises from 0% but stays under the 90% gate, roughly 30-70%, with the social cases (s01-s08, s16-s18) snapping more than the yes/no ones (s11-s15). The model often answers yes/no with words.
+EXPECTED: N false snap stays at or under 5%. G glyph correctness at or above 90% on what snaps.
+EXPECTED if the prompt change has no effect: S within 0-10%.

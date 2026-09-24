@@ -1,0 +1,3 @@
+{
+  "reply": "\"Good game\" in Spanish is **buen juego**."
+}
