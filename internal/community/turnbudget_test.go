@@ -66,9 +66,9 @@ func TestTurnBudgetIsSharedAcrossCompletionsInOneTurn(t *testing.T) {
 		}
 		rounds.Add(1)
 		writer.Header().Set("Content-Type", "application/json")
-		// Tools withdrawn is the only way out of this handler, so a completion
-		// that keeps them keeps looping and the count is the bound under test.
-		if len(body.Tools) == 0 {
+		// The spent notice is the only way out of this handler, so a completion
+		// that never sends it keeps looping and the count is the bound under test.
+		if carriesSpentNotice(body) {
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":"Answered from what was gathered."}}]}`,
 			))
@@ -125,13 +125,8 @@ func TestTurnBudgetExhaustionCarriesTheSpentNotice(t *testing.T) {
 			t.Errorf("decode body: %v", err)
 		}
 		writer.Header().Set("Content-Type", "application/json")
-		if len(body.Tools) == 0 {
-			for _, message := range body.Messages {
-				if text, ok := message.Content.(string); ok &&
-					strings.Contains(text, "tool budget for this turn is spent") {
-					sawNotice.Store(true)
-				}
-			}
+		if carriesSpentNotice(body) {
+			sawNotice.Store(true)
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":"Answered from what was gathered."}}]}`,
 			))
@@ -191,4 +186,16 @@ func TestModelBudgetRejectsATurnAllowanceThatFundsNoToolRound(t *testing.T) {
 		t.Errorf("an unset turn allowance resolved to %d, want the packaged %d",
 			got, turnModelCalls)
 	}
+}
+
+// carriesSpentNotice is how a mock model sees its tools withdrawn, now that the
+// tools array stays the same on every round.
+func carriesSpentNotice(body chatRequest) bool {
+	for _, message := range body.Messages {
+		if text, ok := message.Content.(string); ok &&
+			strings.Contains(text, "tool budget for this turn is spent") {
+			return true
+		}
+	}
+	return false
 }

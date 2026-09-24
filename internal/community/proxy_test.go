@@ -551,7 +551,8 @@ func TestProxyClientRejectsToolCallDuringResponseRepair(t *testing.T) {
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":"Hey there! Happy to help."}}]}`,
 			))
-		case 2:
+		case 2, 3:
+			// The first is refused and answered; the second has no refusal left.
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":null,"tool_calls":[{"id":"call-1","type":"function","function":{"name":"unexpected","arguments":"{}"}}]}}]}`,
 			))
@@ -572,8 +573,8 @@ func TestProxyClientRejectsToolCallDuringResponseRepair(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "tool call during response repair") {
 		t.Fatalf("error = %v", err)
 	}
-	if calls := round.Load(); calls != 2 {
-		t.Fatalf("model rounds = %d", calls)
+	if calls, want := round.Load(), int32(2+withdrawnToolRefusals); calls != want {
+		t.Fatalf("model rounds = %d, want %d", calls, want)
 	}
 }
 
@@ -848,15 +849,10 @@ func TestProxyClientAnswersAfterSpendingTheToolBudget(t *testing.T) {
 		}
 		rounds.Add(1)
 		writer.Header().Set("Content-Type", "application/json")
-		// Once the tools are withdrawn the model can only answer, which is the
-		// behavior under test.
-		if len(body.Tools) == 0 {
-			for _, message := range body.Messages {
-				if text, ok := message.Content.(string); ok &&
-					strings.Contains(text, "tool budget for this turn is spent") {
-					sawBudgetNotice.Store(true)
-				}
-			}
+		// Once the tools are withdrawn the model answers, which is the behavior
+		// under test.
+		if carriesSpentNotice(body) {
+			sawBudgetNotice.Store(true)
 			_, _ = writer.Write([]byte(
 				`{"choices":[{"message":{"content":"Partial answer from what was gathered."}}]}`,
 			))

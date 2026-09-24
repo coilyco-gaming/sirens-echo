@@ -79,6 +79,9 @@ func parseKnob[T knobValue](raw string) (T, bool) {
 var (
 	maxToolRounds      int
 	maxResponseRepairs int
+	// withdrawnToolRefusals is how many tool calls a withdrawn round may refuse
+	// before failing. See docs/sirens-echo-tools.md.
+	withdrawnToolRefusals int
 	// turnModelCalls bounds a turn where maxToolRounds bounds one completion of
 	// the several a turn makes. See docs/sirens-echo-turn-stages.md.
 	turnModelCalls int
@@ -438,6 +441,7 @@ func knobs() []knob {
 		overridable(&maxToolRounds, "SIRENS_ECHO_TOOL_ROUNDS", 6),
 		overridable(&turnModelCalls, "SIRENS_ECHO_TURN_MODEL_CALLS", 24),
 		overridable(&maxResponseRepairs, "SIRENS_ECHO_RESPONSE_REPAIRS", 1),
+		overridable(&withdrawnToolRefusals, "SIRENS_ECHO_WITHDRAWN_TOOL_REFUSALS", 1),
 		overridable(&maxToolResultBytes, "SIRENS_ECHO_TOOL_RESULT_BYTES", 8*1024),
 		overridable(&maxAgentProxyResponseBytes, "SIRENS_ECHO_PROXY_RESPONSE_BYTES", 2*1024*1024),
 		overridable(&maxAssemblyPasses, "SIRENS_ECHO_ASSEMBLY_PASSES", 8),
