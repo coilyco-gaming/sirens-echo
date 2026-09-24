@@ -1,0 +1,2 @@
+sirens-echo forgejo.coilysiren.me/coilyco-gaming/sirens-echo:a80cc83d4c3eeaff4068f19f1522b1e697a09d2f pod=sirens-echo-7888794945-ck2sc started=2026-09-24T00:53:39Z ready=1
+sirens-deep forgejo.coilysiren.me/coilyco-gaming/sirens-echo:a80cc83d4c3eeaff4068f19f1522b1e697a09d2f pod=sirens-deep-64c64c56f4-m8tv7 started=2026-09-24T00:53:48Z ready=1

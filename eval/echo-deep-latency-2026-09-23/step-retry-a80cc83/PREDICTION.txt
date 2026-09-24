@@ -1,0 +1,10 @@
+written 2026-09-24T00:56:12Z, after the roll to a80cc83 (#1215) on both lanes, before any turn of this run
+target image: a80cc83 on both lanes, read at 00:55 UTC (echo pod started 00:53:39Z, deep 00:53:48Z), JEV_MODEL unchanged
+baseline: step-a-035acf38 (#1214), same 3 prompts, same design
+design: 10 reps x 2 lanes x 3 prompts, shuffled seed 81391 (identical order to Step A), 1 warm-up per lane discarded
+treatment arm: echo p1 and echo p2. In Step A's run window SigNoz shows 20 echo model.response.repair events, 10 "social opening" (reply_bytes 6, the p1 hello) and 10 "first-person or collective voice" (reply_bytes 376-406, the p2 tidal lock), and 0 on deep. So every echo p1/p2 turn had one repair round sent with no tools array.
+controls: echo p0 (single round, no repair) and all deep cells (no repairs in Step A)
+EXPECTED if the tools-less repair round missed the cache: echo p1 median falls from 3.32s [3.08-4.22] and echo p2 from 5.96s [5.82-6.25], by roughly the prefill cost of the repair round
+EXPECTED if the tools-less prefix was already cached separately (Step A p1 at 3.32s is far below the 10-12s cold-prefill turns, which points this way): echo p1/p2 medians inside their Step A CIs
+control EXPECTED: echo p0 inside 2.10-2.34s, deep p0 inside 3.38-3.85s
+side channels: count model.tool_call.refused (EXPECTED 0 on p0/p1, small on p2), model.response.repair (EXPECTED again ~10 p1 + ~10 p2, since the fix changes the request, not the style checks), agentproxy first_token_ms p50 on the echo route

@@ -1,0 +1,3 @@
+{
+  "reply": "2+2 = 4.\n\nThat's from the calculator, so it's exact rather than estimated. Anything else you want checked, send it over.\n\n> 🔨 ✅ `calculator.calculate`"
+}
