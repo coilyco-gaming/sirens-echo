@@ -1182,7 +1182,8 @@ func resolveBundlePath() (string, error) {
 // retiredRoleSlugs mirrors agent-compose's roleslug aliases, temporary until
 // every deployment names the current slug.
 var retiredRoleSlugs = map[string]string{
-	"platform":        "platform-eng",
+	"platform":        "eng-platform",
+	"platform-eng":    "eng-platform",
 	"science":         "scientist",
 	"frontend":        "frontend-eng",
 	"gamedev":         "game-dev",
