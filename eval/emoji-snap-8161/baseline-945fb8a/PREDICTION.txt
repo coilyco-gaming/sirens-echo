@@ -1,0 +1,6 @@
+written 2026-09-24T01:27:49Z, before any turn of this run
+target image: 945fb8a (revert #1217) on echo, pod sirens-echo-6596c66799-b2n2g, read 01:20 UTC
+design: 30 labeled cases (cases.json, 20 S + 10 N), 2 reps each, shuffled seed 8161, 1 warm-up discarded
+snap definition for the gate: a turn whose trace logs response.reaction.invoked, matched to the turn by time window. A reply that is one glyph but has no invocation is text on Discord and does not count. The reply-is-one-glyph count is reported as an upper bound.
+EXPECTED baseline: S snap rate low, under 20%, because the only keys are agree/disagree/acknowledge and there is no wave, heart, laugh, celebrate, or sad. The Step A/B runs saw 0 marks on "Say hello back" (20/20 were "Acknowledged." or "Hello." text). G undefined or near 0 for the wave/heart cases. N false snap 0/20.
+reported: S, G, N rates with gate verdicts, latency of snapped vs unsnapped.

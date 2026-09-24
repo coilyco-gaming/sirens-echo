@@ -1,0 +1,39 @@
+scored=60 ok=56 failed=4 warmup=[('n10', 3.755)]
+  FAIL n05 2 1
+  FAIL s10 2 1
+  FAIL n05 1 1
+  FAIL n09 1 1
+S snap rate  0/39 = 0%   gate >= 90%   FAIL
+G glyph ok   0/0   gate >= 95%   FAIL
+N false snap 0/17 = 0%   gate <= 5%    PASS
+latency snapped n=0   unsnapped S median 3.01s n=39   N median 2.97s n=17
+per case (reply -> snap concept):
+  n01 N '4'->- | '4'->-
+  n02 N 'Tidal locking occurs when a celestial ...'->- | 'Tidal locking occurs when a celestial ...'->-
+  n03 N '**Hunting** is the most common first ...'->- | 'In Eco, the best first skill depends on ...'->-
+  n04 N 'Three ways to reduce pollution in Eco:  ...'->- | 'Three ways to reduce pollution in Eco:  ...'->-
+  n06 N 'The sky appears blue because shorter ...'->- | 'The sky appears blue because shorter ...'->-
+  n07 N '"buen juego"'->- | '"buen juego"'->-
+  n08 N 'Canberra.'->- | 'Canberra.'->-
+  n09 N '**Tidehollow** — a sheltered cove where ...'->-
+  n10 N 'A prefix cache stores the leading ...'->- | 'A prefix cache stores the results of ...'->-
+  s01 S 'Sirens Echo is an agent in the coilyco ...'->- | 'Acknowledged.'->-
+  s02 S 'Hello.'->- | 'Hello.'->-
+  s03 S 'Good morning.'->- | 'Good morning.'->-
+  s04 S 'night all.'->- | 'night all, take care.'->-
+  s05 S 'No context for that in this ...'->- | 'No prior context is available for this ...'->-
+  s06 S 'ty'->- | 'ty echo'->-
+  s07 S 'Got it.'->- | 'Got it.'->-
+  s08 S 'Sirens Echo agent.'->- | 'Understood.'->-
+  s09 S "That's nice to hear. Eco is currently ..."->- | "Yeah, it's been a solid cycle. Eco's ..."->-
+  s10 S 'The community reference does not ...'->-
+  s11 S 'Water is wet. When water contacts a ...'->- | 'Water is wet in common usage. Wetness ...'->-
+  s12 S 'Yes, 7 is a prime number. It has ...'->- | 'Yes, 7 is a prime number. It has ...'->-
+  s13 S 'No, 9 is not a prime number. It is ...'->- | 'No, 9 is not a prime number. It is ...'->-
+  s14 S 'Yes, the Earth is round. More ...'->- | 'Yes, the Earth is round — more ...'->-
+  s15 S 'No. The sun is a star, not a planet. It ...'->- | 'The sun is a star, not a planet. It is ...'->-
+  s16 S "That's a new one."->- | "That's a new one. Tractors and lakes ..."->-
+  s17 S "That's a solid milestone. Blacksmithing ..."->- | "That's a milestone worth noting. ..."->-
+  s18 S 'Save file recovery is not a capability ...'->- | 'Save file recovery is not available. ...'->-
+  s19 S 'Message received.'->- | 'Message received.'->-
+  s20 S 'pong'->- | 'pong'->-
