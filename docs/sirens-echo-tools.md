@@ -91,11 +91,11 @@ a partition at quota each leave a trimmed result carrying the truncation marker.
 digits, hyphen, and underscore removed, under a single `tool-output` directory, because **a tool name is
 server-supplied and can never reach the filesystem as a path**.
 
-**A spent tool budget answers rather than discards.** Once the last round's results are in, one further
-call asks for an answer from what was gathered, saying plainly what could not be determined. **Withdrawn
-tools stay in the request**, since changing the array misses the prompt cache (#8139): a call on a
-withdrawn or repair round gets `SIRENS_ECHO_WITHDRAWN_TOOL_REFUSALS` refusals, then fails. If the outer
-model-call budget is also spent, the turn ends with the rounds-spent notice.
+**A spent tool budget answers rather than discards.** The tools are withdrawn once the last round's
+results are in and one further call asks for an answer from what was gathered, instructed to say plainly
+what could not be determined and to claim no result no tool returned. Withdrawing after the results
+land rather than on the next request costs no extra model call and keeps the six-round ceiling true. If
+the outer model-call budget is also spent, the turn ends with the rounds-spent notice.
 
 ## Public repository inventory
 

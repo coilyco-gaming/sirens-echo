@@ -559,9 +559,7 @@ func (c ProxyClient) Complete(
 	toolsSpent := false
 	budget := c.budget()
 	completionTokens := budget.BaseCompletionTokens
-	maxModelCalls := budget.ToolRounds + maxResponseRepairs + budget.BudgetRaises +
-		withdrawnToolRefusals + 1
-	refusals := 0
+	maxModelCalls := budget.ToolRounds + maxResponseRepairs + budget.BudgetRaises + 1
 	// Shared with every other completion this turn makes, so a turn cannot
 	// restart the ceiling above by asking a second time.
 	turn := turnBudgetFrom(ctx)
@@ -574,13 +572,14 @@ func (c ProxyClient) Complete(
 			messages = append(messages, chatMessage{Role: "system", Content: toolBudgetSpentNotice})
 		}
 		turn.spend()
-		// Withdrawn rounds keep the same tools and refuse a call instead, since
-		// changing the array misses the prompt cache. See docs/sirens-echo-tools.md.
-		withdrawn := repairAttempts > 0 || toolsSpent
+		requestTools := tools
+		if repairAttempts > 0 || toolsSpent {
+			requestTools = nil
+		}
 		payload := chatRequest{
 			Model:    c.Model,
 			Messages: messages,
-			Tools:    tools,
+			Tools:    requestTools,
 			// Heartbeats have nowhere to go on a non-streaming request, so the
 			// idle timeout needs this. See docs/sirens-echo-model-call.md.
 			Stream:      true,
@@ -620,12 +619,6 @@ func (c ProxyClient) Complete(
 			continue
 		}
 		message := choice.Message
-		if withdrawn && len(message.ToolCalls) > 0 && refusals < withdrawnToolRefusals {
-			refusals++
-			telemetry.Info(ctx, "model.tool_call.refused", slog.Int("calls", len(message.ToolCalls)))
-			messages = append(messages, refusedToolCalls(message)...)
-			continue
-		}
 		if repairAttempts > 0 && len(message.ToolCalls) > 0 {
 			return CompletionResult{}, fmt.Errorf(
 				"Agent Proxy returned a tool call during response repair",
@@ -1013,33 +1006,6 @@ func guidanceMessage(guidance []ServerGuidance) string {
 
 // toolBudgetSpentNotice asks for an answer from the results already gathered.
 // Framed as data, so it bounds the turn rather than redirecting it.
-const withdrawnToolNotice = "Not run: tools are withdrawn for the rest of this turn. " +
-	"Answer now from what is already in the conversation."
-
-// refusedToolCalls answers every call in a withdrawn round without running it,
-// so the history stays well-formed for the next request.
-func refusedToolCalls(message chatResponseMessage) []chatMessage {
-	var assistantContent any
-	if message.Content.Text != "" {
-		assistantContent = message.Content.Text
-	}
-	out := []chatMessage{{
-		Role:             "assistant",
-		Content:          assistantContent,
-		ReasoningContent: message.ReasoningContent,
-		ToolCalls:        message.ToolCalls,
-	}}
-	for _, call := range message.ToolCalls {
-		out = append(out, chatMessage{
-			Role:       "tool",
-			Content:    withdrawnToolNotice,
-			ToolCallID: call.ID,
-			Name:       call.Function.Name,
-		})
-	}
-	return out
-}
-
 const toolBudgetSpentNotice = "The tool budget for this turn is spent. " +
 	"Answer from the tool results already gathered, and say plainly what could " +
 	"not be determined. Do not claim a result no tool returned."
