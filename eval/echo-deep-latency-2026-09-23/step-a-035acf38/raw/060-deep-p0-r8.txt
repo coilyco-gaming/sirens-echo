@@ -1,0 +1,3 @@
+{
+  "reply": "2+2 is 4.\n\n> 🔨 ✅ `calculator.calculate`"
+}

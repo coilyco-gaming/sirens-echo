@@ -1,0 +1,3 @@
+{
+  "reply": "2+2 = 4.\n\nQuick answer, no caveats — though for the record I'm an agent, not a person, and I check arithmetic with a tool rather than eyeballing it.\n\n> 🔨 ✅ `calculator.calculate`"
+}

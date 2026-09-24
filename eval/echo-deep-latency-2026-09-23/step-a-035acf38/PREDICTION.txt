@@ -1,0 +1,8 @@
+written 2026-09-24T00:11:44Z, before Step A rolled
+target image: 59a9c10 or its code-identical successor 484a3d0 (eval-only diff), JEV_MODEL empty on both lanes
+design: same 3 prompts, 10 reps x 2 lanes, shuffled seed 81391, 1 warm-up per lane discarded. First measure only after both lanes report the new image and 1/1 ready.
+mechanism test (from sysadmin seat's source read, unmeasured): clock moved into last ~516 tokens lets llama.cpp restore the previous turn's checkpoint
+EXPECTED if cache works: echo p0 median drops from 10.82s toward deep-like 1-3s; echo spread may go bimodal (hit vs miss, e.g. first turn after a different prompt or a Discord turn evicting)
+EXPECTED if cache does not work: echo p0 median within its baseline CI 10.77-10.94s
+reported quantity: echo p0 median with bootstrap CI, delta vs 10.82s, plus per-turn hit/miss split if bimodal. The hold-B / apply-B verdict goes to Jev with these numbers, not a seat call.
+side channel: cached-token counts from LiteLLM spans if present
