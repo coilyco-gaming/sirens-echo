@@ -49,9 +49,9 @@ func TestTheTurnCarriesTheCurrentTime(t *testing.T) {
 	if len(messages) < 2 {
 		t.Fatalf("messages = %#v", messages)
 	}
-	// Directly under the local policy, so it reads as a fact about the turn
-	// rather than as reference material a server published.
-	clock := messages[1]
+	// Last before the user turn, so the fixed prefix above it stays cacheable.
+	// See sirens-echo#8139.
+	clock := messages[len(messages)-2]
 	if clock.Role != "system" {
 		t.Errorf("clock role = %q", clock.Role)
 	}

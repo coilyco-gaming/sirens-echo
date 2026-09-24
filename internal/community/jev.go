@@ -82,6 +82,7 @@ type RouteDecision struct {
 	GatedRoots     []string // roots to ship, from the noul-per-root family
 	Focus          string   // a game-focus root, "neither", or "" on fallback
 	Servers        []string // servers to keep, from the noul-per-server family
+	DroppedServers []string // servers Jev answered below 0.5, the only ones pruned
 	Route          string   // "default" or "deepseek"
 	Depth          int      // 1-5, 0 on fallback
 	Shape          string   // an option id, or "" (full) on fallback
@@ -519,16 +520,31 @@ func (a *Agent) applyRouteAnswers(
 
 	if !disabled[RouteFamilyServer] {
 		servers := make([]string, 0)
+		dropped := make([]string, 0)
+		asked, answered := false, false
 		for key, m := range meta {
 			if m.family != RouteFamilyServer {
 				continue
 			}
-			if answer, ok := answers[key]; ok && answer.Probability >= 0.5 {
+			asked = true
+			answer, ok := answers[key]
+			if !ok {
+				continue
+			}
+			answered = true
+			if answer.Probability >= 0.5 {
 				servers = append(servers, m.target)
+			} else {
+				dropped = append(dropped, m.target)
 			}
 		}
 		sort.Strings(servers)
+		sort.Strings(dropped)
 		decision.Servers = servers
+		decision.DroppedServers = dropped
+		if asked && !answered {
+			decision.fellBackTo(RouteFamilyServer, jevFallbackMissingAnswer)
+		}
 	}
 
 	if !disabled[RouteFamilyRoute] {
@@ -569,6 +585,15 @@ func (a *Agent) applyRouteAnswers(
 	}
 }
 
+// PrunedServers is what Complete may drop: an explicit no only, never a
+// fallback. See docs/sirens-echo-tools.md.
+func (d RouteDecision) PrunedServers() []string {
+	if !d.Ran || d.hasFallback(RouteFamilyServer) {
+		return nil
+	}
+	return d.DroppedServers
+}
+
 func metaHasFamily(meta map[string]jevQuestionMeta, family RouteFamily) (jevQuestionMeta, bool) {
 	for _, m := range meta {
 		if m.family == family {
@@ -590,6 +615,7 @@ func recordRouteDecision(span trace.Span, decision RouteDecision) {
 		attribute.StringSlice("jev.root.gated", decision.GatedRoots),
 		attribute.String("jev.focus", decision.Focus),
 		attribute.StringSlice("jev.server.kept", decision.Servers),
+		attribute.StringSlice("jev.server.dropped", decision.DroppedServers),
 		attribute.String("jev.route", decision.Route),
 		attribute.Int("jev.depth", decision.Depth),
 		attribute.String("jev.shape", decision.Shape),

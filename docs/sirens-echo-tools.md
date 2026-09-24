@@ -23,9 +23,9 @@ fatal, an invocation failure ends the turn with the tool-failure notice, and an 
 grounded data the model self-corrects from **once**: an identical failed call is replayed, not re-made
 (#943).
 
-The in-process fixture proves schema discovery, a tool-call-only first response, continuation, alternate
-content forms, and that **a tool which never answers fails on the call bound rather than the
-turn's**. The live Echo evaluation requires an `eco__get_eco_server_status` call and no writes.
+**route.jev can prune a server per turn**: one Jev answers below 0.5 for loses its tools, guidance, and
+grounding from the answer's call, and a call to its tool is refused. **Only an explicit no prunes**, so a
+skipped stage, fallback, or missing answer keeps all. `SIRENS_ECHO_JEV_DISABLE=server` disables it (#8139).
 
 ## Harness tools
 
@@ -47,7 +47,7 @@ third" and not for a total or a unit price. `calculate` evaluates `+ - * / ^`, p
 trailing `%`, and **nothing else**: the grammar has no identifiers and no calls, so no expression
 reaches anything. **Exact rather than floating point**, so `0.1 + 0.2` is `0.3`, and a result that is
 not a decimal is rounded **and says so**, the exact fraction beside it. The expression is echoed with
-the answer. In process rather than a twelfth roster server, and registered unconditionally.
+the answer. In process and registered unconditionally.
 
 ## The fetch tool
 

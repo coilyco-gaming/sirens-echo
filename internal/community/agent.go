@@ -1468,9 +1468,9 @@ func (a *Agent) runTurn(
 	)
 	contextSpan.End()
 
-	// route.jev (jev.go, sirens-echo#8050) traces a decision here; it does
-	// not yet change classifyTurn or Complete below.
-	_ = a.routeJev(turnCtx, current, turn.RequestID(), false, false)
+	// route.jev (jev.go, sirens-echo#8050) traces a decision here. Only its
+	// server family reaches Complete so far; classifyTurn ignores it.
+	route := a.routeJev(turnCtx, current, turn.RequestID(), false, false)
 
 	verdict, gateFailure, err := a.classifyTurn(turnCtx, current, turn.RequestID())
 	if err != nil {
@@ -1491,7 +1491,8 @@ func (a *Agent) runTurn(
 	}
 
 	progress.Stage(turnCtx, stagePhraseThinking)
-	result, err := a.completions.Complete(turnCtx, prompt, turn.RequestID())
+	answerCtx := withDroppedServers(turnCtx, route.PrunedServers())
+	result, err := a.completions.Complete(answerCtx, prompt, turn.RequestID())
 	if err != nil {
 		return a.failTurn(turnCtx, turn, stageModel, err)
 	}

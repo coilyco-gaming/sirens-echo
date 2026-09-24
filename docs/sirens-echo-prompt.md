@@ -5,8 +5,7 @@ holds the assembled result.
 
 `internal/community/prompt.go` supplies the scaffolding: harness identity line, pronoun policy, identity
 policy, admission sentence, trust policy, untrusted-input clause, tool-use clause, reply contract,
-issue-draft policy, and the neutral style block. Sections join with a blank line and an empty one drops
-out, so a social profile renders none. `agent/*.yaml` selects identity, response style, channel label,
+issue-draft policy, and the neutral style block. `agent/*.yaml` selects identity, response style, channel label,
 issue tracker, and which policy roots load. `.agents/skills/<root>/SKILL.md`, or `COMPOSED.md` for a
 composed source, plus one level of `references/*.md`, supplies the rest: `inline: always` files join via
 `LoadSkillpack`, sorted by path with `## Source: <path>` headers under a 256 KB cap; the rest is a
@@ -27,14 +26,14 @@ when any of that goes missing.
 
 A member replying to a message is addressing that message, so the turn names it rather than leaving the
 model to infer it from position: `bob is replying to alice: the plank market crashed on tuesday`. **The
-recent conversation still renders in full**, because naming the subject supplements recency rather than
-replacing it. Discord delivers the addressed message inline for most replies, and otherwise the harness
+recent conversation still renders in full.** Discord delivers the addressed message inline for most replies, and otherwise the harness
 fetches it under the same budget as the other gate-forced calls. **Only one level renders**: a reply to
 a reply does not walk the chain, because the second is a claim about someone else's subject.
 
 **The turn carries a clock and its admitted surface**, a system message each, **read once per turn**.
 Nothing named the time (#855), and nothing named who it may answer (#909). The surface renders from the
-gate's own policy, in counts rather than ids.
+gate's own policy, in counts rather than ids. **The clock is the first message to change between
+turns**, below the surface, guidance, and grounding, so the prefix above it stays cacheable (#8139).
 
 ## Snapshots
 

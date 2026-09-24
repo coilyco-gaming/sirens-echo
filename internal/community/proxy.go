@@ -441,7 +441,15 @@ func (c ProxyClient) Complete(
 				)
 			}
 		}()
+		dropped := droppedServersFrom(ctx)
+		pruned := 0
 		for _, definition := range toolSession.Tools() {
+			// Left out of toolDefinitions too, so a call naming one is refused
+			// as unavailable rather than executed.
+			if dropped[definition.Server] {
+				pruned++
+				continue
+			}
 			tools = append(tools, chatTool{
 				Type: "function",
 				Function: chatToolFunction{
@@ -463,10 +471,19 @@ func (c ProxyClient) Complete(
 			)
 		}
 		unavailable = toolSession.Unavailable()
-		groundingDocuments = toolSession.Grounding()
-		serverGuidances = toolSession.Guidance()
+		for _, document := range toolSession.Grounding() {
+			if !dropped[document.Server] {
+				groundingDocuments = append(groundingDocuments, document)
+			}
+		}
+		for _, guidance := range toolSession.Guidance() {
+			if !dropped[guidance.Server] {
+				serverGuidances = append(serverGuidances, guidance)
+			}
+		}
 		listSpan.SetAttributes(
 			attribute.Int("mcp.tool.count", len(tools)),
+			attribute.Int("mcp.tool.pruned", pruned),
 			attribute.Int("mcp.server.unavailable.count", len(unavailable)),
 		)
 		listSpan.End()
@@ -489,12 +506,9 @@ func (c ProxyClient) Complete(
 
 	messages := []chatMessage{
 		{Role: "system", Content: prompt.System},
-		// Directly under the local policy, because it is a fact about this turn
-		// rather than reference material. See docs/sirens-echo-prompt.md.
-		{Role: "system", Content: clockMessage(c.now())},
 	}
-	// A turn fact like the clock, so the agent stops inferring its own reach
-	// from the policy files. See sirens-echo#909.
+	// A fact about this deployment's reach, fixed per client, so it stays in the
+	// cacheable prefix. See sirens-echo#909.
 	if c.Admission != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: c.Admission})
 	}
@@ -508,6 +522,9 @@ func (c ProxyClient) Complete(
 	if grounding := groundingMessage(groundingDocuments); grounding != "" {
 		messages = append(messages, chatMessage{Role: "system", Content: grounding})
 	}
+	// The first message that changes every turn, so everything above it can be
+	// reused by a prompt cache. See docs/sirens-echo-prompt.md.
+	messages = append(messages, chatMessage{Role: "system", Content: clockMessage(c.now())})
 	// The conversation around the request is its own user turn. Merged into the
 	// request, it made the canonical user message unreadable downstream.
 	if prompt.Context != "" {
