@@ -1,0 +1,7 @@
+written 2026-09-24T03:45:47Z, before any scored turn of this run
+target: echo on a5062e36 (#1222), pod sirens-echo-77dc94b85f-k9525 started 03:43:16Z, SIRENS_ECHO_JEV_MODEL=jev-latest (resolved jev-1.13.0 at 03:45:32 UTC), DISABLE every family except shape.
+liveness: one "hi" turn (not a case) at 03:45:32 returned reaction=wave, reply 👋, in about 2s.
+design: same 30 cases, 2 reps, seed 8161, 1 warm-up. Snap = reaction field. Step 1 (model path only) was S 0/40, N 0/18.
+EXPECTED: the social cases (greetings s01-s04, thanks s05-s06, ack s07-s08/s20, laugh s16, celebrate s17, sad s18), about 12 of 20, snap through Jev. The yes/no and agreement cases (s09-s15, s19) stay words, since agree and disagree come only from the model and the model does not use marks. So S lands around 40-65%, still under the 90% gate.
+EXPECTED: G above 90% on what snaps. N false snap at or under 5%, since the shape family has to pick full for questions that need words.
+EXPECTED: snapped turns median under 1.5s, against about 2.9s unsnapped.

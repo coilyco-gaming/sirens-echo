@@ -1,0 +1,3 @@
+{
+  "reply": "The sun is a star, not a planet. It is the central star of the solar system, around which the planets orbit."
+}

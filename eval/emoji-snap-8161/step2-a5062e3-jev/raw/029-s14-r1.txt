@@ -1,0 +1,3 @@
+{
+  "reply": "Yes. The Earth is an oblate spheroid — roughly spherical, but slightly flattened at the poles and bulging at the equator."
+}

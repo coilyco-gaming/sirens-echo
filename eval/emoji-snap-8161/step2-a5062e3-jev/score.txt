@@ -1,0 +1,46 @@
+scored=60 ok=49 failed=11 warmup=[('n10', 300.39)]
+  FAIL s02 1 1
+  FAIL n05 2 1
+  FAIL s05 1 1
+  FAIL s12 2 1
+  FAIL s07 2 1
+  FAIL s02 2 1
+  FAIL s10 1 1
+  FAIL s04 2 1
+  FAIL n05 1 1
+  FAIL n07 1 1
+  FAIL n02 1 1
+snap source: reaction field
+S snap rate  16/33 = 48%   gate >= 90%   FAIL
+G glyph ok   14/16 = 88%   gate >= 95%   FAIL
+N false snap 0/16 = 0%   gate <= 5%    PASS
+latency snapped median 1.06s n=16   unsnapped S median 17.57s n=17   N median 19.10s n=16
+per case (reply -> snap concept):
+  n01 N '4'->- | '4'->-
+  n02 N 'Tidal locking occurs when a celestial ...'->-
+  n03 N 'Woodworking is the standard first pick. ...'->- | 'Eco is currently in the off season ...'->-
+  n04 N 'Three ways to reduce pollution in Eco:  ...'->- | 'Three ways to reduce pollution in Eco:  ...'->-
+  n06 N 'The sky appears blue because shorter ...'->- | 'The sky appears blue because shorter ...'->-
+  n07 N '"buen juego"'->-
+  n08 N 'Canberra.'->- | 'Canberra.'->-
+  n09 N '- Saltwick - Reefhaven - Driftport - ...'->- | '**Saltwick**  It sounds established and ...'->-
+  n10 N 'A prefix cache stores the leading ...'->- | 'A prefix cache stores the first N ...'->-
+  s01 S '👋'->wave | '👋'->wave
+  s03 S '👋'->wave | '👋'->wave
+  s04 S '👋'->wave
+  s05 S 'acknowledge'->-
+  s06 S 'ty'->- | 'ty'->-
+  s07 S '✅'->acknowledge
+  s08 S '✅'->acknowledge | '✅'->acknowledge
+  s09 S "Yeah, it's been a solid cycle. Eco's ..."->- | "Yeah, it's been a solid cycle. Eco's ..."->-
+  s10 S 'No context available on the meetup or ...'->-
+  s11 S 'Water is wet. The reason is that ...'->- | 'Water is wet. The molecules in liquid ...'->-
+  s12 S 'Yes, 7 is a prime number. It has ...'->-
+  s13 S 'No, 9 is not a prime number. It is ...'->- | 'No, 9 is not a prime number. It is ...'->-
+  s14 S 'Yes. The Earth is an oblate spheroid — ...'->- | 'Yes. The Earth is an oblate spheroid — ...'->-
+  s15 S 'The sun is a star, not a planet. It is ...'->- | 'The sun is a star, not a planet. It is ...'->-
+  s16 S '😂'->laugh | '😂'->laugh
+  s17 S '🎉'->celebrate | '🎉'->celebrate
+  s18 S '😢'->sad | '😢'->sad
+  s19 S '✅'->acknowledge | '✅'->acknowledge
+  s20 S 'pong'->- | 'pong'->-
