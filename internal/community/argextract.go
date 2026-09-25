@@ -15,10 +15,12 @@ import (
 // never from Jev: values are open-set (sirens-echo#8249).
 const toolArgsMetaKey = "coilyco/args"
 
-// toolArgSpec is one argument's declared vocabulary and which entry field to pass.
+// toolArgSpec is one argument's declared vocabulary, which entry field to pass,
+// and forms that are domain words for the tool rather than values ("store").
 type toolArgSpec struct {
 	Vocabulary string
 	Field      string
+	Ignore     map[string]bool
 }
 
 // VocabEntry is one vocabulary item: the forms a member may write, and the values.
@@ -50,7 +52,15 @@ func toolArgSpecs(tool *mcp.Tool) map[string]toolArgSpec {
 		if vocabulary == "" || (field != "id" && field != "name") {
 			continue
 		}
-		specs[name] = toolArgSpec{Vocabulary: vocabulary, Field: field}
+		spec := toolArgSpec{Vocabulary: vocabulary, Field: field, Ignore: map[string]bool{}}
+		if ignore, ok := fields["ignore"].([]any); ok {
+			for _, form := range ignore {
+				if text, ok := form.(string); ok {
+					spec.Ignore[strings.Join(vocabWords(text), " ")] = true
+				}
+			}
+		}
+		specs[name] = spec
 	}
 	return specs
 }
@@ -86,15 +96,19 @@ func (p *MCPProvider) Vocabulary(ctx context.Context, server, uri string) ([]Voc
 }
 
 // matchVocab finds the entry whose longest form appears in message as whole
-// words. A tie between two entries at that length is ambiguous and matches nothing.
-func matchVocab(message string, entries []VocabEntry) (VocabEntry, bool) {
+// words, skipping ignored forms. A tie at that length is ambiguous and matches nothing.
+func matchVocab(message string, entries []VocabEntry, ignore map[string]bool) (VocabEntry, bool) {
 	words := vocabWords(message)
 	var best VocabEntry
 	bestLen, tied := 0, false
 	for _, entry := range entries {
 		length := 0
 		for _, form := range append([]string{entry.Name, entry.ID}, entry.Aliases...) {
-			if formWords := vocabWords(form); len(formWords) > length && containsWords(words, formWords) {
+			formWords := vocabWords(form)
+			if ignore[strings.Join(formWords, " ")] {
+				continue
+			}
+			if len(formWords) > length && containsWords(words, formWords) {
 				length = len(formWords)
 			}
 		}
@@ -158,7 +172,7 @@ func (a *Agent) resolveToolArgs(
 		if err != nil {
 			return nil, false
 		}
-		match, ok := matchVocab(message, entries)
+		match, ok := matchVocab(message, entries, spec.Ignore)
 		if !ok {
 			return nil, false
 		}

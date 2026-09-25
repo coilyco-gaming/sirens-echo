@@ -30,7 +30,7 @@ func TestMatchVocabPicksTheLongestWholeWordForm(t *testing.T) {
 		"Where can I buy LIMESTONE, asking for a friend": "LimestoneItem",
 	}
 	for message, want := range cases {
-		got, ok := matchVocab(message, itemVocab())
+		got, ok := matchVocab(message, itemVocab(), nil)
 		if !ok || got.ID != want {
 			t.Errorf("%q: got %q/%v, want %q", message, got.ID, ok, want)
 		}
@@ -44,23 +44,38 @@ func TestMatchVocabDeclinesOnNoMatchPartialWordsOrATie(t *testing.T) {
 		"ironbar prices",             // not whole words of "iron bar"
 		"iron bar or iron ore",       // two entries tie at two words
 	}
-	if _, ok := matchVocab(cases[0], itemVocab()); ok {
+	if _, ok := matchVocab(cases[0], itemVocab(), nil); ok {
 		t.Errorf("%q matched, want nothing named", cases[0])
 	}
-	if got, ok := matchVocab(cases[1], itemVocab()); !ok || got.ID != "LimestoneItem" {
+	if got, ok := matchVocab(cases[1], itemVocab(), nil); !ok || got.ID != "LimestoneItem" {
 		t.Errorf("%q: got %q/%v, want the plural to match", cases[1], got.ID, ok)
 	}
 	for _, message := range cases[2:] {
-		if got, ok := matchVocab(message, itemVocab()); ok {
+		if got, ok := matchVocab(message, itemVocab(), nil); ok {
 			t.Errorf("%q matched %q, want a decline", message, got.ID)
 		}
+	}
+}
+
+func TestMatchVocabSkipsFormsTheToolDeclaresAsDomainWords(t *testing.T) {
+	vocab := append(itemVocab(), VocabEntry{ID: "StoreItem", Name: "Store"}, VocabEntry{ID: "BrickItem", Name: "Brick"})
+	ignore := map[string]bool{"store": true}
+
+	if got, ok := matchVocab("can I buy bricks in one store and resell them in another", vocab, ignore); !ok || got.ID != "BrickItem" {
+		t.Errorf("bricks in one store: got %q/%v, want Brick once store is a domain word", got.ID, ok)
+	}
+	if got, ok := matchVocab("what should I stock in my store to make money", vocab, ignore); ok {
+		t.Errorf("my store: matched %q, want a decline", got.ID)
+	}
+	if got, ok := matchVocab("what should I stock in my store to make money", vocab, nil); !ok || got.ID != "StoreItem" {
+		t.Errorf("control without ignore: got %q/%v, want Store, the measured wrong fill", got.ID, ok)
 	}
 }
 
 func TestToolArgSpecsSkipsMalformedDeclarations(t *testing.T) {
 	tool := &mcp.Tool{Name: "find_trade"}
 	tool.Meta = mcp.Meta{toolArgsMetaKey: map[string]any{
-		"item":     map[string]any{"vocabulary": "eco://vocab/items", "field": "name"},
+		"item":     map[string]any{"vocabulary": "eco://vocab/items", "field": "name", "ignore": []any{"Store", 3}},
 		"product":  map[string]any{"vocabulary": "eco://vocab/items", "field": "slug"},
 		"currency": "not an object",
 	}}
@@ -69,6 +84,9 @@ func TestToolArgSpecsSkipsMalformedDeclarations(t *testing.T) {
 
 	if len(specs) != 1 || specs["item"].Vocabulary != "eco://vocab/items" || specs["item"].Field != "name" {
 		t.Fatalf("specs = %+v, want only the well-formed item declaration", specs)
+	}
+	if !specs["item"].Ignore["store"] || len(specs["item"].Ignore) != 1 {
+		t.Errorf("ignore = %v, want the string form normalised and the number skipped", specs["item"].Ignore)
 	}
 }
 
