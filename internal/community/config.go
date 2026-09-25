@@ -419,6 +419,22 @@ var (
 	defaultEvaluationCaseTimeout time.Duration
 )
 
+// The Discord event queue, read only under SIRENS_ECHO_DISCORD_QUEUE. See
+// docs/sirens-echo-jobs.md.
+var (
+	// discordQueuePoll is how long an empty claim waits before the next.
+	discordQueuePoll time.Duration
+	// discordQueueBatch is how many events one claim takes.
+	discordQueueBatch int
+	// discordEventMaxAge drops a message sent during a long outage, whose answer
+	// would land far below the conversation that asked for it.
+	discordEventMaxAge     time.Duration
+	discordQueueRetention  time.Duration
+	discordQueueSweepEvery time.Duration
+	// discordHydrateRetry spaces REST reads of a channel that failed to read.
+	discordHydrateRetry time.Duration
+)
+
 // route.jev. Gates nothing by itself: JevModel unset (Config, not a knob)
 // skips the stage entirely regardless of these.
 var (
@@ -457,6 +473,13 @@ func knobs() []knob {
 		overridable(&reexportRefreshInterval, "SIRENS_ECHO_REEXPORT_REFRESH", time.Minute),
 
 		overridable(&turnProgressAfter, "SIRENS_ECHO_PROGRESS_AFTER", 10*time.Second),
+
+		overridable(&discordQueuePoll, "SIRENS_ECHO_DISCORD_QUEUE_POLL", 250*time.Millisecond),
+		overridable(&discordQueueBatch, "SIRENS_ECHO_DISCORD_QUEUE_BATCH", 8),
+		overridable(&discordEventMaxAge, "SIRENS_ECHO_DISCORD_EVENT_MAX_AGE", 15*time.Minute),
+		overridable(&discordQueueRetention, "SIRENS_ECHO_DISCORD_QUEUE_RETENTION", 24*time.Hour),
+		overridable(&discordQueueSweepEvery, "SIRENS_ECHO_DISCORD_QUEUE_SWEEP", time.Hour),
+		overridable(&discordHydrateRetry, "SIRENS_ECHO_DISCORD_HYDRATE_RETRY", 5*time.Minute),
 
 		overridable(&jobProgressEvery, "SIRENS_ECHO_JOB_PROGRESS_EVERY", 20*time.Second),
 		overridable(&defaultJobQueueDepth, "SIRENS_ECHO_JOB_QUEUE_DEPTH", 64),
@@ -964,6 +987,12 @@ type Config struct {
 	// DiscordCommandsEnabled registers and serves application commands. Off by
 	// default because registering is a write to Discord's API.
 	DiscordCommandsEnabled bool
+	// DiscordGateway connects this process's own gateway session. Off, the
+	// session posts over REST and events arrive through the queue.
+	DiscordGateway bool
+	// DiscordQueue takes Discord events from the queue the intake writes. See
+	// docs/sirens-echo-jobs.md.
+	DiscordQueue bool
 	// CoalesceEnabled batches a member's rapid comments onto a worker pool in
 	// place of the execution slot. See docs/sirens-echo-admission.md.
 	CoalesceEnabled bool
@@ -1132,6 +1161,13 @@ func LoadConfig() (Config, error) {
 	}
 	if cfg.AgentProxyModel == "" {
 		missing = append(missing, "AGENT_PROXY_MODEL")
+	}
+	if cfg.DiscordQueue && cfg.JobStoreDSN == "" {
+		missing = append(missing, "SIRENS_ECHO_JOB_STORE_DSN")
+	}
+	// A closed gateway with no queue would receive nothing, silently.
+	if cfg.DiscordEnabled && !cfg.DiscordGateway && !cfg.DiscordQueue {
+		return Config{}, fmt.Errorf("SIRENS_ECHO_DISCORD_GATEWAY=false needs SIRENS_ECHO_DISCORD_QUEUE=true")
 	}
 	if len(missing) > 0 {
 		return Config{}, fmt.Errorf("missing required env: %v", missing)

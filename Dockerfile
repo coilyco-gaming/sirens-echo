@@ -19,6 +19,7 @@ RUN CGO_ENABLED=0 go build -trimpath \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-prompt ./cmd/sirens-echo-prompt \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-access-check ./cmd/sirens-echo-access-check \
     && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-definition-check ./cmd/sirens-echo-definition-check \
+    && CGO_ENABLED=0 go build -trimpath -o /out/sirens-echo-intake ./cmd/sirens-echo-intake \
     && /out/sirens-echo-policy-check
 
 # The release image ships agent-compose but not the composed catalogue, so this
@@ -81,6 +82,9 @@ COPY --from=build --chown=1000:1000 /out/sirens-echo-access-check /usr/local/bin
 # than a preference. Run from the image it compares a deploy-owned definition
 # against the tree this image actually carries. See sirens-echo#973.
 COPY --from=build --chown=1000:1000 /out/sirens-echo-definition-check /usr/local/bin/sirens-echo-definition-check
+# The gateway intake, run as its own Deployment from this image. See
+# docs/sirens-echo-jobs.md.
+COPY --from=build --chown=1000:1000 /out/sirens-echo-intake /usr/local/bin/sirens-echo-intake
 COPY --chown=1000:1000 scripts/stage-compose-sources.sh /app/scripts/stage-compose-sources.sh
 COPY --chown=1000:1000 agent /app/agent
 # Eval material, whose only readers are binaries this stage does not ship. The

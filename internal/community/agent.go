@@ -57,6 +57,10 @@ type Agent struct {
 	lookups *rateLimiter
 	// jobs is nil when the deployment enables no job kinds.
 	jobs *JobRunner
+	// events is the Discord event queue, set only under SIRENS_ECHO_DISCORD_QUEUE.
+	events DiscordEventQueue
+	// hydrated spaces REST reads that fill a closed gateway's state cache.
+	hydrated retryGate
 	// exchanges bounds a run of agent-to-agent turns per channel.
 	exchanges *exchangeLimiter
 	beats     *heartbeat
@@ -242,12 +246,29 @@ func NewAgent(cfg Config, telemetry *Telemetry) (*Agent, error) {
 	if cfg.CoalesceEnabled && session != nil {
 		agent.buildCoalesceLane()
 	}
+	if session != nil && cfg.DiscordQueue {
+		if agent.events, err = openDiscordEventQueue(agent.jobs.Store); err != nil {
+			return nil, err
+		}
+	}
 	if session != nil {
 		session.AddHandler(agent.onReady)
-		session.AddHandler(agent.onMessage)
-		session.AddHandler(agent.onMessageEdit)
-		if cfg.DiscordCommandsEnabled {
-			session.AddHandler(agent.onInteraction)
+		switch {
+		case agent.events != nil:
+			// Offered rather than admitted, so this session and every intake
+			// produce one row per event and the worker answers it once.
+			offerer := &discordOfferer{queue: agent.events, telemetry: agent.telemetry}
+			session.AddHandler(offerer.onMessage)
+			session.AddHandler(offerer.onMessageEdit)
+			if cfg.DiscordCommandsEnabled {
+				session.AddHandler(offerer.onInteraction)
+			}
+		default:
+			session.AddHandler(agent.onMessage)
+			session.AddHandler(agent.onMessageEdit)
+			if cfg.DiscordCommandsEnabled {
+				session.AddHandler(agent.onInteraction)
+			}
 		}
 	}
 	return agent, nil
@@ -534,14 +555,21 @@ func (a *Agent) Run(ctx context.Context) error {
 		if a.lane != nil {
 			a.lane.start(a.drain.root())
 		}
-		if err := a.session.Open(); err != nil {
-			return fmt.Errorf("Discord open: %w", err)
+		if a.cfg.DiscordGateway {
+			if err := a.session.Open(); err != nil {
+				return fmt.Errorf("Discord open: %w", err)
+			}
+			defer a.session.Close()
+		} else if err := a.connectDiscordREST(); err != nil {
+			return err
 		}
-		defer a.session.Close()
 		// A positive signal, so a quiet guild and a stopped gateway stop
 		// producing the same telemetry. See docs/sirens-echo-observability.md.
 		a.beats = &heartbeat{}
 		defer a.watchGateway(ctx)()
+		if a.events != nil {
+			a.startDiscordQueue(ctx)
+		}
 	}
 	if a.tools != nil {
 		// Supervised MCP connections outlive every turn, so shutdown is the only

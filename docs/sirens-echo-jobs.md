@@ -40,8 +40,8 @@ found queued** and an accurate `queued` record is a permanently pending one. `Se
 those to `failed` under `dropped by a restart`. Requeuing instead was considered and not taken: it is
 the larger change, and it needs `Effects` to be load-bearing. See sirens-echo#878.
 
-**Recovery announces every job it settles**, dropped and stranded alike, because correcting the record
-tells nobody: a Discord requester never reads one. `Attempts` counts executions started, so a resumed
+**Recovery announces every job it settles**, dropped and stranded alike, since a Discord requester never
+reads a record. `Attempts` counts executions started, so a resumed
 job cannot look like a first run, and `Effects` records what a job already applied, keyed by a step its
 kind declares, **so a resumed job skips work it did rather than double-applying it**.
 
@@ -56,9 +56,8 @@ count, and **a job belonging to another principal answers `404`, the same as an 
 exist**, so an id cannot be probed for.
 
 `POST /v1/jobs/{id}/cancel` moves queued work straight to `cancelled` and running work to `cancelling`,
-interrupting the execution context. **Interruption is immediate rather than polled**, so a cancel does
-not wait out the job's own timeout, and a watcher also polls the record, covering a cancel arriving from
-another process against a shared store.
+interrupting the execution context. **Interruption is immediate rather than polled**, and a watcher also polls the record for a cancel
+from another process.
 
 One execution is bounded by `Timeout`, thirty minutes by default. The queue depth is bounded and worker
 count is fixed, **so concurrency is a deployment decision rather than a function of arrival rate**.
@@ -80,29 +79,40 @@ and a data-loss boundary anywhere else**.
 `FileJobStore` survives a process restart on the volume it was scheduled onto; `PostgresJobStore`
 survives the pod. Under `strategy: Recreate` on a single replica, a roll destroys the pod, **so the file
 store's durability depends on the volume outliving it and the database's does not**. **Both variables
-set is refused at boot** rather than resolved by precedence, because a lane that quietly ran one of two
-configured stores would put the jobs somewhere nobody was looking. **Connection failure at boot is fatal
-for the same reason**: falling back to memory on an unreachable database would turn a loud outage into
-the silent data loss the durable store was chosen to prevent.
+set is refused at boot** rather than resolved by precedence, and **connection failure at boot is fatal**
+rather than a fallback to memory, which would turn a loud outage into silent data loss.
 
-**`JobKinds` is a closed set.** A kind is a capability, so widening it is a reviewed act here rather
-than something a caller picks: an open set would let a caller name a kind the service has never been
-reviewed for, **and the review is the only thing standing between a job name and the work it
-authorises**.
+**`JobKinds` is a closed set.** A kind is a capability, so widening it is a reviewed act rather than
+something a caller picks.
 
 ## Jobs are single-process
 
-The store, the queue, and the worker pool all live inside one process, **and that is an assumption
-rather than a guarantee anyone enforces**. It is written down because it was not: a second replica was
-proposed on the strength of the deployment provisioning a database per lane, **and nothing in the
-manifests or the code said the harness does not use one for jobs**. A worker takes a job by
-transitioning it to running, and the file store guards that with a `sync.Mutex`, **which excludes
-another goroutine in the same process and nothing else**.
+The store, the queue, and the worker pool all live inside one process, **an assumption nothing
+enforces**. A worker takes a job by transitioning it to running, and the file store guards that with a
+`sync.Mutex`, **which excludes another goroutine in the same process and nothing else**.
 
 **What a second replica would break is not double execution.** The queue is an in-process channel, so
-two replicas hold two separate queues and neither can hand the other's job to a worker. **The failures
-are quieter**: a job is visible only to the process that accepted its submission, so a status read or a
-cancel routed to the other replica finds nothing, and if both mounted the same directory, **two
-process-local mutexes guard nothing between them**, so concurrent transitions interleave and the rename
-makes it last-writer-wins. A shared queue, a claim atomic across processes, and a store both replicas
-can read would each have to land first, **and none is implied by provisioning a database**.
+a job is visible only to the process that accepted it, and a status read or cancel routed to the other
+replica finds nothing. On a shared directory **two process-local mutexes guard nothing between them**.
+A shared queue and a cross-process claim would each have to land first.
+
+## Discord events cross processes
+
+`discord_events` is the one table several processes write, the hand-off from intake to worker
+(teable:coilyco/sirens-echo#8269). **`sirens-echo-intake` holds a gateway session and inserts every
+event under a key every session derives alike**, `discord:msg:<id>`, `discord:edit:<id>:<edited
+timestamp>`, or `discord:interaction:<id>`, with `ON CONFLICT DO NOTHING`, so two intakes and a
+connected worker yield one row. It drops only its own posts and link-preview edits, and admission stays
+with the worker.
+
+**The worker claims oldest first with `FOR UPDATE SKIP LOCKED`, marking the row in the same statement**,
+so a claim is at most once and a second worker takes others. A row stays until the day-old sweep, so
+a late duplicate collides with it rather than being answered twice. An interaction past Discord's
+three-second deadline, and a message older than `SIRENS_ECHO_DISCORD_EVENT_MAX_AGE`, are dropped and
+counted `expired` on `sirens_echo.discord.events`.
+
+`SIRENS_ECHO_DISCORD_QUEUE=true` makes the worker's gateway offer rather than admit, and consume.
+`SIRENS_ECHO_DISCORD_GATEWAY=false` then closes that session. The worker learns its identity from
+`GET /users/@me`, registers commands from there, and fills its empty state cache with one REST read per
+guild and channel. The intake's `/readyz` passes only after READY or RESUMED and a database ping, and never
+registers commands. Cutover: queue on, then intake to two, then gateway off.

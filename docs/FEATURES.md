@@ -70,16 +70,16 @@ What ships today, and where each capability is documented.
   community and general-purpose definitions **in one immutable image**.
 - Deployment-owned tracker MCP URL in Echo, base-scoped token only in the MCP pod, and ExternalSecret
   injection **with no pod AWS permission**.
-- Deploy-selected job store: in-memory, a mounted directory, or Postgres. Singleton k3s Deployment, and
-  full-source-SHA images published to Forgejo OCI. **A main push that publishes no image fails the run**,
-  and an hourly `image-coverage` workflow asks the registry whether main's tip has an image.
+- Deploy-selected job store: in-memory, a mounted directory, or Postgres. One worker Deployment, with an
+  optional **replicated gateway intake feeding it via a Postgres queue**, so a rollout drops no message.
+  Full-SHA images on Forgejo OCI. **A main push publishing no image fails**, and hourly `image-coverage`
+  checks main's tip.
 
 ## Development gates
 
-- `just` recipes for build, policy verification, prompt snapshots, format, vet, test, tidy, run,
-  per-profile evaluation, failure-rate measurement, and full pre-commit.
-- Every boundary this deployment holds **declared once** in `eval/attributes.yaml`, with
-  `just attributes-check` failing when a declaration no longer resolves.
+- `just` recipes for build, policy, prompt snapshots, format, vet, test, tidy, run, evals, failure rates, pre-commit.
+- Every boundary this deployment holds **declared once** in `eval/attributes.yaml`, and
+  `just attributes-check` fails when one no longer resolves.
 - Forgejo CI builds, checks policy, vets, tests, and runs pre-commit. Structure, skills, links, modules,
   comments, secrets, and prompt all validated. **Entrypoint failures logged as severity-carrying JSON,
   never bare stderr.**

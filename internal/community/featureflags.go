@@ -34,6 +34,20 @@ func featureFlags(cfg *Config) []featureFlag {
 			summary:  "Open the Discord gateway session at all.",
 		},
 		{
+			env:      "SIRENS_ECHO_DISCORD_GATEWAY",
+			target:   &cfg.DiscordGateway,
+			fallback: true,
+			summary: "Connect this process's own gateway session. Off, it posts " +
+				"over REST and hears Discord only through the event queue.",
+		},
+		{
+			env:      "SIRENS_ECHO_DISCORD_QUEUE",
+			target:   &cfg.DiscordQueue,
+			fallback: false,
+			summary: "Take Discord events from the Postgres queue the intake " +
+				"writes, and send this process's own gateway events there too.",
+		},
+		{
 			env:      "SIRENS_ECHO_DISCORD_DM_ENABLED",
 			target:   &cfg.DiscordDMEnabled,
 			fallback: false,

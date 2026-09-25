@@ -44,6 +44,7 @@ type Telemetry struct {
 	attachments          metric.Int64Counter
 	admissions           metric.Int64Counter
 	accessChecks         metric.Int64Counter
+	discordEvents        metric.Int64Counter
 	summons              metric.Int64Counter
 	phraseInvocations    metric.Int64Counter
 	failures             metric.Int64Counter
@@ -266,6 +267,10 @@ func newTelemetry(
 	if err != nil {
 		return nil, err
 	}
+	discordEvents, err := meter.Int64Counter("sirens_echo.discord.events")
+	if err != nil {
+		return nil, err
+	}
 	summons, err := meter.Int64Counter("sirens_echo.summons")
 	if err != nil {
 		return nil, err
@@ -314,6 +319,7 @@ func newTelemetry(
 		attachments:          attachments,
 		admissions:           admissions,
 		accessChecks:         accessChecks,
+		discordEvents:        discordEvents,
 		summons:              summons,
 		phraseInvocations:    phraseInvocations,
 		failures:             failures,
@@ -500,6 +506,15 @@ func (t *Telemetry) RecordAdmission(ctx context.Context, outcome, transport stri
 // no guild, channel, or member identifier reaches a metric label.
 func (t *Telemetry) RecordAccess(ctx context.Context, reason string) {
 	t.accessChecks.Add(ctx, 1, metric.WithAttributes(attribute.String("reason", reason)))
+}
+
+// RecordDiscordEvent counts one queue step for a gateway event. Kind and outcome
+// are closed sets, so no Discord identifier reaches a label.
+func (t *Telemetry) RecordDiscordEvent(ctx context.Context, kind, outcome string) {
+	t.discordEvents.Add(ctx, 1, metric.WithAttributes(
+		attribute.String("kind", kind),
+		attribute.String("outcome", outcome),
+	))
 }
 
 // RecordSummon counts one summon-gate decision. Both labels are closed sets,

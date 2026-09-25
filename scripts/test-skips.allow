@@ -18,11 +18,11 @@ TestCapabilityDocIsRightThatTheBuildCarriesNoRevision
 # This entry is permanent while that question needs a checkout to answer.
 TestGraphPatternsNeverReachDeniedSources
 
-# The Postgres-backed SQL, job store and turn log alike, which needs a live
+# The Postgres-backed SQL, job store, turn log, and Discord event queue alike, which needs a live
 # database. There is no in-process Postgres, so the choice is an env gate or no
 # SQL coverage at all.
 #
-# These eight skip under `just test` and `test-skips` in every environment,
+# These nine skip under `just test` and `test-skips` in every environment,
 # including CI, because SIRENS_ECHO_TEST_JOB_STORE_DSN is deliberately not set
 # job-wide. They are not unrun: the `job store SQL` CI step runs exactly this
 # set against a service container, scoping the DSN to that one step so the skip
@@ -39,6 +39,7 @@ TestThePostgresStoreReportsAMissingJob
 TestThePostgresTurnLogReportsWhatAnotherRunLeft
 TestThePostgresTurnLogTakesEachRecordOnce
 TestThePostgresTurnLogClearsFinishedAndKeepsLive
+TestThePostgresDiscordQueueClaimsEachEventOnce
 
 # route.jev's latency and question-count probe (teable:coilyco-gaming/sirens-echo#8050,
 # PR 1). It always measures the built question count against the real content

@@ -93,6 +93,7 @@ case "${1:-}" in
   build)
     mkdir -p bin
     go build -o bin/sirens-echo ./cmd/sirens-echo
+    go build -o bin/sirens-echo-intake ./cmd/sirens-echo-intake
     go build -o bin/sirens-echo-policy-check ./cmd/sirens-echo-policy-check
     go build -o bin/sirens-echo-eval ./cmd/sirens-echo-eval
     ;;
