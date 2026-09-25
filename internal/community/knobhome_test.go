@@ -32,6 +32,8 @@ var elsewhereByDesign = map[string]string{
 	"pollMinAnswers":         "Discord's own floor for what a poll is: fewer than two options is not a poll, so this decides the schema's shape rather than a deployment's tuning",
 	"pollMinDuration":        "Discord's own floor: a poll cannot run for less than one hour, which is a structural fact rather than a deployment's tuning",
 	"jevShapeCutoff":         "the spec's proposed shape-pick cutoff, same reason: it decides what counts as a confident pick, not how long to wait or how many to allow",
+	"jevToolThreshold":       "Kai's routing bar for a direct tool call (sirens-echo#8229): what counts as a confident pick, same reason as the shape cutoff",
+	"jevToolMaxOptions":      "the choice size Jev is reliable at, a property of the model rather than of a deployment",
 }
 
 // numericValue reports whether an expression is a literal number or literals

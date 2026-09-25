@@ -26,13 +26,15 @@ grounded data the model self-corrects from **once**: an identical failed call is
 **route.jev can prune a server per turn**: one Jev answers below 0.5 for loses its tools, guidance, and
 grounding from the answer's call, and a call to its tool is refused. **Only an explicit no prunes**, so a
 skipped stage, fallback, or missing answer keeps all. `SIRENS_ECHO_JEV_DISABLE=server` disables it (#8139).
+**It also picks one tool** (#8229): a server choice, then one over its cached tools plus `no_tool`, in one
+request. **A direct call needs both at 0.9**. Traced only (`jev.tool.*`),
+`SIRENS_ECHO_JEV_DISABLE=tool` disables it.
 
 ## Harness tools
 
 Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
-harness itself answers the call.** A tool listing is held for an hour, and **the thing best
-placed to notice it is wrong is the model that failed to find a tool it expected**, so
-`harness__refresh_tools` lets it say so. It marks every rostered
+harness itself answers the call.** A tool listing is held for an hour, so
+`harness__refresh_tools` lets a model missing an expected tool say so. It marks every rostered
 server for re-reading and dials nothing, so twenty calls cost one listing.
 
 ## The read_skill tool
@@ -93,9 +95,8 @@ server-supplied and can never reach the filesystem as a path**.
 
 **A spent tool budget answers rather than discards.** The tools are withdrawn once the last round's
 results are in and one further call asks for an answer from what was gathered, instructed to say plainly
-what could not be determined and to claim no result no tool returned. Withdrawing after the results
-land rather than on the next request costs no extra model call and keeps the six-round ceiling true. If
-the outer model-call budget is also spent, the turn ends with the rounds-spent notice.
+what could not be determined and to claim no result no tool returned. If the outer model-call budget is
+also spent, the turn ends with the rounds-spent notice.
 
 ## Public repository inventory
 

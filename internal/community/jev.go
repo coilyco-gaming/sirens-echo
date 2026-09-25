@@ -33,13 +33,14 @@ const (
 	RouteFamilyCoalesce  RouteFamily = "coalesce"
 	RouteFamilyAddressed RouteFamily = "addressed"
 	RouteFamilyRequest   RouteFamily = "request"
+	RouteFamilyTool      RouteFamily = "tool"
 )
 
 // routeFamilies is the spec's own table order, so a trace reads the same way.
 var routeFamilies = []RouteFamily{
 	RouteFamilyContent, RouteFamilyDrawer, RouteFamilyRoot, RouteFamilyFocus,
 	RouteFamilyServer, RouteFamilyRoute, RouteFamilyDepth, RouteFamilyShape,
-	RouteFamilyCoalesce, RouteFamilyAddressed, RouteFamilyRequest,
+	RouteFamilyCoalesce, RouteFamilyAddressed, RouteFamilyRequest, RouteFamilyTool,
 }
 
 // jevContentThreshold, jevDrawerThreshold, jevShapeCutoff are the spec's
@@ -92,6 +93,10 @@ type RouteDecision struct {
 	Addressed      bool
 	Requested      string // the reply key the member asked Echo to react with, or ""
 	RequestedProb  float64
+	ToolServer     string // the server the tool family picked, "" on none or fallback
+	ToolServerProb float64
+	Tool           string // that server's tool, "" on no_tool or fallback
+	ToolProb       float64
 
 	// Fallbacks names, per family, why its field is the fallback value.
 	Fallbacks map[RouteFamily]jevFallbackReason
@@ -341,6 +346,13 @@ func (a *Agent) buildRouteQuestions(
 			Prompt:   "Does the member explicitly ask this service to react with a particular emoji, and which?",
 			Criteria: criteria,
 		}, jevQuestionMeta{family: RouteFamilyRequest})
+	}
+
+	if !disabled[RouteFamilyTool] && a.tools != nil {
+		toolQuestions, toolMeta := toolRouteQuestions(a.tools.CachedTools())
+		for _, q := range toolQuestions {
+			add(q, toolMeta[q.Key])
+		}
 	}
 
 	return questions, meta
@@ -621,6 +633,10 @@ func (a *Agent) applyRouteAnswers(
 			decision.fellBackTo(RouteFamilyRequest, jevFallbackMissingAnswer)
 		}
 	}
+
+	if !disabled[RouteFamilyTool] {
+		applyToolAnswers(decision, meta, answers)
+	}
 }
 
 // PrunedServers is what Complete may drop: an explicit no only, never a
@@ -683,7 +699,13 @@ func recordRouteDecision(span trace.Span, decision RouteDecision) {
 		attribute.Bool("jev.addressed", decision.Addressed),
 		attribute.String("jev.request", decision.Requested),
 		attribute.Float64("jev.request.probability", decision.RequestedProb),
+		attribute.String("jev.tool.server", decision.ToolServer),
+		attribute.Float64("jev.tool.server.probability", decision.ToolServerProb),
+		attribute.String("jev.tool.name", decision.Tool),
+		attribute.Float64("jev.tool.probability", decision.ToolProb),
 	)
+	_, _, direct := decision.DirectTool()
+	span.SetAttributes(attribute.Bool("jev.tool.direct", direct))
 	for _, family := range routeFamilies {
 		if reason, fellBack := decision.Fallbacks[family]; fellBack {
 			span.SetAttributes(attribute.String("jev.fallback."+string(family), string(reason)))
