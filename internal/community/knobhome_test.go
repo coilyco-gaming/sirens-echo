@@ -34,6 +34,7 @@ var elsewhereByDesign = map[string]string{
 	"jevShapeCutoff":         "the spec's proposed shape-pick cutoff, same reason: it decides what counts as a confident pick, not how long to wait or how many to allow",
 	"jevToolThreshold":       "Kai's routing bar for a direct tool call (sirens-echo#8229): what counts as a confident pick, same reason as the shape cutoff",
 	"jevToolMaxOptions":      "the choice size Jev is reliable at, a property of the model rather than of a deployment",
+	"maxTemplateReplyRunes":  "the reply-template contract's cap, shared with eco-app's reference renderer: changing it here alone would break the contract",
 }
 
 // numericValue reports whether an expression is a literal number or literals

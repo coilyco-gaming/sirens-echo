@@ -60,6 +60,13 @@ func featureFlags(cfg *Config) []featureFlag {
 				"living answer.",
 		},
 		{
+			env:      "SIRENS_ECHO_JEV_DIRECT_TOOLS",
+			target:   &cfg.JevDirectTools,
+			fallback: false,
+			summary: "Answer from a tool's own reply template, with no model call, " +
+				"when route.jev picks that server and tool at 0.9 or above.",
+		},
+		{
 			env:      "SIRENS_ECHO_MCP_REEXPORT",
 			target:   &cfg.MCPReexport,
 			fallback: false,

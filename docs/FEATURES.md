@@ -1,22 +1,22 @@
 # Features
 
-What ships today, and where each capability is documented. Pages are indexed at the end.
+What ships today, and where each capability is documented.
 
 ## Admission
 
 - Mention, reply, own-thread, and edit invocation with channel, thread, guild, author, and duplicate
-  gates, **the edit gated on a member edit and the thread on cached state, not a lookup**.
+  gates, the edit gated on a member edit and the thread on cached state, not a lookup.
 - Git-tracked access policy stacking guild, channel, user, and role grants with a deny list, per-guild
   rate overrides, and CI validation.
-- Per-user, per-context, and global admission control over **a pool of eight concurrent execution
-  slots** with a bounded queue behind it, **one cooldown notice per window**, and bounded lookups.
+- Per-user, per-context, and global admission control over a pool of eight concurrent execution
+  slots with a bounded queue behind it, one cooldown notice per window, and bounded lookups.
 - Coalescing lane folding a member's rapid comments into one turn behind **an acknowledgment per
-  comment**, one writer per member, **selectable on the Discord summon path and off by default**.
+  comment, one writer per member, selectable on the Discord summon path and off by default**.
 
 ## The response service
 
 - Deploy-selected verified role bundle per lane, from the Core Roster plus the community person package.
-  Neutral and social profiles with independent policy roots, **a Kai-only trust boundary**, build-time checks.
+  Neutral and social profiles with independent policy roots, a Kai-only trust boundary, build-time checks.
 - Definition-selected history budget, skill roots, MCP roster, and issue tracker, the roots carrying
   **one swappable `sirens-game-*` focus, so a swap is one line**. Serialized turns
   bounded Discord-history continuity, and whole-thread prefill inside a thread **dropping oldest first
@@ -28,14 +28,15 @@ What ships today, and where each capability is documented. Pages are indexed at 
   offers. Plain-text replies with one style-aware repair, grounding checks reading first-person and
   passive claims alike **over prose with links masked out**, and neutral-style validation where
   selected.
-- Appended tracker keys for every issue a turn observed or filed, **built only from returned tool
-  results**. Reply refusal for any identifier the process holds, derived from configuration at boot,
-  **admitted by shape and matched by value rather than spelling**.
+- Appended tracker keys for every issue a turn observed or filed, built only from returned tool
+  results. Reply refusal for any identifier the process holds, derived from configuration at boot,
+  admitted by shape and matched by value rather than spelling.
 - Caller-supplied history marked as asserted rather than observed, on both private ingresses. Harness
   reactions for acceptance, tool rounds, failure, and refusal, plus a keyed reaction as whole answer,
-  social ones Jev-snapped pre-model, **text where a receipt is due or no mark fits**.
-- A worklog element on a long Discord turn, one row per tool call resolving in place, **degrading to
-  stacked notice lines where the embed permission is absent**.
+  social ones Jev-snapped pre-model, text where a receipt is due or no mark fits. Flagged: a
+  0.9 Jev tool pick answers from its `_meta` template.
+- A worklog element on a long Discord turn, one row per tool call resolving in place, degrading to
+  stacked notice lines where the embed permission is absent.
 - Oversized tool results saved to the requester's scratchpad instead of being truncated away, and
   replies over the send budget attached whole as a file, **with every failure falling back to
   truncation**. One assembly step for every service-authored suffix, **shortening the answer so no

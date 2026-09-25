@@ -1495,6 +1495,10 @@ func (a *Agent) runTurn(
 	if key, ok := route.SnapReaction(); ok {
 		return a.finishWithSnap(turnCtx, turn, progress, key)
 	}
+	// A confident tool pick answers from the tool's reply template, no model call.
+	if text, ok := a.directToolReply(turnCtx, route); ok {
+		return a.finishWithDirect(turnCtx, turn, text)
+	}
 
 	progress.Stage(turnCtx, stagePhraseThinking)
 	answerCtx := withDroppedServers(turnCtx, route.PrunedServers())

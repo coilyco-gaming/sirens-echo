@@ -926,6 +926,9 @@ type Config struct {
 	// JevDisable names the families route.jev must not ask about, each
 	// falling back to today's behaviour independently of the others.
 	JevDisable []string
+	// JevDirectTools answers from a tool's reply template when route.jev's tool
+	// pick clears the bar. See docs/sirens-echo-tools.md.
+	JevDirectTools bool
 	// HTTPTrustToken authenticates a caller on the tailnet. Empty trusts
 	// nobody. See docs/sirens-echo-http.md.
 	HTTPTrustToken string

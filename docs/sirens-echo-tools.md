@@ -27,8 +27,8 @@ grounded data the model self-corrects from **once**: an identical failed call is
 grounding from the answer's call, and a call to its tool is refused. **Only an explicit no prunes**, so a
 skipped stage, fallback, or missing answer keeps all. `SIRENS_ECHO_JEV_DISABLE=server` disables it (#8139).
 **It also picks one tool** (#8229): a server choice, then one over its cached tools plus `no_tool`, in one
-request. **A direct call needs both at 0.9**. Traced only (`jev.tool.*`),
-`SIRENS_ECHO_JEV_DISABLE=tool` disables it.
+request. **Both at 0.9** with `SIRENS_ECHO_JEV_DIRECT_TOOLS` on answers from the tool's `_meta` reply
+template, no model call. `SIRENS_ECHO_JEV_DISABLE=tool` disables it.
 
 ## Harness tools
 
@@ -53,7 +53,7 @@ the answer. In process and registered unconditionally.
 
 ## The fetch tool
 
-A read-only HTTPS GET. **The fetching is easy, the allowlist is the feature.** It runs in the cluster,
+A read-only HTTPS GET. It runs in the cluster,
 so unbounded it reaches the tailnet, other services' internals, and cloud metadata, and **the model is
 precisely the component an attacker gets to talk to**. `SIRENS_ECHO_FETCH_HOSTS` is a comma-separated
 allowlist, and **empty offers no tool at all**: no schema in the prompt, nothing to be talked into.

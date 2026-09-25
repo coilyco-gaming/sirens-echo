@@ -41,6 +41,8 @@ type ToolResult struct {
 	// Detail is a display value the session validated against its own closed
 	// set, never argument text. See docs/sirens-echo-tool-markup.md.
 	Detail string
+	// Structured is the result's structuredContent, which a reply template reads.
+	Structured any
 }
 
 // GroundingDocument is one resource a server marked for the assistant, already
@@ -813,7 +815,7 @@ func (s *mcpToolSession) Call(
 	if result.IsError {
 		s.recordFailure(attempt, text)
 	}
-	return ToolResult{Text: text, IsError: result.IsError}, nil
+	return ToolResult{Text: text, IsError: result.IsError, Structured: result.StructuredContent}, nil
 }
 
 // callKey identifies one attempt. Arguments that will not marshal fall back to
