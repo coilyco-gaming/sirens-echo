@@ -70,7 +70,11 @@ func (a *Agent) warmTools(ctx context.Context) {
 }
 
 // toolRouteQuestions builds one tool pick per listed server.
-func toolRouteQuestions(listings []CachedServerTools) ([]systemone.Question, map[string]jevQuestionMeta) {
+func toolRouteQuestions(listings []CachedServerTools, skipTools []string) ([]systemone.Question, map[string]jevQuestionMeta) {
+	skip := make(map[string]bool, len(skipTools))
+	for _, name := range skipTools {
+		skip[strings.TrimSpace(name)] = true
+	}
 	questions := make([]systemone.Question, 0, len(listings))
 	meta := make(map[string]jevQuestionMeta)
 	for _, listing := range listings {
@@ -79,7 +83,8 @@ func toolRouteQuestions(listings []CachedServerTools) ([]systemone.Question, map
 		}
 		criteria := make([]systemone.Criterion, 0, len(listing.Tools)+1)
 		for _, tool := range listing.Tools {
-			if tool == nil || tool.Name == "" || tool.Name == toolNoToolOption {
+			if tool == nil || tool.Name == "" || tool.Name == toolNoToolOption ||
+				skip[tool.Name] || skip[listing.Server+"__"+tool.Name] {
 				continue
 			}
 			criteria = append(criteria, systemone.Criterion{Name: tool.Name, Description: tool.Description})
@@ -159,7 +164,7 @@ func applyToolAnswers(
 	}
 	top, rival := topTwoPicks(field)
 	decision.ToolServer, decision.Tool, decision.ToolProb = top.server, top.tool, top.prob
-	decision.ToolServerProb = rival.prob
+	decision.ToolRival, decision.ToolRivalProb = rival.server, rival.prob
 }
 
 // topTwoPicks orders by probability, then server name, so a tie is stable.
@@ -186,7 +191,7 @@ func (d RouteDecision) DirectTool() (server, tool string, ok bool) {
 	if !d.Ran || d.hasFallback(RouteFamilyTool) || d.Tool == "" {
 		return "", "", false
 	}
-	if d.ToolProb < jevToolThreshold || d.ToolServerProb >= jevToolContested {
+	if d.ToolProb < jevToolThreshold || d.ToolRivalProb >= jevToolContested {
 		return "", "", false
 	}
 	return d.ToolServer, d.Tool, true

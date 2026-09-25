@@ -32,7 +32,7 @@ func wikiListing() CachedServerTools {
 }
 
 func TestToolRouteQuestionsAskOneToolChoicePerServerAndNoServerPick(t *testing.T) {
-	questions, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
+	questions, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()}, nil)
 
 	if len(questions) != 2 {
 		t.Fatalf("questions = %d, want one tool pick per server and no separate server pick", len(questions))
@@ -57,21 +57,37 @@ func TestToolRouteQuestionsSkipAServerPastJevsChoiceSize(t *testing.T) {
 	for i := range jevToolMaxOptions {
 		big.Tools = append(big.Tools, &mcp.Tool{Name: fmt.Sprintf("t%d", i)})
 	}
-	questions, _ := toolRouteQuestions([]CachedServerTools{big, ecoListing()})
+	questions, _ := toolRouteQuestions([]CachedServerTools{big, ecoListing()}, nil)
 
 	if len(questions) != 1 || questions[0].Key != toolPickKeyPrefix+"eco" {
 		t.Fatalf("questions = %v, want only eco once the oversize server is left out", questionKeys(questions))
 	}
 }
 
+func TestToolRouteQuestionsLeaveOutSkippedTools(t *testing.T) {
+	eco := ecoListing()
+	eco.Tools = append(eco.Tools, &mcp.Tool{Name: "mcp_beaver_info", Description: "doubles as a liveness probe"})
+	wiki := wikiListing()
+	wiki.Tools = append(wiki.Tools, &mcp.Tool{Name: "mcp_beaver_info"})
+
+	questions, _ := toolRouteQuestions([]CachedServerTools{eco, wiki}, []string{"mcp_beaver_info", "eco__get_market"})
+
+	if names := criterionNames(questions[0].Criteria); fmt.Sprint(names) != "[find_trade no_tool]" {
+		t.Errorf("eco options = %v, want the meta tool and the server-scoped skip left out", names)
+	}
+	if names := criterionNames(questions[1].Criteria); fmt.Sprint(names) != "[search no_tool]" {
+		t.Errorf("wiki options = %v, want the meta tool left out on every server", names)
+	}
+}
+
 func TestToolRouteQuestionsAskNothingWithoutAListing(t *testing.T) {
-	if questions, _ := toolRouteQuestions(nil); len(questions) != 0 {
+	if questions, _ := toolRouteQuestions(nil, nil); len(questions) != 0 {
 		t.Fatalf("questions = %d with no cached listing, want none", len(questions))
 	}
 }
 
 func TestApplyToolAnswersTakesTheMostConfidentServerAndHonoursRivals(t *testing.T) {
-	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()}, nil)
 	cases := []struct {
 		name       string
 		eco, wiki  systemone.Answer
@@ -93,14 +109,14 @@ func TestApplyToolAnswersTakesTheMostConfidentServerAndHonoursRivals(t *testing.
 				t.Errorf("server = %q, want %q", decision.ToolServer, tc.wantServer)
 			}
 			if _, _, direct := decision.DirectTool(); direct != tc.wantDirect {
-				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolServerProb)
+				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolRivalProb)
 			}
 		})
 	}
 }
 
 func TestGeneralServersNeverContestADomainPick(t *testing.T) {
-	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()}, nil)
 	general := []string{"wiki"}
 	cases := []struct {
 		name       string
@@ -122,14 +138,30 @@ func TestGeneralServersNeverContestADomainPick(t *testing.T) {
 				t.Errorf("server = %q, want %q", decision.ToolServer, tc.wantServer)
 			}
 			if _, _, direct := decision.DirectTool(); direct != tc.wantDirect {
-				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolServerProb)
+				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolRivalProb)
 			}
 		})
 	}
 }
 
+func TestApplyToolAnswersNamesTheRivalThatContestsTheWin(t *testing.T) {
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()}, nil)
+	decision := RouteDecision{Ran: true}
+	applyToolAnswers(&decision, meta, map[string]systemone.Answer{
+		toolPickKeyPrefix + "eco":  {Key: toolPickKeyPrefix + "eco", Option: "find_trade", Probability: 1},
+		toolPickKeyPrefix + "wiki": {Key: toolPickKeyPrefix + "wiki", Option: "search", Probability: 0.9},
+	}, nil)
+
+	if decision.ToolServer != "eco" || decision.ToolRival != "wiki" || decision.ToolRivalProb != 0.9 {
+		t.Fatalf("winner %q rival %q at %.2f, want eco contested by wiki at 0.90", decision.ToolServer, decision.ToolRival, decision.ToolRivalProb)
+	}
+	if _, _, direct := decision.DirectTool(); direct {
+		t.Error("direct with a rival at 0.9, want the contest to decline it")
+	}
+}
+
 func TestApplyToolAnswersFallsBackWhenNothingWasAskedOrAnswered(t *testing.T) {
-	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing()})
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing()}, nil)
 
 	missing := RouteDecision{Ran: true}
 	applyToolAnswers(&missing, meta, nil, nil)

@@ -94,7 +94,8 @@ type RouteDecision struct {
 	Requested      string // the reply key the member asked Echo to react with, or ""
 	RequestedProb  float64
 	ToolServer     string  // the server whose tool pick won, "" when every server declined
-	ToolServerProb float64 // the strongest rival server's tool pick, which contests the win
+	ToolRival      string  // the strongest rival server, whose pick contests the win
+	ToolRivalProb  float64 // that rival's pick
 	Tool           string  // that server's tool, "" on no_tool or fallback
 	ToolProb       float64
 
@@ -349,7 +350,7 @@ func (a *Agent) buildRouteQuestions(
 	}
 
 	if !disabled[RouteFamilyTool] && a.tools != nil {
-		toolQuestions, toolMeta := toolRouteQuestions(a.tools.CachedTools())
+		toolQuestions, toolMeta := toolRouteQuestions(a.tools.CachedTools(), a.cfg.JevSkipTools)
 		for _, q := range toolQuestions {
 			add(q, toolMeta[q.Key])
 		}
@@ -700,7 +701,8 @@ func recordRouteDecision(span trace.Span, decision RouteDecision) {
 		attribute.String("jev.request", decision.Requested),
 		attribute.Float64("jev.request.probability", decision.RequestedProb),
 		attribute.String("jev.tool.server", decision.ToolServer),
-		attribute.Float64("jev.tool.server.probability", decision.ToolServerProb),
+		attribute.String("jev.tool.rival", decision.ToolRival),
+		attribute.Float64("jev.tool.rival.probability", decision.ToolRivalProb),
 		attribute.String("jev.tool.name", decision.Tool),
 		attribute.Float64("jev.tool.probability", decision.ToolProb),
 	)

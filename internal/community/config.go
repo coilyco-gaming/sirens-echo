@@ -929,6 +929,9 @@ type Config struct {
 	// JevGeneralServers answer anything or nothing, so they never contest a domain
 	// server's tool pick. See docs/sirens-echo-tools.md.
 	JevGeneralServers []string
+	// JevSkipTools are tools no member question should route to, as tool or
+	// server__tool. Unset skips the beaver meta tool. See docs/sirens-echo-tools.md.
+	JevSkipTools []string
 	// JevDirectTools answers from a tool's reply template when route.jev's tool
 	// pick clears the bar. See docs/sirens-echo-tools.md.
 	JevDirectTools bool
@@ -1065,6 +1068,7 @@ func LoadConfig() (Config, error) {
 		JevModel:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_JEV_MODEL")),
 		JevDisable:           splitList(os.Getenv("SIRENS_ECHO_JEV_DISABLE")),
 		JevGeneralServers:    splitList(os.Getenv("SIRENS_ECHO_JEV_GENERAL_SERVERS")),
+		JevSkipTools:         listOrDefault("SIRENS_ECHO_JEV_SKIP_TOOLS", []string{"mcp_beaver_info"}),
 		HTTPTrustToken:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:           fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		TrackerIssuesTable:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_TRACKER_ISSUES_TABLE")),
@@ -1306,6 +1310,16 @@ func valueOrDefault(value, fallback string) string {
 		return trimmed
 	}
 	return fallback
+}
+
+// listOrDefault reads a comma list, with fallback only when the variable is unset,
+// so set-but-empty clears it.
+func listOrDefault(name string, fallback []string) []string {
+	value, set := os.LookupEnv(name)
+	if !set {
+		return fallback
+	}
+	return splitList(value)
 }
 
 // splitList parses a comma-separated deployment list, dropping empty entries so
