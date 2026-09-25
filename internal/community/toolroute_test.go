@@ -160,6 +160,34 @@ func TestCachedToolsReadsListedServersWithoutDialing(t *testing.T) {
 	}
 }
 
+func TestWarmToolsListsTheRosterBeforeAnyTurn(t *testing.T) {
+	server := mcp.NewServer(&mcp.Implementation{Name: "eco-test", Version: "1"}, nil)
+	server.AddTool(
+		&mcp.Tool{Name: "get_server_status", Description: "status", InputSchema: map[string]any{"type": "object"}},
+		func(context.Context, *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+			return &mcp.CallToolResult{}, nil
+		},
+	)
+	httpServer := httptest.NewServer(mcp.NewStreamableHTTPHandler(
+		func(*http.Request) *mcp.Server { return server },
+		&mcp.StreamableHTTPOptions{JSONResponse: true},
+	))
+	t.Cleanup(httpServer.Close)
+	agent := testJevAgent(t)
+	agent.tools = &MCPProvider{Servers: []MCPServerDefinition{{Name: "eco", URL: httpServer.URL}}}
+	t.Cleanup(func() { _ = agent.tools.Close() })
+
+	if listings := agent.tools.CachedTools(); len(listings) != 0 {
+		t.Fatalf("listings before warm-up = %d, want none", len(listings))
+	}
+	agent.warmTools(context.Background())
+
+	listings := agent.tools.CachedTools()
+	if len(listings) != 1 || listings[0].Server != "eco" || len(listings[0].Tools) != 1 {
+		t.Fatalf("listings after warm-up = %+v, want eco with its one tool", listings)
+	}
+}
+
 func TestRouteJevTracesADirectToolPick(t *testing.T) {
 	agent := testJevAgent(t)
 	agent.cfg.JevModel = "jev-latest"

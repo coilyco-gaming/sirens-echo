@@ -1,6 +1,8 @@
 package community
 
 import (
+	"context"
+	"log/slog"
 	"sort"
 	"strings"
 
@@ -54,6 +56,17 @@ func (p *MCPProvider) CachedTools() []CachedServerTools {
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Server < out[j].Server })
 	return out
+}
+
+// warmTools lists the roster once at startup. A failure is logged and left to
+// the first turn, which retries the listing as it always has.
+func (a *Agent) warmTools(ctx context.Context) {
+	session, err := a.tools.Open(ctx)
+	if err != nil {
+		a.telemetry.Info(ctx, "mcp.warm.failed", slog.String("error", err.Error()))
+		return
+	}
+	_ = session.Close()
 }
 
 // toolRouteQuestions builds one tool pick per listed server.

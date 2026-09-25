@@ -547,6 +547,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		// Supervised MCP connections outlive every turn, so shutdown is the only
 		// thing that closes them and stops any stdio child.
 		defer func() { _ = a.tools.Close() }()
+		// route.jev asks about listed servers only, so list them before the first turn.
+		go a.warmTools(ctx)
 	}
 	// A retention policy that is configured and never fires is no policy, so
 	// the sweeper starts with the service. See sirens-echo#156.
