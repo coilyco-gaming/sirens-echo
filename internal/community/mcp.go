@@ -120,6 +120,7 @@ type supervisedServer struct {
 	tools      []*mcp.Tool
 	resources  []*mcp.Resource
 	prompts    []*mcp.Prompt
+	vocab      map[string]vocabCache
 	refreshed  time.Time
 	retryAfter time.Time
 	backoff    time.Duration

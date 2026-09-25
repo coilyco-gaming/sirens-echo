@@ -26,10 +26,10 @@ grounded data the model self-corrects from **once**: an identical failed call is
 **route.jev can prune a server per turn**: one Jev answers below 0.5 for loses its tools, guidance, and
 grounding from the answer's call, and a call to its tool is refused. **Only an explicit no prunes**, so a
 skipped stage, fallback, or missing answer keeps all. `SIRENS_ECHO_JEV_DISABLE=server` disables it (#8139).
-**It also picks one tool** (#8229): a choice per server over its cached tools plus `no_tool`, one
-call. A top pick at 0.9, no rival at 0.5 (one in `SIRENS_ECHO_JEV_GENERAL_SERVERS` never rivals
-a domain pick), and `SIRENS_ECHO_JEV_DIRECT_TOOLS` on answers from the tool's `_meta` template, no
-model call. `SIRENS_ECHO_JEV_DISABLE=tool` disables it.
+**It also picks one tool** (#8229): a choice per server over its tools plus `no_tool`. A top pick at
+0.9, no rival at 0.5 (`SIRENS_ECHO_JEV_GENERAL_SERVERS` never rival a domain pick), and
+`SIRENS_ECHO_JEV_DIRECT_TOOLS` on answers from the tool's `_meta` template and
+vocabulary, no model call. `SIRENS_ECHO_JEV_DISABLE=tool` disables it.
 
 ## Harness tools
 

@@ -1496,7 +1496,7 @@ func (a *Agent) runTurn(
 		return a.finishWithSnap(turnCtx, turn, progress, key)
 	}
 	// A confident tool pick answers from the tool's reply template, no model call.
-	if text, ok := a.directToolReply(turnCtx, route); ok {
+	if text, ok := a.directToolReply(turnCtx, route, current.Content); ok {
 		return a.finishWithDirect(turnCtx, turn, text)
 	}
 

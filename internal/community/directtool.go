@@ -151,7 +151,7 @@ func formatTemplateValue(value any) (string, bool) {
 
 // directToolReply calls route.jev's picked tool and renders its template. Any
 // miss returns false and the turn takes the model path as before.
-func (a *Agent) directToolReply(ctx context.Context, route RouteDecision) (string, bool) {
+func (a *Agent) directToolReply(ctx context.Context, route RouteDecision, message string) (string, bool) {
 	ctx, span := a.telemetry.StartSpan(ctx, "tool.direct")
 	defer span.End()
 	outcome := directOff
@@ -166,16 +166,10 @@ func (a *Agent) directToolReply(ctx context.Context, route RouteDecision) (strin
 		return "", false
 	}
 	span.SetAttributes(attribute.String("tool.direct.server", server), attribute.String("tool.direct.tool", toolName))
-	templates := cachedToolTemplates(a.tools.CachedTools(), server, toolName)
+	tool := cachedTool(a.tools.CachedTools(), server, toolName)
+	templates := toolReplyTemplates(tool)
 	if len(templates) == 0 {
 		outcome = directNoTemplate
-		return "", false
-	}
-	// No argument extraction yet, so only a template needing no argument can
-	// answer. Checked before the call so a miss costs nothing.
-	args := map[string]any{}
-	if !anyTemplateNeedsNothing(templates, args) {
-		outcome = directNeedsArgs
 		return "", false
 	}
 	session, err := a.tools.Open(ctx)
@@ -184,6 +178,20 @@ func (a *Agent) directToolReply(ctx context.Context, route RouteDecision) (strin
 		return "", false
 	}
 	defer func() { _ = session.Close() }()
+	// The first template whose arguments all resolve decides the call's arguments.
+	specs := toolArgSpecs(tool)
+	var args map[string]any
+	for _, template := range templates {
+		if resolved, ok := a.resolveToolArgs(ctx, server, specs, template.WhenArgs, message); ok {
+			args = resolved
+			break
+		}
+	}
+	if args == nil {
+		outcome = directNeedsArgs
+		return "", false
+	}
+	span.SetAttributes(attribute.Int("tool.direct.args", len(args)))
 	name, err := proxyToolName(server, toolName)
 	if err != nil {
 		outcome = directCallFailed
@@ -204,27 +212,18 @@ func (a *Agent) directToolReply(ctx context.Context, route RouteDecision) (strin
 	return text, true
 }
 
-func cachedToolTemplates(listings []CachedServerTools, server, toolName string) []replyTemplate {
+func cachedTool(listings []CachedServerTools, server, toolName string) *mcp.Tool {
 	for _, listing := range listings {
 		if listing.Server != server {
 			continue
 		}
 		for _, tool := range listing.Tools {
 			if tool != nil && tool.Name == toolName {
-				return toolReplyTemplates(tool)
+				return tool
 			}
 		}
 	}
 	return nil
-}
-
-func anyTemplateNeedsNothing(templates []replyTemplate, args map[string]any) bool {
-	for _, template := range templates {
-		if argsPresent(template.WhenArgs, args) {
-			return true
-		}
-	}
-	return false
 }
 
 // finishWithDirect delivers a template reply the way a snapped mark is delivered.

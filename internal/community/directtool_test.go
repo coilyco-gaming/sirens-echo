@@ -126,7 +126,7 @@ func TestDirectToolReplyAnswersFromTheTemplateWhenEnabled(t *testing.T) {
 	agent.cfg.JevDirectTools = true
 	agent.tools = statusServer(t, []any{map[string]any{"text": "{{players.online}} players online on day {{cycle.daysRunning}}."}})
 
-	got, ok := agent.directToolReply(context.Background(), confidentStatusPick())
+	got, ok := agent.directToolReply(context.Background(), confidentStatusPick(), "is the server up")
 
 	if !ok || got != "7 players online on day 12." {
 		t.Fatalf("directToolReply = %q, %v, want the rendered template", got, ok)
@@ -155,7 +155,7 @@ func TestDirectToolReplyDeclinesWhenOffUnconfidentOrArgumentBound(t *testing.T) 
 			agent := testJevAgent(t)
 			agent.cfg.JevDirectTools = tc.enabled
 			agent.tools = statusServer(t, tc.templates)
-			if got, ok := agent.directToolReply(context.Background(), tc.route); ok {
+			if got, ok := agent.directToolReply(context.Background(), tc.route, "is the server up"); ok {
 				t.Fatalf("directToolReply = %q, want a decline so the model path runs", got)
 			}
 		})
