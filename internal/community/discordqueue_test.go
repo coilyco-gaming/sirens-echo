@@ -292,3 +292,27 @@ func TestThePostgresDiscordQueueClaimsEachEventOnce(t *testing.T) {
 		}
 	}
 }
+
+// Readiness follows the gateway both ways, so a rolling update never counts a
+// reconnecting intake as serving, and a resume is visible in the log.
+func TestIntakeReadinessFollowsDisconnectAndResume(t *testing.T) {
+	t.Parallel()
+	intake := &Intake{telemetry: telemetryOrNoop(nil)}
+	status := func() int {
+		recorder := httptest.NewRecorder()
+		intake.HTTPHandler().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, readyzPath, nil))
+		return recorder.Code
+	}
+	intake.onReady(nil, &discordgo.Ready{SessionID: "s"})
+	if status() != http.StatusServiceUnavailable {
+		t.Fatal("with no queue open the intake is not ready, whatever the gateway says")
+	}
+	intake.onDisconnect(nil, &discordgo.Disconnect{})
+	if intake.ready.Load() || intake.disconnectedAt.Load() == 0 {
+		t.Fatal("a disconnect clears readiness and records when")
+	}
+	intake.onResumed(nil, &discordgo.Resumed{})
+	if !intake.ready.Load() {
+		t.Fatal("a resume restores readiness")
+	}
+}

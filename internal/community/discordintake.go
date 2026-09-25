@@ -128,6 +128,8 @@ type Intake struct {
 	// ready is set by READY and RESUMED and cleared by a disconnect, so a
 	// rolling update never counts a reconnecting session as serving.
 	ready atomic.Bool
+	// disconnectedAt is when the gateway last dropped, so a resume says how long.
+	disconnectedAt atomic.Int64
 }
 
 // NewIntake builds the session and its handlers. Nothing connects until Run.
@@ -155,15 +157,9 @@ func (i *Intake) Run(ctx context.Context) error {
 	if i.cfg.DiscordCommandsEnabled {
 		i.session.AddHandler(offerer.onInteraction)
 	}
-	i.session.AddHandler(func(_ *discordgo.Session, ready *discordgo.Ready) {
-		i.ready.Store(true)
-		i.telemetry.Info(ctx, "discord.intake.ready", slog.String("session_id", ready.SessionID))
-	})
-	i.session.AddHandler(func(*discordgo.Session, *discordgo.Resumed) { i.ready.Store(true) })
-	i.session.AddHandler(func(*discordgo.Session, *discordgo.Disconnect) {
-		i.ready.Store(false)
-		i.telemetry.Info(ctx, "discord.intake.disconnected")
-	})
+	i.session.AddHandler(i.onReady)
+	i.session.AddHandler(i.onResumed)
+	i.session.AddHandler(i.onDisconnect)
 	if err := i.session.Open(); err != nil {
 		return fmt.Errorf("Discord open: %w", err)
 	}
@@ -189,6 +185,28 @@ func (i *Intake) Run(ctx context.Context) error {
 		}
 		return fmt.Errorf("HTTP serve: %w", err)
 	}
+}
+
+func (i *Intake) onReady(_ *discordgo.Session, ready *discordgo.Ready) {
+	i.ready.Store(true)
+	i.telemetry.Info(context.Background(), "discord.intake.ready", slog.String("session_id", ready.SessionID))
+}
+
+// onResumed is logged as READY is, so a disconnect with no line after it reads
+// as a session still down rather than one that came back quietly.
+func (i *Intake) onResumed(*discordgo.Session, *discordgo.Resumed) {
+	down := time.Duration(0)
+	if since := i.disconnectedAt.Load(); since != 0 {
+		down = time.Since(time.Unix(0, since)).Round(time.Millisecond)
+	}
+	i.ready.Store(true)
+	i.telemetry.Info(context.Background(), "discord.intake.resumed", slog.Duration("down", down))
+}
+
+func (i *Intake) onDisconnect(*discordgo.Session, *discordgo.Disconnect) {
+	i.ready.Store(false)
+	i.disconnectedAt.Store(time.Now().UnixNano())
+	i.telemetry.Info(context.Background(), "discord.intake.disconnected")
 }
 
 // HTTPHandler serves liveness, and readiness that holds until the gateway has
