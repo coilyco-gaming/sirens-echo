@@ -2,6 +2,7 @@ package community
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -92,36 +93,78 @@ func toolRouteQuestions(listings []CachedServerTools) ([]systemone.Question, map
 	return questions, meta
 }
 
-// applyToolAnswers takes the most confident non-no_tool pick across servers.
-// ToolServerProb carries the strongest rival server's pick, which contests it.
-func applyToolAnswers(decision *RouteDecision, meta map[string]jevQuestionMeta, answers map[string]systemone.Answer) {
+// toolPick is one server's non-no_tool answer.
+type toolPick struct {
+	server, tool string
+	prob         float64
+}
+
+// applyToolAnswers takes the most confident non-no_tool pick. A domain pick at
+// jevToolContested outranks every general server, which then cannot contest it.
+func applyToolAnswers(
+	decision *RouteDecision,
+	meta map[string]jevQuestionMeta,
+	answers map[string]systemone.Answer,
+	generalServers []string,
+) {
+	general := make(map[string]bool, len(generalServers))
+	for _, name := range generalServers {
+		general[strings.TrimSpace(name)] = true
+	}
+	var domain, all []toolPick
 	asked, answered := false, false
 	for key, m := range meta {
 		if m.family != RouteFamilyTool {
 			continue
 		}
 		asked = true
-		pick, ok := answers[key]
+		answer, ok := answers[key]
 		if !ok {
 			continue
 		}
 		answered = true
-		if pick.Option == toolNoToolOption || pick.Option == "" {
+		if answer.Option == toolNoToolOption || answer.Option == "" {
 			continue
 		}
-		if pick.Probability > decision.ToolProb {
-			decision.ToolServerProb = max(decision.ToolServerProb, decision.ToolProb)
-			decision.ToolServer, decision.Tool, decision.ToolProb = m.target, pick.Option, pick.Probability
-		} else {
-			decision.ToolServerProb = max(decision.ToolServerProb, pick.Probability)
+		pick := toolPick{server: m.target, tool: answer.Option, prob: answer.Probability}
+		all = append(all, pick)
+		if !general[m.target] {
+			domain = append(domain, pick)
 		}
 	}
 	switch {
 	case !asked:
 		decision.fellBackTo(RouteFamilyTool, jevFallbackNoListed)
+		return
 	case !answered:
 		decision.fellBackTo(RouteFamilyTool, jevFallbackMissingAnswer)
+		return
 	}
+	field := all
+	if top, _ := topTwoPicks(domain); top.prob >= jevToolContested {
+		field = domain
+	}
+	top, rival := topTwoPicks(field)
+	decision.ToolServer, decision.Tool, decision.ToolProb = top.server, top.tool, top.prob
+	decision.ToolServerProb = rival.prob
+}
+
+// topTwoPicks orders by probability, then server name, so a tie is stable.
+func topTwoPicks(picks []toolPick) (top, rival toolPick) {
+	sorted := append([]toolPick(nil), picks...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].prob != sorted[j].prob {
+			return sorted[i].prob > sorted[j].prob
+		}
+		return sorted[i].server < sorted[j].server
+	})
+	if len(sorted) > 0 {
+		top = sorted[0]
+	}
+	if len(sorted) > 1 {
+		rival = sorted[1]
+	}
+	return top, rival
 }
 
 // DirectTool is the server and tool to call without the model: the winning pick at

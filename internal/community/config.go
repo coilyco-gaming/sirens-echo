@@ -926,6 +926,9 @@ type Config struct {
 	// JevDisable names the families route.jev must not ask about, each
 	// falling back to today's behaviour independently of the others.
 	JevDisable []string
+	// JevGeneralServers answer anything or nothing, so they never contest a domain
+	// server's tool pick. See docs/sirens-echo-tools.md.
+	JevGeneralServers []string
 	// JevDirectTools answers from a tool's reply template when route.jev's tool
 	// pick clears the bar. See docs/sirens-echo-tools.md.
 	JevDirectTools bool
@@ -1061,6 +1064,7 @@ func LoadConfig() (Config, error) {
 		ContentClassesPath:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_CONTENT_CLASSES")),
 		JevModel:             strings.TrimSpace(os.Getenv("SIRENS_ECHO_JEV_MODEL")),
 		JevDisable:           splitList(os.Getenv("SIRENS_ECHO_JEV_DISABLE")),
+		JevGeneralServers:    splitList(os.Getenv("SIRENS_ECHO_JEV_GENERAL_SERVERS")),
 		HTTPTrustToken:       strings.TrimSpace(os.Getenv("SIRENS_ECHO_HTTP_TOKEN")),
 		FetchHosts:           fetchHosts(os.Getenv("SIRENS_ECHO_FETCH_HOSTS")),
 		TrackerIssuesTable:   strings.TrimSpace(os.Getenv("SIRENS_ECHO_TRACKER_ISSUES_TABLE")),

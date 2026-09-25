@@ -635,7 +635,7 @@ func (a *Agent) applyRouteAnswers(
 	}
 
 	if !disabled[RouteFamilyTool] {
-		applyToolAnswers(decision, meta, answers)
+		applyToolAnswers(decision, meta, answers, a.cfg.JevGeneralServers)
 	}
 }
 

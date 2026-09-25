@@ -27,15 +27,16 @@ grounded data the model self-corrects from **once**: an identical failed call is
 grounding from the answer's call, and a call to its tool is refused. **Only an explicit no prunes**, so a
 skipped stage, fallback, or missing answer keeps all. `SIRENS_ECHO_JEV_DISABLE=server` disables it (#8139).
 **It also picks one tool** (#8229): a choice per server over its cached tools plus `no_tool`, one
-call. A top pick at 0.9, no rival at 0.5, and `SIRENS_ECHO_JEV_DIRECT_TOOLS` on answers from the
-tool's `_meta` template, no model call. `SIRENS_ECHO_JEV_DISABLE=tool` disables it.
+call. A top pick at 0.9, no rival at 0.5 (one in `SIRENS_ECHO_JEV_GENERAL_SERVERS` never rivals
+a domain pick), and `SIRENS_ECHO_JEV_DIRECT_TOOLS` on answers from the tool's `_meta` template, no
+model call. `SIRENS_ECHO_JEV_DISABLE=tool` disables it.
 
 ## Harness tools
 
 Almost every tool Echo offers comes from a rostered MCP server. **A harness tool is the exception: the
 harness itself answers the call.** A tool listing is held for an hour, so
 `harness__refresh_tools` lets a model missing an expected tool say so. It marks every rostered
-server for re-reading and dials nothing, so twenty calls cost one listing.
+server for re-reading and dials nothing.
 
 ## The read_skill tool
 
@@ -71,8 +72,7 @@ allowlist, and **empty offers no tool at all**: no schema in the prompt, nothing
 * **Redirects refused**: a redirect is a destination the allowlist never saw.
 * **A page over the cap is marked, not silently cut.** The read takes one byte past the limit, and an
   oversize body returns what it got plus a truncation line, seam repaired to a rune boundary.
-* **A media URL is described, not decoded**: a non-text content type returns its type and length
-  rather than bytes nobody can read, by shape not by a list (#1029).
+* **A media URL is described, not decoded**: a non-text content type returns its type and length, by shape not by a list (#1029).
 
 **GET only.** A fetched page is untrusted text entering the prompt, and **the allowlist bounds where it
 comes from, saying nothing about what it says**.

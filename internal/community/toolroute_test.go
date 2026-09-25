@@ -88,7 +88,36 @@ func TestApplyToolAnswersTakesTheMostConfidentServerAndHonoursRivals(t *testing.
 		t.Run(tc.name, func(t *testing.T) {
 			tc.eco.Key, tc.wiki.Key = toolPickKeyPrefix+"eco", toolPickKeyPrefix+"wiki"
 			decision := RouteDecision{Ran: true}
-			applyToolAnswers(&decision, meta, map[string]systemone.Answer{tc.eco.Key: tc.eco, tc.wiki.Key: tc.wiki})
+			applyToolAnswers(&decision, meta, map[string]systemone.Answer{tc.eco.Key: tc.eco, tc.wiki.Key: tc.wiki}, nil)
+			if decision.ToolServer != tc.wantServer {
+				t.Errorf("server = %q, want %q", decision.ToolServer, tc.wantServer)
+			}
+			if _, _, direct := decision.DirectTool(); direct != tc.wantDirect {
+				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolServerProb)
+			}
+		})
+	}
+}
+
+func TestGeneralServersNeverContestADomainPick(t *testing.T) {
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
+	general := []string{"wiki"}
+	cases := []struct {
+		name       string
+		eco, wiki  systemone.Answer
+		wantServer string
+		wantDirect bool
+	}{
+		{"general rival ignored", systemone.Answer{Option: "find_trade", Probability: 0.95}, systemone.Answer{Option: "search", Probability: 0.8}, "eco", true},
+		{"general wins when no domain pick", systemone.Answer{Option: toolNoToolOption, Probability: 0.96}, systemone.Answer{Option: "search", Probability: 0.92}, "wiki", true},
+		{"weak domain pick yields to general", systemone.Answer{Option: "find_trade", Probability: 0.3}, systemone.Answer{Option: "search", Probability: 0.93}, "wiki", true},
+		{"domain under the bar still declines", systemone.Answer{Option: "find_trade", Probability: 0.7}, systemone.Answer{Option: "search", Probability: 0.95}, "eco", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.eco.Key, tc.wiki.Key = toolPickKeyPrefix+"eco", toolPickKeyPrefix+"wiki"
+			decision := RouteDecision{Ran: true}
+			applyToolAnswers(&decision, meta, map[string]systemone.Answer{tc.eco.Key: tc.eco, tc.wiki.Key: tc.wiki}, general)
 			if decision.ToolServer != tc.wantServer {
 				t.Errorf("server = %q, want %q", decision.ToolServer, tc.wantServer)
 			}
@@ -103,13 +132,13 @@ func TestApplyToolAnswersFallsBackWhenNothingWasAskedOrAnswered(t *testing.T) {
 	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing()})
 
 	missing := RouteDecision{Ran: true}
-	applyToolAnswers(&missing, meta, nil)
+	applyToolAnswers(&missing, meta, nil, nil)
 	if missing.Fallbacks[RouteFamilyTool] != jevFallbackMissingAnswer {
 		t.Errorf("unanswered fallback = %q, want %q", missing.Fallbacks[RouteFamilyTool], jevFallbackMissingAnswer)
 	}
 
 	unlisted := RouteDecision{Ran: true}
-	applyToolAnswers(&unlisted, nil, nil)
+	applyToolAnswers(&unlisted, nil, nil, nil)
 	if unlisted.Fallbacks[RouteFamilyTool] != jevFallbackNoListed {
 		t.Errorf("no listing fallback = %q, want %q", unlisted.Fallbacks[RouteFamilyTool], jevFallbackNoListed)
 	}
