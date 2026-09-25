@@ -93,9 +93,9 @@ type RouteDecision struct {
 	Addressed      bool
 	Requested      string // the reply key the member asked Echo to react with, or ""
 	RequestedProb  float64
-	ToolServer     string // the server the tool family picked, "" on none or fallback
-	ToolServerProb float64
-	Tool           string // that server's tool, "" on no_tool or fallback
+	ToolServer     string  // the server whose tool pick won, "" when every server declined
+	ToolServerProb float64 // the strongest rival server's tool pick, which contests the win
+	Tool           string  // that server's tool, "" on no_tool or fallback
 	ToolProb       float64
 
 	// Fallbacks names, per family, why its field is the fallback value.

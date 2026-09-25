@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -14,7 +15,8 @@ import (
 
 func ecoListing() CachedServerTools {
 	return CachedServerTools{
-		Server: "eco",
+		Server:   "eco",
+		Guidance: "Live data for the Eco server.",
 		Tools: []*mcp.Tool{
 			{Name: "find_trade", Description: "Where to buy or sell an item."},
 			{Name: "get_market", Description: "How an item's price has moved."},
@@ -22,25 +24,28 @@ func ecoListing() CachedServerTools {
 	}
 }
 
-func TestToolRouteQuestionsAskServerThenOneToolChoicePerServer(t *testing.T) {
-	questions, meta := toolRouteQuestions([]CachedServerTools{ecoListing()})
+func wikiListing() CachedServerTools {
+	return CachedServerTools{
+		Server: "wiki",
+		Tools:  []*mcp.Tool{{Name: "search", Description: "Search the wiki."}},
+	}
+}
+
+func TestToolRouteQuestionsAskOneToolChoicePerServerAndNoServerPick(t *testing.T) {
+	questions, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
 
 	if len(questions) != 2 {
-		t.Fatalf("questions = %d, want the server pick plus one tool pick", len(questions))
+		t.Fatalf("questions = %d, want one tool pick per server and no separate server pick", len(questions))
 	}
-	server := questions[0]
-	if server.Key != toolServerKey || server.Type != systemone.TypeChoice {
-		t.Fatalf("first question = %s/%s, want the %s choice", server.Key, server.Type, toolServerKey)
-	}
-	if names := criterionNames(server.Criteria); fmt.Sprint(names) != "[none eco]" {
-		t.Errorf("server options = %v, want [none eco]", names)
-	}
-	pick := questions[1]
+	pick := questions[0]
 	if pick.Key != toolPickKeyPrefix+"eco" || pick.Type != systemone.TypeChoice {
-		t.Fatalf("second question = %s/%s, want the eco tool choice", pick.Key, pick.Type)
+		t.Fatalf("first question = %s/%s, want the eco tool choice", pick.Key, pick.Type)
 	}
 	if names := criterionNames(pick.Criteria); fmt.Sprint(names) != "[find_trade get_market no_tool]" {
 		t.Errorf("tool options = %v, want the listed tools plus no_tool", names)
+	}
+	if !strings.Contains(pick.Prompt, "Live data for the Eco server.") {
+		t.Errorf("prompt = %q, want the server's own guidance carried in", pick.Prompt)
 	}
 	if meta[pick.Key].target != "eco" || meta[pick.Key].family != RouteFamilyTool {
 		t.Errorf("meta for %s = %+v, want the tool family targeting eco", pick.Key, meta[pick.Key])
@@ -54,13 +59,8 @@ func TestToolRouteQuestionsSkipAServerPastJevsChoiceSize(t *testing.T) {
 	}
 	questions, _ := toolRouteQuestions([]CachedServerTools{big, ecoListing()})
 
-	for _, q := range questions {
-		if q.Key == toolPickKeyPrefix+"huge" {
-			t.Fatal("asked about a server whose tools plus no_tool exceed the choice size")
-		}
-	}
-	if names := criterionNames(questions[0].Criteria); fmt.Sprint(names) != "[none eco]" {
-		t.Errorf("server options = %v, want the oversize server left out", names)
+	if len(questions) != 1 || questions[0].Key != toolPickKeyPrefix+"eco" {
+		t.Fatalf("questions = %v, want only eco once the oversize server is left out", questionKeys(questions))
 	}
 }
 
@@ -70,52 +70,42 @@ func TestToolRouteQuestionsAskNothingWithoutAListing(t *testing.T) {
 	}
 }
 
-func TestApplyToolAnswersCallsDirectlyOnlyWhenBothPicksClearTheBar(t *testing.T) {
-	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing()})
+func TestApplyToolAnswersTakesTheMostConfidentServerAndHonoursRivals(t *testing.T) {
+	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing(), wikiListing()})
 	cases := []struct {
 		name       string
-		serverProb float64
-		toolOption string
-		toolProb   float64
+		eco, wiki  systemone.Answer
+		wantServer string
 		wantDirect bool
 	}{
-		{"both clear", 0.95, "find_trade", 0.93, true},
-		{"server under the bar", 0.85, "find_trade", 0.99, false},
-		{"tool under the bar", 0.97, "find_trade", 0.62, false},
-		{"no_tool wins", 0.97, toolNoToolOption, 0.95, false},
+		{"eco clears, wiki declines", systemone.Answer{Option: "find_trade", Probability: 0.94}, systemone.Answer{Option: toolNoToolOption, Probability: 0.9}, "eco", true},
+		{"eco under the bar", systemone.Answer{Option: "find_trade", Probability: 0.82}, systemone.Answer{Option: toolNoToolOption, Probability: 0.9}, "eco", false},
+		{"wiki contests eco", systemone.Answer{Option: "find_trade", Probability: 0.95}, systemone.Answer{Option: "search", Probability: 0.6}, "eco", false},
+		{"weak rival does not contest", systemone.Answer{Option: "find_trade", Probability: 0.95}, systemone.Answer{Option: "search", Probability: 0.3}, "eco", true},
+		{"every server declines", systemone.Answer{Option: toolNoToolOption, Probability: 0.97}, systemone.Answer{Option: toolNoToolOption, Probability: 0.97}, "", false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc.eco.Key, tc.wiki.Key = toolPickKeyPrefix+"eco", toolPickKeyPrefix+"wiki"
 			decision := RouteDecision{Ran: true}
-			applyToolAnswers(&decision, meta, map[string]systemone.Answer{
-				toolServerKey:             {Key: toolServerKey, Option: "eco", Probability: tc.serverProb},
-				toolPickKeyPrefix + "eco": {Key: toolPickKeyPrefix + "eco", Option: tc.toolOption, Probability: tc.toolProb},
-			})
-			server, tool, direct := decision.DirectTool()
-			if direct != tc.wantDirect {
-				t.Fatalf("direct = %v (%s/%s), want %v", direct, server, tool, tc.wantDirect)
+			applyToolAnswers(&decision, meta, map[string]systemone.Answer{tc.eco.Key: tc.eco, tc.wiki.Key: tc.wiki})
+			if decision.ToolServer != tc.wantServer {
+				t.Errorf("server = %q, want %q", decision.ToolServer, tc.wantServer)
+			}
+			if _, _, direct := decision.DirectTool(); direct != tc.wantDirect {
+				t.Errorf("direct = %v, want %v (tool %.2f, rival %.2f)", direct, tc.wantDirect, decision.ToolProb, decision.ToolServerProb)
 			}
 		})
 	}
 }
 
-func TestApplyToolAnswersRecordsADeclineAndEachFallback(t *testing.T) {
+func TestApplyToolAnswersFallsBackWhenNothingWasAskedOrAnswered(t *testing.T) {
 	_, meta := toolRouteQuestions([]CachedServerTools{ecoListing()})
 
-	declined := RouteDecision{Ran: true}
-	applyToolAnswers(&declined, meta, map[string]systemone.Answer{
-		toolServerKey: {Key: toolServerKey, Option: toolServerNone, Probability: 0.97},
-	})
-	if declined.ToolServer != "" || declined.hasFallback(RouteFamilyTool) {
-		t.Errorf("none winner: server %q fallback %v, want an empty pick and no fallback", declined.ToolServer, declined.Fallbacks)
-	}
-
 	missing := RouteDecision{Ran: true}
-	applyToolAnswers(&missing, meta, map[string]systemone.Answer{
-		toolServerKey: {Key: toolServerKey, Option: "eco", Probability: 0.97},
-	})
+	applyToolAnswers(&missing, meta, nil)
 	if missing.Fallbacks[RouteFamilyTool] != jevFallbackMissingAnswer {
-		t.Errorf("missing tool pick fallback = %q, want %q", missing.Fallbacks[RouteFamilyTool], jevFallbackMissingAnswer)
+		t.Errorf("unanswered fallback = %q, want %q", missing.Fallbacks[RouteFamilyTool], jevFallbackMissingAnswer)
 	}
 
 	unlisted := RouteDecision{Ran: true}
@@ -137,7 +127,7 @@ func TestCachedToolsReadsListedServersWithoutDialing(t *testing.T) {
 		t.Fatalf("listings = %+v, want only eco with its two tools", listings)
 	}
 	if listings[0].Guidance != "" {
-		t.Errorf("guidance = %q with no session, want empty so the fallback text is used", listings[0].Guidance)
+		t.Errorf("guidance = %q with no session, want empty", listings[0].Guidance)
 	}
 }
 
@@ -152,14 +142,11 @@ func TestRouteJevTracesADirectToolPick(t *testing.T) {
 		decodeJSON(t, r, &req)
 		resp := systemone.Response{}
 		for _, q := range req.Questions {
-			switch q.Key {
-			case toolServerKey:
-				resp.Answers = append(resp.Answers, systemone.Answer{Key: q.Key, Option: "eco", Probability: 0.96})
-			case toolPickKeyPrefix + "eco":
+			if q.Key == toolPickKeyPrefix+"eco" {
 				resp.Answers = append(resp.Answers, systemone.Answer{Key: q.Key, Option: "find_trade", Probability: 0.94})
-			default:
-				resp.Answers = append(resp.Answers, systemone.Answer{Key: q.Key, Probability: 0.1})
+				continue
 			}
+			resp.Answers = append(resp.Answers, systemone.Answer{Key: q.Key, Probability: 0.1})
 		}
 		encodeJSON(t, w, resp)
 	}))
@@ -183,7 +170,7 @@ func TestJevDisableToolAsksNoToolQuestions(t *testing.T) {
 	questions, _ := agent.buildRouteQuestions(TranscriptEntry{Content: "hi"}, jevDisabledSet([]string{"tool"}), false, false)
 
 	for _, q := range questions {
-		if q.Key == toolServerKey || q.Key == toolPickKeyPrefix+"eco" {
+		if strings.HasPrefix(q.Key, toolPickKeyPrefix) {
 			t.Fatalf("asked %s with the tool family disabled", q.Key)
 		}
 	}
@@ -195,4 +182,12 @@ func criterionNames(criteria []systemone.Criterion) []string {
 		names = append(names, c.Name)
 	}
 	return names
+}
+
+func questionKeys(questions []systemone.Question) []string {
+	keys := make([]string, 0, len(questions))
+	for _, q := range questions {
+		keys = append(keys, q.Key)
+	}
+	return keys
 }

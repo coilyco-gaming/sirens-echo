@@ -118,7 +118,7 @@ func statusServer(t *testing.T, templates []any) *MCPProvider {
 }
 
 func confidentStatusPick() RouteDecision {
-	return RouteDecision{Ran: true, ToolServer: "eco", ToolServerProb: 0.97, Tool: "get_server_status", ToolProb: 0.95}
+	return RouteDecision{Ran: true, ToolServer: "eco", Tool: "get_server_status", ToolProb: 0.95}
 }
 
 func TestDirectToolReplyAnswersFromTheTemplateWhenEnabled(t *testing.T) {

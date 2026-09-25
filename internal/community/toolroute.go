@@ -8,22 +8,20 @@ import (
 	"forgejo.coilysiren.me/coilyco-gaming/sirens-echo/internal/community/systemone"
 )
 
-// The tool family picks a server, then its tool, as Jev choices: noul values are
-// not calibrated confidences (sirens-echo#8229). See docs/sirens-echo-tools.md.
+// The tool family asks one Jev choice per server. The most confident non-no_tool pick
+// names the server, since a separate server pick declined data (sirens-echo#8229).
 const (
-	// jevToolThreshold is Kai's bar, applied to the server pick and the tool pick.
+	// jevToolThreshold is Kai's bar, applied to the winning tool pick.
 	jevToolThreshold = 0.9
+	// jevToolContested is where a second server's tool pick blocks a direct call.
+	jevToolContested = 0.5
 	// jevToolMaxOptions is the choice size Jev is reliable at, per the
 	// tooling-jev-decisions skill. A larger server is not asked about.
 	jevToolMaxOptions = 240
 
-	toolServerKey       = "tool.server"
 	toolPickKeyPrefix   = "tool.pick:"
-	toolServerNone      = "none"
 	toolNoToolOption    = "no_tool"
-	toolServerNoneText  = "No server's tools are needed: social talk, opinions, how-to answerable from knowledge, or a request addressed to a person."
 	toolNoToolText      = "No tool from this server answers this. Game mechanics and how-to, client crashes and bug reports, wipe or patch schedules, requests addressed to a specific person, and anything outside this server's data."
-	toolServerFallback  = "Tools from the MCP server "
 	jevFallbackNoListed = jevFallbackReason("no_tool_listing")
 )
 
@@ -57,11 +55,10 @@ func (p *MCPProvider) CachedTools() []CachedServerTools {
 	return out
 }
 
-// toolRouteQuestions builds the server pick and one tool pick per server.
+// toolRouteQuestions builds one tool pick per listed server.
 func toolRouteQuestions(listings []CachedServerTools) ([]systemone.Question, map[string]jevQuestionMeta) {
-	questions := make([]systemone.Question, 0, len(listings)+1)
+	questions := make([]systemone.Question, 0, len(listings))
 	meta := make(map[string]jevQuestionMeta)
-	servers := []systemone.Criterion{{Name: toolServerNone, Description: toolServerNoneText}}
 	for _, listing := range listings {
 		if len(listing.Tools)+1 > jevToolMaxOptions {
 			continue
@@ -77,71 +74,63 @@ func toolRouteQuestions(listings []CachedServerTools) ([]systemone.Question, map
 			continue
 		}
 		criteria = append(criteria, systemone.Criterion{Name: toolNoToolOption, Description: toolNoToolText})
-		description := listing.Guidance
-		if description == "" {
-			description = toolServerFallback + "\"" + listing.Server + "\"."
+		prompt := "Which single tool from the MCP server \"" + listing.Server +
+			"\" best answers the member's message? Pick " + toolNoToolOption +
+			" when no tool's data can answer it."
+		if listing.Guidance != "" {
+			prompt += " The server describes itself: " + listing.Guidance
 		}
-		servers = append(servers, systemone.Criterion{Name: listing.Server, Description: description})
 		key := toolPickKeyPrefix + listing.Server
 		questions = append(questions, systemone.Question{
-			Key:  key,
-			Type: systemone.TypeChoice,
-			Prompt: "Which single tool from the MCP server \"" + listing.Server +
-				"\" best answers the member's message? Pick " + toolNoToolOption +
-				" when no tool's data can answer it.",
+			Key:      key,
+			Type:     systemone.TypeChoice,
+			Prompt:   prompt,
 			Criteria: criteria,
 		})
 		meta[key] = jevQuestionMeta{family: RouteFamilyTool, target: listing.Server}
 	}
-	if len(servers) == 1 {
-		return nil, nil
-	}
-	questions = append([]systemone.Question{{
-		Key:      toolServerKey,
-		Type:     systemone.TypeChoice,
-		Prompt:   "Which MCP server's tools, if any, would answer the member's message?",
-		Criteria: servers,
-	}}, questions...)
-	meta[toolServerKey] = jevQuestionMeta{family: RouteFamilyTool}
 	return questions, meta
 }
 
-// applyToolAnswers reads the server pick, then that server's tool pick. A
-// "none" or "no_tool" winner is a decline, recorded with its probability.
+// applyToolAnswers takes the most confident non-no_tool pick across servers.
+// ToolServerProb carries the strongest rival server's pick, which contests it.
 func applyToolAnswers(decision *RouteDecision, meta map[string]jevQuestionMeta, answers map[string]systemone.Answer) {
-	if _, asked := meta[toolServerKey]; !asked {
+	asked, answered := false, false
+	for key, m := range meta {
+		if m.family != RouteFamilyTool {
+			continue
+		}
+		asked = true
+		pick, ok := answers[key]
+		if !ok {
+			continue
+		}
+		answered = true
+		if pick.Option == toolNoToolOption || pick.Option == "" {
+			continue
+		}
+		if pick.Probability > decision.ToolProb {
+			decision.ToolServerProb = max(decision.ToolServerProb, decision.ToolProb)
+			decision.ToolServer, decision.Tool, decision.ToolProb = m.target, pick.Option, pick.Probability
+		} else {
+			decision.ToolServerProb = max(decision.ToolServerProb, pick.Probability)
+		}
+	}
+	switch {
+	case !asked:
 		decision.fellBackTo(RouteFamilyTool, jevFallbackNoListed)
-		return
-	}
-	server, ok := answers[toolServerKey]
-	if !ok {
+	case !answered:
 		decision.fellBackTo(RouteFamilyTool, jevFallbackMissingAnswer)
-		return
 	}
-	decision.ToolServerProb = server.Probability
-	if server.Option == toolServerNone {
-		return
-	}
-	decision.ToolServer = server.Option
-	pick, ok := answers[toolPickKeyPrefix+server.Option]
-	if !ok {
-		decision.fellBackTo(RouteFamilyTool, jevFallbackMissingAnswer)
-		return
-	}
-	decision.ToolProb = pick.Probability
-	if pick.Option == toolNoToolOption {
-		return
-	}
-	decision.Tool = pick.Option
 }
 
-// DirectTool is the server and tool to call without the model: both picks at
-// or above the bar, never on a fallback. Stage 1 only traces it.
+// DirectTool is the server and tool to call without the model: the winning pick at
+// the bar, no rival server's pick at jevToolContested, never on a fallback.
 func (d RouteDecision) DirectTool() (server, tool string, ok bool) {
 	if !d.Ran || d.hasFallback(RouteFamilyTool) || d.Tool == "" {
 		return "", "", false
 	}
-	if d.ToolServerProb < jevToolThreshold || d.ToolProb < jevToolThreshold {
+	if d.ToolProb < jevToolThreshold || d.ToolServerProb >= jevToolContested {
 		return "", "", false
 	}
 	return d.ToolServer, d.Tool, true
